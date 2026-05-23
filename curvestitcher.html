@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Kid-Friendly Curve Stitching</title>
+
+<!-- Paper.js -->
+<script src="https://unpkg.com/paper@0.12.17/dist/paper-full.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    font-family: "Nunito", sans-serif;
+    background: #f7f7fb;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* --- TOP SHAPE PICKER --- */
+  #shape-bar {
+    display: flex;
+    gap: 16px;
+    padding: 12px;
+    background: #fff;
+    border-bottom: 2px solid #eee;
+    align-items: center;
+  }
+  .shape-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #f0f0ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 26px;
+    transition: transform 0.15s;
+  }
+  .shape-btn:hover {
+    transform: scale(1.15);
+  }
+
+  #gear {
+    margin-left: auto;
+    font-size: 28px;
+    cursor: pointer;
+  }
+
+  /* --- CANVAS AREA --- */
+  #canvas-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas {
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 12px;
+  }
+
+  /* --- BOTTOM SLIDERS --- */
+  #sliders {
+    display: flex;
+    gap: 24px;
+    padding: 12px;
+    background: #fff;
+    border-top: 2px solid #eee;
+    justify-content: center;
+  }
+  .slider-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 14px;
+  }
+  input[type=range] {
+    width: 160px;
+  }
+
+  /* --- RIGHT COLOR PALETTE --- */
+  #palette {
+    position: absolute;
+    right: 12px;
+    top: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .color-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  }
+
+  /* --- FLOATING BUTTONS --- */
+  #float-buttons {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 12px;
+  }
+  .float-btn {
+    padding: 10px 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  /* --- ADVANCED PANEL --- */
+  #advanced-panel {
+    position: absolute;
+    top: 0;
+    right: -320px;
+    width: 300px;
+    height: 100%;
+    background: #fafafa;
+    border-left: 2px solid #ddd;
+    padding: 16px;
+    transition: right 0.3s;
+    overflow-y: auto;
+  }
+  #advanced-panel.open {
+    right: 0;
+  }
+
+  #advanced-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  #close-advanced {
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 8px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+
+  .shape-btn.active {
+    outline: 3px solid #1982c4;
+    outline-offset: 2px;
+  }
+
+  .layer-card {
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+
+  .layer-card.selected {
+    border-color: #1982c4;
+    box-shadow: 0 0 0 2px rgba(25, 130, 196, 0.15);
+  }
+
+  .jump-help {
+    font-size: 12px;
+    color: #666;
+    margin: 4px 0;
+  }
+
+  .jump-preset-row {
+    display: flex;
+    gap: 6px;
+    margin: 4px 0;
+  }
+
+  .jump-preset-row select {
+    flex: 1;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- SHAPE PICKER -->
+<div id="shape-bar">
+  <div class="shape-btn" data-shape="circle">⭕</div>
+  <div class="shape-btn" data-shape="triangle">🔺</div>
+  <div class="shape-btn" data-shape="square">⬜</div>
+  <div class="shape-btn" data-shape="star">⭐</div>
+  <div class="shape-btn" data-shape="heart">❤️</div>
+  <div id="gear">⚙️</div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas-container">
+  <canvas id="myCanvas" resize width="600" height="600"></canvas>
+</div>
+
+<!-- SLIDERS -->
+<div id="sliders">
+  <div class="slider-block">
+    <div>🔵 Holes</div>
+    <input id="holes" type="range" min="3" max="200" value="40">
+  </div>
+  <div class="slider-block">
+    <div>🟣 Jump</div>
+    <input id="jump" type="range" min="1" max="100" value="7">
+  </div>
+  <div class="slider-block">
+    <div>🟠 Width</div>
+    <input id="width" type="range" min="1" max="10" value="2">
+  </div>
+</div>
+
+<!-- COLOR PALETTE -->
+<div id="palette">
+  <div class="color-dot" style="background:#ff595e" data-color="#ff595e"></div>
+  <div class="color-dot" style="background:#ffca3a" data-color="#ffca3a"></div>
+  <div class="color-dot" style="background:#8ac926" data-color="#8ac926"></div>
+  <div class="color-dot" style="background:#1982c4" data-color="#1982c4"></div>
+  <div class="color-dot" style="background:#6a4c93" data-color="#6a4c93"></div>
+  <div class="color-dot" style="background:linear-gradient(45deg, red, orange, yellow, green, blue, purple)" data-color="rainbow"></div>
+</div>
+
+<!-- FLOATING BUTTONS -->
+<div id="float-buttons">
+  <div class="float-btn" id="animate">▶ Watch it stitch</div>
+  <div class="float-btn" id="surprise">🎲 Surprise me</div>
+</div>
+
+<!-- ADVANCED PANEL -->
+<div id="advanced-panel">
+  <div id="advanced-header">
+    <h3>Layers</h3>
+    <button id="close-advanced" type="button">Close</button>
+  </div>
+  <button id="add-layer">Add Layer</button>
+  <div id="layer-controls"></div>
+</div>
+
+<script>
+paper.install(window);
+paper.setup('myCanvas');
+
+/* ------------------------------
+   BASIC STATE
+------------------------------ */
+var holesSlider = document.getElementById('holes');
+var jumpSlider  = document.getElementById('jump');
+var widthSlider = document.getElementById('width');
+var animateBtn  = document.getElementById('animate');
+var surpriseBtn = document.getElementById('surprise');
+var gearBtn     = document.getElementById('gear');
+var closeAdvancedBtn = document.getElementById('close-advanced');
+var advancedPanel = document.getElementById('advanced-panel');
+
+var layers = [
+  {
+    jump: 7,
+    width: 2,
+    color: '#1982c4',
+    sequence: null,
+    jumpMode: 'fixed',
+    jumpFormula: 'jump',
+    jumpSequence: ''
+  }
+];
+var selectedLayerIndex = 0;
+
+var points = [];
+var animationActive = false;
+
+/* ------------------------------
+   RAINBOW HELPER
+------------------------------ */
+function rainbowColor(t) {
+  return new Color({ hue: t * 360, saturation: 1, brightness: 1 });
+}
+
+/* ------------------------------
+   SHAPE GENERATION
+------------------------------ */
+var currentShape = "circle";
+
+function polygonPoint(theta, sides, radius, center) {
+  var sector = (2 * Math.PI) / sides;
+  var a = ((theta % sector) + sector) % sector - sector / 2;
+  var r = radius * Math.cos(Math.PI / sides) / Math.cos(a);
+  return new Point(
+    center.x + r * Math.cos(theta),
+    center.y + r * Math.sin(theta)
+  );
+}
+
+function shapePoint(i, n, center, radius) {
+  var t = (2 * Math.PI * i) / n;
+
+  if (currentShape === 'triangle') {
+    return polygonPoint(t - Math.PI / 2, 3, radius, center);
+  }
+
+  if (currentShape === 'square') {
+    var c = Math.cos(t);
+    var s = Math.sin(t);
+    var m = Math.max(Math.abs(c), Math.abs(s));
+    return new Point(
+      center.x + (radius * c) / m,
+      center.y + (radius * s) / m
+    );
+  }
+
+  if (currentShape === 'star') {
+    var starRadius = radius * (0.62 + 0.38 * Math.cos(5 * t));
+    return new Point(
+      center.x + starRadius * Math.cos(t - Math.PI / 2),
+      center.y + starRadius * Math.sin(t - Math.PI / 2)
+    );
+  }
+
+  if (currentShape === 'heart') {
+    var x = 16 * Math.pow(Math.sin(t), 3);
+    var y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+    var scale = radius / 18;
+    return new Point(
+      center.x + x * scale,
+      center.y - y * scale
+    );
+  }
+
+  return new Point(
+    center.x + radius * Math.cos(t),
+    center.y + radius * Math.sin(t)
+  );
+}
+
+function computePoints() {
+  var n = parseInt(holesSlider.value, 10);
+  var center = view.center;
+  var radius = Math.min(view.size.width, view.size.height) * 0.35;
+
+  points = [];
+
+  for (var i = 0; i < n; i++) {
+    points.push(shapePoint(i, n, center, radius));
+  }
+}
+
+/* ------------------------------
+   DRAWING LAYERS
+------------------------------ */
+function computeSequence(layer) {
+  var n = points.length;
+
+  if (layer.sequence && layer.sequence.type === 'custom') {
+    return layer.sequence.list;
+  }
+
+  var jumpMode = layer.jumpMode || 'fixed';
+  var visited = new Array(n).fill(false);
+  var current = 0;
+  var prev = 0;
+  var seq = [];
+  var maxSteps = n * 4;
+
+  function normalizeJump(value) {
+    var k = Math.round(Number(value));
+    if (!isFinite(k)) return 1;
+    k = k % n;
+    if (k === 0) return 1;
+    return k;
+  }
+
+  function parseJumpSequence(text) {
+    if (!text) return [];
+    return text
+      .split(/[\s,]+/)
+      .map(Number)
+      .filter((num) => isFinite(num))
+      .map((num) => Math.round(num))
+      .filter((num) => num !== 0);
+  }
+
+  var jumpResolver;
+  if (jumpMode === 'sequence') {
+    var stepList = parseJumpSequence(layer.jumpSequence);
+    jumpResolver = function(i) {
+      if (!stepList.length) return normalizeJump(layer.jump);
+      return normalizeJump(stepList[i % stepList.length]);
+    };
+  } else if (jumpMode === 'formula') {
+    var formula = (layer.jumpFormula || 'jump').trim();
+    jumpResolver = function(i, currentIndex, previousIndex) {
+      try {
+        var evaluate = new Function('i', 'n', 'current', 'prev', 'jump', 'return (' + formula + ');');
+        return normalizeJump(evaluate(i, n, currentIndex, previousIndex, layer.jump));
+      } catch (err) {
+        return normalizeJump(layer.jump);
+      }
+    };
+  } else {
+    jumpResolver = function() {
+      return normalizeJump(layer.sequence ? layer.sequence.k : layer.jump);
+    };
+  }
+
+  for (var i = 0; i < maxSteps; i++) {
+    if (visited[current]) break;
+    visited[current] = true;
+    seq.push(current);
+    var step = jumpResolver(i, current, prev);
+    prev = current;
+    current = (current + step) % n;
+    if (current < 0) current += n;
+  }
+  return seq;
+}
+
+function drawLayer(layer) {
+  var seq = computeSequence(layer);
+
+  for (var i = 0; i < seq.length; i++) {
+    var seg = new Path();
+    seg.strokeWidth = layer.width;
+
+    if (layer.color === 'rainbow') {
+      seg.strokeColor = rainbowColor(i / seq.length);
+    } else {
+      seg.strokeColor = layer.color;
+    }
+
+    seg.add(points[seq[i]]);
+    seg.add(points[seq[(i + 1) % seq.length]]);
+  }
+}
+
+/* ------------------------------
+   STATIC DRAW
+------------------------------ */
+function drawStatic() {
+  project.activeLayer.removeChildren();
+  computePoints();
+
+  // Draw holes
+  for (var i = 0; i < points.length; i++) {
+    new Path.Circle(points[i], 3).fillColor = '#333';
+  }
+
+  // Draw layers
+  for (var i = 0; i < layers.length; i++) {
+    drawLayer(layers[i]);
+  }
+}
+
+/* ------------------------------
+   ANIMATION
+------------------------------ */
+function animateStitch() {
+  project.activeLayer.removeChildren();
+  computePoints();
+
+  // Draw holes
+  for (var i = 0; i < points.length; i++) {
+    new Path.Circle(points[i], 3).fillColor = '#333';
+  }
+
+  var layerIndex = 0;
+  var seq = computeSequence(layers[layerIndex]);
+  var step = 0;
+  animationActive = true;
+
+  view.onFrame = function() {
+    if (!animationActive) return;
+
+    if (step < seq.length - 1) {
+      var seg = new Path();
+      seg.strokeWidth = layers[layerIndex].width;
+
+      if (layers[layerIndex].color === 'rainbow') {
+        seg.strokeColor = rainbowColor(step / seq.length);
+      } else {
+        seg.strokeColor = layers[layerIndex].color;
+      }
+
+      seg.add(points[seq[step]]);
+      seg.add(points[seq[step + 1]]);
+      step++;
+    } else {
+      layerIndex++;
+      if (layerIndex >= layers.length) {
+        animationActive = false;
+        return;
+      }
+      seq = computeSequence(layers[layerIndex]);
+      step = 0;
+    }
+  };
+}
+
+/* ------------------------------
+   LAYER UI
+------------------------------ */
+function renderLayerControls() {
+  var container = document.getElementById('layer-controls');
+  container.innerHTML = '';
+
+  if (!layers.length) {
+    selectedLayerIndex = -1;
+    return;
+  }
+  if (selectedLayerIndex < 0 || selectedLayerIndex >= layers.length) {
+    selectedLayerIndex = 0;
+  }
+
+  layers.forEach((layer, index) => {
+    var div = document.createElement('div');
+    div.className = 'layer-card' + (index === selectedLayerIndex ? ' selected' : '');
+
+    div.innerHTML = `
+      <strong>Layer ${index + 1}</strong><br>
+      Color: <input type="color" value="${layer.color}" id="color-${index}"><br>
+      Jump: <input type="range" min="1" max="100" value="${layer.jump}" id="jump-${index}"><br>
+      Jump mode:
+      <select id="jump-mode-${index}">
+        <option value="fixed" ${layer.jumpMode === 'fixed' ? 'selected' : ''}>Fixed</option>
+        <option value="formula" ${layer.jumpMode === 'formula' ? 'selected' : ''}>Formula</option>
+        <option value="sequence" ${layer.jumpMode === 'sequence' ? 'selected' : ''}>Sequence</option>
+      </select><br>
+      Formula: <input type="text" value="${layer.jumpFormula || 'jump'}" id="jump-formula-${index}" placeholder="e.g. jump + i"><br>
+      <div class="jump-help">Vars: i, n, current, prev, jump</div>
+      <div class="jump-preset-row">
+        <select id="jump-preset-${index}">
+          <option value="">Preset formulas...</option>
+          <option value="jump + i">Growing spiral (jump + i)</option>
+          <option value="jump + (i % 5)">Wobble (jump + i % 5)</option>
+          <option value="jump * ((i % 3) + 1)">Pulse (jump * ((i % 3) + 1))</option>
+          <option value="(current % 7) + jump">Current-based ((current % 7) + jump)</option>
+        </select>
+        <button type="button" id="use-preset-${index}">Use</button>
+      </div>
+      Sequence: <input type="text" value="${layer.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
+      Width: <input type="range" min="1" max="10" value="${layer.width}" id="width-${index}"><br>
+      Rainbow: <input type="checkbox" id="rainbow-${index}" ${layer.color === 'rainbow' ? 'checked' : ''}><br>
+      <button id="delete-${index}">Delete</button>
+    `;
+
+    container.appendChild(div);
+
+    div.addEventListener('click', (event) => {
+      if (event.target.closest('input, select, button')) return;
+      selectedLayerIndex = index;
+      renderLayerControls();
+    });
+
+    document.getElementById(`color-${index}`).addEventListener('input', e => {
+      layer.color = e.target.value;
+      drawStatic();
+    });
+
+    document.getElementById(`jump-${index}`).addEventListener('input', e => {
+      layer.jump = parseInt(e.target.value, 10);
+      drawStatic();
+    });
+
+    document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
+      layer.jumpMode = e.target.value;
+      renderLayerControls();
+      drawStatic();
+    });
+
+    document.getElementById(`jump-formula-${index}`).addEventListener('input', e => {
+      layer.jumpFormula = e.target.value;
+      if (layer.jumpMode === 'formula') {
+        drawStatic();
+      }
+    });
+
+    document.getElementById(`use-preset-${index}`).addEventListener('click', () => {
+      var preset = document.getElementById(`jump-preset-${index}`).value;
+      if (!preset) return;
+      layer.jumpFormula = preset;
+      layer.jumpMode = 'formula';
+      renderLayerControls();
+      drawStatic();
+    });
+
+    document.getElementById(`jump-sequence-${index}`).addEventListener('input', e => {
+      layer.jumpSequence = e.target.value;
+      if (layer.jumpMode === 'sequence') {
+        drawStatic();
+      }
+    });
+
+    document.getElementById(`width-${index}`).addEventListener('input', e => {
+      layer.width = parseInt(e.target.value, 10);
+      drawStatic();
+    });
+
+    document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
+      layer.color = e.target.checked ? 'rainbow' : '#000000';
+      drawStatic();
+    });
+
+    document.getElementById(`delete-${index}`).addEventListener('click', () => {
+      layers.splice(index, 1);
+      if (!layers.length) {
+        selectedLayerIndex = -1;
+      } else if (selectedLayerIndex >= layers.length) {
+        selectedLayerIndex = layers.length - 1;
+      }
+      renderLayerControls();
+      drawStatic();
+    });
+  });
+}
+
+/* ------------------------------
+   EVENT LISTENERS
+------------------------------ */
+holesSlider.addEventListener('input', drawStatic);
+jumpSlider.addEventListener('input', () => {
+  layers[0].jump = parseInt(jumpSlider.value, 10);
+  drawStatic();
+});
+widthSlider.addEventListener('input', () => {
+  layers[0].width = parseInt(widthSlider.value, 10);
+  drawStatic();
+});
+
+animateBtn.addEventListener('click', animateStitch);
+
+surpriseBtn.addEventListener('click', () => {
+  holesSlider.value = Math.floor(Math.random() * 150) + 20;
+  jumpSlider.value = Math.floor(Math.random() * 50) + 1;
+  widthSlider.value = Math.floor(Math.random() * 8) + 1;
+  layers[0].color = 'rainbow';
+  drawStatic();
+});
+
+gearBtn.addEventListener('click', () => {
+  advancedPanel.classList.toggle('open');
+});
+
+closeAdvancedBtn.addEventListener('click', () => {
+  advancedPanel.classList.remove('open');
+});
+
+document.querySelectorAll('.color-dot').forEach((dot) => {
+  dot.addEventListener('click', () => {
+    if (!layers.length) return;
+    var targetIndex = selectedLayerIndex;
+    if (targetIndex < 0 || targetIndex >= layers.length) {
+      targetIndex = 0;
+    }
+    layers[targetIndex].color = dot.getAttribute('data-color') || '#1982c4';
+    renderLayerControls();
+    drawStatic();
+  });
+});
+
+document.querySelectorAll('.shape-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    currentShape = btn.getAttribute('data-shape') || 'circle';
+    document.querySelectorAll('.shape-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    drawStatic();
+  });
+});
+
+document.getElementById('add-layer').addEventListener('click', () => {
+  layers.push({
+    jump: Math.floor(Math.random() * 20) + 1,
+    width: 2,
+    color: '#'+Math.floor(Math.random()*16777215).toString(16),
+    sequence: null,
+    jumpMode: 'fixed',
+    jumpFormula: 'jump',
+    jumpSequence: ''
+  });
+  selectedLayerIndex = layers.length - 1;
+  renderLayerControls();
+  drawStatic();
+});
+
+/* ------------------------------
+   INITIALIZE
+------------------------------ */
+renderLayerControls();
+document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
+drawStatic();
+
+</script>
+</body>
+</html>
