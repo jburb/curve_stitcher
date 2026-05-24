@@ -71,19 +71,111 @@
     border-top: 2px solid #eee;
     justify-content: center;
   }
-  .kid-thread-indicator {
+  .kid-thread-tools {
     width: 100%;
-    text-align: center;
-    font-size: 12px;
-    color: #5a6575;
-    margin-bottom: 2px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
   }
-  .kid-thread-indicator span {
-    display: inline-block;
-    padding: 2px 10px;
+  .kid-thread-btn {
+    border: 1px solid #d4dbe8;
+    background: #ffffff;
+    color: #213047;
     border-radius: 999px;
-    background: #f1f3fa;
-    border: 1px solid #e1e5ef;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .kid-thread-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .kid-thread-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #4f5f77;
+    background: #eef3ff;
+    border: 1px solid #d7e0f3;
+    border-radius: 999px;
+    padding: 4px 8px;
+    position: relative;
+  }
+  .kid-thread-toggle {
+    border: 1px solid #cfd9ef;
+    border-radius: 999px;
+    background: #fff;
+    color: #213047;
+    font-size: 12px;
+    padding: 2px 8px;
+    min-width: 180px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .kid-thread-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .kid-thread-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .thread-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.2);
+    flex: 0 0 auto;
+    background: #1982c4;
+  }
+  .kid-thread-current-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kid-thread-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 230px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #d7e0f3;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    padding: 6px;
+    z-index: 20;
+  }
+  .kid-thread-menu[hidden] {
+    display: none;
+  }
+  .kid-thread-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 8px;
+    text-align: left;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #213047;
+    cursor: pointer;
+  }
+  .kid-thread-option:hover {
+    background: #f2f6ff;
+  }
+  .kid-thread-option.active {
+    background: #e8f0ff;
   }
   .slider-block {
     display: flex;
@@ -234,7 +326,20 @@
 
 <!-- SLIDERS -->
 <div id="sliders">
-  <div class="kid-thread-indicator" id="kid-thread-indicator"><span id="kid-thread-label">Editing Thread 1</span></div>
+  <div class="kid-thread-tools">
+    <button id="add-magic-thread" class="kid-thread-btn" type="button">Add Thread</button>
+    <button id="remove-last-thread" class="kid-thread-btn" type="button">Remove Last Thread</button>
+    <div class="kid-thread-picker" id="kid-thread-picker">Stitching:
+      <button id="kid-thread-toggle" class="kid-thread-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="kid-thread-current">
+          <span class="thread-swatch" id="kid-thread-active-swatch"></span>
+          <span class="kid-thread-current-label" id="kid-thread-active-label">Thread 1</span>
+        </span>
+        <span aria-hidden="true">▾</span>
+      </button>
+      <div id="kid-thread-menu" class="kid-thread-menu" role="listbox" hidden></div>
+    </div>
+  </div>
   <div class="slider-block">
     <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">40</span></div>
     <input id="holes" type="range" min="3" max="200" value="40">
@@ -285,8 +390,13 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
-var kidThreadIndicator = document.getElementById('kid-thread-indicator');
-var kidThreadLabel = document.getElementById('kid-thread-label');
+var addMagicThreadBtn = document.getElementById('add-magic-thread');
+var removeLastThreadBtn = document.getElementById('remove-last-thread');
+var kidThreadPicker = document.getElementById('kid-thread-picker');
+var kidThreadToggle = document.getElementById('kid-thread-toggle');
+var kidThreadMenu = document.getElementById('kid-thread-menu');
+var kidThreadActiveSwatch = document.getElementById('kid-thread-active-swatch');
+var kidThreadActiveLabel = document.getElementById('kid-thread-active-label');
 var holesValue  = document.getElementById('holes-value');
 var jumpValue   = document.getElementById('jump-value');
 var widthValue  = document.getElementById('width-value');
@@ -312,10 +422,99 @@ var selectedThreadIndex = 0;
 var points = [];
 var animationActive = false;
 
+var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
+
 function updateKidControlValues() {
   holesValue.textContent = holesSlider.value;
   jumpValue.textContent = jumpSlider.value;
   widthValue.textContent = widthSlider.value;
+}
+
+function createThread(config) {
+  return {
+    jump: config.jump,
+    width: config.width,
+    color: config.color,
+    sequence: null,
+    jumpMode: 'fixed',
+    jumpFormula: 'jump',
+    jumpSequence: ''
+  };
+}
+
+function buildMagicThread() {
+  var baseIndex = threads.length ? Math.max(0, selectedThreadIndex) : 0;
+  var base = threads[baseIndex] || createThread({ jump: 7, width: 2, color: '#1982c4' });
+  var jumpShift = (Math.floor(Math.random() * 7) + 2);
+  var nextJump = base.jump + jumpShift;
+  if (nextJump > 100) nextJump = ((nextJump - 1) % 100) + 1;
+
+  var widthShift = Math.random() < 0.5 ? 0 : 1;
+  var nextWidth = Math.min(10, Math.max(1, base.width + widthShift));
+
+  var colorPick = magicThreadColors[Math.floor(Math.random() * magicThreadColors.length)];
+  if (threads.length && threads[threads.length - 1].color === colorPick) {
+    colorPick = magicThreadColors[(magicThreadColors.indexOf(colorPick) + 1) % magicThreadColors.length];
+  }
+
+  return createThread({
+    jump: nextJump,
+    width: nextWidth,
+    color: colorPick
+  });
+}
+
+function applyThreadSwatchStyle(element, color) {
+  if (!element) return;
+  if (color === 'rainbow') {
+    element.style.background = 'linear-gradient(45deg, red, orange, yellow, green, blue, purple)';
+  } else {
+    element.style.background = color || '#1982c4';
+  }
+}
+
+function refreshKidThreadPicker() {
+  kidThreadMenu.innerHTML = '';
+  removeLastThreadBtn.disabled = threads.length <= 1;
+
+  if (!threads.length) {
+    kidThreadToggle.disabled = true;
+    kidThreadActiveLabel.textContent = 'No threads';
+    applyThreadSwatchStyle(kidThreadActiveSwatch, '#cccccc');
+    return;
+  }
+
+  kidThreadToggle.disabled = false;
+
+  for (var i = 0; i < threads.length; i++) {
+    var thread = threads[i];
+    var option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'kid-thread-option' + (i === selectedThreadIndex ? ' active' : '');
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', i === selectedThreadIndex ? 'true' : 'false');
+    option.dataset.index = String(i);
+
+    var swatch = document.createElement('span');
+    swatch.className = 'thread-swatch';
+    applyThreadSwatchStyle(swatch, thread.color);
+
+    var label = document.createElement('span');
+    var colorLabel = thread.color === 'rainbow' ? 'Rainbow' : thread.color.toUpperCase();
+    label.textContent = 'Thread ' + (i + 1) + ' (' + colorLabel + ')';
+
+    option.appendChild(swatch);
+    option.appendChild(label);
+    kidThreadMenu.appendChild(option);
+  }
+
+  var selectedIndex = getKidTargetThreadIndex();
+  var selectedThread = threads[selectedIndex];
+  if (selectedThread) {
+    var selectedLabel = selectedThread.color === 'rainbow' ? 'Rainbow' : selectedThread.color.toUpperCase();
+    kidThreadActiveLabel.textContent = 'Thread ' + (selectedIndex + 1) + ' (' + selectedLabel + ')';
+    applyThreadSwatchStyle(kidThreadActiveSwatch, selectedThread.color);
+  }
 }
 
 function getKidTargetThreadIndex() {
@@ -328,14 +527,10 @@ function getKidTargetThreadIndex() {
 
 function syncKidControlsFromSelectedThread() {
   var index = getKidTargetThreadIndex();
-  kidThreadIndicator.style.display = threads.length > 1 ? 'block' : 'none';
-  if (index < 0) {
-    kidThreadLabel.textContent = 'No thread selected';
-    return;
-  }
+  refreshKidThreadPicker();
+  if (index < 0) return;
   jumpSlider.value = threads[index].jump;
   widthSlider.value = threads[index].width;
-  kidThreadLabel.textContent = 'Editing Thread ' + (index + 1);
   updateKidControlValues();
 }
 
@@ -574,6 +769,7 @@ function renderThreadControls() {
 
   if (!threads.length) {
     selectedThreadIndex = -1;
+    refreshKidThreadPicker();
     return;
   }
   if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
@@ -623,6 +819,7 @@ function renderThreadControls() {
 
     document.getElementById(`color-${index}`).addEventListener('input', e => {
       thread.color = e.target.value;
+      syncKidControlsFromSelectedThread();
       drawStatic();
     });
 
@@ -675,6 +872,7 @@ function renderThreadControls() {
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
       thread.color = e.target.checked ? 'rainbow' : '#000000';
+      syncKidControlsFromSelectedThread();
       drawStatic();
     });
 
@@ -765,17 +963,59 @@ document.querySelectorAll('.shape-btn').forEach((btn) => {
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {
-  threads.push({
-    jump: Math.floor(Math.random() * 20) + 1,
-    width: 2,
-    color: '#'+Math.floor(Math.random()*16777215).toString(16),
-    sequence: null,
-    jumpMode: 'fixed',
-    jumpFormula: 'jump',
-    jumpSequence: ''
-  });
+  threads.push(buildMagicThread());
   selectedThreadIndex = threads.length - 1;
   renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  drawStatic();
+});
+
+kidThreadToggle.addEventListener('click', () => {
+  var isOpen = !kidThreadMenu.hasAttribute('hidden');
+  if (isOpen) {
+    kidThreadMenu.setAttribute('hidden', '');
+    kidThreadToggle.setAttribute('aria-expanded', 'false');
+  } else {
+    kidThreadMenu.removeAttribute('hidden');
+    kidThreadToggle.setAttribute('aria-expanded', 'true');
+  }
+});
+
+kidThreadMenu.addEventListener('click', (event) => {
+  var option = event.target.closest('.kid-thread-option');
+  if (!option) return;
+  var nextIndex = parseInt(option.dataset.index, 10);
+  if (!isFinite(nextIndex) || nextIndex < 0 || nextIndex >= threads.length) return;
+  selectedThreadIndex = nextIndex;
+  kidThreadMenu.setAttribute('hidden', '');
+  kidThreadToggle.setAttribute('aria-expanded', 'false');
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  drawStatic();
+});
+
+document.addEventListener('click', (event) => {
+  if (kidThreadMenu.hasAttribute('hidden')) return;
+  if (kidThreadPicker.contains(event.target)) return;
+  kidThreadMenu.setAttribute('hidden', '');
+  kidThreadToggle.setAttribute('aria-expanded', 'false');
+});
+
+addMagicThreadBtn.addEventListener('click', () => {
+  threads.push(buildMagicThread());
+  // Keep basic controls focused on the newest magic thread.
+  selectedThreadIndex = threads.length - 1;
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  drawStatic();
+});
+
+removeLastThreadBtn.addEventListener('click', () => {
+  if (threads.length <= 1) return;
+  threads.pop();
+  selectedThreadIndex = threads.length - 1;
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
   drawStatic();
 });
 
@@ -785,6 +1025,7 @@ document.getElementById('add-thread').addEventListener('click', () => {
 renderThreadControls();
 document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
 updateKidControlValues();
+refreshKidThreadPicker();
 drawStatic();
 
 </script>
