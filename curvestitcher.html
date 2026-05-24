@@ -1015,8 +1015,7 @@ function polygonPoint(theta, sides, radius, center) {
   );
 }
 
-function shapePoint(i, n, center, radius) {
-  var t = (2 * Math.PI * i) / n;
+function shapePointAtAngle(t, center, radius) {
 
   if (currentShape === 'triangle') {
     return polygonPoint(t - Math.PI / 2, 3, radius, center);
@@ -1056,6 +1055,61 @@ function shapePoint(i, n, center, radius) {
   );
 }
 
+function buildShapeBoundarySamples(sampleCount, center, radius) {
+  var samples = [];
+  for (var i = 0; i < sampleCount; i++) {
+    var t = (2 * Math.PI * i) / sampleCount;
+    samples.push(shapePointAtAngle(t, center, radius));
+  }
+  return samples;
+}
+
+function sampleEvenlyAlongClosedPolyline(vertices, count) {
+  if (!vertices || !vertices.length || count <= 0) return [];
+
+  var edgeLengths = [];
+  var totalLength = 0;
+
+  for (var i = 0; i < vertices.length; i++) {
+    var start = vertices[i];
+    var end = vertices[(i + 1) % vertices.length];
+    var edgeLength = start.getDistance(end);
+    edgeLengths.push(edgeLength);
+    totalLength += edgeLength;
+  }
+
+  if (!isFinite(totalLength) || totalLength <= 0) {
+    return [vertices[0]];
+  }
+
+  var result = [];
+  var stepLength = totalLength / count;
+  var edgeIndex = 0;
+  var traversed = 0;
+
+  for (var targetIndex = 0; targetIndex < count; targetIndex++) {
+    var targetDistance = targetIndex * stepLength;
+
+    while (
+      edgeIndex < edgeLengths.length - 1 &&
+      traversed + edgeLengths[edgeIndex] < targetDistance
+    ) {
+      traversed += edgeLengths[edgeIndex];
+      edgeIndex++;
+    }
+
+    var edgeStart = vertices[edgeIndex];
+    var edgeEnd = vertices[(edgeIndex + 1) % vertices.length];
+    var edgeLen = edgeLengths[edgeIndex];
+    var localDistance = targetDistance - traversed;
+    var ratio = edgeLen > 0 ? localDistance / edgeLen : 0;
+
+    result.push(edgeStart.add(edgeEnd.subtract(edgeStart).multiply(ratio)));
+  }
+
+  return result;
+}
+
 function computePoints() {
   var n = parseInt(holesSlider.value, 10);
   var center = view.center;
@@ -1063,9 +1117,19 @@ function computePoints() {
 
   points = [];
 
-  for (var i = 0; i < n; i++) {
-    points.push(shapePoint(i, n, center, radius));
+  // Circle already has exact uniform spacing with equal-angle sampling.
+  if (currentShape === 'circle') {
+    for (var i = 0; i < n; i++) {
+      var t = (2 * Math.PI * i) / n;
+      points.push(shapePointAtAngle(t, center, radius));
+    }
+    return;
   }
+
+  // Non-circular shapes need perimeter-based resampling for visual uniformity.
+  var sampleCount = Math.max(360, n * 12);
+  var boundarySamples = buildShapeBoundarySamples(sampleCount, center, radius);
+  points = sampleEvenlyAlongClosedPolyline(boundarySamples, n);
 }
 
 /* ------------------------------
@@ -1156,8 +1220,14 @@ function drawThread(thread) {
   }
 }
 
+function shouldShowHoleNumbersNow() {
+  var holeCount = parseInt(holesSlider.value, 10);
+  if (!isFinite(holeCount)) return false;
+  return showHoleNumbers && holeCount <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
+}
+
 function drawHoles() {
-  var numbersVisible = showHoleNumbers && points.length <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
+  var numbersVisible = shouldShowHoleNumbersNow();
   holeNumberLabelsByIndex = Object.create(null);
   highlightedHoleNumbers = [];
   for (var i = 0; i < points.length; i++) {
@@ -1175,12 +1245,16 @@ function drawHoles() {
 }
 
 function bringHoleNumbersToFront() {
-  if (!showHoleNumbers || points.length > HOLE_NUMBER_AUTO_HIDE_THRESHOLD) return;
+  if (!shouldShowHoleNumbersNow()) return;
   var children = project.activeLayer.children;
+  var labels = [];
   for (var i = 0; i < children.length; i++) {
     if (children[i] instanceof PointText) {
-      children[i].bringToFront();
+      labels.push(children[i]);
     }
+  }
+  for (var j = 0; j < labels.length; j++) {
+    labels[j].bringToFront();
   }
 }
 
@@ -1507,17 +1581,23 @@ document.addEventListener('blur', function(event) {
   settleSliderMotion(slider);
 }, true);
 
-holesSlider.addEventListener('input', () => {
+function handleHolesSliderChange() {
   updateKidControlValues();
   // Hole count changes point geometry and stitch path.
   redrawForPathChange();
-});
-advancedHolesSlider.addEventListener('input', () => {
+}
+
+function handleAdvancedHolesSliderChange() {
   holesSlider.value = advancedHolesSlider.value;
   updateKidControlValues();
   // Hole count changes point geometry and stitch path.
   redrawForPathChange();
-});
+}
+
+holesSlider.addEventListener('input', handleHolesSliderChange);
+holesSlider.addEventListener('change', handleHolesSliderChange);
+advancedHolesSlider.addEventListener('input', handleAdvancedHolesSliderChange);
+advancedHolesSlider.addEventListener('change', handleAdvancedHolesSliderChange);
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
   syncHoleNumberToggles();
