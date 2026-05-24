@@ -75,6 +75,19 @@
     border-radius: 12px;
   }
 
+  /* --- ACTIVITY BAR (PALETTE + FUN BUTTONS) --- */
+  #activity-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 8px 12px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+  }
+
   /* --- BOTTOM SLIDERS --- */
   #sliders {
     display: flex;
@@ -86,8 +99,9 @@
     justify-content: center;
   }
   .kid-thread-tools {
-    width: 100%;
+    width: auto;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     gap: 10px;
@@ -123,8 +137,8 @@
     background: #fff;
     color: #213047;
     font-size: 12px;
-    padding: 2px 8px;
-    min-width: 180px;
+    padding: 2px 6px;
+    max-width: 130px;
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
@@ -216,34 +230,28 @@
     width: 160px;
   }
 
-  /* --- RIGHT COLOR PALETTE --- */
+  /* --- COLOR PALETTE --- */
   #palette {
-    position: absolute;
-    right: 12px;
-    top: 100px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: row;
+    gap: 10px;
   }
   .color-dot {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid #fff;
     box-shadow: 0 0 4px rgba(0,0,0,0.2);
   }
 
-  /* --- FLOATING BUTTONS --- */
+  /* --- FUN BUTTONS --- */
   #float-buttons {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
     display: flex;
     gap: 12px;
   }
   .float-btn {
-    padding: 10px 16px;
+    padding: 8px 14px;
     background: #fff;
     border-radius: 12px;
     border: 2px solid #ddd;
@@ -319,6 +327,28 @@
   .jump-preset-row select {
     flex: 1;
   }
+
+  .advanced-global-controls {
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    margin: 10px 0 12px;
+    font-size: 13px;
+  }
+
+  .advanced-inline-value {
+    display: inline-block;
+    min-width: 28px;
+    text-align: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #eef3ff;
+    color: #2f4368;
+    font-size: 12px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
 </style>
 </head>
 
@@ -341,8 +371,24 @@
   </div>
 </div>
 
-<!-- SLIDERS -->
-<div id="sliders">
+<!-- ACTIVITY BAR -->
+<div id="activity-bar">
+  <!-- FUN BUTTONS -->
+  <div id="float-buttons">
+    <div class="float-btn" id="animate">▶ Watch it stitch</div>
+    <div class="float-btn" id="surprise">🎲 Surprise me</div>
+  </div>
+
+  <!-- COLOR PALETTE -->
+  <div id="palette">
+    <div class="color-dot" style="background:#ff595e" data-color="#ff595e"></div>
+    <div class="color-dot" style="background:#ffca3a" data-color="#ffca3a"></div>
+    <div class="color-dot" style="background:#8ac926" data-color="#8ac926"></div>
+    <div class="color-dot" style="background:#1982c4" data-color="#1982c4"></div>
+    <div class="color-dot" style="background:#6a4c93" data-color="#6a4c93"></div>
+    <div class="color-dot" style="background:linear-gradient(45deg, red, orange, yellow, green, blue, purple)" data-color="rainbow"></div>
+  </div>
+
   <div class="kid-thread-tools">
     <button id="add-magic-thread" class="kid-thread-btn" type="button">Add Thread</button>
     <button id="remove-last-thread" class="kid-thread-btn" type="button">Remove Last Thread</button>
@@ -357,34 +403,22 @@
       <div id="kid-thread-menu" class="kid-thread-menu" role="listbox" hidden></div>
     </div>
   </div>
+</div>
+
+<!-- SLIDERS -->
+<div id="sliders">
   <div class="slider-block">
-    <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">40</span></div>
-    <input id="holes" type="range" min="3" max="200" value="40">
+    <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">35</span></div>
+    <input id="holes" type="range" min="3" max="200" value="35">
   </div>
   <div class="slider-block">
-    <div class="slider-label">🟣 Jump <span class="slider-value" id="jump-value">7</span></div>
-    <input id="jump" type="range" min="1" max="100" value="7">
+    <div class="slider-label">🟣 Skip <span class="slider-value" id="jump-value">22</span></div>
+    <input id="jump" type="range" min="1" max="100" value="22">
   </div>
   <div class="slider-block">
-    <div class="slider-label">🟠 Width <span class="slider-value" id="width-value">2</span></div>
+    <div class="slider-label">🟠 Thread Size <span class="slider-value" id="width-value">2</span></div>
     <input id="width" type="range" min="1" max="10" value="2">
   </div>
-</div>
-
-<!-- COLOR PALETTE -->
-<div id="palette">
-  <div class="color-dot" style="background:#ff595e" data-color="#ff595e"></div>
-  <div class="color-dot" style="background:#ffca3a" data-color="#ffca3a"></div>
-  <div class="color-dot" style="background:#8ac926" data-color="#8ac926"></div>
-  <div class="color-dot" style="background:#1982c4" data-color="#1982c4"></div>
-  <div class="color-dot" style="background:#6a4c93" data-color="#6a4c93"></div>
-  <div class="color-dot" style="background:linear-gradient(45deg, red, orange, yellow, green, blue, purple)" data-color="rainbow"></div>
-</div>
-
-<!-- FLOATING BUTTONS -->
-<div id="float-buttons">
-  <div class="float-btn" id="animate">▶ Watch it stitch</div>
-  <div class="float-btn" id="surprise">🎲 Surprise me</div>
 </div>
 
 <!-- ADVANCED PANEL -->
@@ -394,6 +428,9 @@
     <button id="close-advanced" type="button">Close</button>
   </div>
   <button id="add-thread">Add Thread</button>
+  <div class="advanced-global-controls">
+    Holes: <input id="advanced-holes" type="range" min="3" max="200" value="35"><span class="advanced-inline-value" id="advanced-holes-value">35</span>
+  </div>
   <div id="thread-controls"></div>
 </div>
 
@@ -407,6 +444,8 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
+var advancedHolesSlider = document.getElementById('advanced-holes');
+var advancedHolesValue = document.getElementById('advanced-holes-value');
 var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
@@ -426,12 +465,12 @@ var advancedPanel = document.getElementById('advanced-panel');
 
 var threads = [
   {
-    jump: 7,
+    jump: 22,
     width: 2,
     color: '#1982c4',
     sequence: null,
     jumpMode: 'fixed',
-    jumpFormula: 'jump',
+    jumpFormula: 'skip',
     jumpSequence: ''
   }
 ];
@@ -441,12 +480,18 @@ var points = [];
 var animationActive = false;
 var canvasResizeObserver = null;
 
+var DEFAULT_HOLES = 35;
+var DEFAULT_SKIP = 22;
+var DEFAULT_THREAD_SIZE = 2;
+
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 
 function updateKidControlValues() {
   holesValue.textContent = holesSlider.value;
   jumpValue.textContent = jumpSlider.value;
   widthValue.textContent = widthSlider.value;
+  advancedHolesSlider.value = holesSlider.value;
+  advancedHolesValue.textContent = holesSlider.value;
 }
 
 function createThread(config) {
@@ -456,14 +501,14 @@ function createThread(config) {
     color: config.color,
     sequence: null,
     jumpMode: 'fixed',
-    jumpFormula: 'jump',
+    jumpFormula: 'skip',
     jumpSequence: ''
   };
 }
 
 function buildMagicThread() {
   var baseIndex = threads.length ? Math.max(0, selectedThreadIndex) : 0;
-  var base = threads[baseIndex] || createThread({ jump: 7, width: 2, color: '#1982c4' });
+  var base = threads[baseIndex] || createThread({ jump: 22, width: 2, color: '#1982c4' });
   var jumpShift = (Math.floor(Math.random() * 7) + 2);
   var nextJump = base.jump + jumpShift;
   if (nextJump > 100) nextJump = ((nextJump - 1) % 100) + 1;
@@ -519,8 +564,7 @@ function refreshKidThreadPicker() {
     applyThreadSwatchStyle(swatch, thread.color);
 
     var label = document.createElement('span');
-    var colorLabel = thread.color === 'rainbow' ? 'Rainbow' : thread.color.toUpperCase();
-    label.textContent = 'Thread ' + (i + 1) + ' (' + colorLabel + ')';
+    label.textContent = 'Thread ' + (i + 1);
 
     option.appendChild(swatch);
     option.appendChild(label);
@@ -530,8 +574,7 @@ function refreshKidThreadPicker() {
   var selectedIndex = getKidTargetThreadIndex();
   var selectedThread = threads[selectedIndex];
   if (selectedThread) {
-    var selectedLabel = selectedThread.color === 'rainbow' ? 'Rainbow' : selectedThread.color.toUpperCase();
-    kidThreadActiveLabel.textContent = 'Thread ' + (selectedIndex + 1) + ' (' + selectedLabel + ')';
+    kidThreadActiveLabel.textContent = 'Thread ' + (selectedIndex + 1);
     applyThreadSwatchStyle(kidThreadActiveSwatch, selectedThread.color);
   }
 }
@@ -550,6 +593,23 @@ function syncKidControlsFromSelectedThread() {
   if (index < 0) return;
   jumpSlider.value = threads[index].jump;
   widthSlider.value = threads[index].width;
+  updateKidControlValues();
+}
+
+function applyDefaultHoles() {
+  holesSlider.value = String(DEFAULT_HOLES);
+  advancedHolesSlider.value = String(DEFAULT_HOLES);
+  updateKidControlValues();
+}
+
+function applyDefaultSkipAndSize() {
+  var targetIndex = getKidTargetThreadIndex();
+  if (targetIndex >= 0 && threads[targetIndex]) {
+    threads[targetIndex].jump = DEFAULT_SKIP;
+    threads[targetIndex].width = DEFAULT_THREAD_SIZE;
+  }
+  jumpSlider.value = String(DEFAULT_SKIP);
+  widthSlider.value = String(DEFAULT_THREAD_SIZE);
   updateKidControlValues();
 }
 
@@ -694,11 +754,11 @@ function computeSequence(thread) {
       return normalizeJump(stepList[i % stepList.length]);
     };
   } else if (jumpMode === 'formula') {
-    var formula = (thread.jumpFormula || 'jump').trim();
+    var formula = (thread.jumpFormula || 'skip').trim();
     jumpResolver = function(i, currentIndex, previousIndex) {
       try {
-        var evaluate = new Function('i', 'n', 'current', 'prev', 'jump', 'return (' + formula + ');');
-        return normalizeJump(evaluate(i, n, currentIndex, previousIndex, thread.jump));
+        var evaluate = new Function('i', 'n', 'current', 'prev', 'skip', 'jump', 'return (' + formula + ');');
+        return normalizeJump(evaluate(i, n, currentIndex, previousIndex, thread.jump, thread.jump));
       } catch (err) {
         return normalizeJump(thread.jump);
       }
@@ -822,30 +882,42 @@ function renderThreadControls() {
     var div = document.createElement('div');
     div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
 
+    var isFixedMode = thread.jumpMode === 'fixed';
+    var isFormulaMode = thread.jumpMode === 'formula';
+    var isSequenceMode = thread.jumpMode === 'sequence';
+
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
       Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
-      Jump: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><br>
-      Jump mode:
+      Skip mode:
       <select id="jump-mode-${index}">
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Fixed</option>
         <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Formula</option>
         <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Sequence</option>
       </select><br>
-      Formula: <input type="text" value="${thread.jumpFormula || 'jump'}" id="jump-formula-${index}" placeholder="e.g. jump + i"><br>
-      <div class="jump-help">Vars: i, n, current, prev, jump</div>
+      ${isFixedMode ? `
+      Skip: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      ` : ''}
+      ${isFormulaMode ? `
+      Base skip: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Formula: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. skip + i"><br>
+      <div class="jump-help">Vars: i, n, current, prev, skip</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
-          <option value="jump + i">Growing spiral (jump + i)</option>
-          <option value="jump + (i % 5)">Wobble (jump + i % 5)</option>
-          <option value="jump * ((i % 3) + 1)">Pulse (jump * ((i % 3) + 1))</option>
-          <option value="(current % 7) + jump">Current-based ((current % 7) + jump)</option>
+          <option value="skip + i">Growing spiral (skip + i)</option>
+          <option value="skip + (i % 5)">Wobble (skip + i % 5)</option>
+          <option value="skip * ((i % 3) + 1)">Pulse (skip * ((i % 3) + 1))</option>
+          <option value="(current % 7) + skip">Current-based ((current % 7) + skip)</option>
         </select>
         <button type="button" id="use-preset-${index}">Use</button>
       </div>
-      Sequence: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
-      Width: <input type="range" min="1" max="10" value="${thread.width}" id="width-${index}"><br>
+      ` : ''}
+      ${isSequenceMode ? `
+      Skip sequence: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
+      <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
+      ` : ''}
+      Size: <input type="range" min="1" max="10" value="${thread.width}" id="width-${index}"><span class="advanced-inline-value" id="adv-size-value-${index}">${thread.width}</span><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
       <button id="delete-${index}">Delete</button>
     `;
@@ -865,14 +937,21 @@ function renderThreadControls() {
       drawStatic();
     });
 
-    document.getElementById(`jump-${index}`).addEventListener('input', e => {
-      thread.jump = parseInt(e.target.value, 10);
-      if (index === getKidTargetThreadIndex()) {
-        jumpSlider.value = thread.jump;
-        updateKidControlValues();
-      }
-      drawStatic();
-    });
+    var skipInput = document.getElementById(`jump-${index}`);
+    if (skipInput) {
+      skipInput.addEventListener('input', e => {
+        thread.jump = parseInt(e.target.value, 10);
+        var skipValueChip = document.getElementById(`adv-skip-value-${index}`);
+        if (skipValueChip) {
+          skipValueChip.textContent = String(thread.jump);
+        }
+        if (index === getKidTargetThreadIndex()) {
+          jumpSlider.value = thread.jump;
+          updateKidControlValues();
+        }
+        drawStatic();
+      });
+    }
 
     document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
       thread.jumpMode = e.target.value;
@@ -880,31 +959,44 @@ function renderThreadControls() {
       drawStatic();
     });
 
-    document.getElementById(`jump-formula-${index}`).addEventListener('input', e => {
-      thread.jumpFormula = e.target.value;
-      if (thread.jumpMode === 'formula') {
-        drawStatic();
-      }
-    });
+    var formulaInput = document.getElementById(`jump-formula-${index}`);
+    if (formulaInput) {
+      formulaInput.addEventListener('input', e => {
+        thread.jumpFormula = e.target.value;
+        if (thread.jumpMode === 'formula') {
+          drawStatic();
+        }
+      });
+    }
 
-    document.getElementById(`use-preset-${index}`).addEventListener('click', () => {
-      var preset = document.getElementById(`jump-preset-${index}`).value;
-      if (!preset) return;
-      thread.jumpFormula = preset;
-      thread.jumpMode = 'formula';
-      renderThreadControls();
-      drawStatic();
-    });
-
-    document.getElementById(`jump-sequence-${index}`).addEventListener('input', e => {
-      thread.jumpSequence = e.target.value;
-      if (thread.jumpMode === 'sequence') {
+    var usePresetBtn = document.getElementById(`use-preset-${index}`);
+    if (usePresetBtn) {
+      usePresetBtn.addEventListener('click', () => {
+        var preset = document.getElementById(`jump-preset-${index}`).value;
+        if (!preset) return;
+        thread.jumpFormula = preset;
+        thread.jumpMode = 'formula';
+        renderThreadControls();
         drawStatic();
-      }
-    });
+      });
+    }
+
+    var sequenceInput = document.getElementById(`jump-sequence-${index}`);
+    if (sequenceInput) {
+      sequenceInput.addEventListener('input', e => {
+        thread.jumpSequence = e.target.value;
+        if (thread.jumpMode === 'sequence') {
+          drawStatic();
+        }
+      });
+    }
 
     document.getElementById(`width-${index}`).addEventListener('input', e => {
       thread.width = parseInt(e.target.value, 10);
+      var sizeValueChip = document.getElementById(`adv-size-value-${index}`);
+      if (sizeValueChip) {
+        sizeValueChip.textContent = String(thread.width);
+      }
       if (index === getKidTargetThreadIndex()) {
         widthSlider.value = thread.width;
         updateKidControlValues();
@@ -938,6 +1030,11 @@ function renderThreadControls() {
    EVENT LISTENERS
 ------------------------------ */
 holesSlider.addEventListener('input', () => {
+  updateKidControlValues();
+  drawStatic();
+});
+advancedHolesSlider.addEventListener('input', () => {
+  holesSlider.value = advancedHolesSlider.value;
   updateKidControlValues();
   drawStatic();
 });
@@ -1052,6 +1149,13 @@ if (window.ResizeObserver) {
 
 window.addEventListener('resize', fitCanvasToStage);
 
+window.addEventListener('pageshow', () => {
+  applyDefaultHoles();
+  applyDefaultSkipAndSize();
+  renderThreadControls();
+  drawStatic();
+});
+
 addMagicThreadBtn.addEventListener('click', () => {
   threads.push(buildMagicThread());
   // Keep basic controls focused on the newest magic thread.
@@ -1076,7 +1180,8 @@ removeLastThreadBtn.addEventListener('click', () => {
 renderThreadControls();
 document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
 advancedPanel.classList.remove('open');
-updateKidControlValues();
+applyDefaultHoles();
+applyDefaultSkipAndSize();
 refreshKidThreadPicker();
 fitCanvasToStage();
 
