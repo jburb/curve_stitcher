@@ -43,6 +43,27 @@
     transform: scale(1.15);
   }
 
+  .top-icon-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 0;
+    background: #f0f0ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 22px;
+    transition: transform 0.15s;
+  }
+  .top-icon-btn:hover {
+    transform: scale(1.08);
+  }
+  .top-icon-btn.active {
+    outline: 3px solid #1982c4;
+    outline-offset: 2px;
+  }
+
   #gear {
     margin-left: auto;
     font-size: 28px;
@@ -118,6 +139,16 @@
   .kid-thread-btn:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+  .kid-thread-btn.is-active {
+    background: #e8f0ff;
+    border-color: #b7cff8;
+  }
+  .kid-icon-btn {
+    min-width: 40px;
+    padding: 6px 10px;
+    font-size: 16px;
+    line-height: 1;
   }
   .kid-thread-picker {
     display: inline-flex;
@@ -334,7 +365,45 @@
     border-radius: 10px;
     border: 1px solid #ddd;
     margin: 10px 0 12px;
-    font-size: 13px;
+    font-size: inherit;
+  }
+  .advanced-global-controls input,
+  .advanced-global-controls select,
+  .advanced-global-controls label {
+    font-size: inherit;
+  }
+  .advanced-global-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .advanced-subsection {
+    padding: 8px 2px;
+    border-bottom: 1px solid #eceff6;
+  }
+  .advanced-subsection:last-of-type {
+    border-bottom: 0;
+  }
+  .advanced-global-row {
+    margin: 8px 0;
+  }
+  .advanced-global-help {
+    font-size: 12px;
+    color: #667;
+    margin-top: 6px;
+  }
+  .advanced-add-thread {
+    width: 100%;
+    border: 1px solid #cfd9ef;
+    background: #fff;
+    border-radius: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  .advanced-section-title {
+    font-weight: 700;
+    color: #445;
+    margin: 8px 0 8px;
   }
 
   .advanced-inline-value {
@@ -361,6 +430,7 @@
   <div class="shape-btn" data-shape="square">⬜</div>
   <div class="shape-btn" data-shape="star">⭐</div>
   <div class="shape-btn" data-shape="heart">❤️</div>
+  <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
   <div id="gear">⚙️</div>
 </div>
 
@@ -409,7 +479,7 @@
 <div id="sliders">
   <div class="slider-block">
     <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">35</span></div>
-    <input id="holes" type="range" min="3" max="200" value="35">
+    <input id="holes" type="range" min="3" max="140" value="35">
   </div>
   <div class="slider-block">
     <div class="slider-label">🟣 Skip <span class="slider-value" id="jump-value">22</span></div>
@@ -424,13 +494,29 @@
 <!-- ADVANCED PANEL -->
 <div id="advanced-panel">
   <div id="advanced-header">
-    <h3>Threads</h3>
+    <h3>Advanced Controls</h3>
     <button id="close-advanced" type="button">Close</button>
   </div>
-  <button id="add-thread">Add Thread</button>
   <div class="advanced-global-controls">
-    Holes: <input id="advanced-holes" type="range" min="3" max="200" value="35"><span class="advanced-inline-value" id="advanced-holes-value">35</span>
+    <div class="advanced-subsection">
+      <div class="advanced-global-title">Shape</div>
+      <div class="advanced-global-row">Shape: <select id="advanced-shape">
+        <option value="circle">Circle</option>
+        <option value="triangle">Triangle</option>
+        <option value="square">Square</option>
+        <option value="star">Star</option>
+        <option value="heart">Heart</option>
+      </select></div>
+    </div>
+    <div class="advanced-subsection">
+      <div class="advanced-global-title">Holes</div>
+      <div class="advanced-global-row">Holes: <input id="advanced-holes" type="range" min="3" max="140" value="35"><span class="advanced-inline-value" id="advanced-holes-value">35</span></div>
+      <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
+      <div class="advanced-global-help">Hole numbers auto-hide when holes exceed 80.</div>
+    </div>
   </div>
+  <div class="advanced-section-title">Threads</div>
+  <button id="add-thread" class="advanced-add-thread">Add Thread</button>
   <div id="thread-controls"></div>
 </div>
 
@@ -444,11 +530,14 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
+var advancedShapeSelect = document.getElementById('advanced-shape');
 var advancedHolesSlider = document.getElementById('advanced-holes');
 var advancedHolesValue = document.getElementById('advanced-holes-value');
+var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
 var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
+var holeNumbersToggleBtn = document.getElementById('toggle-hole-numbers');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
 var kidThreadMenu = document.getElementById('kid-thread-menu');
@@ -479,10 +568,13 @@ var selectedThreadIndex = 0;
 var points = [];
 var animationActive = false;
 var canvasResizeObserver = null;
+var showHoleNumbers = false;
 
 var DEFAULT_HOLES = 35;
 var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
+var MAX_HOLES = 140;
+var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 
@@ -534,6 +626,29 @@ function applyThreadSwatchStyle(element, color) {
     element.style.background = 'linear-gradient(45deg, red, orange, yellow, green, blue, purple)';
   } else {
     element.style.background = color || '#1982c4';
+  }
+}
+
+function syncHoleNumberToggles() {
+  advancedHoleNumbersToggle.checked = showHoleNumbers;
+  holeNumbersToggleBtn.classList.toggle('active', showHoleNumbers);
+  holeNumbersToggleBtn.setAttribute('aria-pressed', showHoleNumbers ? 'true' : 'false');
+  holeNumbersToggleBtn.title = showHoleNumbers ? 'Hole numbers on' : 'Hole numbers off';
+}
+
+function setCurrentShape(shape, shouldDraw) {
+  var nextShape = shape || 'circle';
+  currentShape = nextShape;
+  document.querySelectorAll('.shape-btn').forEach((b) => b.classList.remove('active'));
+  var activeShapeBtn = document.querySelector('.shape-btn[data-shape="' + nextShape + '"]');
+  if (activeShapeBtn) {
+    activeShapeBtn.classList.add('active');
+  }
+  if (advancedShapeSelect.value !== nextShape) {
+    advancedShapeSelect.value = nextShape;
+  }
+  if (shouldDraw !== false) {
+    drawStatic();
   }
 }
 
@@ -799,6 +914,20 @@ function drawThread(thread) {
   }
 }
 
+function drawHoles() {
+  var numbersVisible = showHoleNumbers && points.length <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
+  for (var i = 0; i < points.length; i++) {
+    new Path.Circle(points[i], 3).fillColor = '#333';
+    if (numbersVisible) {
+      var label = new PointText(points[i].add([0, -10]));
+      label.justification = 'center';
+      label.fillColor = '#555';
+      label.fontSize = 9;
+      label.content = String(i + 1);
+    }
+  }
+}
+
 /* ------------------------------
    STATIC DRAW
 ------------------------------ */
@@ -807,9 +936,7 @@ function drawStatic() {
   computePoints();
 
   // Draw holes
-  for (var i = 0; i < points.length; i++) {
-    new Path.Circle(points[i], 3).fillColor = '#333';
-  }
+  drawHoles();
 
   // Draw threads
   for (var i = 0; i < threads.length; i++) {
@@ -825,9 +952,7 @@ function animateStitch() {
   computePoints();
 
   // Draw holes
-  for (var i = 0; i < points.length; i++) {
-    new Path.Circle(points[i], 3).fillColor = '#333';
-  }
+  drawHoles();
 
   var threadIndex = 0;
   var seq = computeSequence(threads[threadIndex]);
@@ -1038,6 +1163,11 @@ advancedHolesSlider.addEventListener('input', () => {
   updateKidControlValues();
   drawStatic();
 });
+advancedHoleNumbersToggle.addEventListener('change', () => {
+  showHoleNumbers = advancedHoleNumbersToggle.checked;
+  syncHoleNumberToggles();
+  drawStatic();
+});
 jumpSlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
@@ -1060,7 +1190,7 @@ animateBtn.addEventListener('click', animateStitch);
 surpriseBtn.addEventListener('click', () => {
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
-  holesSlider.value = Math.floor(Math.random() * 150) + 20;
+  holesSlider.value = Math.floor(Math.random() * (MAX_HOLES - 19)) + 20;
   jumpSlider.value = Math.floor(Math.random() * 50) + 1;
   widthSlider.value = Math.floor(Math.random() * 8) + 1;
   updateKidControlValues();
@@ -1094,11 +1224,12 @@ document.querySelectorAll('.color-dot').forEach((dot) => {
 
 document.querySelectorAll('.shape-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
-    currentShape = btn.getAttribute('data-shape') || 'circle';
-    document.querySelectorAll('.shape-btn').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    drawStatic();
+    setCurrentShape(btn.getAttribute('data-shape') || 'circle');
   });
+});
+
+advancedShapeSelect.addEventListener('change', () => {
+  setCurrentShape(advancedShapeSelect.value || 'circle');
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {
@@ -1174,14 +1305,21 @@ removeLastThreadBtn.addEventListener('click', () => {
   drawStatic();
 });
 
+holeNumbersToggleBtn.addEventListener('click', () => {
+  showHoleNumbers = !showHoleNumbers;
+  syncHoleNumberToggles();
+  drawStatic();
+});
+
 /* ------------------------------
    INITIALIZE
 ------------------------------ */
 renderThreadControls();
-document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
+setCurrentShape('circle', false);
 advancedPanel.classList.remove('open');
 applyDefaultHoles();
 applyDefaultSkipAndSize();
+syncHoleNumberToggles();
 refreshKidThreadPicker();
 fitCanvasToStage();
 
