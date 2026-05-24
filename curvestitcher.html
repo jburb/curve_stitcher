@@ -15,6 +15,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    overflow: hidden;
   }
 
   /* --- TOP SHAPE PICKER --- */
@@ -51,11 +52,24 @@
   /* --- CANVAS AREA --- */
   #canvas-container {
     flex: 1;
+    min-height: 0;
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  #canvas-stage {
+    width: 100%;
+    max-width: 760px;
+    max-height: 100%;
+    aspect-ratio: 1 / 1;
   }
   canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
     border: 1px solid #ddd;
     background: #fff;
     border-radius: 12px;
@@ -245,6 +259,7 @@
     right: -320px;
     width: 300px;
     height: 100%;
+    box-sizing: border-box;
     background: #fafafa;
     border-left: 2px solid #ddd;
     padding: 16px;
@@ -321,7 +336,9 @@
 
 <!-- CANVAS -->
 <div id="canvas-container">
-  <canvas id="myCanvas" resize width="600" height="600"></canvas>
+  <div id="canvas-stage">
+    <canvas id="myCanvas" resize width="600" height="600"></canvas>
+  </div>
 </div>
 
 <!-- SLIDERS -->
@@ -390,6 +407,7 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
+var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
@@ -421,6 +439,7 @@ var selectedThreadIndex = 0;
 
 var points = [];
 var animationActive = false;
+var canvasResizeObserver = null;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 
@@ -532,6 +551,29 @@ function syncKidControlsFromSelectedThread() {
   jumpSlider.value = threads[index].jump;
   widthSlider.value = threads[index].width;
   updateKidControlValues();
+}
+
+function fitCanvasToStage() {
+  var containerRect = canvasStage.parentElement.getBoundingClientRect();
+  var size = Math.floor(Math.min(containerRect.width, containerRect.height));
+  if (!isFinite(size) || size <= 0) return;
+
+  // Keep the stage physically square so canvas rendering never stretches.
+  canvasStage.style.width = size + 'px';
+  canvasStage.style.height = size + 'px';
+
+  if (view.viewSize.width === size && view.viewSize.height === size) {
+    return;
+  }
+
+  view.viewSize = new Size(size, size);
+
+  if (animationActive) {
+    animationActive = false;
+    view.onFrame = null;
+  }
+
+  drawStatic();
 }
 
 /* ------------------------------
@@ -1001,6 +1043,15 @@ document.addEventListener('click', (event) => {
   kidThreadToggle.setAttribute('aria-expanded', 'false');
 });
 
+if (window.ResizeObserver) {
+  canvasResizeObserver = new ResizeObserver(() => {
+    fitCanvasToStage();
+  });
+  canvasResizeObserver.observe(canvasStage);
+}
+
+window.addEventListener('resize', fitCanvasToStage);
+
 addMagicThreadBtn.addEventListener('click', () => {
   threads.push(buildMagicThread());
   // Keep basic controls focused on the newest magic thread.
@@ -1024,9 +1075,10 @@ removeLastThreadBtn.addEventListener('click', () => {
 ------------------------------ */
 renderThreadControls();
 document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
+advancedPanel.classList.remove('open');
 updateKidControlValues();
 refreshKidThreadPicker();
-drawStatic();
+fitCanvasToStage();
 
 </script>
 </body>
