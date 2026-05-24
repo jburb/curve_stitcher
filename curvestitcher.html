@@ -595,6 +595,8 @@ var animationActive = false;
 var animationState = null;
 var canvasResizeObserver = null;
 var showHoleNumbers = false;
+var holeNumberLabelsByIndex = Object.create(null);
+var highlightedHoleNumbers = [];
 
 var DEFAULT_HOLES = 35;
 var DEFAULT_SKIP = 22;
@@ -707,6 +709,42 @@ function settleAllSliderMotion() {
   }
 }
 
+function setHoleNumberHighlight(index, isHighlighted) {
+  var label = holeNumberLabelsByIndex[index];
+  if (!label) return;
+  label.fontWeight = isHighlighted ? 'bold' : 'normal';
+  label.fillColor = isHighlighted ? '#1f2f4d' : '#555';
+}
+
+function clearHighlightedHoleNumbers() {
+  for (var i = 0; i < highlightedHoleNumbers.length; i++) {
+    setHoleNumberHighlight(highlightedHoleNumbers[i], false);
+  }
+  highlightedHoleNumbers = [];
+}
+
+function highlightHoleNumberPair(firstIndex, secondIndex) {
+  clearHighlightedHoleNumbers();
+
+  if (!isFinite(firstIndex) || !isFinite(secondIndex)) return;
+
+  setHoleNumberHighlight(firstIndex, true);
+  highlightedHoleNumbers.push(firstIndex);
+
+  if (secondIndex !== firstIndex) {
+    setHoleNumberHighlight(secondIndex, true);
+    highlightedHoleNumbers.push(secondIndex);
+  }
+}
+
+function syncHoleNumberHighlightFromAnimationState() {
+  if (!animationState || !animationState.activeHolePair) {
+    clearHighlightedHoleNumbers();
+    return;
+  }
+  highlightHoleNumberPair(animationState.activeHolePair[0], animationState.activeHolePair[1]);
+}
+
 function updateKidControlValues() {
   holesValue.textContent = holesSlider.value;
   jumpValue.textContent = jumpSlider.value;
@@ -783,6 +821,7 @@ function setCurrentShape(shape, shouldDraw) {
 
 function refreshKidThreadPicker() {
   kidThreadPicker.style.display = threads.length > 1 ? 'inline-flex' : 'none';
+  removeLastThreadBtn.style.display = threads.length > 1 ? '' : 'none';
   kidThreadMenu.innerHTML = '';
   removeLastThreadBtn.disabled = threads.length <= 1;
 
@@ -876,6 +915,7 @@ function stopAnimationIfActive() {
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  clearHighlightedHoleNumbers();
   updateMusicPlaybackState();
 }
 
@@ -924,6 +964,7 @@ function redrawAnimationInPlace() {
     );
   }
 
+  syncHoleNumberHighlightFromAnimationState();
   bringHoleNumbersToFront();
 }
 
@@ -1117,6 +1158,8 @@ function drawThread(thread) {
 
 function drawHoles() {
   var numbersVisible = showHoleNumbers && points.length <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
+  holeNumberLabelsByIndex = Object.create(null);
+  highlightedHoleNumbers = [];
   for (var i = 0; i < points.length; i++) {
     new Path.Circle(points[i], 3).fillColor = '#333';
     if (numbersVisible) {
@@ -1124,7 +1167,9 @@ function drawHoles() {
       label.justification = 'center';
       label.fillColor = '#555';
       label.fontSize = 9;
+      label.fontWeight = 'normal';
       label.content = String(i + 1);
+      holeNumberLabelsByIndex[i] = label;
     }
   }
 }
@@ -1154,6 +1199,7 @@ function drawStatic() {
     drawThread(threads[i]);
   }
 
+  clearHighlightedHoleNumbers();
   bringHoleNumbersToFront();
 }
 
@@ -1165,6 +1211,7 @@ function animateStitch() {
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  clearHighlightedHoleNumbers();
 
   project.activeLayer.removeChildren();
   computePoints();
@@ -1177,6 +1224,7 @@ function animateStitch() {
     threadIndex: 0,
     step: 0,
     elapsed: 0,
+    activeHolePair: null,
     sequences: threads.map(function(thread) {
       return computeSequence(thread);
     })
@@ -1191,6 +1239,7 @@ function animateStitch() {
       animationActive = false;
       view.onFrame = null;
       animationState = null;
+      clearHighlightedHoleNumbers();
       updateMusicPlaybackState();
       return;
     }
@@ -1212,6 +1261,7 @@ function animateStitch() {
         animationActive = false;
         animationState = null;
         view.onFrame = null;
+        clearHighlightedHoleNumbers();
         updateMusicPlaybackState();
         return;
       }
@@ -1219,6 +1269,9 @@ function animateStitch() {
       var seq = animationState.sequences[threadIndex] || [];
 
       if (animationState.step < seq.length - 1) {
+        var fromIndex = seq[animationState.step];
+        var toIndex = seq[animationState.step + 1];
+
         var seg = new Path();
         seg.strokeWidth = threads[threadIndex].width;
 
@@ -1228,8 +1281,10 @@ function animateStitch() {
           seg.strokeColor = threads[threadIndex].color;
         }
 
-        seg.add(points[seq[animationState.step]]);
-        seg.add(points[seq[animationState.step + 1]]);
+        seg.add(points[fromIndex]);
+        seg.add(points[toIndex]);
+        animationState.activeHolePair = [fromIndex, toIndex];
+        syncHoleNumberHighlightFromAnimationState();
         animationState.step++;
         bringHoleNumbersToFront();
       } else {
@@ -1238,6 +1293,7 @@ function animateStitch() {
           animationActive = false;
           animationState = null;
           view.onFrame = null;
+          clearHighlightedHoleNumbers();
           updateMusicPlaybackState();
           return;
         }
