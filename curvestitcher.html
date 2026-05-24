@@ -590,6 +590,7 @@ var selectedThreadIndex = 0;
 
 var points = [];
 var animationActive = false;
+var animationState = null;
 var canvasResizeObserver = null;
 var showHoleNumbers = false;
 
@@ -675,7 +676,7 @@ function setCurrentShape(shape, shouldDraw) {
     advancedShapeSelect.value = nextShape;
   }
   if (shouldDraw !== false) {
-    drawStatic();
+    redrawForPathChange();
   }
 }
 
@@ -769,11 +770,57 @@ function applyDefaultTempo() {
   syncAdvancedTempoControls();
 }
 
-function restartAnimationIfRunning() {
+function stopAnimationIfActive() {
   if (!animationActive) return;
   animationActive = false;
   view.onFrame = null;
-  animateStitch();
+  animationState = null;
+}
+
+function redrawForPathChange() {
+  // Path/topology changes invalidate the current stitch progression.
+  stopAnimationIfActive();
+  drawStatic();
+}
+
+function drawAnimatedSegments(thread, seq, segmentCount) {
+  if (!seq || seq.length < 2 || segmentCount <= 0) return;
+  var maxSegments = Math.min(segmentCount, seq.length - 1);
+  for (var i = 0; i < maxSegments; i++) {
+    var seg = new Path();
+    seg.strokeWidth = thread.width;
+    if (thread.color === 'rainbow') {
+      seg.strokeColor = rainbowColor(i / seq.length);
+    } else {
+      seg.strokeColor = thread.color;
+    }
+    seg.add(points[seq[i]]);
+    seg.add(points[seq[i + 1]]);
+  }
+}
+
+function redrawAnimationInPlace() {
+  // Style-only updates should preserve current animation progress.
+  if (!animationActive || !animationState) {
+    drawStatic();
+    return;
+  }
+
+  project.activeLayer.removeChildren();
+  computePoints();
+  drawHoles();
+
+  for (var i = 0; i < animationState.threadIndex; i++) {
+    drawAnimatedSegments(threads[i], animationState.sequences[i], (animationState.sequences[i] || []).length - 1);
+  }
+
+  if (animationState.threadIndex >= 0 && animationState.threadIndex < threads.length) {
+    drawAnimatedSegments(
+      threads[animationState.threadIndex],
+      animationState.sequences[animationState.threadIndex],
+      animationState.step
+    );
+  }
 }
 
 function fitCanvasToStage() {
@@ -1002,42 +1049,67 @@ function animateStitch() {
   // Draw holes
   drawHoles();
 
-  var threadIndex = 0;
-  var seq = computeSequence(threads[threadIndex]);
-  var step = 0;
-  var secondsPerSegment = (60 / currentAnimationBpm) * BEATS_PER_STITCH_SEGMENT;
-  var elapsed = 0;
+  animationState = {
+    threadIndex: 0,
+    step: 0,
+    elapsed: 0,
+    sequences: threads.map(function(thread) {
+      return computeSequence(thread);
+    })
+  };
   animationActive = true;
 
   view.onFrame = function(event) {
     if (!animationActive) return;
 
-    elapsed += event.delta;
+    if (!animationState || !animationState.sequences.length) {
+      animationActive = false;
+      view.onFrame = null;
+      return;
+    }
 
-    while (elapsed >= secondsPerSegment && animationActive) {
-      elapsed -= secondsPerSegment;
+    animationState.elapsed += event.delta;
 
-      if (step < seq.length - 1) {
+    var secondsPerSegment = (60 / currentAnimationBpm) * BEATS_PER_STITCH_SEGMENT;
+    if (!isFinite(secondsPerSegment) || secondsPerSegment <= 0) {
+      secondsPerSegment = (60 / DEFAULT_ANIMATION_BPM) * BEATS_PER_STITCH_SEGMENT;
+    }
+
+    while (animationState.elapsed >= secondsPerSegment && animationActive) {
+      animationState.elapsed -= secondsPerSegment;
+
+      var threadIndex = animationState.threadIndex;
+      if (threadIndex < 0 || threadIndex >= threads.length) {
+        animationActive = false;
+        animationState = null;
+        view.onFrame = null;
+        return;
+      }
+
+      var seq = animationState.sequences[threadIndex] || [];
+
+      if (animationState.step < seq.length - 1) {
         var seg = new Path();
         seg.strokeWidth = threads[threadIndex].width;
 
         if (threads[threadIndex].color === 'rainbow') {
-          seg.strokeColor = rainbowColor(step / seq.length);
+          seg.strokeColor = rainbowColor(animationState.step / seq.length);
         } else {
           seg.strokeColor = threads[threadIndex].color;
         }
 
-        seg.add(points[seq[step]]);
-        seg.add(points[seq[step + 1]]);
-        step++;
+        seg.add(points[seq[animationState.step]]);
+        seg.add(points[seq[animationState.step + 1]]);
+        animationState.step++;
       } else {
-        threadIndex++;
-        if (threadIndex >= threads.length) {
+        animationState.threadIndex++;
+        if (animationState.threadIndex >= threads.length) {
           animationActive = false;
+          animationState = null;
+          view.onFrame = null;
           return;
         }
-        seq = computeSequence(threads[threadIndex]);
-        step = 0;
+        animationState.step = 0;
       }
     }
   };
@@ -1115,7 +1187,7 @@ function renderThreadControls() {
     document.getElementById(`color-${index}`).addEventListener('input', e => {
       thread.color = e.target.value;
       syncKidControlsFromSelectedThread();
-      drawStatic();
+      redrawAnimationInPlace();
     });
 
     var skipInput = document.getElementById(`jump-${index}`);
@@ -1130,14 +1202,14 @@ function renderThreadControls() {
           jumpSlider.value = thread.jump;
           updateKidControlValues();
         }
-        drawStatic();
+        redrawForPathChange();
       });
     }
 
     document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
       thread.jumpMode = e.target.value;
       renderThreadControls();
-      drawStatic();
+      redrawForPathChange();
     });
 
     var formulaInput = document.getElementById(`jump-formula-${index}`);
@@ -1145,7 +1217,7 @@ function renderThreadControls() {
       formulaInput.addEventListener('input', e => {
         thread.jumpFormula = e.target.value;
         if (thread.jumpMode === 'formula') {
-          drawStatic();
+          redrawForPathChange();
         }
       });
     }
@@ -1158,7 +1230,7 @@ function renderThreadControls() {
         thread.jumpFormula = preset;
         thread.jumpMode = 'formula';
         renderThreadControls();
-        drawStatic();
+        redrawForPathChange();
       });
     }
 
@@ -1167,7 +1239,7 @@ function renderThreadControls() {
       sequenceInput.addEventListener('input', e => {
         thread.jumpSequence = e.target.value;
         if (thread.jumpMode === 'sequence') {
-          drawStatic();
+          redrawForPathChange();
         }
       });
     }
@@ -1182,13 +1254,13 @@ function renderThreadControls() {
         widthSlider.value = thread.width;
         updateKidControlValues();
       }
-      drawStatic();
+      redrawAnimationInPlace();
     });
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
       thread.color = e.target.checked ? 'rainbow' : '#000000';
       syncKidControlsFromSelectedThread();
-      drawStatic();
+      redrawAnimationInPlace();
     });
 
     document.getElementById(`delete-${index}`).addEventListener('click', () => {
@@ -1200,7 +1272,7 @@ function renderThreadControls() {
       }
       renderThreadControls();
       syncKidControlsFromSelectedThread();
-      drawStatic();
+      redrawForPathChange();
     });
   });
 
@@ -1212,17 +1284,20 @@ function renderThreadControls() {
 ------------------------------ */
 holesSlider.addEventListener('input', () => {
   updateKidControlValues();
-  drawStatic();
+  // Hole count changes point geometry and stitch path.
+  redrawForPathChange();
 });
 advancedHolesSlider.addEventListener('input', () => {
   holesSlider.value = advancedHolesSlider.value;
   updateKidControlValues();
-  drawStatic();
+  // Hole count changes point geometry and stitch path.
+  redrawForPathChange();
 });
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
   syncHoleNumberToggles();
-  drawStatic();
+  // Labels only; keep animation continuity.
+  redrawAnimationInPlace();
 });
 jumpSlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
@@ -1230,7 +1305,7 @@ jumpSlider.addEventListener('input', () => {
   updateKidControlValues();
   threads[targetIndex].jump = parseInt(jumpSlider.value, 10);
   renderThreadControls();
-  drawStatic();
+  redrawForPathChange();
 });
 widthSlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
@@ -1238,7 +1313,8 @@ widthSlider.addEventListener('input', () => {
   updateKidControlValues();
   threads[targetIndex].width = parseInt(widthSlider.value, 10);
   renderThreadControls();
-  drawStatic();
+  // Stroke width is style-only for the already-determined route.
+  redrawAnimationInPlace();
 });
 
 animateBtn.addEventListener('click', animateStitch);
@@ -1254,7 +1330,7 @@ surpriseBtn.addEventListener('click', () => {
   threads[targetIndex].width = parseInt(widthSlider.value, 10);
   threads[targetIndex].color = 'rainbow';
   renderThreadControls();
-  drawStatic();
+  redrawForPathChange();
 });
 
 gearBtn.addEventListener('click', () => {
@@ -1274,7 +1350,7 @@ document.querySelectorAll('.color-dot').forEach((dot) => {
     }
     threads[targetIndex].color = dot.getAttribute('data-color') || '#1982c4';
     renderThreadControls();
-    drawStatic();
+    redrawAnimationInPlace();
   });
 });
 
@@ -1296,12 +1372,14 @@ advancedTempoInput.addEventListener('change', () => {
   }
   currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
-  restartAnimationIfRunning();
+  // Tempo change updates playback speed without resetting progress.
+  redrawAnimationInPlace();
 });
 
 resetTempoBtn.addEventListener('click', () => {
   applyDefaultTempo();
-  restartAnimationIfRunning();
+  // Tempo reset should also preserve current stitch position.
+  redrawAnimationInPlace();
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {
@@ -1309,7 +1387,7 @@ document.getElementById('add-thread').addEventListener('click', () => {
   selectedThreadIndex = threads.length - 1;
   renderThreadControls();
   syncKidControlsFromSelectedThread();
-  drawStatic();
+  redrawForPathChange();
 });
 
 kidThreadToggle.addEventListener('click', () => {
@@ -1333,7 +1411,6 @@ kidThreadMenu.addEventListener('click', (event) => {
   kidThreadToggle.setAttribute('aria-expanded', 'false');
   renderThreadControls();
   syncKidControlsFromSelectedThread();
-  drawStatic();
 });
 
 document.addEventListener('click', (event) => {
@@ -1357,7 +1434,7 @@ window.addEventListener('pageshow', () => {
   applyDefaultSkipAndSize();
   applyDefaultTempo();
   renderThreadControls();
-  drawStatic();
+  redrawForPathChange();
 });
 
 addMagicThreadBtn.addEventListener('click', () => {
@@ -1366,7 +1443,7 @@ addMagicThreadBtn.addEventListener('click', () => {
   selectedThreadIndex = threads.length - 1;
   renderThreadControls();
   syncKidControlsFromSelectedThread();
-  drawStatic();
+  redrawForPathChange();
 });
 
 removeLastThreadBtn.addEventListener('click', () => {
@@ -1375,13 +1452,14 @@ removeLastThreadBtn.addEventListener('click', () => {
   selectedThreadIndex = threads.length - 1;
   renderThreadControls();
   syncKidControlsFromSelectedThread();
-  drawStatic();
+  redrawForPathChange();
 });
 
 holeNumbersToggleBtn.addEventListener('click', () => {
   showHoleNumbers = !showHoleNumbers;
   syncHoleNumberToggles();
-  drawStatic();
+  // Labels only; keep animation continuity.
+  redrawAnimationInPlace();
 });
 
 /* ------------------------------
