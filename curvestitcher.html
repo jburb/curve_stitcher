@@ -391,6 +391,15 @@
     color: #667;
     margin-top: 6px;
   }
+  .advanced-reset-btn {
+    border: 1px solid #cfd9ef;
+    background: #fff;
+    border-radius: 8px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 6px;
+  }
   .advanced-add-thread {
     width: 100%;
     border: 1px solid #cfd9ef;
@@ -514,6 +523,17 @@
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
       <div class="advanced-global-help">Hole numbers auto-hide when holes exceed 80.</div>
     </div>
+    <div class="advanced-subsection">
+      <div class="advanced-global-title">Stitch Tempo</div>
+      <div class="advanced-global-row">BPM: <select id="advanced-tempo">
+        <option value="84">84</option>
+        <option value="168">168</option>
+        <option value="252">252</option>
+        <option value="336">336</option>
+        <option value="420">420</option>
+      </select><span class="advanced-inline-value" id="advanced-tempo-value">84</span><button id="reset-tempo" type="button" class="advanced-reset-btn">Reset</button></div>
+      <div class="advanced-global-help">Default tempo is 84 BPM. This affects stitch animation when you press "Watch it stitch".</div>
+    </div>
   </div>
   <div class="advanced-section-title">Threads</div>
   <button id="add-thread" class="advanced-add-thread">Add Thread</button>
@@ -534,6 +554,9 @@ var advancedShapeSelect = document.getElementById('advanced-shape');
 var advancedHolesSlider = document.getElementById('advanced-holes');
 var advancedHolesValue = document.getElementById('advanced-holes-value');
 var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
+var advancedTempoInput = document.getElementById('advanced-tempo');
+var advancedTempoValue = document.getElementById('advanced-tempo-value');
+var resetTempoBtn = document.getElementById('reset-tempo');
 var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
@@ -575,6 +598,10 @@ var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
 var MAX_HOLES = 140;
 var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
+var DEFAULT_ANIMATION_BPM = 84;
+var BEATS_PER_STITCH_SEGMENT = 1;
+var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
+var ALLOWED_TEMPOS = [84, 168, 252, 336, 420];
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 
@@ -653,6 +680,7 @@ function setCurrentShape(shape, shouldDraw) {
 }
 
 function refreshKidThreadPicker() {
+  kidThreadPicker.style.display = threads.length > 1 ? 'inline-flex' : 'none';
   kidThreadMenu.innerHTML = '';
   removeLastThreadBtn.disabled = threads.length <= 1;
 
@@ -726,6 +754,26 @@ function applyDefaultSkipAndSize() {
   jumpSlider.value = String(DEFAULT_SKIP);
   widthSlider.value = String(DEFAULT_THREAD_SIZE);
   updateKidControlValues();
+}
+
+function syncAdvancedTempoControls() {
+  if (ALLOWED_TEMPOS.indexOf(currentAnimationBpm) === -1) {
+    currentAnimationBpm = DEFAULT_ANIMATION_BPM;
+  }
+  advancedTempoInput.value = String(currentAnimationBpm);
+  advancedTempoValue.textContent = String(currentAnimationBpm);
+}
+
+function applyDefaultTempo() {
+  currentAnimationBpm = DEFAULT_ANIMATION_BPM;
+  syncAdvancedTempoControls();
+}
+
+function restartAnimationIfRunning() {
+  if (!animationActive) return;
+  animationActive = false;
+  view.onFrame = null;
+  animateStitch();
 }
 
 function fitCanvasToStage() {
@@ -957,32 +1005,40 @@ function animateStitch() {
   var threadIndex = 0;
   var seq = computeSequence(threads[threadIndex]);
   var step = 0;
+  var secondsPerSegment = (60 / currentAnimationBpm) * BEATS_PER_STITCH_SEGMENT;
+  var elapsed = 0;
   animationActive = true;
 
-  view.onFrame = function() {
+  view.onFrame = function(event) {
     if (!animationActive) return;
 
-    if (step < seq.length - 1) {
-      var seg = new Path();
-      seg.strokeWidth = threads[threadIndex].width;
+    elapsed += event.delta;
 
-      if (threads[threadIndex].color === 'rainbow') {
-        seg.strokeColor = rainbowColor(step / seq.length);
+    while (elapsed >= secondsPerSegment && animationActive) {
+      elapsed -= secondsPerSegment;
+
+      if (step < seq.length - 1) {
+        var seg = new Path();
+        seg.strokeWidth = threads[threadIndex].width;
+
+        if (threads[threadIndex].color === 'rainbow') {
+          seg.strokeColor = rainbowColor(step / seq.length);
+        } else {
+          seg.strokeColor = threads[threadIndex].color;
+        }
+
+        seg.add(points[seq[step]]);
+        seg.add(points[seq[step + 1]]);
+        step++;
       } else {
-        seg.strokeColor = threads[threadIndex].color;
+        threadIndex++;
+        if (threadIndex >= threads.length) {
+          animationActive = false;
+          return;
+        }
+        seq = computeSequence(threads[threadIndex]);
+        step = 0;
       }
-
-      seg.add(points[seq[step]]);
-      seg.add(points[seq[step + 1]]);
-      step++;
-    } else {
-      threadIndex++;
-      if (threadIndex >= threads.length) {
-        animationActive = false;
-        return;
-      }
-      seq = computeSequence(threads[threadIndex]);
-      step = 0;
     }
   };
 }
@@ -1232,6 +1288,22 @@ advancedShapeSelect.addEventListener('change', () => {
   setCurrentShape(advancedShapeSelect.value || 'circle');
 });
 
+advancedTempoInput.addEventListener('change', () => {
+  var parsed = Math.round(Number(advancedTempoInput.value));
+  if (!isFinite(parsed)) return;
+  if (ALLOWED_TEMPOS.indexOf(parsed) === -1) {
+    parsed = DEFAULT_ANIMATION_BPM;
+  }
+  currentAnimationBpm = parsed;
+  syncAdvancedTempoControls();
+  restartAnimationIfRunning();
+});
+
+resetTempoBtn.addEventListener('click', () => {
+  applyDefaultTempo();
+  restartAnimationIfRunning();
+});
+
 document.getElementById('add-thread').addEventListener('click', () => {
   threads.push(buildMagicThread());
   selectedThreadIndex = threads.length - 1;
@@ -1283,6 +1355,7 @@ window.addEventListener('resize', fitCanvasToStage);
 window.addEventListener('pageshow', () => {
   applyDefaultHoles();
   applyDefaultSkipAndSize();
+  applyDefaultTempo();
   renderThreadControls();
   drawStatic();
 });
@@ -1319,6 +1392,7 @@ setCurrentShape('circle', false);
 advancedPanel.classList.remove('open');
 applyDefaultHoles();
 applyDefaultSkipAndSize();
+applyDefaultTempo();
 syncHoleNumberToggles();
 refreshKidThreadPicker();
 fitCanvasToStage();
