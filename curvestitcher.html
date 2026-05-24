@@ -64,11 +64,26 @@
   /* --- BOTTOM SLIDERS --- */
   #sliders {
     display: flex;
+    flex-wrap: wrap;
     gap: 24px;
     padding: 12px;
     background: #fff;
     border-top: 2px solid #eee;
     justify-content: center;
+  }
+  .kid-thread-indicator {
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    color: #5a6575;
+    margin-bottom: 2px;
+  }
+  .kid-thread-indicator span {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #f1f3fa;
+    border: 1px solid #e1e5ef;
   }
   .slider-block {
     display: flex;
@@ -168,7 +183,7 @@
     outline-offset: 2px;
   }
 
-  .layer-card {
+  .thread-card {
     background: #fff;
     padding: 10px;
     border-radius: 10px;
@@ -177,7 +192,7 @@
     cursor: pointer;
   }
 
-  .layer-card.selected {
+  .thread-card.selected {
     border-color: #1982c4;
     box-shadow: 0 0 0 2px rgba(25, 130, 196, 0.15);
   }
@@ -219,6 +234,7 @@
 
 <!-- SLIDERS -->
 <div id="sliders">
+  <div class="kid-thread-indicator" id="kid-thread-indicator"><span id="kid-thread-label">Editing Thread 1</span></div>
   <div class="slider-block">
     <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">40</span></div>
     <input id="holes" type="range" min="3" max="200" value="40">
@@ -252,11 +268,11 @@
 <!-- ADVANCED PANEL -->
 <div id="advanced-panel">
   <div id="advanced-header">
-    <h3>Layers</h3>
+    <h3>Threads</h3>
     <button id="close-advanced" type="button">Close</button>
   </div>
-  <button id="add-layer">Add Layer</button>
-  <div id="layer-controls"></div>
+  <button id="add-thread">Add Thread</button>
+  <div id="thread-controls"></div>
 </div>
 
 <script>
@@ -269,6 +285,8 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
+var kidThreadIndicator = document.getElementById('kid-thread-indicator');
+var kidThreadLabel = document.getElementById('kid-thread-label');
 var holesValue  = document.getElementById('holes-value');
 var jumpValue   = document.getElementById('jump-value');
 var widthValue  = document.getElementById('width-value');
@@ -278,7 +296,7 @@ var gearBtn     = document.getElementById('gear');
 var closeAdvancedBtn = document.getElementById('close-advanced');
 var advancedPanel = document.getElementById('advanced-panel');
 
-var layers = [
+var threads = [
   {
     jump: 7,
     width: 2,
@@ -289,7 +307,7 @@ var layers = [
     jumpSequence: ''
   }
 ];
-var selectedLayerIndex = 0;
+var selectedThreadIndex = 0;
 
 var points = [];
 var animationActive = false;
@@ -300,19 +318,24 @@ function updateKidControlValues() {
   widthValue.textContent = widthSlider.value;
 }
 
-function getKidTargetLayerIndex() {
-  if (!layers.length) return -1;
-  if (selectedLayerIndex >= 0 && selectedLayerIndex < layers.length) {
-    return selectedLayerIndex;
+function getKidTargetThreadIndex() {
+  if (!threads.length) return -1;
+  if (selectedThreadIndex >= 0 && selectedThreadIndex < threads.length) {
+    return selectedThreadIndex;
   }
   return 0;
 }
 
-function syncKidControlsFromSelectedLayer() {
-  var index = getKidTargetLayerIndex();
-  if (index < 0) return;
-  jumpSlider.value = layers[index].jump;
-  widthSlider.value = layers[index].width;
+function syncKidControlsFromSelectedThread() {
+  var index = getKidTargetThreadIndex();
+  kidThreadIndicator.style.display = threads.length > 1 ? 'block' : 'none';
+  if (index < 0) {
+    kidThreadLabel.textContent = 'No thread selected';
+    return;
+  }
+  jumpSlider.value = threads[index].jump;
+  widthSlider.value = threads[index].width;
+  kidThreadLabel.textContent = 'Editing Thread ' + (index + 1);
   updateKidControlValues();
 }
 
@@ -392,16 +415,16 @@ function computePoints() {
 }
 
 /* ------------------------------
-   DRAWING LAYERS
+   DRAWING THREADS
 ------------------------------ */
-function computeSequence(layer) {
+function computeSequence(thread) {
   var n = points.length;
 
-  if (layer.sequence && layer.sequence.type === 'custom') {
-    return layer.sequence.list;
+  if (thread.sequence && thread.sequence.type === 'custom') {
+    return thread.sequence.list;
   }
 
-  var jumpMode = layer.jumpMode || 'fixed';
+  var jumpMode = thread.jumpMode || 'fixed';
   var visited = new Array(n).fill(false);
   var current = 0;
   var prev = 0;
@@ -428,24 +451,24 @@ function computeSequence(layer) {
 
   var jumpResolver;
   if (jumpMode === 'sequence') {
-    var stepList = parseJumpSequence(layer.jumpSequence);
+    var stepList = parseJumpSequence(thread.jumpSequence);
     jumpResolver = function(i) {
-      if (!stepList.length) return normalizeJump(layer.jump);
+      if (!stepList.length) return normalizeJump(thread.jump);
       return normalizeJump(stepList[i % stepList.length]);
     };
   } else if (jumpMode === 'formula') {
-    var formula = (layer.jumpFormula || 'jump').trim();
+    var formula = (thread.jumpFormula || 'jump').trim();
     jumpResolver = function(i, currentIndex, previousIndex) {
       try {
         var evaluate = new Function('i', 'n', 'current', 'prev', 'jump', 'return (' + formula + ');');
-        return normalizeJump(evaluate(i, n, currentIndex, previousIndex, layer.jump));
+        return normalizeJump(evaluate(i, n, currentIndex, previousIndex, thread.jump));
       } catch (err) {
-        return normalizeJump(layer.jump);
+        return normalizeJump(thread.jump);
       }
     };
   } else {
     jumpResolver = function() {
-      return normalizeJump(layer.sequence ? layer.sequence.k : layer.jump);
+      return normalizeJump(thread.sequence ? thread.sequence.k : thread.jump);
     };
   }
 
@@ -461,17 +484,17 @@ function computeSequence(layer) {
   return seq;
 }
 
-function drawLayer(layer) {
-  var seq = computeSequence(layer);
+function drawThread(thread) {
+  var seq = computeSequence(thread);
 
   for (var i = 0; i < seq.length; i++) {
     var seg = new Path();
-    seg.strokeWidth = layer.width;
+    seg.strokeWidth = thread.width;
 
-    if (layer.color === 'rainbow') {
+    if (thread.color === 'rainbow') {
       seg.strokeColor = rainbowColor(i / seq.length);
     } else {
-      seg.strokeColor = layer.color;
+      seg.strokeColor = thread.color;
     }
 
     seg.add(points[seq[i]]);
@@ -491,9 +514,9 @@ function drawStatic() {
     new Path.Circle(points[i], 3).fillColor = '#333';
   }
 
-  // Draw layers
-  for (var i = 0; i < layers.length; i++) {
-    drawLayer(layers[i]);
+  // Draw threads
+  for (var i = 0; i < threads.length; i++) {
+    drawThread(threads[i]);
   }
 }
 
@@ -509,8 +532,8 @@ function animateStitch() {
     new Path.Circle(points[i], 3).fillColor = '#333';
   }
 
-  var layerIndex = 0;
-  var seq = computeSequence(layers[layerIndex]);
+  var threadIndex = 0;
+  var seq = computeSequence(threads[threadIndex]);
   var step = 0;
   animationActive = true;
 
@@ -519,59 +542,59 @@ function animateStitch() {
 
     if (step < seq.length - 1) {
       var seg = new Path();
-      seg.strokeWidth = layers[layerIndex].width;
+      seg.strokeWidth = threads[threadIndex].width;
 
-      if (layers[layerIndex].color === 'rainbow') {
+      if (threads[threadIndex].color === 'rainbow') {
         seg.strokeColor = rainbowColor(step / seq.length);
       } else {
-        seg.strokeColor = layers[layerIndex].color;
+        seg.strokeColor = threads[threadIndex].color;
       }
 
       seg.add(points[seq[step]]);
       seg.add(points[seq[step + 1]]);
       step++;
     } else {
-      layerIndex++;
-      if (layerIndex >= layers.length) {
+      threadIndex++;
+      if (threadIndex >= threads.length) {
         animationActive = false;
         return;
       }
-      seq = computeSequence(layers[layerIndex]);
+      seq = computeSequence(threads[threadIndex]);
       step = 0;
     }
   };
 }
 
 /* ------------------------------
-   LAYER UI
+   THREAD UI
 ------------------------------ */
-function renderLayerControls() {
-  var container = document.getElementById('layer-controls');
+function renderThreadControls() {
+  var container = document.getElementById('thread-controls');
   container.innerHTML = '';
 
-  if (!layers.length) {
-    selectedLayerIndex = -1;
+  if (!threads.length) {
+    selectedThreadIndex = -1;
     return;
   }
-  if (selectedLayerIndex < 0 || selectedLayerIndex >= layers.length) {
-    selectedLayerIndex = 0;
+  if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
+    selectedThreadIndex = 0;
   }
 
-  layers.forEach((layer, index) => {
+  threads.forEach((thread, index) => {
     var div = document.createElement('div');
-    div.className = 'layer-card' + (index === selectedLayerIndex ? ' selected' : '');
+    div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
 
     div.innerHTML = `
-      <strong>Layer ${index + 1}</strong><br>
-      Color: <input type="color" value="${layer.color}" id="color-${index}"><br>
-      Jump: <input type="range" min="1" max="100" value="${layer.jump}" id="jump-${index}"><br>
+      <strong>Thread ${index + 1}</strong><br>
+      Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
+      Jump: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><br>
       Jump mode:
       <select id="jump-mode-${index}">
-        <option value="fixed" ${layer.jumpMode === 'fixed' ? 'selected' : ''}>Fixed</option>
-        <option value="formula" ${layer.jumpMode === 'formula' ? 'selected' : ''}>Formula</option>
-        <option value="sequence" ${layer.jumpMode === 'sequence' ? 'selected' : ''}>Sequence</option>
+        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Fixed</option>
+        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Formula</option>
+        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Sequence</option>
       </select><br>
-      Formula: <input type="text" value="${layer.jumpFormula || 'jump'}" id="jump-formula-${index}" placeholder="e.g. jump + i"><br>
+      Formula: <input type="text" value="${thread.jumpFormula || 'jump'}" id="jump-formula-${index}" placeholder="e.g. jump + i"><br>
       <div class="jump-help">Vars: i, n, current, prev, jump</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
@@ -583,9 +606,9 @@ function renderLayerControls() {
         </select>
         <button type="button" id="use-preset-${index}">Use</button>
       </div>
-      Sequence: <input type="text" value="${layer.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
-      Width: <input type="range" min="1" max="10" value="${layer.width}" id="width-${index}"><br>
-      Rainbow: <input type="checkbox" id="rainbow-${index}" ${layer.color === 'rainbow' ? 'checked' : ''}><br>
+      Sequence: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
+      Width: <input type="range" min="1" max="10" value="${thread.width}" id="width-${index}"><br>
+      Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
       <button id="delete-${index}">Delete</button>
     `;
 
@@ -593,34 +616,34 @@ function renderLayerControls() {
 
     div.addEventListener('click', (event) => {
       if (event.target.closest('input, select, button')) return;
-      selectedLayerIndex = index;
-      renderLayerControls();
-      syncKidControlsFromSelectedLayer();
+      selectedThreadIndex = index;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
     });
 
     document.getElementById(`color-${index}`).addEventListener('input', e => {
-      layer.color = e.target.value;
+      thread.color = e.target.value;
       drawStatic();
     });
 
     document.getElementById(`jump-${index}`).addEventListener('input', e => {
-      layer.jump = parseInt(e.target.value, 10);
-      if (index === getKidTargetLayerIndex()) {
-        jumpSlider.value = layer.jump;
+      thread.jump = parseInt(e.target.value, 10);
+      if (index === getKidTargetThreadIndex()) {
+        jumpSlider.value = thread.jump;
         updateKidControlValues();
       }
       drawStatic();
     });
 
     document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
-      layer.jumpMode = e.target.value;
-      renderLayerControls();
+      thread.jumpMode = e.target.value;
+      renderThreadControls();
       drawStatic();
     });
 
     document.getElementById(`jump-formula-${index}`).addEventListener('input', e => {
-      layer.jumpFormula = e.target.value;
-      if (layer.jumpMode === 'formula') {
+      thread.jumpFormula = e.target.value;
+      if (thread.jumpMode === 'formula') {
         drawStatic();
       }
     });
@@ -628,47 +651,47 @@ function renderLayerControls() {
     document.getElementById(`use-preset-${index}`).addEventListener('click', () => {
       var preset = document.getElementById(`jump-preset-${index}`).value;
       if (!preset) return;
-      layer.jumpFormula = preset;
-      layer.jumpMode = 'formula';
-      renderLayerControls();
+      thread.jumpFormula = preset;
+      thread.jumpMode = 'formula';
+      renderThreadControls();
       drawStatic();
     });
 
     document.getElementById(`jump-sequence-${index}`).addEventListener('input', e => {
-      layer.jumpSequence = e.target.value;
-      if (layer.jumpMode === 'sequence') {
+      thread.jumpSequence = e.target.value;
+      if (thread.jumpMode === 'sequence') {
         drawStatic();
       }
     });
 
     document.getElementById(`width-${index}`).addEventListener('input', e => {
-      layer.width = parseInt(e.target.value, 10);
-      if (index === getKidTargetLayerIndex()) {
-        widthSlider.value = layer.width;
+      thread.width = parseInt(e.target.value, 10);
+      if (index === getKidTargetThreadIndex()) {
+        widthSlider.value = thread.width;
         updateKidControlValues();
       }
       drawStatic();
     });
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
-      layer.color = e.target.checked ? 'rainbow' : '#000000';
+      thread.color = e.target.checked ? 'rainbow' : '#000000';
       drawStatic();
     });
 
     document.getElementById(`delete-${index}`).addEventListener('click', () => {
-      layers.splice(index, 1);
-      if (!layers.length) {
-        selectedLayerIndex = -1;
-      } else if (selectedLayerIndex >= layers.length) {
-        selectedLayerIndex = layers.length - 1;
+      threads.splice(index, 1);
+      if (!threads.length) {
+        selectedThreadIndex = -1;
+      } else if (selectedThreadIndex >= threads.length) {
+        selectedThreadIndex = threads.length - 1;
       }
-      renderLayerControls();
-      syncKidControlsFromSelectedLayer();
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
       drawStatic();
     });
   });
 
-  syncKidControlsFromSelectedLayer();
+  syncKidControlsFromSelectedThread();
 }
 
 /* ------------------------------
@@ -679,35 +702,35 @@ holesSlider.addEventListener('input', () => {
   drawStatic();
 });
 jumpSlider.addEventListener('input', () => {
-  var targetIndex = getKidTargetLayerIndex();
+  var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
   updateKidControlValues();
-  layers[targetIndex].jump = parseInt(jumpSlider.value, 10);
-  renderLayerControls();
+  threads[targetIndex].jump = parseInt(jumpSlider.value, 10);
+  renderThreadControls();
   drawStatic();
 });
 widthSlider.addEventListener('input', () => {
-  var targetIndex = getKidTargetLayerIndex();
+  var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
   updateKidControlValues();
-  layers[targetIndex].width = parseInt(widthSlider.value, 10);
-  renderLayerControls();
+  threads[targetIndex].width = parseInt(widthSlider.value, 10);
+  renderThreadControls();
   drawStatic();
 });
 
 animateBtn.addEventListener('click', animateStitch);
 
 surpriseBtn.addEventListener('click', () => {
-  var targetIndex = getKidTargetLayerIndex();
+  var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
   holesSlider.value = Math.floor(Math.random() * 150) + 20;
   jumpSlider.value = Math.floor(Math.random() * 50) + 1;
   widthSlider.value = Math.floor(Math.random() * 8) + 1;
   updateKidControlValues();
-  layers[targetIndex].jump = parseInt(jumpSlider.value, 10);
-  layers[targetIndex].width = parseInt(widthSlider.value, 10);
-  layers[targetIndex].color = 'rainbow';
-  renderLayerControls();
+  threads[targetIndex].jump = parseInt(jumpSlider.value, 10);
+  threads[targetIndex].width = parseInt(widthSlider.value, 10);
+  threads[targetIndex].color = 'rainbow';
+  renderThreadControls();
   drawStatic();
 });
 
@@ -721,13 +744,13 @@ closeAdvancedBtn.addEventListener('click', () => {
 
 document.querySelectorAll('.color-dot').forEach((dot) => {
   dot.addEventListener('click', () => {
-    if (!layers.length) return;
-    var targetIndex = selectedLayerIndex;
-    if (targetIndex < 0 || targetIndex >= layers.length) {
+    if (!threads.length) return;
+    var targetIndex = selectedThreadIndex;
+    if (targetIndex < 0 || targetIndex >= threads.length) {
       targetIndex = 0;
     }
-    layers[targetIndex].color = dot.getAttribute('data-color') || '#1982c4';
-    renderLayerControls();
+    threads[targetIndex].color = dot.getAttribute('data-color') || '#1982c4';
+    renderThreadControls();
     drawStatic();
   });
 });
@@ -741,8 +764,8 @@ document.querySelectorAll('.shape-btn').forEach((btn) => {
   });
 });
 
-document.getElementById('add-layer').addEventListener('click', () => {
-  layers.push({
+document.getElementById('add-thread').addEventListener('click', () => {
+  threads.push({
     jump: Math.floor(Math.random() * 20) + 1,
     width: 2,
     color: '#'+Math.floor(Math.random()*16777215).toString(16),
@@ -751,15 +774,15 @@ document.getElementById('add-layer').addEventListener('click', () => {
     jumpFormula: 'jump',
     jumpSequence: ''
   });
-  selectedLayerIndex = layers.length - 1;
-  renderLayerControls();
+  selectedThreadIndex = threads.length - 1;
+  renderThreadControls();
   drawStatic();
 });
 
 /* ------------------------------
    INITIALIZE
 ------------------------------ */
-renderLayerControls();
+renderThreadControls();
 document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
 updateKidControlValues();
 drawStatic();
