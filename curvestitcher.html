@@ -76,6 +76,21 @@
     align-items: center;
     font-size: 14px;
   }
+  .slider-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .slider-value {
+    min-width: 28px;
+    text-align: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #f1f3fa;
+    color: #334;
+    font-size: 12px;
+    line-height: 1.5;
+  }
   input[type=range] {
     width: 160px;
   }
@@ -205,15 +220,15 @@
 <!-- SLIDERS -->
 <div id="sliders">
   <div class="slider-block">
-    <div>🔵 Holes</div>
+    <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">40</span></div>
     <input id="holes" type="range" min="3" max="200" value="40">
   </div>
   <div class="slider-block">
-    <div>🟣 Jump</div>
+    <div class="slider-label">🟣 Jump <span class="slider-value" id="jump-value">7</span></div>
     <input id="jump" type="range" min="1" max="100" value="7">
   </div>
   <div class="slider-block">
-    <div>🟠 Width</div>
+    <div class="slider-label">🟠 Width <span class="slider-value" id="width-value">2</span></div>
     <input id="width" type="range" min="1" max="10" value="2">
   </div>
 </div>
@@ -254,6 +269,9 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
+var holesValue  = document.getElementById('holes-value');
+var jumpValue   = document.getElementById('jump-value');
+var widthValue  = document.getElementById('width-value');
 var animateBtn  = document.getElementById('animate');
 var surpriseBtn = document.getElementById('surprise');
 var gearBtn     = document.getElementById('gear');
@@ -275,6 +293,28 @@ var selectedLayerIndex = 0;
 
 var points = [];
 var animationActive = false;
+
+function updateKidControlValues() {
+  holesValue.textContent = holesSlider.value;
+  jumpValue.textContent = jumpSlider.value;
+  widthValue.textContent = widthSlider.value;
+}
+
+function getKidTargetLayerIndex() {
+  if (!layers.length) return -1;
+  if (selectedLayerIndex >= 0 && selectedLayerIndex < layers.length) {
+    return selectedLayerIndex;
+  }
+  return 0;
+}
+
+function syncKidControlsFromSelectedLayer() {
+  var index = getKidTargetLayerIndex();
+  if (index < 0) return;
+  jumpSlider.value = layers[index].jump;
+  widthSlider.value = layers[index].width;
+  updateKidControlValues();
+}
 
 /* ------------------------------
    RAINBOW HELPER
@@ -555,6 +595,7 @@ function renderLayerControls() {
       if (event.target.closest('input, select, button')) return;
       selectedLayerIndex = index;
       renderLayerControls();
+      syncKidControlsFromSelectedLayer();
     });
 
     document.getElementById(`color-${index}`).addEventListener('input', e => {
@@ -564,6 +605,10 @@ function renderLayerControls() {
 
     document.getElementById(`jump-${index}`).addEventListener('input', e => {
       layer.jump = parseInt(e.target.value, 10);
+      if (index === getKidTargetLayerIndex()) {
+        jumpSlider.value = layer.jump;
+        updateKidControlValues();
+      }
       drawStatic();
     });
 
@@ -598,6 +643,10 @@ function renderLayerControls() {
 
     document.getElementById(`width-${index}`).addEventListener('input', e => {
       layer.width = parseInt(e.target.value, 10);
+      if (index === getKidTargetLayerIndex()) {
+        widthSlider.value = layer.width;
+        updateKidControlValues();
+      }
       drawStatic();
     });
 
@@ -614,31 +663,51 @@ function renderLayerControls() {
         selectedLayerIndex = layers.length - 1;
       }
       renderLayerControls();
+      syncKidControlsFromSelectedLayer();
       drawStatic();
     });
   });
+
+  syncKidControlsFromSelectedLayer();
 }
 
 /* ------------------------------
    EVENT LISTENERS
 ------------------------------ */
-holesSlider.addEventListener('input', drawStatic);
+holesSlider.addEventListener('input', () => {
+  updateKidControlValues();
+  drawStatic();
+});
 jumpSlider.addEventListener('input', () => {
-  layers[0].jump = parseInt(jumpSlider.value, 10);
+  var targetIndex = getKidTargetLayerIndex();
+  if (targetIndex < 0) return;
+  updateKidControlValues();
+  layers[targetIndex].jump = parseInt(jumpSlider.value, 10);
+  renderLayerControls();
   drawStatic();
 });
 widthSlider.addEventListener('input', () => {
-  layers[0].width = parseInt(widthSlider.value, 10);
+  var targetIndex = getKidTargetLayerIndex();
+  if (targetIndex < 0) return;
+  updateKidControlValues();
+  layers[targetIndex].width = parseInt(widthSlider.value, 10);
+  renderLayerControls();
   drawStatic();
 });
 
 animateBtn.addEventListener('click', animateStitch);
 
 surpriseBtn.addEventListener('click', () => {
+  var targetIndex = getKidTargetLayerIndex();
+  if (targetIndex < 0) return;
   holesSlider.value = Math.floor(Math.random() * 150) + 20;
   jumpSlider.value = Math.floor(Math.random() * 50) + 1;
   widthSlider.value = Math.floor(Math.random() * 8) + 1;
-  layers[0].color = 'rainbow';
+  updateKidControlValues();
+  layers[targetIndex].jump = parseInt(jumpSlider.value, 10);
+  layers[targetIndex].width = parseInt(widthSlider.value, 10);
+  layers[targetIndex].color = 'rainbow';
+  renderLayerControls();
   drawStatic();
 });
 
@@ -692,6 +761,7 @@ document.getElementById('add-layer').addEventListener('click', () => {
 ------------------------------ */
 renderLayerControls();
 document.querySelector('.shape-btn[data-shape="circle"]').classList.add('active');
+updateKidControlValues();
 drawStatic();
 
 </script>
