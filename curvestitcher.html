@@ -440,6 +440,7 @@
   <div class="shape-btn" data-shape="star">⭐</div>
   <div class="shape-btn" data-shape="heart">❤️</div>
   <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
+  <button id="toggle-music" class="top-icon-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
   <div id="gear">⚙️</div>
 </div>
 
@@ -561,6 +562,7 @@ var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var holeNumbersToggleBtn = document.getElementById('toggle-hole-numbers');
+var musicToggleBtn = document.getElementById('toggle-music');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
 var kidThreadMenu = document.getElementById('kid-thread-menu');
@@ -603,8 +605,107 @@ var DEFAULT_ANIMATION_BPM = 84;
 var BEATS_PER_STITCH_SEGMENT = 1;
 var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
 var ALLOWED_TEMPOS = [84, 168, 252, 336, 420];
+var MUSIC_TRACK_PATH = 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3';
+var SLIDER_MOTION_SETTLE_MS = 180;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
+var joyAudio = new Audio(MUSIC_TRACK_PATH);
+joyAudio.preload = 'auto';
+var isMusicMuted = false;
+var hasMusicStartedSinceLoad = false;
+var sliderMotionKeys = Object.create(null);
+var sliderMotionSettleTimers = Object.create(null);
+var sliderMotionKeySeed = 0;
+
+function getSliderMotionKey(slider) {
+  if (!slider) return null;
+  if (!slider.dataset.motionKey) {
+    sliderMotionKeySeed += 1;
+    slider.dataset.motionKey = 'slider-' + sliderMotionKeySeed;
+  }
+  return slider.dataset.motionKey;
+}
+
+function hasActiveSliderMotion() {
+  for (var key in sliderMotionKeys) {
+    if (sliderMotionKeys[key]) return true;
+  }
+  return false;
+}
+
+function shouldMusicBePlaying() {
+  return animationActive || hasActiveSliderMotion();
+}
+
+function syncMusicToggleButton() {
+  musicToggleBtn.textContent = isMusicMuted ? '🔇' : '🔊';
+  musicToggleBtn.classList.toggle('active', isMusicMuted);
+  musicToggleBtn.setAttribute('aria-pressed', isMusicMuted ? 'true' : 'false');
+  musicToggleBtn.setAttribute('aria-label', isMusicMuted ? 'Unmute music' : 'Mute music');
+  musicToggleBtn.title = isMusicMuted ? 'Unmute music' : 'Mute music';
+}
+
+function playMusicFromCurrentState() {
+  if (!hasMusicStartedSinceLoad) {
+    joyAudio.currentTime = 0;
+    hasMusicStartedSinceLoad = true;
+  }
+  var playRequest = joyAudio.play();
+  if (playRequest && typeof playRequest.catch === 'function') {
+    playRequest.catch(function() {
+      // Ignore autoplay-policy rejections; the next user gesture will retry.
+    });
+  }
+}
+
+function updateMusicPlaybackState() {
+  if (isMusicMuted) {
+    if (!joyAudio.paused) {
+      joyAudio.pause();
+    }
+    return;
+  }
+  if (shouldMusicBePlaying()) {
+    playMusicFromCurrentState();
+    return;
+  }
+  if (!joyAudio.paused) {
+    joyAudio.pause();
+  }
+}
+
+function markSliderAsMoving(slider) {
+  var key = getSliderMotionKey(slider);
+  if (!key) return;
+  sliderMotionKeys[key] = true;
+  if (sliderMotionSettleTimers[key]) {
+    clearTimeout(sliderMotionSettleTimers[key]);
+    delete sliderMotionSettleTimers[key];
+  }
+}
+
+function settleSliderMotionByKey(key) {
+  if (!key) return;
+  if (sliderMotionSettleTimers[key]) {
+    clearTimeout(sliderMotionSettleTimers[key]);
+  }
+  sliderMotionSettleTimers[key] = window.setTimeout(function() {
+    delete sliderMotionKeys[key];
+    delete sliderMotionSettleTimers[key];
+    updateMusicPlaybackState();
+  }, SLIDER_MOTION_SETTLE_MS);
+}
+
+function settleSliderMotion(slider) {
+  var key = getSliderMotionKey(slider);
+  settleSliderMotionByKey(key);
+}
+
+function settleAllSliderMotion() {
+  for (var key in sliderMotionKeys) {
+    settleSliderMotionByKey(key);
+  }
+}
 
 function updateKidControlValues() {
   holesValue.textContent = holesSlider.value;
@@ -775,6 +876,7 @@ function stopAnimationIfActive() {
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  updateMusicPlaybackState();
 }
 
 function redrawForPathChange() {
@@ -821,6 +923,8 @@ function redrawAnimationInPlace() {
       animationState.step
     );
   }
+
+  bringHoleNumbersToFront();
 }
 
 function fitCanvasToStage() {
@@ -841,6 +945,8 @@ function fitCanvasToStage() {
   if (animationActive) {
     animationActive = false;
     view.onFrame = null;
+    animationState = null;
+    updateMusicPlaybackState();
   }
 
   drawStatic();
@@ -1023,6 +1129,16 @@ function drawHoles() {
   }
 }
 
+function bringHoleNumbersToFront() {
+  if (!showHoleNumbers || points.length > HOLE_NUMBER_AUTO_HIDE_THRESHOLD) return;
+  var children = project.activeLayer.children;
+  for (var i = 0; i < children.length; i++) {
+    if (children[i] instanceof PointText) {
+      children[i].bringToFront();
+    }
+  }
+}
+
 /* ------------------------------
    STATIC DRAW
 ------------------------------ */
@@ -1037,17 +1153,25 @@ function drawStatic() {
   for (var i = 0; i < threads.length; i++) {
     drawThread(threads[i]);
   }
+
+  bringHoleNumbersToFront();
 }
 
 /* ------------------------------
    ANIMATION
 ------------------------------ */
 function animateStitch() {
+  // Always treat this as a fresh run, even if a prior animation is active.
+  animationActive = false;
+  view.onFrame = null;
+  animationState = null;
+
   project.activeLayer.removeChildren();
   computePoints();
 
   // Draw holes
   drawHoles();
+  bringHoleNumbersToFront();
 
   animationState = {
     threadIndex: 0,
@@ -1058,6 +1182,7 @@ function animateStitch() {
     })
   };
   animationActive = true;
+  updateMusicPlaybackState();
 
   view.onFrame = function(event) {
     if (!animationActive) return;
@@ -1065,10 +1190,14 @@ function animateStitch() {
     if (!animationState || !animationState.sequences.length) {
       animationActive = false;
       view.onFrame = null;
+      animationState = null;
+      updateMusicPlaybackState();
       return;
     }
 
-    animationState.elapsed += event.delta;
+    // Clamp long frame gaps so a resumed tab or hitch cannot skip ahead visibly.
+    var frameDelta = Math.min(event.delta, 0.1);
+    animationState.elapsed += frameDelta;
 
     var secondsPerSegment = (60 / currentAnimationBpm) * BEATS_PER_STITCH_SEGMENT;
     if (!isFinite(secondsPerSegment) || secondsPerSegment <= 0) {
@@ -1083,6 +1212,7 @@ function animateStitch() {
         animationActive = false;
         animationState = null;
         view.onFrame = null;
+        updateMusicPlaybackState();
         return;
       }
 
@@ -1101,12 +1231,14 @@ function animateStitch() {
         seg.add(points[seq[animationState.step]]);
         seg.add(points[seq[animationState.step + 1]]);
         animationState.step++;
+        bringHoleNumbersToFront();
       } else {
         animationState.threadIndex++;
         if (animationState.threadIndex >= threads.length) {
           animationActive = false;
           animationState = null;
           view.onFrame = null;
+          updateMusicPlaybackState();
           return;
         }
         animationState.step = 0;
@@ -1114,6 +1246,12 @@ function animateStitch() {
     }
   };
 }
+
+joyAudio.addEventListener('ended', function() {
+  if (!shouldMusicBePlaying()) return;
+  joyAudio.currentTime = 0;
+  playMusicFromCurrentState();
+});
 
 /* ------------------------------
    THREAD UI
@@ -1282,6 +1420,37 @@ function renderThreadControls() {
 /* ------------------------------
    EVENT LISTENERS
 ------------------------------ */
+document.addEventListener('pointerdown', function(event) {
+  var slider = event.target && event.target.closest ? event.target.closest('input[type="range"]') : null;
+  if (!slider) return;
+  markSliderAsMoving(slider);
+  updateMusicPlaybackState();
+});
+
+document.addEventListener('input', function(event) {
+  var slider = event.target && event.target.matches && event.target.matches('input[type="range"]') ? event.target : null;
+  if (!slider) return;
+  markSliderAsMoving(slider);
+  updateMusicPlaybackState();
+});
+
+document.addEventListener('keyup', function(event) {
+  var slider = event.target && event.target.matches && event.target.matches('input[type="range"]') ? event.target : null;
+  if (!slider) return;
+  settleSliderMotion(slider);
+});
+
+document.addEventListener('pointerup', settleAllSliderMotion);
+document.addEventListener('mouseup', settleAllSliderMotion);
+document.addEventListener('touchend', settleAllSliderMotion, { passive: true });
+document.addEventListener('touchcancel', settleAllSliderMotion, { passive: true });
+document.addEventListener('pointercancel', settleAllSliderMotion);
+document.addEventListener('blur', function(event) {
+  var slider = event.target && event.target.matches && event.target.matches('input[type="range"]') ? event.target : null;
+  if (!slider) return;
+  settleSliderMotion(slider);
+}, true);
+
 holesSlider.addEventListener('input', () => {
   updateKidControlValues();
   // Hole count changes point geometry and stitch path.
@@ -1462,6 +1631,12 @@ holeNumbersToggleBtn.addEventListener('click', () => {
   redrawAnimationInPlace();
 });
 
+musicToggleBtn.addEventListener('click', () => {
+  isMusicMuted = !isMusicMuted;
+  syncMusicToggleButton();
+  updateMusicPlaybackState();
+});
+
 /* ------------------------------
    INITIALIZE
 ------------------------------ */
@@ -1472,6 +1647,7 @@ applyDefaultHoles();
 applyDefaultSkipAndSize();
 applyDefaultTempo();
 syncHoleNumberToggles();
+syncMusicToggleButton();
 refreshKidThreadPicker();
 fitCanvasToStage();
 
