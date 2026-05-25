@@ -242,6 +242,15 @@
     align-items: center;
     font-size: 14px;
   }
+  .curve-type-select {
+    width: 170px;
+    border: 1px solid #cfd9ef;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 13px;
+    background: #fff;
+    color: #213047;
+  }
   .slider-label {
     display: flex;
     align-items: center;
@@ -350,13 +359,21 @@
   }
 
   .jump-preset-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: 6px;
     margin: 4px 0;
+    width: 100%;
   }
 
   .jump-preset-row select {
-    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .jump-preset-row button {
+    white-space: nowrap;
   }
 
   .advanced-global-controls {
@@ -488,6 +505,13 @@
 <!-- SLIDERS -->
 <div id="sliders">
   <div class="slider-block">
+    <div class="slider-label">✨ Stitch by...</div>
+    <select id="kid-stitch-by" class="curve-type-select">
+      <option value="add">Adding</option>
+      <option value="multiply">Multiplying</option>
+    </select>
+  </div>
+  <div class="slider-block">
     <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">35</span></div>
     <input id="holes" type="range" min="3" max="140" value="35">
   </div>
@@ -551,6 +575,7 @@ paper.setup('myCanvas');
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
 var widthSlider = document.getElementById('width');
+var kidStitchBySelect = document.getElementById('kid-stitch-by');
 var advancedShapeSelect = document.getElementById('advanced-shape');
 var advancedHolesSlider = document.getElementById('advanced-holes');
 var advancedHolesValue = document.getElementById('advanced-holes-value');
@@ -585,7 +610,9 @@ var threads = [
     sequence: null,
     jumpMode: 'fixed',
     jumpFormula: 'skip',
-    jumpSequence: ''
+    jumpSequence: '',
+    connectMultiplier: 2,
+    connectOffset: 0
   }
 ];
 var selectedThreadIndex = 0;
@@ -763,8 +790,36 @@ function createThread(config) {
     sequence: null,
     jumpMode: 'fixed',
     jumpFormula: 'skip',
-    jumpSequence: ''
+    jumpSequence: '',
+    connectMultiplier: 2,
+    connectOffset: 0
   };
+}
+
+function ensureThreadConnectConfig(thread) {
+  if (!thread) return;
+  if (!isFinite(thread.connectMultiplier)) {
+    thread.connectMultiplier = 2;
+  }
+  if (!isFinite(thread.connectOffset)) {
+    thread.connectOffset = 0;
+  }
+}
+
+function getKidStitchByForThread(thread) {
+  if (!thread || thread.jumpMode !== 'connect') {
+    return 'add';
+  }
+  return 'multiply';
+}
+
+function syncKidStitchByControl() {
+  var index = getKidTargetThreadIndex();
+  if (index < 0 || !threads[index]) {
+    kidStitchBySelect.value = 'add';
+    return;
+  }
+  kidStitchBySelect.value = getKidStitchByForThread(threads[index]);
 }
 
 function buildMagicThread() {
@@ -877,8 +932,10 @@ function syncKidControlsFromSelectedThread() {
   var index = getKidTargetThreadIndex();
   refreshKidThreadPicker();
   if (index < 0) return;
+  ensureThreadConnectConfig(threads[index]);
   jumpSlider.value = threads[index].jump;
   widthSlider.value = threads[index].width;
+  syncKidStitchByControl();
   updateKidControlValues();
 }
 
@@ -927,19 +984,23 @@ function redrawForPathChange() {
   drawStatic();
 }
 
-function drawAnimatedSegments(thread, seq, segmentCount) {
-  if (!seq || seq.length < 2 || segmentCount <= 0) return;
-  var maxSegments = Math.min(segmentCount, seq.length);
+function drawAnimatedSegments(thread, segments, segmentCount) {
+  if (!segments || !segments.length || segmentCount <= 0) return;
+  var maxSegments = Math.min(segmentCount, segments.length);
   for (var i = 0; i < maxSegments; i++) {
+    var fromIndex = segments[i][0];
+    var toIndex = segments[i][1];
+    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
+
     var seg = new Path();
     seg.strokeWidth = thread.width;
     if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / seq.length);
+      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
     } else {
       seg.strokeColor = thread.color;
     }
-    seg.add(points[seq[i]]);
-    seg.add(points[seq[(i + 1) % seq.length]]);
+    seg.add(points[fromIndex]);
+    seg.add(points[toIndex]);
   }
 }
 
@@ -951,11 +1012,11 @@ function getAnimationSecondsPerSegment() {
   return secondsPerSegment;
 }
 
-function drawAnimatedSegmentProgress(thread, seq, segmentIndex, progress) {
-  if (!seq || seq.length < 2 || segmentIndex < 0 || segmentIndex >= seq.length) return null;
+function drawAnimatedSegmentProgress(thread, segments, segmentIndex, progress) {
+  if (!segments || !segments.length || segmentIndex < 0 || segmentIndex >= segments.length) return null;
 
-  var fromIndex = seq[segmentIndex];
-  var toIndex = seq[(segmentIndex + 1) % seq.length];
+  var fromIndex = segments[segmentIndex][0];
+  var toIndex = segments[segmentIndex][1];
   var startPoint = points[fromIndex];
   var endPoint = points[toIndex];
 
@@ -970,7 +1031,7 @@ function drawAnimatedSegmentProgress(thread, seq, segmentIndex, progress) {
   seg.strokeWidth = thread.width;
 
   if (thread.color === 'rainbow') {
-    seg.strokeColor = rainbowColor(segmentIndex / seq.length);
+    seg.strokeColor = rainbowColor(segmentIndex / Math.max(1, segments.length));
   } else {
     seg.strokeColor = thread.color;
   }
@@ -991,11 +1052,13 @@ function drawSegmentSettleAccent(settle) {
   if (!settle || settle.remaining <= 0 || settle.duration <= 0) return;
   if (settle.threadIndex < 0 || settle.threadIndex >= threads.length) return;
 
-  var seq = settle.seq;
-  if (!seq || seq.length < 2 || settle.segmentIndex < 0 || settle.segmentIndex >= seq.length) return;
+  var segments = settle.segments;
+  if (!segments || !segments.length || settle.segmentIndex < 0 || settle.segmentIndex >= segments.length) return;
 
-  var startPoint = points[seq[settle.segmentIndex]];
-  var endPoint = points[seq[(settle.segmentIndex + 1) % seq.length]];
+  var fromIndex = segments[settle.segmentIndex][0];
+  var toIndex = segments[settle.segmentIndex][1];
+  var startPoint = points[fromIndex];
+  var endPoint = points[toIndex];
   if (!startPoint || !endPoint) return;
 
   var ratio = Math.max(0, Math.min(1, settle.remaining / settle.duration));
@@ -1008,8 +1071,8 @@ function drawSegmentSettleAccent(settle) {
   var incoming = endPoint.subtract(startPoint);
   if (incoming.length <= 0) return;
 
-  var nextIndex = (settle.segmentIndex + 2) % seq.length;
-  var nextPoint = points[seq[nextIndex]];
+  var nextSegment = segments[(settle.segmentIndex + 1) % segments.length];
+  var nextPoint = nextSegment ? points[nextSegment[1]] : null;
   var outgoing = nextPoint ? nextPoint.subtract(endPoint) : null;
 
   var tangent = incoming.normalize(1);
@@ -1024,7 +1087,7 @@ function drawSegmentSettleAccent(settle) {
 
   var thread = threads[settle.threadIndex];
   var color = thread.color === 'rainbow'
-    ? rainbowColor(settle.segmentIndex / seq.length)
+    ? rainbowColor(settle.segmentIndex / Math.max(1, segments.length))
     : thread.color;
 
   var settleLine = new Path();
@@ -1050,19 +1113,19 @@ function renderAnimationFrame() {
   drawHoles();
 
   for (var i = 0; i < animationState.threadIndex; i++) {
-    drawAnimatedSegments(threads[i], animationState.sequences[i], (animationState.sequences[i] || []).length);
+    drawAnimatedSegments(threads[i], animationState.segmentLists[i], (animationState.segmentLists[i] || []).length);
   }
 
   var activePair = null;
   if (animationState.threadIndex >= 0 && animationState.threadIndex < threads.length) {
     var activeThread = threads[animationState.threadIndex];
-    var activeSeq = animationState.sequences[animationState.threadIndex] || [];
+    var activeSegments = animationState.segmentLists[animationState.threadIndex] || [];
 
-    drawAnimatedSegments(activeThread, activeSeq, animationState.step);
+    drawAnimatedSegments(activeThread, activeSegments, animationState.step);
 
-    if (animationState.step < activeSeq.length) {
+    if (animationState.step < activeSegments.length) {
       var segmentProgress = animationState.elapsed / getAnimationSecondsPerSegment();
-      activePair = drawAnimatedSegmentProgress(activeThread, activeSeq, animationState.step, segmentProgress);
+      activePair = drawAnimatedSegmentProgress(activeThread, activeSegments, animationState.step, segmentProgress);
     }
   }
 
@@ -1282,6 +1345,16 @@ function computeSequence(thread) {
       .filter((num) => num !== 0);
   }
 
+  function normalizeFormulaExpression(expression) {
+    if (!expression) return 'skip';
+    return String(expression)
+      .trim()
+      .replace(/[×·]/g, '*')
+      .replace(/÷/g, '/')
+      .replace(/\^/g, '**')
+      .replace(/\bmod\b/gi, '%');
+  }
+
   var jumpResolver;
   if (jumpMode === 'sequence') {
     var stepList = parseJumpSequence(thread.jumpSequence);
@@ -1290,11 +1363,21 @@ function computeSequence(thread) {
       return normalizeJump(stepList[i % stepList.length]);
     };
   } else if (jumpMode === 'formula') {
-    var formula = (thread.jumpFormula || 'skip').trim();
+    var formula = normalizeFormulaExpression(thread.jumpFormula || 'skip');
     jumpResolver = function(i, currentIndex, previousIndex) {
       try {
-        var evaluate = new Function('i', 'n', 'current', 'prev', 'skip', 'jump', 'return (' + formula + ');');
-        return normalizeJump(evaluate(i, n, currentIndex, previousIndex, thread.jump, thread.jump));
+        var evaluate = new Function(
+          'i', 'n', 'current', 'prev', 'skip', 'jump',
+          'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
+          'return (' + formula + ');'
+        );
+        return normalizeJump(
+          evaluate(
+            i, n, currentIndex, previousIndex, thread.jump, thread.jump,
+            Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
+            Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
+          )
+        );
       } catch (err) {
         return normalizeJump(thread.jump);
       }
@@ -1317,21 +1400,49 @@ function computeSequence(thread) {
   return seq;
 }
 
-function drawThread(thread) {
-  var seq = computeSequence(thread);
+function computeSegments(thread) {
+  var n = points.length;
+  if (!n || !thread) return [];
 
-  for (var i = 0; i < seq.length; i++) {
+  if (thread.jumpMode === 'connect') {
+    ensureThreadConnectConfig(thread);
+    var segments = [];
+    var multiplier = Math.round(Number(thread.connectMultiplier || 2));
+    var offset = Math.round(Number(thread.connectOffset || 0));
+    for (var i = 0; i < n; i++) {
+      var mapped = (multiplier * i + offset) % n;
+      if (mapped < 0) mapped += n;
+      segments.push([i, mapped]);
+    }
+    return segments;
+  }
+
+  var seq = computeSequence(thread);
+  var chained = [];
+  for (var j = 0; j < seq.length; j++) {
+    chained.push([seq[j], seq[(j + 1) % seq.length]]);
+  }
+  return chained;
+}
+
+function drawThread(thread) {
+  var segments = computeSegments(thread);
+
+  for (var i = 0; i < segments.length; i++) {
+    var fromIndex = segments[i][0];
+    var toIndex = segments[i][1];
+    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
     var seg = new Path();
     seg.strokeWidth = thread.width;
 
     if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / seq.length);
+      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
     } else {
       seg.strokeColor = thread.color;
     }
 
-    seg.add(points[seq[i]]);
-    seg.add(points[seq[(i + 1) % seq.length]]);
+    seg.add(points[fromIndex]);
+    seg.add(points[toIndex]);
   }
 }
 
@@ -1411,8 +1522,8 @@ function animateStitch() {
     elapsed: 0,
     activeHolePair: null,
     settle: null,
-    sequences: threads.map(function(thread) {
-      return computeSequence(thread);
+    segmentLists: threads.map(function(thread) {
+      return computeSegments(thread);
     })
   };
   animationActive = true;
@@ -1422,7 +1533,7 @@ function animateStitch() {
   view.onFrame = function(event) {
     if (!animationActive) return;
 
-    if (!animationState || !animationState.sequences.length) {
+    if (!animationState || !animationState.segmentLists.length) {
       animationActive = false;
       view.onFrame = null;
       animationState = null;
@@ -1459,13 +1570,13 @@ function animateStitch() {
         return;
       }
 
-      var seq = animationState.sequences[threadIndex] || [];
+      var segments = animationState.segmentLists[threadIndex] || [];
 
-      if (animationState.step < seq.length) {
+      if (animationState.step < segments.length) {
         animationState.settle = {
           threadIndex: threadIndex,
           segmentIndex: animationState.step,
-          seq: seq,
+          segments: segments,
           duration: STITCH_PULL_SETTLE_SECONDS,
           remaining: STITCH_PULL_SETTLE_SECONDS
         };
@@ -1512,43 +1623,62 @@ function renderThreadControls() {
   }
 
   threads.forEach((thread, index) => {
+    ensureThreadConnectConfig(thread);
+
     var div = document.createElement('div');
     div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
 
     var isFixedMode = thread.jumpMode === 'fixed';
     var isFormulaMode = thread.jumpMode === 'formula';
     var isSequenceMode = thread.jumpMode === 'sequence';
+    var isConnectMode = thread.jumpMode === 'connect';
 
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
       Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
-      Skip mode:
+      Stitch math mode:
       <select id="jump-mode-${index}">
-        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Fixed</option>
-        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Formula</option>
-        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Sequence</option>
+        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
+        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
+        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Step list</option>
+        <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
       </select><br>
       ${isFixedMode ? `
-      Skip: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Add each step: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
       ` : ''}
       ${isFormulaMode ? `
-      Base skip: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
-      Formula: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. skip + i"><br>
-      <div class="jump-help">Vars: i, n, current, prev, skip</div>
+      Base add: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + i) mod n"><br>
+      <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
+      <div class="jump-help">Vars: i (step), n (holes), current, prev, skip</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
-          <option value="skip + i">Growing spiral (skip + i)</option>
-          <option value="skip + (i % 5)">Wobble (skip + i % 5)</option>
-          <option value="skip * ((i % 3) + 1)">Pulse (skip * ((i % 3) + 1))</option>
-          <option value="(current % 7) + skip">Current-based ((current % 7) + skip)</option>
+          <option value="(skip + i) mod n">Growing spiral ((skip + i) mod n)</option>
+          <option value="skip + (i mod 5)">Wobble (skip + (i mod 5))</option>
+          <option value="skip × ((i mod 3) + 1)">Pulse (skip × ((i mod 3) + 1))</option>
+          <option value="(current mod 7) + skip">Current-based ((current mod 7) + skip)</option>
         </select>
         <button type="button" id="use-preset-${index}">Use</button>
       </div>
       ` : ''}
       ${isSequenceMode ? `
-      Skip sequence: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
+      Step list: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
       <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
+      ` : ''}
+      ${isConnectMode ? `
+      Multiplier (times): <input type="range" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-${index}"><span class="advanced-inline-value" id="adv-connect-m-value-${index}">${thread.connectMultiplier}</span><br>
+      Offset (add-on): <input type="range" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-${index}"><span class="advanced-inline-value" id="adv-connect-offset-value-${index}">${thread.connectOffset}</span><br>
+      <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
+      <div class="jump-preset-row">
+        <select id="connect-preset-${index}">
+          <option value="">Preset multiplier...</option>
+          <option value="2,0">Cardioid (m=2, offset=0)</option>
+          <option value="3,0">Nephroid (m=3, offset=0)</option>
+          <option value="4,0">Times 4 (m=4, offset=0)</option>
+        </select>
+        <button type="button" id="use-connect-preset-${index}">Use</button>
+      </div>
       ` : ''}
       Size: <input type="range" min="1" max="10" value="${thread.width}" id="width-${index}"><span class="advanced-inline-value" id="adv-size-value-${index}">${thread.width}</span><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
@@ -1621,6 +1751,48 @@ function renderThreadControls() {
         if (thread.jumpMode === 'sequence') {
           redrawForPathChange();
         }
+      });
+    }
+
+    var connectMultiplierInput = document.getElementById(`connect-m-${index}`);
+    if (connectMultiplierInput) {
+      connectMultiplierInput.addEventListener('input', e => {
+        thread.connectMultiplier = parseInt(e.target.value, 10);
+        var mChip = document.getElementById(`adv-connect-m-value-${index}`);
+        if (mChip) mChip.textContent = String(thread.connectMultiplier);
+        if (index === getKidTargetThreadIndex()) {
+          syncKidStitchByControl();
+        }
+        redrawForPathChange();
+      });
+    }
+
+    var connectOffsetInput = document.getElementById(`connect-offset-${index}`);
+    if (connectOffsetInput) {
+      connectOffsetInput.addEventListener('input', e => {
+        thread.connectOffset = parseInt(e.target.value, 10);
+        var offsetChip = document.getElementById(`adv-connect-offset-value-${index}`);
+        if (offsetChip) offsetChip.textContent = String(thread.connectOffset);
+        if (index === getKidTargetThreadIndex()) {
+          syncKidStitchByControl();
+        }
+        redrawForPathChange();
+      });
+    }
+
+    var useConnectPresetBtn = document.getElementById(`use-connect-preset-${index}`);
+    if (useConnectPresetBtn) {
+      useConnectPresetBtn.addEventListener('click', () => {
+        var raw = document.getElementById(`connect-preset-${index}`).value;
+        if (!raw) return;
+        var parts = raw.split(',');
+        if (parts.length !== 2) return;
+        thread.jumpMode = 'connect';
+        thread.connectMultiplier = parseInt(parts[0], 10);
+        thread.connectOffset = parseInt(parts[1], 10);
+        renderThreadControls();
+        syncKidControlsFromSelectedThread();
+        redrawForPathChange();
       });
     }
 
@@ -1715,6 +1887,27 @@ advancedHoleNumbersToggle.addEventListener('change', () => {
   syncHoleNumberToggles();
   // Labels only; keep animation continuity.
   redrawAnimationInPlace();
+});
+kidStitchBySelect.addEventListener('change', () => {
+  var targetIndex = getKidTargetThreadIndex();
+  if (targetIndex < 0 || !threads[targetIndex]) return;
+
+  var thread = threads[targetIndex];
+  var choice = kidStitchBySelect.value;
+
+  if (choice === 'multiply') {
+    thread.jumpMode = 'connect';
+    thread.connectMultiplier = 2;
+    thread.connectOffset = 0;
+  } else if (choice === 'add') {
+    if (thread.jumpMode === 'connect') {
+      thread.jumpMode = 'fixed';
+    }
+  }
+
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  redrawForPathChange();
 });
 jumpSlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
