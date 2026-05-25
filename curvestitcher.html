@@ -505,19 +505,23 @@
 <!-- SLIDERS -->
 <div id="sliders">
   <div class="slider-block">
-    <div class="slider-label">✨ Stitch by...</div>
+    <div class="slider-label">⚫ Holes <span class="slider-value" id="holes-value">35</span></div>
+    <input id="holes" type="range" min="3" max="140" value="35">
+  </div>
+  <div class="slider-block">
+    <div class="slider-label">🧵 Stitch by...</div>
     <select id="kid-stitch-by" class="curve-type-select">
       <option value="add">Adding</option>
       <option value="multiply">Multiplying</option>
     </select>
   </div>
-  <div class="slider-block">
-    <div class="slider-label">🔵 Holes <span class="slider-value" id="holes-value">35</span></div>
-    <input id="holes" type="range" min="3" max="140" value="35">
-  </div>
-  <div class="slider-block">
-    <div class="slider-label">🟣 Skip <span class="slider-value" id="jump-value">22</span></div>
+  <div class="slider-block" id="add-slider-block">
+    <div class="slider-label">➕ Add <span class="slider-value" id="jump-value">22</span></div>
     <input id="jump" type="range" min="1" max="100" value="22">
+  </div>
+  <div class="slider-block" id="multiply-slider-block" style="display:none;">
+    <div class="slider-label">✖ Multiply <span class="slider-value" id="multiply-value">2</span></div>
+    <input id="multiply" type="range" min="1" max="12" value="2">
   </div>
   <div class="slider-block">
     <div class="slider-label">🟠 Thread Size <span class="slider-value" id="width-value">2</span></div>
@@ -574,8 +578,11 @@ paper.setup('myCanvas');
 ------------------------------ */
 var holesSlider = document.getElementById('holes');
 var jumpSlider  = document.getElementById('jump');
+var multiplySlider = document.getElementById('multiply');
 var widthSlider = document.getElementById('width');
 var kidStitchBySelect = document.getElementById('kid-stitch-by');
+var addSliderBlock = document.getElementById('add-slider-block');
+var multiplySliderBlock = document.getElementById('multiply-slider-block');
 var advancedShapeSelect = document.getElementById('advanced-shape');
 var advancedHolesSlider = document.getElementById('advanced-holes');
 var advancedHolesValue = document.getElementById('advanced-holes-value');
@@ -595,6 +602,7 @@ var kidThreadActiveSwatch = document.getElementById('kid-thread-active-swatch');
 var kidThreadActiveLabel = document.getElementById('kid-thread-active-label');
 var holesValue  = document.getElementById('holes-value');
 var jumpValue   = document.getElementById('jump-value');
+var multiplyValue = document.getElementById('multiply-value');
 var widthValue  = document.getElementById('width-value');
 var animateBtn  = document.getElementById('animate');
 var surpriseBtn = document.getElementById('surprise');
@@ -777,6 +785,7 @@ function syncHoleNumberHighlightFromAnimationState() {
 function updateKidControlValues() {
   holesValue.textContent = holesSlider.value;
   jumpValue.textContent = jumpSlider.value;
+  multiplyValue.textContent = multiplySlider.value;
   widthValue.textContent = widthSlider.value;
   advancedHolesSlider.value = holesSlider.value;
   advancedHolesValue.textContent = holesSlider.value;
@@ -820,6 +829,21 @@ function syncKidStitchByControl() {
     return;
   }
   kidStitchBySelect.value = getKidStitchByForThread(threads[index]);
+}
+
+function syncBasicMathSliderVisibility() {
+  var index = getKidTargetThreadIndex();
+  var isMultiplyMode = false;
+
+  if (index >= 0 && threads[index]) {
+    isMultiplyMode = threads[index].jumpMode === 'connect';
+  }
+
+  addSliderBlock.style.display = isMultiplyMode ? 'none' : '';
+  multiplySliderBlock.style.display = isMultiplyMode ? '' : 'none';
+
+  jumpSlider.disabled = isMultiplyMode;
+  multiplySlider.disabled = !isMultiplyMode;
 }
 
 function buildMagicThread() {
@@ -934,8 +958,10 @@ function syncKidControlsFromSelectedThread() {
   if (index < 0) return;
   ensureThreadConnectConfig(threads[index]);
   jumpSlider.value = threads[index].jump;
+  multiplySlider.value = threads[index].connectMultiplier;
   widthSlider.value = threads[index].width;
   syncKidStitchByControl();
+  syncBasicMathSliderVisibility();
   updateKidControlValues();
 }
 
@@ -1410,8 +1436,11 @@ function computeSegments(thread) {
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
     var offset = Math.round(Number(thread.connectOffset || 0));
     for (var i = 0; i < n; i++) {
-      var mapped = (multiplier * i + offset) % n;
-      if (mapped < 0) mapped += n;
+      // Use label-based (1..n) arithmetic so visible hole numbers match mapping behavior.
+      var sourceLabel = i + 1;
+      var mappedLabel = (multiplier * sourceLabel + offset - 1) % n;
+      if (mappedLabel < 0) mappedLabel += n;
+      var mapped = mappedLabel;
       segments.push([i, mapped]);
     }
     return segments;
@@ -1639,9 +1668,9 @@ function renderThreadControls() {
       Stitch math mode:
       <select id="jump-mode-${index}">
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
-        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
-        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Step list</option>
         <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
+        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Step list</option>
+        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
       </select><br>
       ${isFixedMode ? `
       Add each step: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
@@ -1761,7 +1790,7 @@ function renderThreadControls() {
         var mChip = document.getElementById(`adv-connect-m-value-${index}`);
         if (mChip) mChip.textContent = String(thread.connectMultiplier);
         if (index === getKidTargetThreadIndex()) {
-          syncKidStitchByControl();
+          syncKidControlsFromSelectedThread();
         }
         redrawForPathChange();
       });
@@ -1774,7 +1803,7 @@ function renderThreadControls() {
         var offsetChip = document.getElementById(`adv-connect-offset-value-${index}`);
         if (offsetChip) offsetChip.textContent = String(thread.connectOffset);
         if (index === getKidTargetThreadIndex()) {
-          syncKidStitchByControl();
+          syncKidControlsFromSelectedThread();
         }
         redrawForPathChange();
       });
@@ -1912,9 +1941,21 @@ kidStitchBySelect.addEventListener('change', () => {
 jumpSlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
+  if (threads[targetIndex].jumpMode === 'connect') return;
   updateKidControlValues();
   threads[targetIndex].jump = parseInt(jumpSlider.value, 10);
   renderThreadControls();
+  redrawForPathChange();
+});
+multiplySlider.addEventListener('input', () => {
+  var targetIndex = getKidTargetThreadIndex();
+  if (targetIndex < 0 || !threads[targetIndex]) return;
+  ensureThreadConnectConfig(threads[targetIndex]);
+  threads[targetIndex].jumpMode = 'connect';
+  threads[targetIndex].connectMultiplier = parseInt(multiplySlider.value, 10);
+  updateKidControlValues();
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
   redrawForPathChange();
 });
 widthSlider.addEventListener('input', () => {
@@ -2090,6 +2131,7 @@ applyDefaultTempo();
 syncHoleNumberToggles();
 syncMusicToggleButton();
 refreshKidThreadPicker();
+syncBasicMathSliderVisibility();
 fitCanvasToStage();
 
 </script>
