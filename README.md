@@ -1,6 +1,19 @@
 # curve_stitcher
 for playing with curve stitching a la mary everest boole (enabled in this case of course by babbage)
 
+## License
+
+This project is licensed under PolyForm Noncommercial 1.0.0. See [LICENSE](LICENSE).
+
+License intent for this project:
+- Free use, sharing, and modification for noncommercial purposes.
+- Attribution to Josh Hicken.
+- Commercial/for-profit use is not permitted under the current license.
+
+Note on future changes:
+- The project license can be changed in future versions.
+- Prior distributed copies remain under the license they were released under.
+
 ## Current Milestones
 
 1. Square canvas enforcement hardening
