@@ -3,8 +3,14 @@ for playing with curve stitching a la mary everest boole (enabled in this case o
 
 ## Current Milestones
 
-1. Shape border support
-2. SVG export
+1. Stitch motion realism
+2. Square canvas enforcement hardening
+3. Formula mode clarity
+4. Cardioid support assurance
+5. Shape border support
+6. SVG export
+7. Known pattern discovery detector
+8. Stitch library (offline-first)
 
 ## TODO Backlog
 
@@ -55,10 +61,11 @@ for playing with curve stitching a la mary everest boole (enabled in this case o
 
 ## Suggested Delivery Order
 
-1. Shape borders
-2. SVG export
-3. Stitch library (offline-first)
-4. Formula UX pass
-5. Mapping mode for cardioid family
-6. Pattern discovery notifier
-7. Motion realism polish
+1. Stitch motion realism
+2. Square canvas enforcement hardening
+3. Formula UX pass
+4. Mapping mode for cardioid family
+5. Shape borders
+6. SVG export
+7. Pattern discovery notifier
+8. Stitch library (offline-first)
