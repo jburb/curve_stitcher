@@ -590,6 +590,7 @@ var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers')
 var advancedTempoInput = document.getElementById('advanced-tempo');
 var advancedTempoValue = document.getElementById('advanced-tempo-value');
 var resetTempoBtn = document.getElementById('reset-tempo');
+var canvasContainer = document.getElementById('canvas-container');
 var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
@@ -646,6 +647,7 @@ var MUSIC_TRACK_PATH = 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3
 var SLIDER_MOTION_SETTLE_MS = 180;
 var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
 var STITCH_PULL_SETTLE_OVERSHOOT = 0.027;
+var pendingCanvasFit = false;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 var joyAudio = new Audio(MUSIC_TRACK_PATH);
@@ -1172,14 +1174,47 @@ function redrawAnimationInPlace() {
   renderAnimationFrame();
 }
 
+function scheduleFitCanvasToStage() {
+  if (pendingCanvasFit) return;
+  pendingCanvasFit = true;
+  requestAnimationFrame(function() {
+    pendingCanvasFit = false;
+    fitCanvasToStage();
+  });
+}
+
 function fitCanvasToStage() {
-  var containerRect = canvasStage.parentElement.getBoundingClientRect();
-  var size = Math.floor(Math.min(containerRect.width, containerRect.height));
+  var stageHost = canvasStage.parentElement || canvasContainer;
+  var containerRect = stageHost.getBoundingClientRect();
+
+  var maxWidth = parseFloat(getComputedStyle(canvasStage).maxWidth);
+  if (!isFinite(maxWidth) || maxWidth <= 0) {
+    maxWidth = Infinity;
+  }
+
+  var viewportCap = Infinity;
+  if (window.visualViewport) {
+    viewportCap = Math.min(window.visualViewport.width, window.visualViewport.height);
+  }
+
+  var size = Math.floor(Math.min(containerRect.width, containerRect.height, maxWidth, viewportCap));
+
+  if ((!isFinite(size) || size <= 0) && canvasContainer) {
+    var fallbackWidth = canvasContainer.clientWidth || 0;
+    var fallbackHeight = canvasContainer.clientHeight || 0;
+    size = Math.floor(Math.min(fallbackWidth, fallbackHeight, maxWidth));
+  }
+
   if (!isFinite(size) || size <= 0) return;
 
   // Keep the stage physically square so canvas rendering never stretches.
-  canvasStage.style.width = size + 'px';
-  canvasStage.style.height = size + 'px';
+  var pixelSize = size + 'px';
+  if (canvasStage.style.width !== pixelSize) {
+    canvasStage.style.width = pixelSize;
+  }
+  if (canvasStage.style.height !== pixelSize) {
+    canvasStage.style.height = pixelSize;
+  }
 
   if (view.viewSize.width === size && view.viewSize.height === size) {
     return;
@@ -1665,7 +1700,7 @@ function renderThreadControls() {
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
       Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
-      Stitch math mode:
+      Stitch by:
       <select id="jump-mode-${index}">
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
         <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
@@ -1673,7 +1708,7 @@ function renderThreadControls() {
         <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
       </select><br>
       ${isFixedMode ? `
-      Add each step: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Add by: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
       ` : ''}
       ${isFormulaMode ? `
       Base add: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
@@ -1696,7 +1731,7 @@ function renderThreadControls() {
       <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
       ` : ''}
       ${isConnectMode ? `
-      Multiplier (times): <input type="range" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-${index}"><span class="advanced-inline-value" id="adv-connect-m-value-${index}">${thread.connectMultiplier}</span><br>
+      Multiply by: <input type="range" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-${index}"><span class="advanced-inline-value" id="adv-connect-m-value-${index}">${thread.connectMultiplier}</span><br>
       Offset (add-on): <input type="range" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-${index}"><span class="advanced-inline-value" id="adv-connect-offset-value-${index}">${thread.connectOffset}</span><br>
       <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
       <div class="jump-preset-row">
@@ -2073,12 +2108,19 @@ document.addEventListener('click', (event) => {
 
 if (window.ResizeObserver) {
   canvasResizeObserver = new ResizeObserver(() => {
-    fitCanvasToStage();
+    scheduleFitCanvasToStage();
   });
   canvasResizeObserver.observe(canvasStage);
+  if (canvasContainer) {
+    canvasResizeObserver.observe(canvasContainer);
+  }
 }
 
-window.addEventListener('resize', fitCanvasToStage);
+window.addEventListener('resize', scheduleFitCanvasToStage);
+window.addEventListener('orientationchange', scheduleFitCanvasToStage);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', scheduleFitCanvasToStage);
+}
 
 window.addEventListener('pageshow', () => {
   applyDefaultHoles();
