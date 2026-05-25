@@ -609,6 +609,8 @@ var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
 var ALLOWED_TEMPOS = [84, 168, 252, 336, 420];
 var MUSIC_TRACK_PATH = 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3';
 var SLIDER_MOTION_SETTLE_MS = 180;
+var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
+var STITCH_PULL_SETTLE_OVERSHOOT = 0.027;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 var joyAudio = new Audio(MUSIC_TRACK_PATH);
@@ -927,7 +929,7 @@ function redrawForPathChange() {
 
 function drawAnimatedSegments(thread, seq, segmentCount) {
   if (!seq || seq.length < 2 || segmentCount <= 0) return;
-  var maxSegments = Math.min(segmentCount, seq.length - 1);
+  var maxSegments = Math.min(segmentCount, seq.length);
   for (var i = 0; i < maxSegments; i++) {
     var seg = new Path();
     seg.strokeWidth = thread.width;
@@ -937,13 +939,108 @@ function drawAnimatedSegments(thread, seq, segmentCount) {
       seg.strokeColor = thread.color;
     }
     seg.add(points[seq[i]]);
-    seg.add(points[seq[i + 1]]);
+    seg.add(points[seq[(i + 1) % seq.length]]);
   }
 }
 
-function redrawAnimationInPlace() {
-  // Style-only updates should preserve current animation progress.
-  if (!animationActive || !animationState) {
+function getAnimationSecondsPerSegment() {
+  var secondsPerSegment = (60 / currentAnimationBpm) * BEATS_PER_STITCH_SEGMENT;
+  if (!isFinite(secondsPerSegment) || secondsPerSegment <= 0) {
+    secondsPerSegment = (60 / DEFAULT_ANIMATION_BPM) * BEATS_PER_STITCH_SEGMENT;
+  }
+  return secondsPerSegment;
+}
+
+function drawAnimatedSegmentProgress(thread, seq, segmentIndex, progress) {
+  if (!seq || seq.length < 2 || segmentIndex < 0 || segmentIndex >= seq.length) return null;
+
+  var fromIndex = seq[segmentIndex];
+  var toIndex = seq[(segmentIndex + 1) % seq.length];
+  var startPoint = points[fromIndex];
+  var endPoint = points[toIndex];
+
+  if (!startPoint || !endPoint) return null;
+
+  var p = Math.max(0, Math.min(1, progress));
+  // A slight ease-out makes the pull feel more organic without changing tempo.
+  var eased = 1 - Math.pow(1 - p, 2);
+  var currentPoint = startPoint.add(endPoint.subtract(startPoint).multiply(eased));
+
+  var seg = new Path();
+  seg.strokeWidth = thread.width;
+
+  if (thread.color === 'rainbow') {
+    seg.strokeColor = rainbowColor(segmentIndex / seq.length);
+  } else {
+    seg.strokeColor = thread.color;
+  }
+
+  seg.add(startPoint);
+  seg.add(currentPoint);
+
+  if (p < 1) {
+    var pullHead = new Path.Circle(currentPoint, Math.max(1.8, thread.width * 0.7));
+    pullHead.fillColor = seg.strokeColor;
+    pullHead.opacity = 0.88;
+  }
+
+  return [fromIndex, toIndex];
+}
+
+function drawSegmentSettleAccent(settle) {
+  if (!settle || settle.remaining <= 0 || settle.duration <= 0) return;
+  if (settle.threadIndex < 0 || settle.threadIndex >= threads.length) return;
+
+  var seq = settle.seq;
+  if (!seq || seq.length < 2 || settle.segmentIndex < 0 || settle.segmentIndex >= seq.length) return;
+
+  var startPoint = points[seq[settle.segmentIndex]];
+  var endPoint = points[seq[(settle.segmentIndex + 1) % seq.length]];
+  if (!startPoint || !endPoint) return;
+
+  var ratio = Math.max(0, Math.min(1, settle.remaining / settle.duration));
+  var settleStrength = ratio * ratio;
+  var distance = startPoint.getDistance(endPoint);
+  var overshootAmount = Math.min(8, distance * STITCH_PULL_SETTLE_OVERSHOOT * settleStrength);
+  if (overshootAmount <= 0.01) return;
+
+  // Blend incoming and outgoing directions so the overshoot follows local flow.
+  var incoming = endPoint.subtract(startPoint);
+  if (incoming.length <= 0) return;
+
+  var nextIndex = (settle.segmentIndex + 2) % seq.length;
+  var nextPoint = points[seq[nextIndex]];
+  var outgoing = nextPoint ? nextPoint.subtract(endPoint) : null;
+
+  var tangent = incoming.normalize(1);
+  if (outgoing && outgoing.length > 0) {
+    tangent = incoming.normalize(0.7).add(outgoing.normalize(0.3));
+    if (tangent.length <= 0) {
+      tangent = incoming.normalize(1);
+    }
+  }
+
+  var overshootPoint = endPoint.add(tangent.normalize(overshootAmount));
+
+  var thread = threads[settle.threadIndex];
+  var color = thread.color === 'rainbow'
+    ? rainbowColor(settle.segmentIndex / seq.length)
+    : thread.color;
+
+  var settleLine = new Path();
+  settleLine.strokeColor = color;
+  settleLine.strokeWidth = Math.max(1, thread.width * (0.75 + 0.35 * ratio));
+  settleLine.opacity = 0.65 * ratio;
+  settleLine.add(endPoint);
+  settleLine.add(overshootPoint);
+
+  var settleHead = new Path.Circle(overshootPoint, Math.max(1.4, thread.width * 0.55));
+  settleHead.fillColor = color;
+  settleHead.opacity = 0.7 * ratio;
+}
+
+function renderAnimationFrame() {
+  if (!animationState) {
     drawStatic();
     return;
   }
@@ -953,19 +1050,37 @@ function redrawAnimationInPlace() {
   drawHoles();
 
   for (var i = 0; i < animationState.threadIndex; i++) {
-    drawAnimatedSegments(threads[i], animationState.sequences[i], (animationState.sequences[i] || []).length - 1);
+    drawAnimatedSegments(threads[i], animationState.sequences[i], (animationState.sequences[i] || []).length);
   }
 
+  var activePair = null;
   if (animationState.threadIndex >= 0 && animationState.threadIndex < threads.length) {
-    drawAnimatedSegments(
-      threads[animationState.threadIndex],
-      animationState.sequences[animationState.threadIndex],
-      animationState.step
-    );
+    var activeThread = threads[animationState.threadIndex];
+    var activeSeq = animationState.sequences[animationState.threadIndex] || [];
+
+    drawAnimatedSegments(activeThread, activeSeq, animationState.step);
+
+    if (animationState.step < activeSeq.length) {
+      var segmentProgress = animationState.elapsed / getAnimationSecondsPerSegment();
+      activePair = drawAnimatedSegmentProgress(activeThread, activeSeq, animationState.step, segmentProgress);
+    }
   }
 
+  drawSegmentSettleAccent(animationState.settle);
+
+  animationState.activeHolePair = activePair;
   syncHoleNumberHighlightFromAnimationState();
   bringHoleNumbersToFront();
+}
+
+function redrawAnimationInPlace() {
+  // Style-only updates should preserve current animation progress.
+  if (!animationActive || !animationState) {
+    drawStatic();
+    return;
+  }
+
+  renderAnimationFrame();
 }
 
 function fitCanvasToStage() {
@@ -1290,21 +1405,19 @@ function animateStitch() {
   project.activeLayer.removeChildren();
   computePoints();
 
-  // Draw holes
-  drawHoles();
-  bringHoleNumbersToFront();
-
   animationState = {
     threadIndex: 0,
     step: 0,
     elapsed: 0,
     activeHolePair: null,
+    settle: null,
     sequences: threads.map(function(thread) {
       return computeSequence(thread);
     })
   };
   animationActive = true;
   updateMusicPlaybackState();
+  renderAnimationFrame();
 
   view.onFrame = function(event) {
     if (!animationActive) return;
@@ -1315,6 +1428,7 @@ function animateStitch() {
       animationState = null;
       clearHighlightedHoleNumbers();
       updateMusicPlaybackState();
+      drawStatic();
       return;
     }
 
@@ -1322,10 +1436,14 @@ function animateStitch() {
     var frameDelta = Math.min(event.delta, 0.1);
     animationState.elapsed += frameDelta;
 
-    var secondsPerSegment = (60 / currentAnimationBpm) * BEATS_PER_STITCH_SEGMENT;
-    if (!isFinite(secondsPerSegment) || secondsPerSegment <= 0) {
-      secondsPerSegment = (60 / DEFAULT_ANIMATION_BPM) * BEATS_PER_STITCH_SEGMENT;
+    if (animationState.settle) {
+      animationState.settle.remaining = Math.max(0, animationState.settle.remaining - frameDelta);
+      if (animationState.settle.remaining <= 0) {
+        animationState.settle = null;
+      }
     }
+
+    var secondsPerSegment = getAnimationSecondsPerSegment();
 
     while (animationState.elapsed >= secondsPerSegment && animationActive) {
       animationState.elapsed -= secondsPerSegment;
@@ -1337,30 +1455,21 @@ function animateStitch() {
         view.onFrame = null;
         clearHighlightedHoleNumbers();
         updateMusicPlaybackState();
+        drawStatic();
         return;
       }
 
       var seq = animationState.sequences[threadIndex] || [];
 
-      if (animationState.step < seq.length - 1) {
-        var fromIndex = seq[animationState.step];
-        var toIndex = seq[animationState.step + 1];
-
-        var seg = new Path();
-        seg.strokeWidth = threads[threadIndex].width;
-
-        if (threads[threadIndex].color === 'rainbow') {
-          seg.strokeColor = rainbowColor(animationState.step / seq.length);
-        } else {
-          seg.strokeColor = threads[threadIndex].color;
-        }
-
-        seg.add(points[fromIndex]);
-        seg.add(points[toIndex]);
-        animationState.activeHolePair = [fromIndex, toIndex];
-        syncHoleNumberHighlightFromAnimationState();
+      if (animationState.step < seq.length) {
+        animationState.settle = {
+          threadIndex: threadIndex,
+          segmentIndex: animationState.step,
+          seq: seq,
+          duration: STITCH_PULL_SETTLE_SECONDS,
+          remaining: STITCH_PULL_SETTLE_SECONDS
+        };
         animationState.step++;
-        bringHoleNumbersToFront();
       } else {
         animationState.threadIndex++;
         if (animationState.threadIndex >= threads.length) {
@@ -1369,11 +1478,14 @@ function animateStitch() {
           view.onFrame = null;
           clearHighlightedHoleNumbers();
           updateMusicPlaybackState();
+          drawStatic();
           return;
         }
         animationState.step = 0;
       }
     }
+
+    renderAnimationFrame();
   };
 }
 
