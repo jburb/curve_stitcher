@@ -545,6 +545,8 @@
         <option value="star">Star</option>
         <option value="heart">Heart</option>
       </select></div>
+      <div class="advanced-global-row">Border: <input id="advanced-border-enabled" type="checkbox"></div>
+      <div class="advanced-global-help">Paired inner + outer borders around holes (Stitching mode).</div>
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Holes</div>
@@ -587,6 +589,7 @@ var advancedShapeSelect = document.getElementById('advanced-shape');
 var advancedHolesSlider = document.getElementById('advanced-holes');
 var advancedHolesValue = document.getElementById('advanced-holes-value');
 var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
+var advancedBorderEnabledInput = document.getElementById('advanced-border-enabled');
 var advancedTempoInput = document.getElementById('advanced-tempo');
 var advancedTempoValue = document.getElementById('advanced-tempo-value');
 var resetTempoBtn = document.getElementById('reset-tempo');
@@ -648,6 +651,16 @@ var SLIDER_MOTION_SETTLE_MS = 180;
 var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
 var STITCH_PULL_SETTLE_OVERSHOOT = 0.027;
 var pendingCanvasFit = false;
+var BORDER_STROKE_WIDTH = 2;
+var BORDER_INNER_GAP = 10;
+var BORDER_OUTER_GAP = 17;
+var LABEL_HOLE_CLEARANCE = 2.2;
+var LABEL_BORDER_CLEARANCE = 1.2;
+var LABEL_OUTER_BIAS = 0.72;
+var BORDER_STROKE_COLOR = '#2f4368';
+var BORDER_INCLUDE_IN_SVG = true;
+
+var borderEnabled = true;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 var joyAudio = new Audio(MUSIC_TRACK_PATH);
@@ -791,6 +804,10 @@ function updateKidControlValues() {
   widthValue.textContent = widthSlider.value;
   advancedHolesSlider.value = holesSlider.value;
   advancedHolesValue.textContent = holesSlider.value;
+}
+
+function syncBorderControls() {
+  advancedBorderEnabledInput.checked = borderEnabled;
 }
 
 function createThread(config) {
@@ -1138,6 +1155,7 @@ function renderAnimationFrame() {
 
   project.activeLayer.removeChildren();
   computePoints();
+  drawShapeBorder();
   drawHoles();
 
   for (var i = 0; i < animationState.threadIndex; i++) {
@@ -1243,6 +1261,13 @@ function rainbowColor(t) {
    SHAPE GENERATION
 ------------------------------ */
 var currentShape = "circle";
+
+function getShapeGeometry() {
+  return {
+    center: view.center,
+    radius: Math.min(view.size.width, view.size.height) * 0.35
+  };
+}
 
 function polygonPoint(theta, sides, radius, center) {
   var sector = (2 * Math.PI) / sides;
@@ -1351,8 +1376,9 @@ function sampleEvenlyAlongClosedPolyline(vertices, count) {
 
 function computePoints() {
   var n = parseInt(holesSlider.value, 10);
-  var center = view.center;
-  var radius = Math.min(view.size.width, view.size.height) * 0.35;
+  var geometry = getShapeGeometry();
+  var center = geometry.center;
+  var radius = geometry.radius;
 
   points = [];
 
@@ -1369,6 +1395,84 @@ function computePoints() {
   var sampleCount = Math.max(360, n * 12);
   var boundarySamples = buildShapeBoundarySamples(sampleCount, center, radius);
   points = sampleEvenlyAlongClosedPolyline(boundarySamples, n);
+}
+
+function signedAreaOfClosedPolyline(vertices) {
+  if (!vertices || vertices.length < 3) return 0;
+  var twiceArea = 0;
+  for (var i = 0; i < vertices.length; i++) {
+    var current = vertices[i];
+    var next = vertices[(i + 1) % vertices.length];
+    twiceArea += (current.x * next.y) - (next.x * current.y);
+  }
+  return twiceArea / 2;
+}
+
+function offsetClosedPolyline(vertices, distance) {
+  if (!vertices || vertices.length < 3 || !isFinite(distance) || distance === 0) {
+    return vertices ? vertices.slice() : [];
+  }
+
+  var ccw = signedAreaOfClosedPolyline(vertices) > 0;
+  var outwardRotation = ccw ? -90 : 90;
+  var result = [];
+
+  for (var i = 0; i < vertices.length; i++) {
+    var prev = vertices[(i - 1 + vertices.length) % vertices.length];
+    var curr = vertices[i];
+    var next = vertices[(i + 1) % vertices.length];
+
+    var incoming = curr.subtract(prev);
+    var outgoing = next.subtract(curr);
+
+    var n1 = incoming.length > 0 ? incoming.normalize(1).rotate(outwardRotation) : null;
+    var n2 = outgoing.length > 0 ? outgoing.normalize(1).rotate(outwardRotation) : null;
+
+    var normal = null;
+    if (n1 && n2) {
+      normal = n1.add(n2);
+      if (normal.length <= 1e-6) {
+        normal = n1;
+      }
+    } else {
+      normal = n1 || n2;
+    }
+
+    if (!normal || normal.length <= 1e-6) {
+      var tangent = next.subtract(prev);
+      normal = tangent.length > 0 ? tangent.normalize(1).rotate(outwardRotation) : new Point(0, -1);
+    }
+
+    result.push(curr.add(normal.normalize(distance)));
+  }
+
+  return result;
+}
+
+function drawShapeBorder() {
+  if (!borderEnabled) return;
+
+  // Use the same boundary generator as hole placement and draw paired offsets around it.
+  var geometry = getShapeGeometry();
+  var boundarySamples = buildShapeBoundarySamples(480, geometry.center, geometry.radius);
+  if (!boundarySamples.length) return;
+
+  var outerSamples = offsetClosedPolyline(boundarySamples, BORDER_OUTER_GAP);
+  var innerSamples = offsetClosedPolyline(boundarySamples, -BORDER_INNER_GAP);
+
+  var outerPath = new Path(outerSamples);
+  outerPath.closed = true;
+  outerPath.strokeColor = BORDER_STROKE_COLOR;
+  outerPath.strokeWidth = BORDER_STROKE_WIDTH;
+  outerPath.strokeJoin = 'round';
+  outerPath.strokeCap = 'round';
+
+  var innerPath = new Path(innerSamples);
+  innerPath.closed = true;
+  innerPath.strokeColor = BORDER_STROKE_COLOR;
+  innerPath.strokeWidth = BORDER_STROKE_WIDTH;
+  innerPath.strokeJoin = 'round';
+  innerPath.strokeCap = 'round';
 }
 
 /* ------------------------------
@@ -1516,19 +1620,111 @@ function shouldShowHoleNumbersNow() {
   return showHoleNumbers && holeCount <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
 }
 
+function getOutwardDirectionAtHole(index, ccw) {
+  if (!points.length) return new Point(0, -1);
+
+  var n = points.length;
+  var prev = points[(index - 1 + n) % n];
+  var curr = points[index];
+  var next = points[(index + 1) % n];
+  var tangent = next.subtract(prev);
+
+  if (tangent.length <= 0.001) {
+    var fromCenter = curr.subtract(view.center);
+    if (fromCenter.length <= 0.001) return new Point(0, -1);
+    return fromCenter.normalize(1);
+  }
+
+  var outwardRotation = ccw ? -90 : 90;
+  var outward = tangent.normalize(1).rotate(outwardRotation);
+  if (outward.length <= 0.001) {
+    var fallback = curr.subtract(view.center);
+    if (fallback.length <= 0.001) return new Point(0, -1);
+    return fallback.normalize(1);
+  }
+
+  // Ensure direction points away from center for stable "outer side" placement.
+  if (outward.dot(curr.subtract(view.center)) < 0) {
+    outward = outward.multiply(-1);
+  }
+
+  return outward.normalize(1);
+}
+
+function getBoundsExtentAlongDirection(item, direction) {
+  var dir = direction.normalize(1);
+  var center = item.position;
+  var corners = [
+    item.bounds.topLeft,
+    item.bounds.topRight,
+    item.bounds.bottomLeft,
+    item.bounds.bottomRight
+  ];
+  var maxProjection = 0;
+  for (var i = 0; i < corners.length; i++) {
+    var projection = corners[i].subtract(center).dot(dir);
+    if (projection > maxProjection) {
+      maxProjection = projection;
+    }
+  }
+  return Math.max(0, maxProjection);
+}
+
+function getHoleNumberFontSize(holeCount) {
+  if (holeCount >= 70) return 8;
+  if (holeCount >= 55) return 8.5;
+  return 9;
+}
+
 function drawHoles() {
   var numbersVisible = shouldShowHoleNumbersNow();
+  var holeCount = parseInt(holesSlider.value, 10);
+  if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
+  var fontSize = getHoleNumberFontSize(holeCount);
+  var ccw = signedAreaOfClosedPolyline(points) > 0;
   holeNumberLabelsByIndex = Object.create(null);
   highlightedHoleNumbers = [];
   for (var i = 0; i < points.length; i++) {
     new Path.Circle(points[i], 3).fillColor = '#333';
     if (numbersVisible) {
-      var label = new PointText(points[i].add([0, -10]));
+      var outward = getOutwardDirectionAtHole(i, ccw);
+
+      var label = new PointText(points[i]);
       label.justification = 'center';
       label.fillColor = '#555';
-      label.fontSize = 9;
+      label.fontSize = fontSize;
       label.fontWeight = 'normal';
       label.content = String(i + 1);
+
+      var extent = getBoundsExtentAlongDirection(label, outward);
+      var minOffset = 3 + LABEL_HOLE_CLEARANCE + extent;
+      var maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE + extent);
+
+      // If space is tight, reduce label size before final placement.
+      if (maxOffset < minOffset) {
+        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE) - (3 + LABEL_HOLE_CLEARANCE);
+        var targetFont = Math.max(6, Math.min(label.fontSize, availableBand * 1.6));
+        if (targetFont < label.fontSize) {
+          label.fontSize = targetFont;
+          extent = getBoundsExtentAlongDirection(label, outward);
+          minOffset = 3 + LABEL_HOLE_CLEARANCE + extent;
+          maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE + extent);
+        }
+      }
+
+      var preferredOffset = Math.max(minOffset, BORDER_OUTER_GAP * LABEL_OUTER_BIAS);
+      var clampedOffset;
+      if (maxOffset >= minOffset) {
+        clampedOffset = Math.max(minOffset, Math.min(preferredOffset, maxOffset));
+      } else {
+        // Fallback: prioritize staying inside the outer border band.
+        clampedOffset = Math.max(3.8, maxOffset);
+      }
+      if (!isFinite(clampedOffset)) {
+        clampedOffset = Math.max(4, BORDER_OUTER_GAP * 0.6);
+      }
+      label.position = points[i].add(outward.multiply(clampedOffset));
+
       holeNumberLabelsByIndex[i] = label;
     }
   }
@@ -1554,6 +1750,9 @@ function bringHoleNumbersToFront() {
 function drawStatic() {
   project.activeLayer.removeChildren();
   computePoints();
+
+  // Border is a style-only layer for Stitching mode and should sit behind holes/threads.
+  drawShapeBorder();
 
   // Draw holes
   drawHoles();
@@ -1952,6 +2151,12 @@ advancedHoleNumbersToggle.addEventListener('change', () => {
   // Labels only; keep animation continuity.
   redrawAnimationInPlace();
 });
+advancedBorderEnabledInput.addEventListener('change', () => {
+  borderEnabled = advancedBorderEnabledInput.checked;
+  syncBorderControls();
+  // Border is style-only and should not reset animation progress.
+  redrawAnimationInPlace();
+});
 kidStitchBySelect.addEventListener('change', () => {
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0 || !threads[targetIndex]) return;
@@ -2171,6 +2376,7 @@ applyDefaultHoles();
 applyDefaultSkipAndSize();
 applyDefaultTempo();
 syncHoleNumberToggles();
+syncBorderControls();
 syncMusicToggleButton();
 refreshKidThreadPicker();
 syncBasicMathSliderVisibility();
