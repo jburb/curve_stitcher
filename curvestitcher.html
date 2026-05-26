@@ -1449,30 +1449,116 @@ function offsetClosedPolyline(vertices, distance) {
   return result;
 }
 
+function lineIntersection(a1, a2, b1, b2) {
+  var r = a2.subtract(a1);
+  var s = b2.subtract(b1);
+  var rxs = r.cross(s);
+  if (Math.abs(rxs) <= 1e-8) {
+    return null;
+  }
+  var t = b1.subtract(a1).cross(s) / rxs;
+  return a1.add(r.multiply(t));
+}
+
+function getPolygonCornerVertices() {
+  var geometry = getShapeGeometry();
+  var vertices = [];
+
+  if (currentShape === 'triangle') {
+    for (var i = 0; i < 3; i++) {
+      var tTri = (Math.PI / 2) + (i * 2 * Math.PI / 3);
+      vertices.push(shapePointAtAngle(tTri, geometry.center, geometry.radius));
+    }
+    return vertices;
+  }
+
+  if (currentShape === 'square') {
+    for (var j = 0; j < 4; j++) {
+      var tSq = (Math.PI / 4) + (j * Math.PI / 2);
+      vertices.push(shapePointAtAngle(tSq, geometry.center, geometry.radius));
+    }
+    return vertices;
+  }
+
+  return null;
+}
+
+function offsetConvexPolygon(vertices, distance) {
+  if (!vertices || vertices.length < 3 || !isFinite(distance) || distance === 0) {
+    return vertices ? vertices.slice() : [];
+  }
+
+  var n = vertices.length;
+  var ccw = signedAreaOfClosedPolyline(vertices) > 0;
+  var outwardRotation = ccw ? -90 : 90;
+  var offsetLines = [];
+
+  for (var i = 0; i < n; i++) {
+    var start = vertices[i];
+    var end = vertices[(i + 1) % n];
+    var edge = end.subtract(start);
+    if (edge.length <= 1e-8) continue;
+
+    var outward = edge.normalize(1).rotate(outwardRotation).normalize(distance);
+    offsetLines.push({
+      p1: start.add(outward),
+      p2: end.add(outward)
+    });
+  }
+
+  if (offsetLines.length < 3) {
+    return vertices.slice();
+  }
+
+  var result = [];
+  for (var k = 0; k < offsetLines.length; k++) {
+    var prevLine = offsetLines[(k - 1 + offsetLines.length) % offsetLines.length];
+    var thisLine = offsetLines[k];
+    var corner = lineIntersection(prevLine.p1, prevLine.p2, thisLine.p1, thisLine.p2);
+    if (!corner) {
+      corner = thisLine.p1;
+    }
+    result.push(corner);
+  }
+
+  return result;
+}
+
 function drawShapeBorder() {
   if (!borderEnabled) return;
 
-  // Use the same boundary generator as hole placement and draw paired offsets around it.
-  var geometry = getShapeGeometry();
-  var boundarySamples = buildShapeBoundarySamples(480, geometry.center, geometry.radius);
-  if (!boundarySamples.length) return;
+  var polygonVertices = getPolygonCornerVertices();
+  var outerSamples;
+  var innerSamples;
 
-  var outerSamples = offsetClosedPolyline(boundarySamples, BORDER_OUTER_GAP);
-  var innerSamples = offsetClosedPolyline(boundarySamples, -BORDER_INNER_GAP);
+  if (polygonVertices && polygonVertices.length >= 3) {
+    // For polygons, offset exact edges and intersect them for crisp, stable corners.
+    outerSamples = offsetConvexPolygon(polygonVertices, BORDER_OUTER_GAP);
+    innerSamples = offsetConvexPolygon(polygonVertices, -BORDER_INNER_GAP);
+  } else {
+    // Curved/organic shapes continue to use dense polyline offsets.
+    var geometry = getShapeGeometry();
+    var boundarySamples = buildShapeBoundarySamples(480, geometry.center, geometry.radius);
+    if (!boundarySamples.length) return;
+    outerSamples = offsetClosedPolyline(boundarySamples, BORDER_OUTER_GAP);
+    innerSamples = offsetClosedPolyline(boundarySamples, -BORDER_INNER_GAP);
+  }
 
   var outerPath = new Path(outerSamples);
   outerPath.closed = true;
   outerPath.strokeColor = BORDER_STROKE_COLOR;
   outerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  outerPath.strokeJoin = 'round';
+  outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
   outerPath.strokeCap = 'round';
+  outerPath.miterLimit = 8;
 
   var innerPath = new Path(innerSamples);
   innerPath.closed = true;
   innerPath.strokeColor = BORDER_STROKE_COLOR;
   innerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  innerPath.strokeJoin = 'round';
+  innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
   innerPath.strokeCap = 'round';
+  innerPath.miterLimit = 8;
 }
 
 /* ------------------------------

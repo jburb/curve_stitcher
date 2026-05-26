@@ -21,37 +21,30 @@ Contributor terms:
 
 ## Current Milestones
 
-1. Shape border support
-2. SVG export
-3. Known pattern discovery detector
-4. Triangula experience (Sierpinski world)
-5. Mashrabiya experience (Islamic rosette world)
-6. Stitch library (offline-first)
-7. Advanced stitch ribbon motion (Option 4)
+1. SVG export
+2. Known pattern discovery detector
+3. Triangula experience (Sierpinski world)
+4. Mashrabiya experience (Islamic rosette world)
+5. Stitch library (offline-first)
+6. Advanced stitch ribbon motion (Option 4)
 
 ## Recently Completed
 
 1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
-2. Stitch motion realism (progressive pull + settle accent, tempo-locked)
-3. Arithmetic-first stitch controls in kid and advanced UI
-4. Multiplication mapping mode (cardioid/nephroid capable)
-5. Formula UX pass (math-friendly input normalization and clearer guidance)
-6. Multiplication mapping aligned to visible hole numbering semantics
+2. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
+3. Stitch motion realism (progressive pull + settle accent, tempo-locked)
+4. Arithmetic-first stitch controls in kid and advanced UI
+5. Multiplication mapping mode (cardioid/nephroid capable)
+6. Formula UX pass (math-friendly input normalization and clearer guidance)
+7. Multiplication mapping aligned to visible hole numbering semantics
 
 ## TODO Backlog
 
-1. **Shape border support**
-	- Add optional shape border rendering for Stitching mode (the primary mode), with user controls for on/off and width.
-	- Keep border color fixed to an app-defined default (no border color control in v1).
-	- Keep border updates style-only so animation is not interrupted.
-	- Constrain border width to a relatively low maximum so large values do not hide perimeter holes in Stitching mode.
-	- Include border in SVG export by default.
-
-2. **SVG export**
+1. **SVG export**
 	- Export current stitched design to SVG.
 	- Define export scope clearly (threads, holes, optional labels/border).
 
-3. **Known pattern discovery detector**
+2. **Known pattern discovery detector**
 	 - Detect when control combinations approximately match known constructions and show a tasteful "discovery" badge.
 	 - Use a short stabilization window (for example 700-1200 ms) before firing to avoid slider thrash.
 	 - Initial pattern candidates:
@@ -61,7 +54,7 @@ Contributor terms:
 		 - Hyperbola envelope
 		 - Nephroid-like variants
 
-4. **Triangula experience (Sierpinski world)**
+3. **Triangula experience (Sierpinski world)**
 	- Entry trigger and transition:
 	  - When the user stitches/discovers an equilateral triangle in Stitching mode, offer an optional prompt to "Enter Triangula".
 	  - If confirmed, transition by scrolling the current stitch shape out of canvas view along a path congruent with an edge of the equilateral triangle.
@@ -80,7 +73,7 @@ Contributor terms:
 	- Audio/animation behavior parity:
 	  - Preserve music behavior exactly: play continuously while animation is running and while sliders are actively moving; pause when animation is idle and controls are at rest.
 
-5. **Mashrabiya experience (Islamic rosette world)**
+4. **Mashrabiya experience (Islamic rosette world)**
 	- Entry trigger and transition:
 	  - When the user stitches/discovers a Mystic Rose in Stitching mode, offer an optional prompt to "Enter Mashrabiya".
 	  - Reuse a similarly polished scene transition language so movement into Mashrabiya feels native to the app (not a hard context switch).
@@ -97,12 +90,12 @@ Contributor terms:
 	- Audio/animation behavior parity:
 	  - Keep the same activity-driven music lifecycle as the main app (play during animation/active adjustment, pause at rest).
 
-6. **Stitch library (offline-first)**
+5. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-7. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+6. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
@@ -118,10 +111,9 @@ Contributor terms:
 
 ## Suggested Delivery Order
 
-1. Shape borders
-2. SVG export
-3. Pattern discovery notifier
-4. Triangula experience (Sierpinski world)
-5. Mashrabiya experience (Islamic rosette world)
-6. Stitch library (offline-first)
-7. Advanced stitch ribbon motion (Option 4)
+1. SVG export
+2. Pattern discovery notifier
+3. Triangula experience (Sierpinski world)
+4. Mashrabiya experience (Islamic rosette world)
+5. Stitch library (offline-first)
+6. Advanced stitch ribbon motion (Option 4)
