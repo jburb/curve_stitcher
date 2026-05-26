@@ -565,6 +565,11 @@
       </select><span class="advanced-inline-value" id="advanced-tempo-value">84</span><button id="reset-tempo" type="button" class="advanced-reset-btn">Reset</button></div>
       <div class="advanced-global-help">Default tempo is 84 BPM. This affects stitch animation when you press "Watch it stitch".</div>
     </div>
+    <div class="advanced-subsection">
+      <div class="advanced-global-title">Export</div>
+      <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Export SVG</button></div>
+      <div class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
+    </div>
   </div>
   <div class="advanced-section-title">Threads</div>
   <button id="add-thread" class="advanced-add-thread">Add Thread</button>
@@ -593,6 +598,7 @@ var advancedBorderEnabledInput = document.getElementById('advanced-border-enable
 var advancedTempoInput = document.getElementById('advanced-tempo');
 var advancedTempoValue = document.getElementById('advanced-tempo-value');
 var resetTempoBtn = document.getElementById('reset-tempo');
+var exportSvgBtn = document.getElementById('advanced-export-svg');
 var canvasContainer = document.getElementById('canvas-container');
 var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
@@ -655,7 +661,9 @@ var BORDER_STROKE_WIDTH = 2;
 var BORDER_INNER_GAP = 10;
 var BORDER_OUTER_GAP = 17;
 var LABEL_HOLE_CLEARANCE = 2.2;
+var LABEL_HOLE_CLEARANCE_SVG = 4.2;
 var LABEL_BORDER_CLEARANCE = 1.2;
+var LABEL_BORDER_CLEARANCE_SVG = 3.2;
 var LABEL_OUTER_BIAS = 0.72;
 var BORDER_STROKE_COLOR = '#2f4368';
 var BORDER_INCLUDE_IN_SVG = true;
@@ -1527,6 +1535,31 @@ function offsetConvexPolygon(vertices, distance) {
 function drawShapeBorder() {
   if (!borderEnabled) return;
 
+  var borderGeometry = getBorderGeometryForCurrentShape();
+  if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
+
+  var polygonVertices = borderGeometry.isPolygon ? borderGeometry.polygonVertices : null;
+  var outerSamples = borderGeometry.outerSamples;
+  var innerSamples = borderGeometry.innerSamples;
+
+  var outerPath = new Path(outerSamples);
+  outerPath.closed = true;
+  outerPath.strokeColor = BORDER_STROKE_COLOR;
+  outerPath.strokeWidth = BORDER_STROKE_WIDTH;
+  outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
+  outerPath.strokeCap = 'round';
+  outerPath.miterLimit = 8;
+
+  var innerPath = new Path(innerSamples);
+  innerPath.closed = true;
+  innerPath.strokeColor = BORDER_STROKE_COLOR;
+  innerPath.strokeWidth = BORDER_STROKE_WIDTH;
+  innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
+  innerPath.strokeCap = 'round';
+  innerPath.miterLimit = 8;
+}
+
+function getBorderGeometryForCurrentShape() {
   var polygonVertices = getPolygonCornerVertices();
   var outerSamples;
   var innerSamples;
@@ -1544,21 +1577,12 @@ function drawShapeBorder() {
     innerSamples = offsetClosedPolyline(boundarySamples, -BORDER_INNER_GAP);
   }
 
-  var outerPath = new Path(outerSamples);
-  outerPath.closed = true;
-  outerPath.strokeColor = BORDER_STROKE_COLOR;
-  outerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
-  outerPath.strokeCap = 'round';
-  outerPath.miterLimit = 8;
-
-  var innerPath = new Path(innerSamples);
-  innerPath.closed = true;
-  innerPath.strokeColor = BORDER_STROKE_COLOR;
-  innerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
-  innerPath.strokeCap = 'round';
-  innerPath.miterLimit = 8;
+  return {
+    outerSamples: outerSamples,
+    innerSamples: innerSamples,
+    isPolygon: !!(polygonVertices && polygonVertices.length >= 3),
+    polygonVertices: polygonVertices
+  };
 }
 
 /* ------------------------------
@@ -1762,6 +1786,173 @@ function getHoleNumberFontSize(holeCount) {
   return 9;
 }
 
+function getHoleLabelOffsetFromExtent(extent, borderClearance, holeClearance) {
+  var borderPad = isFinite(borderClearance) ? borderClearance : LABEL_BORDER_CLEARANCE;
+  var holePad = isFinite(holeClearance) ? holeClearance : LABEL_HOLE_CLEARANCE;
+  var minOffset = 3 + holePad + extent;
+  var maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + borderPad + extent);
+  var preferredOffset = Math.max(minOffset, BORDER_OUTER_GAP * LABEL_OUTER_BIAS);
+  var clampedOffset;
+
+  if (maxOffset >= minOffset) {
+    clampedOffset = Math.max(minOffset, Math.min(preferredOffset, maxOffset));
+  } else {
+    // Fallback: prioritize staying inside the outer border band.
+    clampedOffset = Math.max(3.8, maxOffset);
+  }
+
+  if (!isFinite(clampedOffset)) {
+    clampedOffset = Math.max(4, BORDER_OUTER_GAP * 0.6);
+  }
+
+  return {
+    offset: clampedOffset,
+    minOffset: minOffset,
+    maxOffset: maxOffset
+  };
+}
+
+function estimateTextExtentAlongDirection(text, fontSize) {
+  var len = String(text || '').length;
+  if (len <= 1) return fontSize * 0.28;
+  if (len === 2) return fontSize * 0.46;
+  return fontSize * (0.56 + Math.min(2, len - 2) * 0.1);
+}
+
+function formatSvgNumber(value) {
+  return String(Math.round(value * 1000) / 1000);
+}
+
+function colorToSvg(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && typeof value.toCSS === 'function') {
+    return value.toCSS(true);
+  }
+  return '#000000';
+}
+
+function svgPathFromPoints(vertices) {
+  if (!vertices || !vertices.length) return '';
+  var parts = ['M ' + formatSvgNumber(vertices[0].x) + ' ' + formatSvgNumber(vertices[0].y)];
+  for (var i = 1; i < vertices.length; i++) {
+    parts.push('L ' + formatSvgNumber(vertices[i].x) + ' ' + formatSvgNumber(vertices[i].y));
+  }
+  parts.push('Z');
+  return parts.join(' ');
+}
+
+function getTimestampLabel() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  var ss = String(now.getSeconds()).padStart(2, '0');
+  return y + m + d + '-' + hh + mm + ss;
+}
+
+function buildCurrentDesignSvgString() {
+  // Export a fresh static snapshot independent from transient animation artifacts.
+  computePoints();
+
+  var width = Math.round(view.viewSize.width);
+  var height = Math.round(view.viewSize.height);
+  var lines = [];
+
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
+
+  if (borderEnabled && BORDER_INCLUDE_IN_SVG) {
+    var borderGeometry = getBorderGeometryForCurrentShape();
+    if (borderGeometry && borderGeometry.outerSamples && borderGeometry.innerSamples) {
+      var lineJoin = borderGeometry.isPolygon ? 'miter' : 'round';
+      var outerPathData = svgPathFromPoints(borderGeometry.outerSamples);
+      var innerPathData = svgPathFromPoints(borderGeometry.innerSamples);
+      lines.push('<path d="' + outerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
+      lines.push('<path d="' + innerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
+    }
+  }
+
+  for (var t = 0; t < threads.length; t++) {
+    var thread = threads[t];
+    var segments = computeSegments(thread);
+    for (var s = 0; s < segments.length; s++) {
+      var fromPoint = points[segments[s][0]];
+      var toPoint = points[segments[s][1]];
+      if (!fromPoint || !toPoint) continue;
+
+      var strokeColor = thread.color === 'rainbow'
+        ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
+        : colorToSvg(thread.color);
+
+      lines.push(
+        '<line x1="' + formatSvgNumber(fromPoint.x) + '" y1="' + formatSvgNumber(fromPoint.y) +
+        '" x2="' + formatSvgNumber(toPoint.x) + '" y2="' + formatSvgNumber(toPoint.y) +
+        '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
+        '" stroke-linecap="round" stroke-linejoin="round"/>'
+      );
+    }
+  }
+
+  for (var i = 0; i < points.length; i++) {
+    lines.push('<circle cx="' + formatSvgNumber(points[i].x) + '" cy="' + formatSvgNumber(points[i].y) + '" r="3" fill="#333"/>');
+  }
+
+  if (shouldShowHoleNumbersNow()) {
+    var holeCount = parseInt(holesSlider.value, 10);
+    if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
+    var fontSize = getHoleNumberFontSize(holeCount);
+    var ccw = signedAreaOfClosedPolyline(points) > 0;
+
+    for (var j = 0; j < points.length; j++) {
+      var text = String(j + 1);
+      var outward = getOutwardDirectionAtHole(j, ccw);
+      var extent = estimateTextExtentAlongDirection(text, fontSize);
+      var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+
+      if (metrics.maxOffset < metrics.minOffset) {
+        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
+        var reducedFont = Math.max(6, Math.min(fontSize, availableBand * 1.6));
+        if (reducedFont < fontSize) {
+          fontSize = reducedFont;
+          extent = estimateTextExtentAlongDirection(text, fontSize);
+          metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+        }
+      }
+
+      var labelPos = points[j].add(outward.multiply(metrics.offset));
+      lines.push(
+        '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
+        '" fill="#555" font-size="' + formatSvgNumber(fontSize) +
+        '" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="middle">' +
+        text +
+        '</text>'
+      );
+    }
+  }
+
+  lines.push('</svg>');
+  return lines.join('\n');
+}
+
+function downloadCurrentDesignSvg() {
+  var svgString = buildCurrentDesignSvgString();
+  var blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'curve_stitcher-' + getTimestampLabel() + '.svg';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(function() {
+    URL.revokeObjectURL(url);
+  }, 0);
+}
+
 function drawHoles() {
   var numbersVisible = shouldShowHoleNumbersNow();
   var holeCount = parseInt(holesSlider.value, 10);
@@ -1783,8 +1974,9 @@ function drawHoles() {
       label.content = String(i + 1);
 
       var extent = getBoundsExtentAlongDirection(label, outward);
-      var minOffset = 3 + LABEL_HOLE_CLEARANCE + extent;
-      var maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE + extent);
+      var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
+      var minOffset = metrics.minOffset;
+      var maxOffset = metrics.maxOffset;
 
       // If space is tight, reduce label size before final placement.
       if (maxOffset < minOffset) {
@@ -1793,21 +1985,16 @@ function drawHoles() {
         if (targetFont < label.fontSize) {
           label.fontSize = targetFont;
           extent = getBoundsExtentAlongDirection(label, outward);
-          minOffset = 3 + LABEL_HOLE_CLEARANCE + extent;
-          maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE + extent);
+          metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
+          minOffset = metrics.minOffset;
+          maxOffset = metrics.maxOffset;
         }
       }
 
-      var preferredOffset = Math.max(minOffset, BORDER_OUTER_GAP * LABEL_OUTER_BIAS);
-      var clampedOffset;
-      if (maxOffset >= minOffset) {
-        clampedOffset = Math.max(minOffset, Math.min(preferredOffset, maxOffset));
-      } else {
-        // Fallback: prioritize staying inside the outer border band.
-        clampedOffset = Math.max(3.8, maxOffset);
-      }
-      if (!isFinite(clampedOffset)) {
-        clampedOffset = Math.max(4, BORDER_OUTER_GAP * 0.6);
+      var clampedOffset = metrics.offset;
+      if (maxOffset < minOffset) {
+        // Recompute fallback offset against latest bounds when tight.
+        clampedOffset = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE).offset;
       }
       label.position = points[i].add(outward.multiply(clampedOffset));
 
@@ -2357,6 +2544,10 @@ resetTempoBtn.addEventListener('click', () => {
   applyDefaultTempo();
   // Tempo reset should also preserve current stitch position.
   redrawAnimationInPlace();
+});
+
+exportSvgBtn.addEventListener('click', () => {
+  downloadCurrentDesignSvg();
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {

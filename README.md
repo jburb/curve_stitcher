@@ -43,6 +43,7 @@ Contributor terms:
 1. **SVG export**
 	- Export current stitched design to SVG.
 	- Define export scope clearly (threads, holes, optional labels/border).
+	- Add export prompts for include/exclude selection of SVG elements (for example: borders, threads, holes, hole numbers).
 
 2. **Known pattern discovery detector**
 	 - Detect when control combinations approximately match known constructions and show a tasteful "discovery" badge.
