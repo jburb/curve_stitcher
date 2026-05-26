@@ -3,16 +3,21 @@ for playing with curve stitching a la mary everest boole (enabled in this case o
 
 ## License
 
-This project is licensed under PolyForm Noncommercial 1.0.0. See [LICENSE](LICENSE).
+This project is licensed under GNU General Public License v3.0. See [LICENSE](LICENSE).
 
-License intent for this project:
-- Free use, sharing, and modification for noncommercial purposes.
-- Attribution to Josh Hicken.
-- Commercial/for-profit use is not permitted under the current license.
+Copyright (c) 2026 Josh Hicken.
 
-Note on future changes:
-- The project license can be changed in future versions.
+Attribution and notices:
+- Keep copyright and license notices intact in copies and derivatives.
+
+Future relicensing path:
+- The maintainer may offer future versions under additional or different licenses, including Apache-2.0 or MIT.
 - Prior distributed copies remain under the license they were released under.
+
+Contributor terms:
+- By submitting a contribution, you agree that your contribution is licensed under GPL-3.0-or-later for this project.
+- You also grant the project maintainer (Josh Hicken) permission to relicense your contributed code in future versions of this project under other open source licenses, including Apache-2.0 and MIT.
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor agreement details.
 
 ## Current Milestones
 
