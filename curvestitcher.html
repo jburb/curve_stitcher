@@ -282,6 +282,11 @@
     align-items: center;
     gap: 8px;
   }
+  .thread-size-icon {
+    color: #4f5f77;
+    font-size: 14px;
+    line-height: 1;
+  }
   .slider-value {
     min-width: 28px;
     text-align: center;
@@ -312,6 +317,12 @@
   }
 
   /* --- FUN BUTTONS --- */
+  #playback-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
   #float-buttons {
     display: flex;
     gap: 12px;
@@ -343,8 +354,14 @@
     background: #fff;
     color: #213047;
     border-radius: 999px;
-    padding: 4px 8px;
-    font-size: 12px;
+    width: 36px;
+    height: 30px;
+    padding: 0;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
     cursor: pointer;
   }
   .kid-tempo-btn.is-active {
@@ -352,6 +369,11 @@
     border-color: #9fb8e8;
     color: #1f3f75;
     font-weight: 600;
+  }
+  .play-pause-btn {
+    width: 36px;
+    height: 30px;
+    font-size: 16px;
   }
 
   /* --- ADVANCED PANEL --- */
@@ -621,16 +643,18 @@
 
 <!-- ACTIVITY BAR -->
 <div id="activity-bar">
+  <div id="playback-controls">
+    <div class="kid-tempo-group" aria-label="Kid-friendly tempo controls">
+      <button class="kid-tempo-btn play-pause-btn" id="animate" type="button" aria-pressed="false" aria-label="Watch it stitch" title="Watch it stitch">▶</button>
+      <button id="kid-tempo-slow" class="kid-tempo-btn" type="button" title="Slow speed" aria-label="Slow speed">🐢</button>
+      <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed" aria-label="Just right speed">🚶</button>
+      <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed" aria-label="Fast speed">🐇</button>
+    </div>
+  </div>
+
   <!-- FUN BUTTONS -->
   <div id="float-buttons">
-    <button class="float-btn" id="animate" type="button" aria-pressed="false">▶ Watch it stitch</button>
-    <div class="float-btn" id="surprise">🎲 Surprise me</div>
-    <div class="kid-tempo-group" aria-label="Kid-friendly tempo controls">
-      <span>Speed</span>
-      <button id="kid-tempo-slow" class="kid-tempo-btn" type="button" title="Slow speed">🐢 Slow</button>
-      <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed">🚶 Just right</button>
-      <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed">🐇 Fast</button>
-    </div>
+    <button class="float-btn" id="surprise" type="button">🎲 Surprise me</button>
   </div>
 
   <!-- COLOR PALETTE -->
@@ -681,7 +705,7 @@
     <input id="multiply" type="range" min="1" max="12" value="2">
   </div>
   <div class="slider-block">
-    <div class="slider-label">🟠 Thread Size <span class="slider-value" id="width-value">2</span></div>
+    <div class="slider-label"><span class="thread-size-icon" aria-hidden="true">◍</span> Thread Size <span class="slider-value" id="width-value">2</span></div>
     <input id="width" type="range" min="1" max="10" value="2">
   </div>
 </div>
@@ -1079,9 +1103,6 @@ function buildMagicThread() {
   var nextJump = base.jump + jumpShift;
   if (nextJump > 100) nextJump = ((nextJump - 1) % 100) + 1;
 
-  var widthShift = Math.random() < 0.5 ? 0 : 1;
-  var nextWidth = Math.min(10, Math.max(1, base.width + widthShift));
-
   var colorPick = magicThreadColors[Math.floor(Math.random() * magicThreadColors.length)];
   if (threads.length && threads[threads.length - 1].color === colorPick) {
     colorPick = magicThreadColors[(magicThreadColors.indexOf(colorPick) + 1) % magicThreadColors.length];
@@ -1089,7 +1110,7 @@ function buildMagicThread() {
 
   return createThread({
     jump: nextJump,
-    width: nextWidth,
+    width: DEFAULT_THREAD_SIZE,
     color: colorPick
   });
 }
@@ -1247,19 +1268,22 @@ function applyTempoValue(bpm) {
 function syncAnimateButtonLabel() {
   if (!animateBtn) return;
   if (animationPlaybackState === 'playing') {
-    animateBtn.textContent = '⏸ Pause stitching';
+    animateBtn.textContent = '⏸';
     animateBtn.setAttribute('aria-pressed', 'true');
+    animateBtn.setAttribute('aria-label', 'Pause stitching');
     animateBtn.title = 'Pause stitching';
     return;
   }
   if (animationPlaybackState === 'paused') {
-    animateBtn.textContent = '▶ Resume stitching';
+    animateBtn.textContent = '▶';
     animateBtn.setAttribute('aria-pressed', 'false');
+    animateBtn.setAttribute('aria-label', 'Resume stitching');
     animateBtn.title = 'Resume stitching';
     return;
   }
-  animateBtn.textContent = '▶ Watch it stitch';
+  animateBtn.textContent = '▶';
   animateBtn.setAttribute('aria-pressed', 'false');
+  animateBtn.setAttribute('aria-label', 'Watch it stitch');
   animateBtn.title = 'Watch it stitch';
 }
 
