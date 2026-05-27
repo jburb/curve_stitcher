@@ -444,6 +444,83 @@
     vertical-align: middle;
     margin-left: 6px;
   }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(21, 28, 44, 0.46);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 80;
+    padding: 16px;
+  }
+
+  .modal-backdrop.open {
+    display: flex;
+  }
+
+  .modal-card {
+    width: min(460px, 100%);
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #d8dfef;
+    box-shadow: 0 18px 50px rgba(18, 30, 53, 0.22);
+    padding: 14px;
+  }
+
+  .modal-card h4 {
+    margin: 0 0 10px;
+    color: #2b3e63;
+  }
+
+  .modal-row {
+    margin: 9px 0;
+    font-size: 14px;
+    color: #304564;
+  }
+
+  .modal-row label {
+    display: block;
+  }
+
+  .modal-row input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 9px;
+    border: 1px solid #cfd9ef;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .modal-help {
+    font-size: 12px;
+    color: #5e7090;
+    margin-top: 4px;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .modal-btn {
+    border: 1px solid #cfd9ef;
+    background: #fff;
+    color: #2f4368;
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .modal-btn.primary {
+    background: #2f5fb3;
+    border-color: #2f5fb3;
+    color: #fff;
+  }
 </style>
 </head>
 
@@ -576,6 +653,44 @@
   <div id="thread-controls"></div>
 </div>
 
+<div id="export-options-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="export-options-title">
+  <div class="modal-card">
+    <h4 id="export-options-title">SVG Export Options</h4>
+    <div class="modal-row">
+      <label for="export-name-input">Custom name</label>
+      <input id="export-name-input" type="text" placeholder="curve_stitcher-20260527-143000">
+      <div class="modal-help">Used as the file name base for exported files.</div>
+    </div>
+    <div class="modal-row">
+      <label><input id="export-include-threads" type="checkbox" checked> Include stitched threads in SVG</label>
+    </div>
+    <div class="modal-row">
+      <label><input id="export-include-params" type="checkbox" checked> Include parameter sheet (.txt)</label>
+      <div class="modal-help">Adds shape/control/thread values for reproducibility.</div>
+    </div>
+    <div class="modal-row">
+      <label><input id="export-include-guide" type="checkbox"> Include stitching guide (.txt)</label>
+      <div class="modal-help">Adds a human-friendly step summary for manual stitching after manufacturing.</div>
+    </div>
+    <div class="modal-row">
+      <label for="export-guide-detail">Guide detail</label>
+      <select id="export-guide-detail">
+        <option value="compact" selected>Compact</option>
+        <option value="detailed">Detailed</option>
+      </select>
+      <div class="modal-help">Compact includes representative connections; Detailed includes the full connection listing.</div>
+    </div>
+    <div class="modal-row">
+      <label><input id="export-include-preview" type="checkbox"> Include preview image (.png)</label>
+      <div class="modal-help">Adds a snapshot image reference from the current canvas.</div>
+    </div>
+    <div class="modal-actions">
+      <button id="export-cancel-btn" type="button" class="modal-btn">Cancel</button>
+      <button id="export-confirm-btn" type="button" class="modal-btn primary">Export</button>
+    </div>
+  </div>
+</div>
+
 <script>
 paper.install(window);
 paper.setup('myCanvas');
@@ -599,6 +714,15 @@ var advancedTempoInput = document.getElementById('advanced-tempo');
 var advancedTempoValue = document.getElementById('advanced-tempo-value');
 var resetTempoBtn = document.getElementById('reset-tempo');
 var exportSvgBtn = document.getElementById('advanced-export-svg');
+var exportOptionsModal = document.getElementById('export-options-modal');
+var exportNameInput = document.getElementById('export-name-input');
+var exportIncludeThreadsInput = document.getElementById('export-include-threads');
+var exportIncludeParamsInput = document.getElementById('export-include-params');
+var exportIncludeGuideInput = document.getElementById('export-include-guide');
+var exportGuideDetailInput = document.getElementById('export-guide-detail');
+var exportIncludePreviewInput = document.getElementById('export-include-preview');
+var exportConfirmBtn = document.getElementById('export-confirm-btn');
+var exportCancelBtn = document.getElementById('export-cancel-btn');
 var canvasContainer = document.getElementById('canvas-container');
 var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
@@ -1854,7 +1978,81 @@ function getTimestampLabel() {
   return y + m + d + '-' + hh + mm + ss;
 }
 
-function buildCurrentDesignSvgString() {
+function normalizeExportBaseName(rawName) {
+  var fallback = 'curve_stitcher-' + getTimestampLabel();
+  var source = String(rawName || '').trim();
+  if (!source) return fallback;
+  var cleaned = source
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[_\-.]+|[_\-.]+$/g, '');
+  return cleaned || fallback;
+}
+
+function triggerBlobDownload(blob, fileName) {
+  var url = URL.createObjectURL(blob);
+  var anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(function() {
+    URL.revokeObjectURL(url);
+  }, 0);
+}
+
+function buildParameterSheetText(fileBaseName, options) {
+  function getReadableStitchMode(mode) {
+    if (mode === 'connect') return 'Multiplication';
+    if (mode === 'sequence') return 'Step list';
+    if (mode === 'formula') return 'Expression';
+    return 'Addition';
+  }
+
+  var lines = [];
+  var now = new Date();
+  lines.push('curve_stitcher parameter sheet');
+  lines.push('Generated: ' + now.toISOString());
+  lines.push('Export name: ' + fileBaseName);
+  lines.push('');
+  lines.push('Global');
+  lines.push('Shape: ' + currentShape);
+  lines.push('Holes: ' + holesSlider.value);
+  lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
+  lines.push('Hole numbers visible in export: ' + (shouldShowHoleNumbersNow() ? 'yes' : 'no'));
+  lines.push('Include stitched threads in SVG: ' + (options.includeThreads ? 'yes' : 'no'));
+  lines.push('');
+  lines.push('Threads');
+
+  for (var i = 0; i < threads.length; i++) {
+    var thread = threads[i];
+    ensureThreadConnectConfig(thread);
+    lines.push('Thread ' + (i + 1));
+    lines.push('  Color: ' + String(thread.color));
+    lines.push('  Size: ' + String(thread.width));
+    lines.push('  Stitch mode: ' + getReadableStitchMode(thread.jumpMode));
+    lines.push('  Add value: ' + String(thread.jump));
+    if (thread.jumpMode === 'connect') {
+      lines.push('  Multiply by: ' + String(thread.connectMultiplier));
+      lines.push('  Offset: ' + String(thread.connectOffset));
+    }
+    if (thread.jumpMode === 'sequence') {
+      lines.push('  Step list: ' + String(thread.jumpSequence || ''));
+    }
+    if (thread.jumpMode === 'formula') {
+      lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function buildCurrentDesignSvgString(options) {
+  options = options || {};
+  var includeThreads = options.includeThreads !== false;
+
   // Export a fresh static snapshot independent from transient animation artifacts.
   computePoints();
 
@@ -1876,24 +2074,26 @@ function buildCurrentDesignSvgString() {
     }
   }
 
-  for (var t = 0; t < threads.length; t++) {
-    var thread = threads[t];
-    var segments = computeSegments(thread);
-    for (var s = 0; s < segments.length; s++) {
-      var fromPoint = points[segments[s][0]];
-      var toPoint = points[segments[s][1]];
-      if (!fromPoint || !toPoint) continue;
+  if (includeThreads) {
+    for (var t = 0; t < threads.length; t++) {
+      var thread = threads[t];
+      var segments = computeSegments(thread);
+      for (var s = 0; s < segments.length; s++) {
+        var fromPoint = points[segments[s][0]];
+        var toPoint = points[segments[s][1]];
+        if (!fromPoint || !toPoint) continue;
 
-      var strokeColor = thread.color === 'rainbow'
-        ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
-        : colorToSvg(thread.color);
+        var strokeColor = thread.color === 'rainbow'
+          ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
+          : colorToSvg(thread.color);
 
-      lines.push(
-        '<line x1="' + formatSvgNumber(fromPoint.x) + '" y1="' + formatSvgNumber(fromPoint.y) +
-        '" x2="' + formatSvgNumber(toPoint.x) + '" y2="' + formatSvgNumber(toPoint.y) +
-        '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
-        '" stroke-linecap="round" stroke-linejoin="round"/>'
-      );
+        lines.push(
+          '<line x1="' + formatSvgNumber(fromPoint.x) + '" y1="' + formatSvgNumber(fromPoint.y) +
+          '" x2="' + formatSvgNumber(toPoint.x) + '" y2="' + formatSvgNumber(toPoint.y) +
+          '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
+          '" stroke-linecap="round" stroke-linejoin="round"/>'
+        );
+      }
     }
   }
 
@@ -1938,19 +2138,158 @@ function buildCurrentDesignSvgString() {
   return lines.join('\n');
 }
 
-function downloadCurrentDesignSvg() {
-  var svgString = buildCurrentDesignSvgString();
+function downloadCurrentDesignSvg(fileBaseName, options) {
+  var svgString = buildCurrentDesignSvgString(options);
   var blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'curve_stitcher-' + getTimestampLabel() + '.svg';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(function() {
-    URL.revokeObjectURL(url);
-  }, 0);
+  triggerBlobDownload(blob, fileBaseName + '.svg');
+}
+
+function downloadParameterSheet(fileBaseName, options) {
+  var text = buildParameterSheetText(fileBaseName, options || {});
+  var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  triggerBlobDownload(blob, fileBaseName + '-parameters.txt');
+}
+
+function buildStitchingGuideText(fileBaseName, options) {
+  function getReadableStitchMode(mode) {
+    if (mode === 'connect') return 'Multiplication';
+    if (mode === 'sequence') return 'Step list';
+    if (mode === 'formula') return 'Expression';
+    return 'Addition';
+  }
+
+  function appendRepresentativeConnections(targetLines, segments, maxCount) {
+    var count = maxCount && maxCount > 0 ? Math.min(maxCount, segments.length) : segments.length;
+    for (var idx = 0; idx < count; idx++) {
+      targetLines.push('    ' + String(segments[idx][0] + 1) + ' -> ' + String(segments[idx][1] + 1));
+    }
+    if (maxCount && segments.length > count) {
+      targetLines.push('    ... (' + String(segments.length - count) + ' more)');
+    }
+  }
+
+  options = options || {};
+  var guideDetail = options.guideDetail === 'detailed' ? 'detailed' : 'compact';
+  var compactMode = guideDetail !== 'detailed';
+
+  computePoints();
+
+  var lines = [];
+  var now = new Date();
+  lines.push('curve_stitcher manual stitching guide');
+  lines.push('Generated: ' + now.toISOString());
+  lines.push('Export name: ' + fileBaseName);
+  lines.push('');
+  lines.push('Preparation');
+  lines.push('1. Manufacture the board with shape "' + currentShape + '" and ' + String(points.length) + ' numbered holes.');
+  lines.push('2. Number holes clockwise as shown in the preview/export from 1 to ' + String(points.length) + '.');
+  lines.push('3. Use one thread sequence section per listed thread below.');
+  lines.push('4. Guide detail mode: ' + (compactMode ? 'Compact' : 'Detailed') + '.');
+  lines.push('');
+
+  for (var i = 0; i < threads.length; i++) {
+    var thread = threads[i];
+    ensureThreadConnectConfig(thread);
+    var segments = computeSegments(thread);
+    var modeName = getReadableStitchMode(thread.jumpMode);
+    lines.push('Thread ' + (i + 1));
+    lines.push('  Mode: ' + modeName);
+    lines.push('  Color: ' + String(thread.color));
+    lines.push('  Width: ' + String(thread.width));
+
+    if (thread.jumpMode === 'connect') {
+      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): target = ((multiplier * source + offset - 1) mod n) + 1, using labels 1..n.');
+      lines.push('  Multiplier: ' + String(thread.connectMultiplier));
+      lines.push('  Offset: ' + String(thread.connectOffset));
+      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
+      appendRepresentativeConnections(lines, segments, compactMode ? 12 : 0);
+    } else if (thread.jumpMode === 'sequence') {
+      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): repeat the provided step list from each current hole, wrapping modulo n.');
+      lines.push('  Step list: ' + String(thread.jumpSequence || ''));
+      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
+      appendRepresentativeConnections(lines, segments, compactMode ? 14 : 0);
+    } else if (thread.jumpMode === 'formula') {
+      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): evaluate expression per step, then connect current -> (current + step) mod n.');
+      lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
+      lines.push('  Base add value: ' + String(thread.jump));
+      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
+      appendRepresentativeConnections(lines, segments, compactMode ? 14 : 0);
+    } else {
+      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): next = ((current + add - 1) mod n) + 1, using labels 1..n.');
+      lines.push('  Add value: ' + String(thread.jump));
+      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
+      appendRepresentativeConnections(lines, segments, compactMode ? 14 : 0);
+    }
+
+    lines.push('');
+  }
+
+  lines.push('Notes');
+  lines.push('- If threads are hidden in the exported SVG, use this guide plus the parameter sheet for reconstruction.');
+  lines.push('- Keep consistent thread tension to match the on-screen reference closely.');
+
+  return lines.join('\n');
+}
+
+function downloadStitchingGuide(fileBaseName, options) {
+  var text = buildStitchingGuideText(fileBaseName, options || {});
+  var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  triggerBlobDownload(blob, fileBaseName + '-stitching-guide.txt');
+}
+
+function downloadPreviewImage(fileBaseName) {
+  var canvas = document.getElementById('myCanvas');
+  if (!canvas || typeof canvas.toBlob !== 'function') {
+    return;
+  }
+  canvas.toBlob(function(blob) {
+    if (!blob) return;
+    triggerBlobDownload(blob, fileBaseName + '-preview.png');
+  }, 'image/png');
+}
+
+function openExportOptionsModal() {
+  exportNameInput.value = 'curve_stitcher-' + getTimestampLabel();
+  exportIncludeThreadsInput.checked = true;
+  exportIncludeParamsInput.checked = true;
+  exportIncludeGuideInput.checked = false;
+  exportGuideDetailInput.value = 'compact';
+  exportGuideDetailInput.disabled = true;
+  exportIncludePreviewInput.checked = false;
+  exportOptionsModal.classList.add('open');
+  exportNameInput.focus();
+  exportNameInput.select();
+}
+
+function closeExportOptionsModal() {
+  exportOptionsModal.classList.remove('open');
+}
+
+function runExportFromModalSelection() {
+  var baseName = normalizeExportBaseName(exportNameInput.value);
+  var options = {
+    includeThreads: exportIncludeThreadsInput.checked,
+    includeParams: exportIncludeParamsInput.checked,
+    includeGuide: exportIncludeGuideInput.checked,
+    guideDetail: exportGuideDetailInput.value,
+    includePreview: exportIncludePreviewInput.checked
+  };
+
+  downloadCurrentDesignSvg(baseName, options);
+
+  if (options.includeParams) {
+    downloadParameterSheet(baseName, options);
+  }
+
+  if (options.includeGuide) {
+    downloadStitchingGuide(baseName, options);
+  }
+
+  if (options.includePreview) {
+    downloadPreviewImage(baseName);
+  }
+
+  closeExportOptionsModal();
 }
 
 function drawHoles() {
@@ -2547,7 +2886,31 @@ resetTempoBtn.addEventListener('click', () => {
 });
 
 exportSvgBtn.addEventListener('click', () => {
-  downloadCurrentDesignSvg();
+  openExportOptionsModal();
+});
+
+exportConfirmBtn.addEventListener('click', () => {
+  runExportFromModalSelection();
+});
+
+exportIncludeGuideInput.addEventListener('change', () => {
+  exportGuideDetailInput.disabled = !exportIncludeGuideInput.checked;
+});
+
+exportCancelBtn.addEventListener('click', () => {
+  closeExportOptionsModal();
+});
+
+exportOptionsModal.addEventListener('click', (event) => {
+  if (event.target === exportOptionsModal) {
+    closeExportOptionsModal();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!exportOptionsModal.classList.contains('open')) return;
+  closeExportOptionsModal();
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {
