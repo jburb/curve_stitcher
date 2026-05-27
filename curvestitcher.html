@@ -315,6 +315,8 @@
   #float-buttons {
     display: flex;
     gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
   }
   .float-btn {
     padding: 8px 14px;
@@ -324,6 +326,32 @@
     cursor: pointer;
     font-size: 14px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .kid-tempo-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d7e0f3;
+    background: #eef3ff;
+    font-size: 12px;
+    color: #334b72;
+  }
+  .kid-tempo-btn {
+    border: 1px solid #cfd9ef;
+    background: #fff;
+    color: #213047;
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .kid-tempo-btn.is-active {
+    background: #e8f0ff;
+    border-color: #9fb8e8;
+    color: #1f3f75;
+    font-weight: 600;
   }
 
   /* --- ADVANCED PANEL --- */
@@ -595,8 +623,14 @@
 <div id="activity-bar">
   <!-- FUN BUTTONS -->
   <div id="float-buttons">
-    <div class="float-btn" id="animate">▶ Watch it stitch</div>
+    <button class="float-btn" id="animate" type="button" aria-pressed="false">▶ Watch it stitch</button>
     <div class="float-btn" id="surprise">🎲 Surprise me</div>
+    <div class="kid-tempo-group" aria-label="Kid-friendly tempo controls">
+      <span>Speed</span>
+      <button id="kid-tempo-slow" class="kid-tempo-btn" type="button" title="Slow speed">🐢 Slow</button>
+      <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed">🚶 Just right</button>
+      <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed">🐇 Fast</button>
+    </div>
   </div>
 
   <!-- COLOR PALETTE -->
@@ -772,6 +806,9 @@ var multiplyValue = document.getElementById('multiply-value');
 var widthValue  = document.getElementById('width-value');
 var animateBtn  = document.getElementById('animate');
 var surpriseBtn = document.getElementById('surprise');
+var kidTempoSlowBtn = document.getElementById('kid-tempo-slow');
+var kidTempoNormalBtn = document.getElementById('kid-tempo-normal');
+var kidTempoFastBtn = document.getElementById('kid-tempo-fast');
 var gearBtn     = document.getElementById('gear');
 var closeAdvancedBtn = document.getElementById('close-advanced');
 var advancedPanel = document.getElementById('advanced-panel');
@@ -794,6 +831,7 @@ var selectedThreadIndex = 0;
 var points = [];
 var animationActive = false;
 var animationState = null;
+var animationPlaybackState = 'idle';
 var canvasResizeObserver = null;
 var showHoleNumbers = false;
 var holeNumberLabelsByIndex = Object.create(null);
@@ -808,6 +846,11 @@ var DEFAULT_ANIMATION_BPM = 84;
 var BEATS_PER_STITCH_SEGMENT = 1;
 var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
 var ALLOWED_TEMPOS = [84, 168, 252, 336, 420];
+var KID_TEMPO_PRESETS = {
+  slow: 84,
+  normal: 168,
+  fast: 252
+};
 var MUSIC_TRACK_PATH = 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3';
 var SLIDER_MOTION_SETTLE_MS = 180;
 var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
@@ -1173,17 +1216,74 @@ function syncAdvancedTempoControls() {
   advancedTempoValue.textContent = String(currentAnimationBpm);
 }
 
-function applyDefaultTempo() {
-  currentAnimationBpm = DEFAULT_ANIMATION_BPM;
+function syncKidTempoPresetControls() {
+  if (!kidTempoSlowBtn || !kidTempoNormalBtn || !kidTempoFastBtn) return;
+  var activePreset = null;
+  if (currentAnimationBpm === KID_TEMPO_PRESETS.slow) activePreset = 'slow';
+  if (currentAnimationBpm === KID_TEMPO_PRESETS.normal) activePreset = 'normal';
+  if (currentAnimationBpm === KID_TEMPO_PRESETS.fast) activePreset = 'fast';
+
+  kidTempoSlowBtn.classList.toggle('is-active', activePreset === 'slow');
+  kidTempoNormalBtn.classList.toggle('is-active', activePreset === 'normal');
+  kidTempoFastBtn.classList.toggle('is-active', activePreset === 'fast');
+
+  kidTempoSlowBtn.setAttribute('aria-pressed', activePreset === 'slow' ? 'true' : 'false');
+  kidTempoNormalBtn.setAttribute('aria-pressed', activePreset === 'normal' ? 'true' : 'false');
+  kidTempoFastBtn.setAttribute('aria-pressed', activePreset === 'fast' ? 'true' : 'false');
+}
+
+function applyTempoValue(bpm) {
+  var parsed = Math.round(Number(bpm));
+  if (!isFinite(parsed) || ALLOWED_TEMPOS.indexOf(parsed) === -1) {
+    parsed = DEFAULT_ANIMATION_BPM;
+  }
+  currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
+  syncKidTempoPresetControls();
+  // Tempo change updates playback speed without resetting progress.
+  redrawAnimationInPlace();
+}
+
+function syncAnimateButtonLabel() {
+  if (!animateBtn) return;
+  if (animationPlaybackState === 'playing') {
+    animateBtn.textContent = '⏸ Pause stitching';
+    animateBtn.setAttribute('aria-pressed', 'true');
+    animateBtn.title = 'Pause stitching';
+    return;
+  }
+  if (animationPlaybackState === 'paused') {
+    animateBtn.textContent = '▶ Resume stitching';
+    animateBtn.setAttribute('aria-pressed', 'false');
+    animateBtn.title = 'Resume stitching';
+    return;
+  }
+  animateBtn.textContent = '▶ Watch it stitch';
+  animateBtn.setAttribute('aria-pressed', 'false');
+  animateBtn.title = 'Watch it stitch';
+}
+
+function applyDefaultTempo() {
+  applyTempoValue(DEFAULT_ANIMATION_BPM);
 }
 
 function stopAnimationIfActive() {
-  if (!animationActive) return;
+  if (!animationActive && !animationState) return;
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  animationPlaybackState = 'idle';
+  syncAnimateButtonLabel();
   clearHighlightedHoleNumbers();
+  updateMusicPlaybackState();
+}
+
+function pauseAnimationIfActive() {
+  if (!animationActive || !animationState) return;
+  animationActive = false;
+  view.onFrame = null;
+  animationPlaybackState = 'paused';
+  syncAnimateButtonLabel();
   updateMusicPlaybackState();
 }
 
@@ -1348,7 +1448,7 @@ function renderAnimationFrame() {
 
 function redrawAnimationInPlace() {
   // Style-only updates should preserve current animation progress.
-  if (!animationActive || !animationState) {
+  if (!animationState) {
     drawStatic();
     return;
   }
@@ -2424,6 +2524,85 @@ function drawStatic() {
 /* ------------------------------
    ANIMATION
 ------------------------------ */
+function runAnimationFrameTick(event) {
+  if (!animationActive) return;
+
+  if (!animationState || !animationState.segmentLists.length) {
+    animationActive = false;
+    view.onFrame = null;
+    animationState = null;
+    animationPlaybackState = 'idle';
+    syncAnimateButtonLabel();
+    clearHighlightedHoleNumbers();
+    updateMusicPlaybackState();
+    drawStatic();
+    return;
+  }
+
+  // Clamp long frame gaps so a resumed tab or hitch cannot skip ahead visibly.
+  var frameDelta = Math.min(event.delta, 0.1);
+  animationState.elapsed += frameDelta;
+
+  if (animationState.settle) {
+    animationState.settle.remaining = Math.max(0, animationState.settle.remaining - frameDelta);
+    if (animationState.settle.remaining <= 0) {
+      animationState.settle = null;
+    }
+  }
+
+  var secondsPerSegment = getAnimationSecondsPerSegment();
+
+  while (animationState.elapsed >= secondsPerSegment && animationActive) {
+    animationState.elapsed -= secondsPerSegment;
+
+    var threadIndex = animationState.threadIndex;
+    if (threadIndex < 0 || threadIndex >= threads.length) {
+      animationActive = false;
+      animationState = null;
+      animationPlaybackState = 'idle';
+      view.onFrame = null;
+      syncAnimateButtonLabel();
+      clearHighlightedHoleNumbers();
+      updateMusicPlaybackState();
+      drawStatic();
+      return;
+    }
+
+    var segments = animationState.segmentLists[threadIndex] || [];
+
+    if (animationState.step < segments.length) {
+      animationState.settle = {
+        threadIndex: threadIndex,
+        segmentIndex: animationState.step,
+        segments: segments,
+        duration: STITCH_PULL_SETTLE_SECONDS,
+        remaining: STITCH_PULL_SETTLE_SECONDS
+      };
+      animationState.step++;
+    } else {
+      animationState.threadIndex++;
+      if (animationState.threadIndex >= threads.length) {
+        animationActive = false;
+        animationState = null;
+        animationPlaybackState = 'idle';
+        view.onFrame = null;
+        syncAnimateButtonLabel();
+        clearHighlightedHoleNumbers();
+        updateMusicPlaybackState();
+        drawStatic();
+        return;
+      }
+      animationState.step = 0;
+    }
+  }
+
+  renderAnimationFrame();
+}
+
+function startAnimationLoop() {
+  view.onFrame = runAnimationFrameTick;
+}
+
 function animateStitch() {
   // Always treat this as a fresh run, even if a prior animation is active.
   animationActive = false;
@@ -2445,77 +2624,32 @@ function animateStitch() {
     })
   };
   animationActive = true;
+  animationPlaybackState = 'playing';
+  syncAnimateButtonLabel();
   updateMusicPlaybackState();
   renderAnimationFrame();
+  startAnimationLoop();
+}
 
-  view.onFrame = function(event) {
-    if (!animationActive) return;
+function resumeAnimationIfPaused() {
+  if (animationActive || !animationState) return;
+  animationActive = true;
+  animationPlaybackState = 'playing';
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  startAnimationLoop();
+}
 
-    if (!animationState || !animationState.segmentLists.length) {
-      animationActive = false;
-      view.onFrame = null;
-      animationState = null;
-      clearHighlightedHoleNumbers();
-      updateMusicPlaybackState();
-      drawStatic();
-      return;
-    }
-
-    // Clamp long frame gaps so a resumed tab or hitch cannot skip ahead visibly.
-    var frameDelta = Math.min(event.delta, 0.1);
-    animationState.elapsed += frameDelta;
-
-    if (animationState.settle) {
-      animationState.settle.remaining = Math.max(0, animationState.settle.remaining - frameDelta);
-      if (animationState.settle.remaining <= 0) {
-        animationState.settle = null;
-      }
-    }
-
-    var secondsPerSegment = getAnimationSecondsPerSegment();
-
-    while (animationState.elapsed >= secondsPerSegment && animationActive) {
-      animationState.elapsed -= secondsPerSegment;
-
-      var threadIndex = animationState.threadIndex;
-      if (threadIndex < 0 || threadIndex >= threads.length) {
-        animationActive = false;
-        animationState = null;
-        view.onFrame = null;
-        clearHighlightedHoleNumbers();
-        updateMusicPlaybackState();
-        drawStatic();
-        return;
-      }
-
-      var segments = animationState.segmentLists[threadIndex] || [];
-
-      if (animationState.step < segments.length) {
-        animationState.settle = {
-          threadIndex: threadIndex,
-          segmentIndex: animationState.step,
-          segments: segments,
-          duration: STITCH_PULL_SETTLE_SECONDS,
-          remaining: STITCH_PULL_SETTLE_SECONDS
-        };
-        animationState.step++;
-      } else {
-        animationState.threadIndex++;
-        if (animationState.threadIndex >= threads.length) {
-          animationActive = false;
-          animationState = null;
-          view.onFrame = null;
-          clearHighlightedHoleNumbers();
-          updateMusicPlaybackState();
-          drawStatic();
-          return;
-        }
-        animationState.step = 0;
-      }
-    }
-
-    renderAnimationFrame();
-  };
+function toggleAnimationPlayback() {
+  if (animationPlaybackState === 'playing') {
+    pauseAnimationIfActive();
+    return;
+  }
+  if (animationPlaybackState === 'paused') {
+    resumeAnimationIfPaused();
+    return;
+  }
+  animateStitch();
 }
 
 joyAudio.addEventListener('ended', function() {
@@ -2863,7 +2997,7 @@ widthSlider.addEventListener('input', () => {
   redrawAnimationInPlace();
 });
 
-animateBtn.addEventListener('click', animateStitch);
+animateBtn.addEventListener('click', toggleAnimationPlayback);
 
 surpriseBtn.addEventListener('click', () => {
   var targetIndex = getKidTargetThreadIndex();
@@ -2911,21 +3045,23 @@ advancedShapeSelect.addEventListener('change', () => {
 });
 
 advancedTempoInput.addEventListener('change', () => {
-  var parsed = Math.round(Number(advancedTempoInput.value));
-  if (!isFinite(parsed)) return;
-  if (ALLOWED_TEMPOS.indexOf(parsed) === -1) {
-    parsed = DEFAULT_ANIMATION_BPM;
-  }
-  currentAnimationBpm = parsed;
-  syncAdvancedTempoControls();
-  // Tempo change updates playback speed without resetting progress.
-  redrawAnimationInPlace();
+  applyTempoValue(advancedTempoInput.value);
 });
 
 resetTempoBtn.addEventListener('click', () => {
   applyDefaultTempo();
-  // Tempo reset should also preserve current stitch position.
-  redrawAnimationInPlace();
+});
+
+kidTempoSlowBtn.addEventListener('click', () => {
+  applyTempoValue(KID_TEMPO_PRESETS.slow);
+});
+
+kidTempoNormalBtn.addEventListener('click', () => {
+  applyTempoValue(KID_TEMPO_PRESETS.normal);
+});
+
+kidTempoFastBtn.addEventListener('click', () => {
+  applyTempoValue(KID_TEMPO_PRESETS.fast);
 });
 
 exportSvgBtn.addEventListener('click', () => {
@@ -3010,6 +3146,8 @@ window.addEventListener('pageshow', () => {
   applyDefaultHoles();
   applyDefaultSkipAndSize();
   applyDefaultTempo();
+  animationPlaybackState = 'idle';
+  syncAnimateButtonLabel();
   renderThreadControls();
   redrawForPathChange();
 });
@@ -3054,6 +3192,7 @@ advancedPanel.classList.remove('open');
 applyDefaultHoles();
 applyDefaultSkipAndSize();
 applyDefaultTempo();
+syncAnimateButtonLabel();
 syncHoleNumberToggles();
 syncBorderControls();
 syncMusicToggleButton();
