@@ -662,26 +662,14 @@
       <div class="modal-help">Used as the file name base for exported files.</div>
     </div>
     <div class="modal-row">
-      <label><input id="export-include-threads" type="checkbox" checked> Include stitched threads in SVG</label>
+      <label><input id="export-include-threads" type="checkbox"> Include stitched threads in SVG</label>
     </div>
     <div class="modal-row">
-      <label><input id="export-include-params" type="checkbox" checked> Include parameter sheet (.txt)</label>
-      <div class="modal-help">Adds shape/control/thread values for reproducibility.</div>
+      <label><input id="export-include-guide" type="checkbox" checked> Include stitching guide (.txt)</label>
+      <div class="modal-help">Adds full parameters and manual stitching instructions in one text file.</div>
     </div>
     <div class="modal-row">
-      <label><input id="export-include-guide" type="checkbox"> Include stitching guide (.txt)</label>
-      <div class="modal-help">Adds a human-friendly step summary for manual stitching after manufacturing.</div>
-    </div>
-    <div class="modal-row">
-      <label for="export-guide-detail">Guide detail</label>
-      <select id="export-guide-detail">
-        <option value="compact" selected>Compact</option>
-        <option value="detailed">Detailed</option>
-      </select>
-      <div class="modal-help">Compact includes representative connections; Detailed includes the full connection listing.</div>
-    </div>
-    <div class="modal-row">
-      <label><input id="export-include-preview" type="checkbox"> Include preview image (.png)</label>
+      <label><input id="export-include-preview" type="checkbox" checked> Include preview image (.png)</label>
       <div class="modal-help">Adds a snapshot image reference from the current canvas.</div>
     </div>
     <div class="modal-actions">
@@ -717,9 +705,7 @@ var exportSvgBtn = document.getElementById('advanced-export-svg');
 var exportOptionsModal = document.getElementById('export-options-modal');
 var exportNameInput = document.getElementById('export-name-input');
 var exportIncludeThreadsInput = document.getElementById('export-include-threads');
-var exportIncludeParamsInput = document.getElementById('export-include-params');
 var exportIncludeGuideInput = document.getElementById('export-include-guide');
-var exportGuideDetailInput = document.getElementById('export-guide-detail');
 var exportIncludePreviewInput = document.getElementById('export-include-preview');
 var exportConfirmBtn = document.getElementById('export-confirm-btn');
 var exportCancelBtn = document.getElementById('export-cancel-btn');
@@ -2003,52 +1989,6 @@ function triggerBlobDownload(blob, fileName) {
   }, 0);
 }
 
-function buildParameterSheetText(fileBaseName, options) {
-  function getReadableStitchMode(mode) {
-    if (mode === 'connect') return 'Multiplication';
-    if (mode === 'sequence') return 'Step list';
-    if (mode === 'formula') return 'Expression';
-    return 'Addition';
-  }
-
-  var lines = [];
-  var now = new Date();
-  lines.push('curve_stitcher parameter sheet');
-  lines.push('Generated: ' + now.toISOString());
-  lines.push('Export name: ' + fileBaseName);
-  lines.push('');
-  lines.push('Global');
-  lines.push('Shape: ' + currentShape);
-  lines.push('Holes: ' + holesSlider.value);
-  lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
-  lines.push('Hole numbers visible in export: ' + (shouldShowHoleNumbersNow() ? 'yes' : 'no'));
-  lines.push('Include stitched threads in SVG: ' + (options.includeThreads ? 'yes' : 'no'));
-  lines.push('');
-  lines.push('Threads');
-
-  for (var i = 0; i < threads.length; i++) {
-    var thread = threads[i];
-    ensureThreadConnectConfig(thread);
-    lines.push('Thread ' + (i + 1));
-    lines.push('  Color: ' + String(thread.color));
-    lines.push('  Size: ' + String(thread.width));
-    lines.push('  Stitch mode: ' + getReadableStitchMode(thread.jumpMode));
-    lines.push('  Add value: ' + String(thread.jump));
-    if (thread.jumpMode === 'connect') {
-      lines.push('  Multiply by: ' + String(thread.connectMultiplier));
-      lines.push('  Offset: ' + String(thread.connectOffset));
-    }
-    if (thread.jumpMode === 'sequence') {
-      lines.push('  Step list: ' + String(thread.jumpSequence || ''));
-    }
-    if (thread.jumpMode === 'formula') {
-      lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
-    }
-  }
-
-  return lines.join('\n');
-}
-
 function buildCurrentDesignSvgString(options) {
   options = options || {};
   var includeThreads = options.includeThreads !== false;
@@ -2144,12 +2084,6 @@ function downloadCurrentDesignSvg(fileBaseName, options) {
   triggerBlobDownload(blob, fileBaseName + '.svg');
 }
 
-function downloadParameterSheet(fileBaseName, options) {
-  var text = buildParameterSheetText(fileBaseName, options || {});
-  var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  triggerBlobDownload(blob, fileBaseName + '-parameters.txt');
-}
-
 function buildStitchingGuideText(fileBaseName, options) {
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
@@ -2158,19 +2092,11 @@ function buildStitchingGuideText(fileBaseName, options) {
     return 'Addition';
   }
 
-  function appendRepresentativeConnections(targetLines, segments, maxCount) {
-    var count = maxCount && maxCount > 0 ? Math.min(maxCount, segments.length) : segments.length;
-    for (var idx = 0; idx < count; idx++) {
+  function appendConnections(targetLines, segments) {
+    for (var idx = 0; idx < segments.length; idx++) {
       targetLines.push('    ' + String(segments[idx][0] + 1) + ' -> ' + String(segments[idx][1] + 1));
     }
-    if (maxCount && segments.length > count) {
-      targetLines.push('    ... (' + String(segments.length - count) + ' more)');
-    }
   }
-
-  options = options || {};
-  var guideDetail = options.guideDetail === 'detailed' ? 'detailed' : 'compact';
-  var compactMode = guideDetail !== 'detailed';
 
   computePoints();
 
@@ -2180,11 +2106,41 @@ function buildStitchingGuideText(fileBaseName, options) {
   lines.push('Generated: ' + now.toISOString());
   lines.push('Export name: ' + fileBaseName);
   lines.push('');
+  lines.push('Parameters');
+  lines.push('Global');
+  lines.push('Shape: ' + currentShape);
+  lines.push('Holes: ' + holesSlider.value);
+  lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
+  lines.push('Hole numbers visible in export: ' + (shouldShowHoleNumbersNow() ? 'yes' : 'no'));
+  lines.push('Include stitched threads in SVG: ' + (options.includeThreads ? 'yes' : 'no'));
+  lines.push('');
+  lines.push('Threads');
+
+  for (var p = 0; p < threads.length; p++) {
+    var paramThread = threads[p];
+    ensureThreadConnectConfig(paramThread);
+    lines.push('Thread ' + (p + 1));
+    lines.push('  Color: ' + String(paramThread.color));
+    lines.push('  Size: ' + String(paramThread.width));
+    lines.push('  Stitch mode: ' + getReadableStitchMode(paramThread.jumpMode));
+    lines.push('  Add value: ' + String(paramThread.jump));
+    if (paramThread.jumpMode === 'connect') {
+      lines.push('  Multiply by: ' + String(paramThread.connectMultiplier));
+      lines.push('  Offset: ' + String(paramThread.connectOffset));
+    }
+    if (paramThread.jumpMode === 'sequence') {
+      lines.push('  Step list: ' + String(paramThread.jumpSequence || ''));
+    }
+    if (paramThread.jumpMode === 'formula') {
+      lines.push('  Expression: ' + String(paramThread.jumpFormula || 'skip'));
+    }
+  }
+
+  lines.push('');
   lines.push('Preparation');
   lines.push('1. Manufacture the board with shape "' + currentShape + '" and ' + String(points.length) + ' numbered holes.');
   lines.push('2. Number holes clockwise as shown in the preview/export from 1 to ' + String(points.length) + '.');
   lines.push('3. Use one thread sequence section per listed thread below.');
-  lines.push('4. Guide detail mode: ' + (compactMode ? 'Compact' : 'Detailed') + '.');
   lines.push('');
 
   for (var i = 0; i < threads.length; i++) {
@@ -2198,34 +2154,34 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Width: ' + String(thread.width));
 
     if (thread.jumpMode === 'connect') {
-      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): target = ((multiplier * source + offset - 1) mod n) + 1, using labels 1..n.');
+      lines.push('  Rule: target = ((multiplier * source + offset - 1) mod n) + 1, using labels 1..n.');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
       lines.push('  Offset: ' + String(thread.connectOffset));
-      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
-      appendRepresentativeConnections(lines, segments, compactMode ? 12 : 0);
+      lines.push('  Full connections:');
+      appendConnections(lines, segments);
     } else if (thread.jumpMode === 'sequence') {
-      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): repeat the provided step list from each current hole, wrapping modulo n.');
+      lines.push('  Rule: repeat the provided step list from each current hole, wrapping modulo n.');
       lines.push('  Step list: ' + String(thread.jumpSequence || ''));
-      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
-      appendRepresentativeConnections(lines, segments, compactMode ? 14 : 0);
+      lines.push('  Full connections:');
+      appendConnections(lines, segments);
     } else if (thread.jumpMode === 'formula') {
-      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): evaluate expression per step, then connect current -> (current + step) mod n.');
+      lines.push('  Rule: evaluate expression per step, then connect current -> (current + step) mod n.');
       lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
       lines.push('  Base add value: ' + String(thread.jump));
-      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
-      appendRepresentativeConnections(lines, segments, compactMode ? 14 : 0);
+      lines.push('  Full connections:');
+      appendConnections(lines, segments);
     } else {
-      lines.push('  Rule (' + (compactMode ? 'compact' : 'detailed') + '): next = ((current + add - 1) mod n) + 1, using labels 1..n.');
+      lines.push('  Rule: next = ((current + add - 1) mod n) + 1, using labels 1..n.');
       lines.push('  Add value: ' + String(thread.jump));
-      lines.push(compactMode ? '  Representative connections:' : '  Full connections:');
-      appendRepresentativeConnections(lines, segments, compactMode ? 14 : 0);
+      lines.push('  Full connections:');
+      appendConnections(lines, segments);
     }
 
     lines.push('');
   }
 
   lines.push('Notes');
-  lines.push('- If threads are hidden in the exported SVG, use this guide plus the parameter sheet for reconstruction.');
+  lines.push('- If threads are hidden in the exported SVG, use this guide for reconstruction.');
   lines.push('- Keep consistent thread tension to match the on-screen reference closely.');
 
   return lines.join('\n');
@@ -2250,12 +2206,9 @@ function downloadPreviewImage(fileBaseName) {
 
 function openExportOptionsModal() {
   exportNameInput.value = 'curve_stitcher-' + getTimestampLabel();
-  exportIncludeThreadsInput.checked = true;
-  exportIncludeParamsInput.checked = true;
-  exportIncludeGuideInput.checked = false;
-  exportGuideDetailInput.value = 'compact';
-  exportGuideDetailInput.disabled = true;
-  exportIncludePreviewInput.checked = false;
+  exportIncludeThreadsInput.checked = false;
+  exportIncludeGuideInput.checked = true;
+  exportIncludePreviewInput.checked = true;
   exportOptionsModal.classList.add('open');
   exportNameInput.focus();
   exportNameInput.select();
@@ -2269,17 +2222,11 @@ function runExportFromModalSelection() {
   var baseName = normalizeExportBaseName(exportNameInput.value);
   var options = {
     includeThreads: exportIncludeThreadsInput.checked,
-    includeParams: exportIncludeParamsInput.checked,
     includeGuide: exportIncludeGuideInput.checked,
-    guideDetail: exportGuideDetailInput.value,
     includePreview: exportIncludePreviewInput.checked
   };
 
   downloadCurrentDesignSvg(baseName, options);
-
-  if (options.includeParams) {
-    downloadParameterSheet(baseName, options);
-  }
 
   if (options.includeGuide) {
     downloadStitchingGuide(baseName, options);
@@ -2891,10 +2838,6 @@ exportSvgBtn.addEventListener('click', () => {
 
 exportConfirmBtn.addEventListener('click', () => {
   runExportFromModalSelection();
-});
-
-exportIncludeGuideInput.addEventListener('change', () => {
-  exportGuideDetailInput.disabled = !exportIncludeGuideInput.checked;
 });
 
 exportCancelBtn.addEventListener('click', () => {
