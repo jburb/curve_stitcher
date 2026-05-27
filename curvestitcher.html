@@ -21,12 +21,38 @@
 
   /* --- TOP SHAPE PICKER --- */
   #shape-bar {
-    display: flex;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
     padding: 12px;
     background: #fff;
     border-bottom: 2px solid #eee;
     align-items: center;
+  }
+  .top-bar-left,
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+  }
+  .top-bar-left {
+    justify-content: flex-start;
+  }
+  .top-bar-right {
+    justify-content: flex-end;
+  }
+  .top-bar-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .shape-picker-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
   }
   .shape-btn {
     width: 48px;
@@ -66,7 +92,6 @@
   }
 
   #gear {
-    margin-left: auto;
     font-size: 28px;
     cursor: pointer;
   }
@@ -522,6 +547,18 @@
     border-color: #2f5fb3;
     color: #fff;
   }
+
+  @media (max-width: 720px) {
+    #shape-bar {
+      grid-template-columns: auto 1fr auto;
+    }
+    .top-bar-center {
+      gap: 8px;
+    }
+    .shape-picker-group {
+      gap: 8px;
+    }
+  }
 </style>
 </head>
 
@@ -529,14 +566,22 @@
 
 <!-- SHAPE PICKER -->
 <div id="shape-bar">
-  <div class="shape-btn" data-shape="circle">⭕</div>
-  <div class="shape-btn" data-shape="triangle">🔺</div>
-  <div class="shape-btn" data-shape="square">⬜</div>
-  <div class="shape-btn" data-shape="star">⭐</div>
-  <div class="shape-btn" data-shape="heart">❤️</div>
-  <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
-  <button id="toggle-music" class="top-icon-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
-  <div id="gear">⚙️</div>
+  <div class="top-bar-left">
+    <button id="toggle-music" class="top-icon-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
+  </div>
+  <div class="top-bar-center">
+    <div class="shape-picker-group">
+      <div class="shape-btn" data-shape="circle">⭕</div>
+      <div class="shape-btn" data-shape="triangle">🔺</div>
+      <div class="shape-btn" data-shape="square">⬜</div>
+      <div class="shape-btn" data-shape="star">⭐</div>
+      <div class="shape-btn" data-shape="heart">❤️</div>
+    </div>
+    <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
+  </div>
+  <div class="top-bar-right">
+    <div id="gear">⚙️</div>
+  </div>
 </div>
 
 <!-- CANVAS -->
