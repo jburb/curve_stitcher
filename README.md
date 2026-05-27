@@ -22,10 +22,11 @@ Contributor terms:
 ## Current Milestones
 
 1. Known pattern discovery detector
-2. Triangula experience (Sierpinski world)
-3. Mashrabiya experience (Islamic rosette world)
-4. Stitch library (offline-first)
-5. Advanced stitch ribbon motion (Option 4)
+2. Dynamic add/multiply bounds guardrail
+3. Triangula experience (Sierpinski world)
+4. Mashrabiya experience (Islamic rosette world)
+5. Stitch library (offline-first)
+6. Advanced stitch ribbon motion (Option 4)
 
 ## Recently Completed
 
@@ -61,7 +62,12 @@ Contributor terms:
 		 - Hyperbola envelope
 		 - Nephroid-like variants
 
-2. **Triangula experience (Sierpinski world)**
+2. **Dynamic add/multiply bounds guardrail**
+	 - Add dynamic control bounds so add/multiply upper limits are constrained by current hole count.
+	 - Keep behavior predictable when hole count changes (for example clamp/normalize with clear value feedback).
+	 - Preserve advanced-user intent where possible (for example optional free numeric entry in advanced mode).
+
+3. **Triangula experience (Sierpinski world)**
 	- Entry trigger and transition:
 	  - When the user stitches/discovers an equilateral triangle in Stitching mode, offer an optional prompt to "Enter Triangula".
 	  - If confirmed, transition by scrolling the current stitch shape out of canvas view along a path congruent with an edge of the equilateral triangle.
@@ -80,7 +86,7 @@ Contributor terms:
 	- Audio/animation behavior parity:
 	  - Preserve music behavior exactly: play continuously while animation is running and while sliders are actively moving; pause when animation is idle and controls are at rest.
 
-3. **Mashrabiya experience (Islamic rosette world)**
+4. **Mashrabiya experience (Islamic rosette world)**
 	- Entry trigger and transition:
 	  - When the user stitches/discovers a Mystic Rose in Stitching mode, offer an optional prompt to "Enter Mashrabiya".
 	  - Reuse a similarly polished scene transition language so movement into Mashrabiya feels native to the app (not a hard context switch).
@@ -97,12 +103,12 @@ Contributor terms:
 	- Audio/animation behavior parity:
 	  - Keep the same activity-driven music lifecycle as the main app (play during animation/active adjustment, pause at rest).
 
-4. **Stitch library (offline-first)**
+5. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-5. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+6. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
@@ -119,7 +125,8 @@ Contributor terms:
 ## Suggested Delivery Order
 
 1. Pattern discovery notifier
-2. Triangula experience (Sierpinski world)
-3. Mashrabiya experience (Islamic rosette world)
-4. Stitch library (offline-first)
-5. Advanced stitch ribbon motion (Option 4)
+2. Dynamic add/multiply bounds guardrail
+3. Triangula experience (Sierpinski world)
+4. Mashrabiya experience (Islamic rosette world)
+5. Stitch library (offline-first)
+6. Advanced stitch ribbon motion (Option 4)
