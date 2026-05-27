@@ -21,8 +21,8 @@ Contributor terms:
 
 ## Current Milestones
 
-1. SVG export
-2. Known pattern discovery detector
+1. Known pattern discovery detector
+2. Playback control refinement (watch it stitch)
 3. Triangula experience (Sierpinski world)
 4. Mashrabiya experience (Islamic rosette world)
 5. Stitch library (offline-first)
@@ -37,23 +37,35 @@ Contributor terms:
 5. Multiplication mapping mode (cardioid/nephroid capable)
 6. Formula UX pass (math-friendly input normalization and clearer guidance)
 7. Multiplication mapping aligned to visible hole numbering semantics
+8. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
 
 ## TODO Backlog
 
-1. **SVG export**
-	- Export current stitched design to SVG.
-	- Define export scope clearly (threads, holes, optional labels/border).
-	- Add export prompts for include/exclude selection of SVG elements (for example: borders, threads, holes, hole numbers).
-
-2. **Known pattern discovery detector**
+1. **Known pattern discovery detector**
 	 - Detect when control combinations approximately match known constructions and show a tasteful "discovery" badge.
 	 - Use a short stabilization window (for example 700-1200 ms) before firing to avoid slider thrash.
+	 - On first discovery of each shape/pattern family, reveal a matching entry in a shape library and introduce a music picker.
+	 - Music picker behavior on first discovery:
+		 - Add one song icon per discovered song/shape pairing.
+		 - Render each icon label from the song filename (without extension) along a spiral path conforming to the discovered shape.
+		 - Truncate label text to a fixed visual footprint and show the full filename via tooltip (or equivalent hover/focus affordance).
+		 - Persist revealed songs so they remain selectable after first unlock.
+	 - Music playback integration:
+		 - Allow selecting the active animation song from discovered songs, extending the current single-track Bach setup.
+		 - Expose per-song BPM option sets in Advanced controls.
+		 - BPM options remain integer multiples of each song's base BPM (exact sets TBD per song).
 	 - Initial pattern candidates:
 		 - Cardioid-like times tables
 		 - Mystic Rose
 		 - Parabola envelope
 		 - Hyperbola envelope
 		 - Nephroid-like variants
+
+2. **Playback control refinement (watch it stitch)**
+	 - Add pause/resume support for stitch playback if implementation complexity remains manageable.
+	 - Keep existing animation continuity expectations (resume from current stitch position/state).
+	 - Add kid-friendly BPM presentation options (for example tortoise/hare style tempo choices) alongside advanced numeric BPM control.
+	 - Ensure tempo UI remains understandable for younger users while preserving precision controls for advanced users.
 
 3. **Triangula experience (Sierpinski world)**
 	- Entry trigger and transition:
@@ -112,8 +124,8 @@ Contributor terms:
 
 ## Suggested Delivery Order
 
-1. SVG export
-2. Pattern discovery notifier
+1. Pattern discovery notifier
+2. Playback control refinement (watch it stitch)
 3. Triangula experience (Sierpinski world)
 4. Mashrabiya experience (Islamic rosette world)
 5. Stitch library (offline-first)

@@ -6,6 +6,7 @@
 
 <!-- Paper.js -->
 <script src="js/paper-full.min.js"></script>
+<script src="js/jszip.min.js"></script>
 
 <style>
   body {
@@ -2084,6 +2085,11 @@ function downloadCurrentDesignSvg(fileBaseName, options) {
   triggerBlobDownload(blob, fileBaseName + '.svg');
 }
 
+function createCurrentDesignSvgBlob(options) {
+  var svgString = buildCurrentDesignSvgString(options);
+  return new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+}
+
 function buildStitchingGuideText(fileBaseName, options) {
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
@@ -2193,6 +2199,11 @@ function downloadStitchingGuide(fileBaseName, options) {
   triggerBlobDownload(blob, fileBaseName + '-stitching-guide.txt');
 }
 
+function createStitchingGuideBlob(fileBaseName, options) {
+  var text = buildStitchingGuideText(fileBaseName, options || {});
+  return new Blob([text], { type: 'text/plain;charset=utf-8' });
+}
+
 function downloadPreviewImage(fileBaseName) {
   var canvas = document.getElementById('myCanvas');
   if (!canvas || typeof canvas.toBlob !== 'function') {
@@ -2202,6 +2213,38 @@ function downloadPreviewImage(fileBaseName) {
     if (!blob) return;
     triggerBlobDownload(blob, fileBaseName + '-preview.png');
   }, 'image/png');
+}
+
+function createPreviewImageBlob() {
+  return new Promise(function(resolve) {
+    var canvas = document.getElementById('myCanvas');
+    if (!canvas || typeof canvas.toBlob !== 'function') {
+      resolve(null);
+      return;
+    }
+    canvas.toBlob(function(blob) {
+      resolve(blob || null);
+    }, 'image/png');
+  });
+}
+
+async function downloadExportZipBundle(fileBaseName, options) {
+  var zip = new JSZip();
+  zip.file(fileBaseName + '.svg', createCurrentDesignSvgBlob(options));
+
+  if (options.includeGuide) {
+    zip.file(fileBaseName + '-stitching-guide.txt', createStitchingGuideBlob(fileBaseName, options));
+  }
+
+  if (options.includePreview) {
+    var previewBlob = await createPreviewImageBlob();
+    if (previewBlob) {
+      zip.file(fileBaseName + '-preview.png', previewBlob);
+    }
+  }
+
+  var zipBlob = await zip.generateAsync({ type: 'blob' });
+  triggerBlobDownload(zipBlob, fileBaseName + '.zip');
 }
 
 function openExportOptionsModal() {
@@ -2218,7 +2261,7 @@ function closeExportOptionsModal() {
   exportOptionsModal.classList.remove('open');
 }
 
-function runExportFromModalSelection() {
+async function runExportFromModalSelection() {
   var baseName = normalizeExportBaseName(exportNameInput.value);
   var options = {
     includeThreads: exportIncludeThreadsInput.checked,
@@ -2226,14 +2269,22 @@ function runExportFromModalSelection() {
     includePreview: exportIncludePreviewInput.checked
   };
 
-  downloadCurrentDesignSvg(baseName, options);
-
-  if (options.includeGuide) {
-    downloadStitchingGuide(baseName, options);
-  }
-
-  if (options.includePreview) {
-    downloadPreviewImage(baseName);
+  try {
+    if (typeof JSZip === 'undefined') {
+      // Fallback path if zip library fails to load.
+      downloadCurrentDesignSvg(baseName, options);
+      if (options.includeGuide) {
+        downloadStitchingGuide(baseName, options);
+      }
+      if (options.includePreview) {
+        downloadPreviewImage(baseName);
+      }
+    } else {
+      await downloadExportZipBundle(baseName, options);
+    }
+  } catch (error) {
+    console.error('Export failed:', error);
+    alert('Export failed. Please try again.');
   }
 
   closeExportOptionsModal();
