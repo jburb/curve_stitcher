@@ -43,7 +43,7 @@ Contributor terms:
 ## TODO Backlog
 
 1. **Known pattern discovery detector**
-	 - Status: partially implemented (triangle/square discovery flow and song picker unlocks exist), with additional refinement still needed.
+	 - Status: partially implemented (triangle/square discovery flow and song picker unlocks exist), with additional refinement still needed e.g. clean up the verbage.
 	 - Detect when control combinations approximately match known constructions and show a tasteful "discovery" badge.
 	 - Use a short stabilization window (for example 700-1200 ms) before firing to avoid slider thrash.
 	 - On first discovery of each shape/pattern family, reveal a matching entry in a shape library and introduce a music picker.
