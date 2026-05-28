@@ -36,6 +36,7 @@
   }
   .top-bar-left {
     justify-content: flex-start;
+    gap: 10px;
   }
   .top-bar-right {
     justify-content: flex-end;
@@ -94,6 +95,51 @@
   #gear {
     font-size: 28px;
     cursor: pointer;
+  }
+
+  #discovery-toggle.has-unseen {
+    box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
+    animation: discoveryPulse 1.15s ease-in-out infinite;
+    position: relative;
+  }
+  #discovery-toggle.has-unseen::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: #ff595e;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  @keyframes discoveryPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.085); }
+    100% { transform: scale(1); }
+  }
+
+  #discovery-toast {
+    position: fixed;
+    top: 74px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-14px);
+    z-index: 85;
+    background: #1f3f75;
+    color: #fff;
+    border-radius: 12px;
+    border: 2px solid #89a9e6;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.22s ease;
+    box-shadow: 0 8px 16px rgba(24, 44, 82, 0.28);
+  }
+  #discovery-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 
   /* --- CANVAS AREA --- */
@@ -377,6 +423,67 @@
   }
 
   /* --- ADVANCED PANEL --- */
+  #discovery-panel {
+    position: absolute;
+    top: 0;
+    left: -320px;
+    width: 300px;
+    height: 100%;
+    box-sizing: border-box;
+    background: #fafafa;
+    border-right: 2px solid #ddd;
+    padding: 16px;
+    transition: left 0.3s;
+    overflow-y: auto;
+    z-index: 40;
+  }
+  #discovery-panel.open {
+    left: 0;
+  }
+  .discovery-card {
+    background: #fff;
+    border: 1px solid #d7e0f3;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 0 0 10px;
+  }
+  .discovery-card h4 {
+    margin: 0 0 5px;
+    font-size: 14px;
+    color: #2f4368;
+  }
+  .discovery-card p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: #5f7090;
+  }
+  .discovery-card .advanced-reset-btn {
+    font-size: 12px;
+  }
+  .discovery-subtitle {
+    font-size: 12px;
+    color: #5f7090;
+    margin: 2px 0 10px;
+  }
+  .song-picker-wrap {
+    background: #fff;
+    border: 1px solid #d7e0f3;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .song-picker-wrap[hidden] {
+    display: none;
+  }
+  .song-picker-wrap select {
+    width: 100%;
+    margin-top: 6px;
+    border: 1px solid #cfd9ef;
+    border-radius: 8px;
+    padding: 5px 7px;
+    font-size: 13px;
+  }
+
   #advanced-panel {
     position: absolute;
     top: 0;
@@ -394,14 +501,16 @@
     right: 0;
   }
 
-  #advanced-header {
+  #advanced-header,
+  #discovery-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
   }
 
-  #close-advanced {
+  #close-advanced,
+  #close-discovery {
     border: 1px solid #ddd;
     background: #fff;
     border-radius: 8px;
@@ -617,6 +726,7 @@
 <!-- SHAPE PICKER -->
 <div id="shape-bar">
   <div class="top-bar-left">
+    <button id="discovery-toggle" class="top-icon-btn" type="button" title="Open discovery library" aria-label="Open discovery library" aria-pressed="false">🧭</button>
     <button id="toggle-music" class="top-icon-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
   </div>
   <div class="top-bar-center">
@@ -632,6 +742,24 @@
   <div class="top-bar-right">
     <div id="gear">⚙️</div>
   </div>
+</div>
+
+<div id="discovery-toast" role="status" aria-live="polite"></div>
+
+<div id="discovery-panel" aria-label="Discovery library">
+  <div id="discovery-header">
+    <h3>Discovery Library</h3>
+    <button id="close-discovery" type="button">Close</button>
+  </div>
+  <div class="discovery-subtitle">Unlocked shapes, songs, and future return paths to shape-specific worlds.</div>
+
+  <div id="song-picker-wrap" class="song-picker-wrap" hidden>
+    <strong>Song Picker</strong>
+    <div class="advanced-global-help">Unlocked as shapes are discovered.</div>
+    <select id="discovered-song-picker" aria-label="Discovered songs"></select>
+  </div>
+
+  <div id="discovery-cards"></div>
 </div>
 
 <!-- CANVAS -->
@@ -650,11 +778,6 @@
       <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed" aria-label="Just right speed">🚶</button>
       <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed" aria-label="Fast speed">🐇</button>
     </div>
-  </div>
-
-  <!-- FUN BUTTONS -->
-  <div id="float-buttons">
-    <button class="float-btn" id="surprise" type="button">🎲 Surprise me</button>
   </div>
 
   <!-- COLOR PALETTE -->
@@ -818,6 +941,8 @@ var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var holeNumbersToggleBtn = document.getElementById('toggle-hole-numbers');
+var discoveryToggleBtn = document.getElementById('discovery-toggle');
+var closeDiscoveryBtn = document.getElementById('close-discovery');
 var musicToggleBtn = document.getElementById('toggle-music');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
@@ -829,13 +954,17 @@ var jumpValue   = document.getElementById('jump-value');
 var multiplyValue = document.getElementById('multiply-value');
 var widthValue  = document.getElementById('width-value');
 var animateBtn  = document.getElementById('animate');
-var surpriseBtn = document.getElementById('surprise');
 var kidTempoSlowBtn = document.getElementById('kid-tempo-slow');
 var kidTempoNormalBtn = document.getElementById('kid-tempo-normal');
 var kidTempoFastBtn = document.getElementById('kid-tempo-fast');
 var gearBtn     = document.getElementById('gear');
 var closeAdvancedBtn = document.getElementById('close-advanced');
 var advancedPanel = document.getElementById('advanced-panel');
+var discoveryPanel = document.getElementById('discovery-panel');
+var discoveryCards = document.getElementById('discovery-cards');
+var songPickerWrap = document.getElementById('song-picker-wrap');
+var discoveredSongPicker = document.getElementById('discovered-song-picker');
+var discoveryToast = document.getElementById('discovery-toast');
 
 var threads = [
   {
@@ -869,13 +998,62 @@ var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
 var DEFAULT_ANIMATION_BPM = 84;
 var BEATS_PER_STITCH_SEGMENT = 1;
 var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
-var ALLOWED_TEMPOS = [84, 168, 252, 336, 420];
-var KID_TEMPO_PRESETS = {
-  slow: 84,
-  normal: 168,
-  fast: 252
+var DEFAULT_TEMPO_OPTIONS = [84, 168, 252, 336, 420];
+var SONG_TEMPO_OPTIONS = {
+  bach: DEFAULT_TEMPO_OPTIONS.slice(),
+  triangle: [110, 220, 330, 440, 550],
+  square: [150, 300, 450, 600, 750],
+  // Placeholder values until measured BPM-based sets are finalized.
+  rosette: DEFAULT_TEMPO_OPTIONS.slice()
 };
-var MUSIC_TRACK_PATH = 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3';
+var MUSIC_LIBRARY = {
+  bach: {
+    title: 'music_for_videos-bach-fugue-no21-110853',
+    path: 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3'
+  },
+  triangle: {
+    title: 'Wethankyou,God,wethankyou,BWV29-CompletePerformance',
+    path: 'assets/audio/Wethankyou,God,wethankyou,BWV29-CompletePerformance.mp3'
+  },
+  square: {
+    title: 'gregorquendel-tetris-theme-korobeiniki-arranged-for-piano-186249',
+    path: 'assets/audio/gregorquendel-tetris-theme-korobeiniki-arranged-for-piano-186249.mp3'
+  },
+  rosette: {
+    title: 'djovan-the-voice-of-the-oud-258611',
+    path: 'assets/audio/djovan-the-voice-of-the-oud-258611.mp3'
+  }
+};
+var DISCOVERY_LIBRARY = {
+  triangle: {
+    title: 'Triangle Discovery',
+    icon: '🔺',
+    description: 'Unlocked path toward the Triangula experience.',
+    experienceName: 'Triangula',
+    songId: 'triangle'
+  },
+  square: {
+    title: 'Square Discovery',
+    icon: '⬜',
+    description: 'Unlocked path toward the Squarus experience.',
+    experienceName: 'Squarus',
+    songId: 'square'
+  },
+  rosette: {
+    title: 'Mystic Rose / Rosette Discovery',
+    icon: '✺',
+    description: 'Unlocked path toward the Mashrabiya experience.',
+    experienceName: 'Mashrabiya',
+    songId: 'rosette'
+  }
+};
+var DISCOVERY_STABILIZE_MS = 900;
+var discoveryTimer = null;
+var discoveredShapeKeys = Object.create(null);
+var unlockedSongIds = [];
+var currentSongId = 'bach';
+var hasUnseenDiscoveries = false;
+var discoveryToastTimer = null;
 var SLIDER_MOTION_SETTLE_MS = 180;
 var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
 var STITCH_PULL_SETTLE_OVERSHOOT = 0.027;
@@ -894,7 +1072,7 @@ var BORDER_INCLUDE_IN_SVG = true;
 var borderEnabled = true;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
-var joyAudio = new Audio(MUSIC_TRACK_PATH);
+var joyAudio = new Audio(MUSIC_LIBRARY[currentSongId].path);
 joyAudio.preload = 'auto';
 var isMusicMuted = false;
 var hasMusicStartedSinceLoad = false;
@@ -957,6 +1135,412 @@ function updateMusicPlaybackState() {
   if (!joyAudio.paused) {
     joyAudio.pause();
   }
+}
+
+function syncDiscoveryToggleButton() {
+  if (!discoveryToggleBtn) return;
+  var isOpen = discoveryPanel.classList.contains('open');
+  discoveryToggleBtn.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+  discoveryToggleBtn.title = isOpen ? 'Close discovery library' : 'Open discovery library';
+  discoveryToggleBtn.classList.toggle('active', isOpen);
+  discoveryToggleBtn.classList.toggle('has-unseen', hasUnseenDiscoveries && !isOpen);
+}
+
+function showDiscoveryToast(message) {
+  if (!discoveryToast) return;
+  if (discoveryToastTimer) {
+    clearTimeout(discoveryToastTimer);
+    discoveryToastTimer = null;
+  }
+
+  discoveryToast.textContent = message;
+  discoveryToast.classList.add('show');
+
+  discoveryToastTimer = window.setTimeout(function() {
+    discoveryToast.classList.remove('show');
+    discoveryToastTimer = null;
+  }, 2500);
+}
+
+function getTempoOptionsForSong(songId) {
+  var list = SONG_TEMPO_OPTIONS[songId];
+  if (!list || !list.length) {
+    return DEFAULT_TEMPO_OPTIONS.slice();
+  }
+  return list.slice();
+}
+
+function getActiveTempoOptions() {
+  return getTempoOptionsForSong(currentSongId);
+}
+
+function getKidTempoPresetsForSong(songId) {
+  var options = getTempoOptionsForSong(songId);
+  var slow = options[0];
+  var normal = options[Math.min(1, options.length - 1)];
+  var fast = options[Math.min(2, options.length - 1)];
+  return {
+    slow: slow,
+    normal: normal,
+    fast: fast
+  };
+}
+
+function renderAdvancedTempoOptions() {
+  if (!advancedTempoInput) return;
+  var options = getActiveTempoOptions();
+  advancedTempoInput.innerHTML = '';
+  for (var i = 0; i < options.length; i++) {
+    var option = document.createElement('option');
+    option.value = String(options[i]);
+    option.textContent = String(options[i]);
+    advancedTempoInput.appendChild(option);
+  }
+}
+
+function setCurrentSong(songId) {
+  if (!MUSIC_LIBRARY[songId]) return;
+  if (currentSongId === songId) return;
+
+  var shouldResume = shouldMusicBePlaying() && !isMusicMuted;
+  currentSongId = songId;
+  renderAdvancedTempoOptions();
+  var allowedTempos = getActiveTempoOptions();
+  if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
+    currentAnimationBpm = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
+  }
+  syncAdvancedTempoControls();
+  syncKidTempoPresetControls();
+  joyAudio.pause();
+  joyAudio.src = MUSIC_LIBRARY[currentSongId].path;
+  joyAudio.load();
+  hasMusicStartedSinceLoad = false;
+
+  if (shouldResume) {
+    playMusicFromCurrentState();
+  }
+  renderSongPicker();
+}
+
+function getSongPickerOptions() {
+  var options = ['bach'];
+  for (var i = 0; i < unlockedSongIds.length; i++) {
+    if (options.indexOf(unlockedSongIds[i]) === -1) {
+      options.push(unlockedSongIds[i]);
+    }
+  }
+  return options;
+}
+
+function renderSongPicker() {
+  var hasUnlocked = unlockedSongIds.length > 0;
+  songPickerWrap.hidden = !hasUnlocked;
+  discoveredSongPicker.innerHTML = '';
+  if (!hasUnlocked) return;
+
+  var optionIds = getSongPickerOptions();
+  for (var i = 0; i < optionIds.length; i++) {
+    var option = document.createElement('option');
+    option.value = optionIds[i];
+    option.textContent = MUSIC_LIBRARY[optionIds[i]].title;
+    discoveredSongPicker.appendChild(option);
+  }
+
+  if (optionIds.indexOf(currentSongId) === -1) {
+    currentSongId = 'bach';
+  }
+  discoveredSongPicker.value = currentSongId;
+}
+
+function renderDiscoveryLibrary() {
+  discoveryCards.innerHTML = '';
+
+  var keys = Object.keys(DISCOVERY_LIBRARY);
+  var unlockedCount = 0;
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (!discoveredShapeKeys[key]) continue;
+    unlockedCount++;
+
+    var config = DISCOVERY_LIBRARY[key];
+    var card = document.createElement('div');
+    card.className = 'discovery-card';
+
+    var title = document.createElement('h4');
+    title.textContent = config.icon + ' ' + config.title;
+    card.appendChild(title);
+
+    var text = document.createElement('p');
+    text.textContent = config.description;
+    card.appendChild(text);
+
+    var action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'advanced-reset-btn';
+    action.textContent = 'Return to ' + config.experienceName;
+    action.addEventListener('click', function(experienceName) {
+      return function() {
+        alert(experienceName + ' experience is not available yet, but this return path is now reserved in the discovery library.');
+      };
+    }(config.experienceName));
+    card.appendChild(action);
+
+    discoveryCards.appendChild(card);
+  }
+
+  if (!unlockedCount) {
+    var empty = document.createElement('div');
+    empty.className = 'advanced-global-help';
+    empty.textContent = 'No shape discoveries yet. Keep exploring shapes and stitch mappings to unlock cards.';
+    discoveryCards.appendChild(empty);
+  }
+
+  renderSongPicker();
+  syncDiscoveryToggleButton();
+}
+
+function unlockSong(songId) {
+  if (!songId || !MUSIC_LIBRARY[songId]) return;
+  if (unlockedSongIds.indexOf(songId) !== -1) return;
+  unlockedSongIds.push(songId);
+}
+
+function unlockDiscovery(shapeKey) {
+  if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
+  if (discoveredShapeKeys[shapeKey]) return;
+
+  discoveredShapeKeys[shapeKey] = true;
+  unlockSong(DISCOVERY_LIBRARY[shapeKey].songId);
+  hasUnseenDiscoveries = true;
+  showDiscoveryToast('New discovery unlocked: ' + DISCOVERY_LIBRARY[shapeKey].title);
+  renderDiscoveryLibrary();
+}
+
+function getDiscoveryCandidateThreads() {
+  if (selectedThreadIndex >= 0 && selectedThreadIndex < threads.length) {
+    return [threads[selectedThreadIndex]];
+  }
+  return threads.slice();
+}
+
+function buildUndirectedGraphFromSegments(segments, pointCount) {
+  var adjacency = [];
+  var neighbors = [];
+  for (var i = 0; i < pointCount; i++) {
+    adjacency.push(Object.create(null));
+    neighbors.push([]);
+  }
+
+  if (!segments || !segments.length) {
+    return {
+      adjacency: adjacency,
+      neighbors: neighbors
+    };
+  }
+
+  for (var s = 0; s < segments.length; s++) {
+    var fromIndex = segments[s][0];
+    var toIndex = segments[s][1];
+
+    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= pointCount || toIndex >= pointCount) continue;
+    if (fromIndex === toIndex) continue;
+    if (adjacency[fromIndex][toIndex]) continue;
+
+    adjacency[fromIndex][toIndex] = true;
+    adjacency[toIndex][fromIndex] = true;
+    neighbors[fromIndex].push(toIndex);
+    neighbors[toIndex].push(fromIndex);
+  }
+
+  return {
+    adjacency: adjacency,
+    neighbors: neighbors
+  };
+}
+
+function isApproxEquilateralTriangleByIndices(a, b, c) {
+  var pa = points[a];
+  var pb = points[b];
+  var pc = points[c];
+  if (!pa || !pb || !pc) return false;
+
+  var sideAB = pa.getDistance(pb);
+  var sideBC = pb.getDistance(pc);
+  var sideCA = pc.getDistance(pa);
+
+  var minSide = Math.min(sideAB, sideBC, sideCA);
+  var maxSide = Math.max(sideAB, sideBC, sideCA);
+  if (!isFinite(minSide) || !isFinite(maxSide) || minSide <= 1e-4) return false;
+
+  var areaTwice = Math.abs(pb.subtract(pa).cross(pc.subtract(pa)));
+  if (areaTwice <= (minSide * minSide * 0.08)) return false;
+
+  // Tight tolerance keeps Triangula strictly tied to equilateral stitching.
+  return (maxSide / minSide) <= 1.015;
+}
+
+function threadHasEquilateralTriangleDiscovery(thread) {
+  if (!thread || points.length < 3) return false;
+
+  var graph = buildUndirectedGraphFromSegments(computeSegments(thread), points.length);
+  var adjacency = graph.adjacency;
+  var neighbors = graph.neighbors;
+
+  for (var a = 0; a < neighbors.length; a++) {
+    for (var i = 0; i < neighbors[a].length; i++) {
+      var b = neighbors[a][i];
+      if (b <= a) continue;
+
+      for (var j = 0; j < neighbors[b].length; j++) {
+        var c = neighbors[b][j];
+        if (c <= b || c === a) continue;
+        if (!adjacency[a][c]) continue;
+
+        if (isApproxEquilateralTriangleByIndices(a, b, c)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function isApproxSquareCycleByIndices(a, b, c, d) {
+  var p0 = points[a];
+  var p1 = points[b];
+  var p2 = points[c];
+  var p3 = points[d];
+  if (!p0 || !p1 || !p2 || !p3) return false;
+
+  var v01 = p1.subtract(p0);
+  var v12 = p2.subtract(p1);
+  var v23 = p3.subtract(p2);
+  var v30 = p0.subtract(p3);
+
+  var l01 = v01.length;
+  var l12 = v12.length;
+  var l23 = v23.length;
+  var l30 = v30.length;
+  var minSide = Math.min(l01, l12, l23, l30);
+  var maxSide = Math.max(l01, l12, l23, l30);
+
+  if (!isFinite(minSide) || !isFinite(maxSide) || minSide <= 1e-4) return false;
+  if ((maxSide / minSide) > 1.03) return false;
+
+  var areaTwice = Math.abs(v01.cross(p3.subtract(p0))) + Math.abs(v12.cross(p0.subtract(p1)));
+  if (areaTwice <= (minSide * minSide * 0.12)) return false;
+
+  function isNearlyRightAngle(vA, vB) {
+    if (vA.length <= 1e-4 || vB.length <= 1e-4) return false;
+    var cosineAbs = Math.abs(vA.dot(vB) / (vA.length * vB.length));
+    return cosineAbs <= 0.2;
+  }
+
+  if (!isNearlyRightAngle(v01, v12)) return false;
+  if (!isNearlyRightAngle(v12, v23)) return false;
+  if (!isNearlyRightAngle(v23, v30)) return false;
+  if (!isNearlyRightAngle(v30, v01)) return false;
+
+  var d02 = p0.getDistance(p2);
+  var d13 = p1.getDistance(p3);
+  var minDiag = Math.min(d02, d13);
+  var maxDiag = Math.max(d02, d13);
+  if (!isFinite(minDiag) || minDiag <= 1e-4) return false;
+  if ((maxDiag / minDiag) > 1.03) return false;
+
+  return true;
+}
+
+function threadHasSquareDiscovery(thread) {
+  if (!thread || points.length < 4) return false;
+
+  var graph = buildUndirectedGraphFromSegments(computeSegments(thread), points.length);
+  var adjacency = graph.adjacency;
+  var neighbors = graph.neighbors;
+
+  for (var a = 0; a < neighbors.length; a++) {
+    for (var i = 0; i < neighbors[a].length; i++) {
+      var b = neighbors[a][i];
+      if (b === a) continue;
+
+      for (var j = 0; j < neighbors[b].length; j++) {
+        var c = neighbors[b][j];
+        if (c === b || c === a) continue;
+
+        for (var k = 0; k < neighbors[c].length; k++) {
+          var d = neighbors[c][k];
+          if (d === c || d === b || d === a) continue;
+          if (!adjacency[d][a]) continue;
+
+          if (isApproxSquareCycleByIndices(a, b, c, d)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function isRosetteDiscoveryCandidate() {
+  var holeCount = parseInt(holesSlider.value, 10);
+  if (!isFinite(holeCount) || holeCount < 24) return false;
+
+  var candidates = getDiscoveryCandidateThreads();
+  for (var i = 0; i < candidates.length; i++) {
+    var thread = candidates[i];
+    ensureThreadConnectConfig(thread);
+    if (thread.jumpMode === 'connect' && Number(thread.connectMultiplier) >= 3) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function evaluateDiscoveryCandidates() {
+  computePoints();
+
+  var candidates = getDiscoveryCandidateThreads();
+  var foundTriangle = false;
+  var foundSquare = false;
+
+  for (var i = 0; i < candidates.length; i++) {
+    if (!foundTriangle && threadHasEquilateralTriangleDiscovery(candidates[i])) {
+      foundTriangle = true;
+    }
+    if (!foundSquare && threadHasSquareDiscovery(candidates[i])) {
+      foundSquare = true;
+    }
+    if (foundTriangle && foundSquare) break;
+  }
+
+  if (foundTriangle) {
+    unlockDiscovery('triangle');
+  }
+  if (foundSquare) {
+    unlockDiscovery('square');
+  }
+  if (isRosetteDiscoveryCandidate()) {
+    unlockDiscovery('rosette');
+  }
+}
+
+function scheduleDiscoveryEvaluation() {
+  if (discoveryTimer) {
+    clearTimeout(discoveryTimer);
+  }
+  discoveryTimer = window.setTimeout(function() {
+    discoveryTimer = null;
+    if (hasActiveSliderMotion()) {
+      scheduleDiscoveryEvaluation();
+      return;
+    }
+    evaluateDiscoveryCandidates();
+  }, DISCOVERY_STABILIZE_MS);
 }
 
 function markSliderAsMoving(slider) {
@@ -1230,8 +1814,9 @@ function applyDefaultSkipAndSize() {
 }
 
 function syncAdvancedTempoControls() {
-  if (ALLOWED_TEMPOS.indexOf(currentAnimationBpm) === -1) {
-    currentAnimationBpm = DEFAULT_ANIMATION_BPM;
+  var allowedTempos = getActiveTempoOptions();
+  if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
+    currentAnimationBpm = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
   }
   advancedTempoInput.value = String(currentAnimationBpm);
   advancedTempoValue.textContent = String(currentAnimationBpm);
@@ -1239,10 +1824,11 @@ function syncAdvancedTempoControls() {
 
 function syncKidTempoPresetControls() {
   if (!kidTempoSlowBtn || !kidTempoNormalBtn || !kidTempoFastBtn) return;
+  var presets = getKidTempoPresetsForSong(currentSongId);
   var activePreset = null;
-  if (currentAnimationBpm === KID_TEMPO_PRESETS.slow) activePreset = 'slow';
-  if (currentAnimationBpm === KID_TEMPO_PRESETS.normal) activePreset = 'normal';
-  if (currentAnimationBpm === KID_TEMPO_PRESETS.fast) activePreset = 'fast';
+  if (currentAnimationBpm === presets.slow) activePreset = 'slow';
+  if (currentAnimationBpm === presets.normal) activePreset = 'normal';
+  if (currentAnimationBpm === presets.fast) activePreset = 'fast';
 
   kidTempoSlowBtn.classList.toggle('is-active', activePreset === 'slow');
   kidTempoNormalBtn.classList.toggle('is-active', activePreset === 'normal');
@@ -1255,8 +1841,9 @@ function syncKidTempoPresetControls() {
 
 function applyTempoValue(bpm) {
   var parsed = Math.round(Number(bpm));
-  if (!isFinite(parsed) || ALLOWED_TEMPOS.indexOf(parsed) === -1) {
-    parsed = DEFAULT_ANIMATION_BPM;
+  var allowedTempos = getActiveTempoOptions();
+  if (!isFinite(parsed) || allowedTempos.indexOf(parsed) === -1) {
+    parsed = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
   }
   currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
@@ -1288,7 +1875,8 @@ function syncAnimateButtonLabel() {
 }
 
 function applyDefaultTempo() {
-  applyTempoValue(DEFAULT_ANIMATION_BPM);
+  var allowedTempos = getActiveTempoOptions();
+  applyTempoValue(allowedTempos[0] || DEFAULT_ANIMATION_BPM);
 }
 
 function stopAnimationIfActive() {
@@ -1315,6 +1903,7 @@ function redrawForPathChange() {
   // Path/topology changes invalidate the current stitch progression.
   stopAnimationIfActive();
   drawStatic();
+  scheduleDiscoveryEvaluation();
 }
 
 function drawAnimatedSegments(thread, segments, segmentCount) {
@@ -1474,10 +2063,12 @@ function redrawAnimationInPlace() {
   // Style-only updates should preserve current animation progress.
   if (!animationState) {
     drawStatic();
+    scheduleDiscoveryEvaluation();
     return;
   }
 
   renderAnimationFrame();
+  scheduleDiscoveryEvaluation();
 }
 
 function scheduleFitCanvasToStage() {
@@ -3023,18 +3614,21 @@ widthSlider.addEventListener('input', () => {
 
 animateBtn.addEventListener('click', toggleAnimationPlayback);
 
-surpriseBtn.addEventListener('click', () => {
-  var targetIndex = getKidTargetThreadIndex();
-  if (targetIndex < 0) return;
-  holesSlider.value = Math.floor(Math.random() * (MAX_HOLES - 19)) + 20;
-  jumpSlider.value = Math.floor(Math.random() * 50) + 1;
-  widthSlider.value = Math.floor(Math.random() * 8) + 1;
-  updateKidControlValues();
-  threads[targetIndex].jump = parseInt(jumpSlider.value, 10);
-  threads[targetIndex].width = parseInt(widthSlider.value, 10);
-  threads[targetIndex].color = 'rainbow';
-  renderThreadControls();
-  redrawForPathChange();
+discoveryToggleBtn.addEventListener('click', () => {
+  discoveryPanel.classList.toggle('open');
+  if (discoveryPanel.classList.contains('open')) {
+    hasUnseenDiscoveries = false;
+  }
+  syncDiscoveryToggleButton();
+});
+
+closeDiscoveryBtn.addEventListener('click', () => {
+  discoveryPanel.classList.remove('open');
+  syncDiscoveryToggleButton();
+});
+
+discoveredSongPicker.addEventListener('change', () => {
+  setCurrentSong(discoveredSongPicker.value);
 });
 
 gearBtn.addEventListener('click', () => {
@@ -3077,15 +3671,18 @@ resetTempoBtn.addEventListener('click', () => {
 });
 
 kidTempoSlowBtn.addEventListener('click', () => {
-  applyTempoValue(KID_TEMPO_PRESETS.slow);
+  var presets = getKidTempoPresetsForSong(currentSongId);
+  applyTempoValue(presets.slow);
 });
 
 kidTempoNormalBtn.addEventListener('click', () => {
-  applyTempoValue(KID_TEMPO_PRESETS.normal);
+  var presets = getKidTempoPresetsForSong(currentSongId);
+  applyTempoValue(presets.normal);
 });
 
 kidTempoFastBtn.addEventListener('click', () => {
-  applyTempoValue(KID_TEMPO_PRESETS.fast);
+  var presets = getKidTempoPresetsForSong(currentSongId);
+  applyTempoValue(presets.fast);
 });
 
 exportSvgBtn.addEventListener('click', () => {
@@ -3108,8 +3705,15 @@ exportOptionsModal.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  if (!exportOptionsModal.classList.contains('open')) return;
-  closeExportOptionsModal();
+  if (exportOptionsModal.classList.contains('open')) {
+    closeExportOptionsModal();
+    return;
+  }
+  if (discoveryPanel.classList.contains('open')) {
+    discoveryPanel.classList.remove('open');
+    syncDiscoveryToggleButton();
+    return;
+  }
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {
@@ -3213,6 +3817,8 @@ musicToggleBtn.addEventListener('click', () => {
 renderThreadControls();
 setCurrentShape('circle', false);
 advancedPanel.classList.remove('open');
+discoveryPanel.classList.remove('open');
+renderAdvancedTempoOptions();
 applyDefaultHoles();
 applyDefaultSkipAndSize();
 applyDefaultTempo();
@@ -3221,8 +3827,11 @@ syncHoleNumberToggles();
 syncBorderControls();
 syncMusicToggleButton();
 refreshKidThreadPicker();
+renderDiscoveryLibrary();
+syncDiscoveryToggleButton();
 syncBasicMathSliderVisibility();
 fitCanvasToStage();
+scheduleDiscoveryEvaluation();
 
 </script>
 </body>

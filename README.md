@@ -90,6 +90,8 @@ Contributor terms:
 	- Entry trigger and transition:
 	  - When the user stitches/discovers a Mystic Rose in Stitching mode, offer an optional prompt to "Enter Mashrabiya".
 	  - Reuse a similarly polished scene transition language so movement into Mashrabiya feels native to the app (not a hard context switch).
+	  - Define and document the strict unlock definition of "rosette" before finalizing discovery detection logic.
+	  - Candidate strict rule to evaluate: complete-graph rosette for 5-12 holes (each hole connected to every other hole), potentially as a dedicated Mashrabiya subtype/milestone.
 	- Core experience:
 	  - Generate Islamic rosettes ("mystic roses") as the primary geometric object.
 	  - Support varying fold/point structures (for example 6-fold, 8-fold, 12-fold and beyond) to produce distinct rosette families.
