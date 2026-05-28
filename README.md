@@ -43,6 +43,7 @@ Contributor terms:
 ## TODO Backlog
 
 1. **Known pattern discovery detector**
+	 - Status: partially implemented (triangle/square discovery flow and song picker unlocks exist), with additional refinement still needed.
 	 - Detect when control combinations approximately match known constructions and show a tasteful "discovery" badge.
 	 - Use a short stabilization window (for example 700-1200 ms) before firing to avoid slider thrash.
 	 - On first discovery of each shape/pattern family, reveal a matching entry in a shape library and introduce a music picker.
@@ -91,6 +92,7 @@ Contributor terms:
 	  - When the user stitches/discovers a Mystic Rose in Stitching mode, offer an optional prompt to "Enter Mashrabiya".
 	  - Reuse a similarly polished scene transition language so movement into Mashrabiya feels native to the app (not a hard context switch).
 	  - Define and document the strict unlock definition of "rosette" before finalizing discovery detection logic.
+	  - Current implementation status: rosette discovery unlocking is intentionally disabled behind a feature flag until the strict detection definition is finalized.
 	  - Candidate strict rule to evaluate: complete-graph rosette for 5-12 holes (each hole connected to every other hole), potentially as a dedicated Mashrabiya subtype/milestone.
 	- Core experience:
 	  - Generate Islamic rosettes ("mystic roses") as the primary geometric object.

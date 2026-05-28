@@ -475,13 +475,71 @@
   .song-picker-wrap[hidden] {
     display: none;
   }
-  .song-picker-wrap select {
-    width: 100%;
+  .song-shape-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .song-selected-line {
     margin-top: 6px;
+    font-size: 11px;
+    color: #54698f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .song-shape-item {
+    width: 46px;
+    height: 46px;
     border: 1px solid #cfd9ef;
-    border-radius: 8px;
-    padding: 5px 7px;
-    font-size: 13px;
+    background: #fff;
+    border-radius: 999px;
+    padding: 2px;
+    cursor: pointer;
+    color: #2f4368;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease;
+  }
+  .song-shape-item:hover {
+    border-color: #aec3ea;
+    background: #f7faff;
+    transform: translateY(-1px);
+  }
+  .song-shape-item.is-active {
+    border-color: #2f5fb3;
+    background: #eaf1ff;
+    box-shadow: 0 0 0 2px rgba(47, 95, 179, 0.22);
+  }
+  .song-shape-svg {
+    width: 40px;
+    height: 40px;
+    display: block;
+    border-radius: 999px;
+    background: radial-gradient(circle at 50% 50%, #fbfdff 0%, #eef4ff 70%, #e5eefc 100%);
+  }
+  .song-shape-outline {
+    stroke: #9eb4dd;
+    stroke-width: 1.2;
+    fill: none;
+    opacity: 0.8;
+  }
+  .song-shape-text {
+    fill: #2f4368;
+    font-size: 10.6px;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+    font-family: "JetBrains Mono", "Fira Mono", "Cascadia Mono", "Consolas", "Courier New", monospace;
+  }
+  .song-shape-item.is-active .song-shape-outline {
+    stroke: #6f8fc8;
+    stroke-width: 1.5;
+    opacity: 1;
+  }
+  .song-shape-item.is-active .song-shape-text {
+    fill: #1f3f75;
   }
 
   #advanced-panel {
@@ -630,6 +688,18 @@
     margin-left: 6px;
   }
 
+  .advanced-inline-number {
+    width: 62px;
+    margin-left: 6px;
+    padding: 2px 6px;
+    border: 1px solid #cfd9ef;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #2f4368;
+    background: #fff;
+    vertical-align: middle;
+  }
+
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -754,9 +824,10 @@
   <div class="discovery-subtitle">Unlocked shapes, songs, and future return paths to shape-specific worlds.</div>
 
   <div id="song-picker-wrap" class="song-picker-wrap" hidden>
-    <strong>Song Picker</strong>
-    <div class="advanced-global-help">Unlocked as shapes are discovered.</div>
-    <select id="discovered-song-picker" aria-label="Discovered songs"></select>
+    <strong>Song Shapes</strong>
+    <div class="advanced-global-help">Tap a shape token to switch songs.</div>
+    <div id="song-selected-line" class="song-selected-line" aria-live="polite"></div>
+    <div id="discovered-song-picker" class="song-shape-picker" role="listbox" aria-label="Discovered songs"></div>
   </div>
 
   <div id="discovery-cards"></div>
@@ -854,7 +925,7 @@
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Holes</div>
-      <div class="advanced-global-row">Holes: <input id="advanced-holes" type="range" min="3" max="140" value="35"><span class="advanced-inline-value" id="advanced-holes-value">35</span></div>
+      <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="140" value="35" aria-label="Holes value"></div>
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
       <div class="advanced-global-help">Hole numbers auto-hide when holes exceed 80.</div>
     </div>
@@ -921,8 +992,7 @@ var kidStitchBySelect = document.getElementById('kid-stitch-by');
 var addSliderBlock = document.getElementById('add-slider-block');
 var multiplySliderBlock = document.getElementById('multiply-slider-block');
 var advancedShapeSelect = document.getElementById('advanced-shape');
-var advancedHolesSlider = document.getElementById('advanced-holes');
-var advancedHolesValue = document.getElementById('advanced-holes-value');
+var advancedHolesNumberInput = document.getElementById('advanced-holes-number');
 var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
 var advancedBorderEnabledInput = document.getElementById('advanced-border-enabled');
 var advancedTempoInput = document.getElementById('advanced-tempo');
@@ -963,6 +1033,7 @@ var advancedPanel = document.getElementById('advanced-panel');
 var discoveryPanel = document.getElementById('discovery-panel');
 var discoveryCards = document.getElementById('discovery-cards');
 var songPickerWrap = document.getElementById('song-picker-wrap');
+var songSelectedLine = document.getElementById('song-selected-line');
 var discoveredSongPicker = document.getElementById('discovered-song-picker');
 var discoveryToast = document.getElementById('discovery-toast');
 
@@ -1008,16 +1079,16 @@ var SONG_TEMPO_OPTIONS = {
 };
 var MUSIC_LIBRARY = {
   bach: {
-    title: 'music_for_videos-bach-fugue-no21-110853',
-    path: 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3'
+    title: 'Bach_Fugue_21_in_BbMajor',
+    path: 'assets/audio/Bach_Fugue_21_in_BbMajor.mp3'
   },
   triangle: {
-    title: 'Wethankyou,God,wethankyou,BWV29-CompletePerformance',
-    path: 'assets/audio/Wethankyou,God,wethankyou,BWV29-CompletePerformance.mp3'
+    title: 'Bach_Cantata_BWV_29_Sinfonia',
+    path: 'assets/audio/Bach_Cantata_BWV_29_Sinfonia.mp3'
   },
   square: {
-    title: 'gregorquendel-tetris-theme-korobeiniki-arranged-for-piano-186249',
-    path: 'assets/audio/gregorquendel-tetris-theme-korobeiniki-arranged-for-piano-186249.mp3'
+    title: 'GregorQuendel_Korobeiniki_for_Piano',
+    path: 'assets/audio/GregorQuendel_Korobeiniki_for_Piano.mp3'
   },
   rosette: {
     title: 'djovan-the-voice-of-the-oud-258611',
@@ -1026,28 +1097,29 @@ var MUSIC_LIBRARY = {
 };
 var DISCOVERY_LIBRARY = {
   triangle: {
-    title: 'Triangle Discovery',
+    title: 'Equilateral Triangle',
     icon: '🔺',
-    description: 'Unlocked path toward the Triangula experience.',
+    description: 'Unlocked the path to Triangula.',
     experienceName: 'Triangula',
     songId: 'triangle'
   },
   square: {
-    title: 'Square Discovery',
+    title: 'Square',
     icon: '⬜',
-    description: 'Unlocked path toward the Squarus experience.',
+    description: 'Unlocked the path to Squarus.',
     experienceName: 'Squarus',
     songId: 'square'
   },
   rosette: {
-    title: 'Mystic Rose / Rosette Discovery',
+    title: 'Mystic Rose / Rosette',
     icon: '✺',
-    description: 'Unlocked path toward the Mashrabiya experience.',
+    description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
     songId: 'rosette'
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
+var ROSETTE_DISCOVERY_ENABLED = false;
 var discoveryTimer = null;
 var discoveredShapeKeys = Object.create(null);
 var unlockedSongIds = [];
@@ -1232,24 +1304,346 @@ function getSongPickerOptions() {
   return options;
 }
 
+function getSongFilenameLabel(songId) {
+  var entry = MUSIC_LIBRARY[songId];
+  if (!entry) return songId;
+
+  var source = entry.path || entry.title || songId;
+  var baseName = String(source).split('/').pop();
+  return baseName.replace(/\.[a-z0-9]+$/i, '');
+}
+
+function truncateSongLabel(label, maxChars) {
+  if (!label) return '';
+  if (label.length <= maxChars) return label;
+  return label.slice(0, Math.max(1, maxChars - 1)) + '…';
+}
+
+function getSongShapeKey(songId) {
+  if (songId === 'triangle') return 'triangle';
+  if (songId === 'square') return 'square';
+  if (songId === 'rosette') return 'rosette';
+  return 'circle';
+}
+
+function getPolygonRadiusFactor(angle, sides) {
+  var sector = (2 * Math.PI) / sides;
+  var normalized = ((angle % sector) + sector) % sector;
+  var local = normalized - (sector / 2);
+  return Math.cos(Math.PI / sides) / Math.cos(local);
+}
+
+function mix(a, b, t) {
+  return a + ((b - a) * t);
+}
+
+function getSongShapeProfile(shapeKey) {
+  if (shapeKey === 'triangle') {
+    return {
+      innerFactor: 0.09,
+      outerFactor: 0.44,
+      startOffset: '0%',
+      charWidthFactor: 0.62
+    };
+  }
+  if (shapeKey === 'square') {
+    return {
+      innerFactor: 0.09,
+      outerFactor: 0.44,
+      startOffset: '0%',
+      charWidthFactor: 0.62
+    };
+  }
+  if (shapeKey === 'rosette') {
+    return {
+      innerFactor: 0.08,
+      outerFactor: 0.43,
+      startOffset: '0%',
+      charWidthFactor: 0.62
+    };
+  }
+  return {
+    innerFactor: 0.09,
+    outerFactor: 0.43,
+    startOffset: '0%',
+    charWidthFactor: 0.62
+  };
+}
+
+function getShapeRadiusFactor(shapeKey, angle) {
+  if (shapeKey === 'triangle') {
+    return getPolygonRadiusFactor(angle - (Math.PI / 2), 3);
+  }
+  if (shapeKey === 'square') {
+    var c = Math.cos(angle);
+    var s = Math.sin(angle);
+    return 1 / Math.max(Math.abs(c), Math.abs(s));
+  }
+  if (shapeKey === 'rosette') {
+    return 0.86 + (0.14 * Math.cos(angle * 6));
+  }
+  return 1;
+}
+
+function estimateMonospaceTextLength(label, fontSize, charWidthFactor, letterSpacingEm) {
+  var text = String(label || '');
+  if (!text) return 0;
+  var spacing = isFinite(letterSpacingEm) ? (fontSize * letterSpacingEm) : 0;
+  return text.length * (fontSize * charWidthFactor + spacing);
+}
+
+function getMinimumWrapPitch(fontSize) {
+  // Keep wrap spacing above glyph-height footprint to avoid cross-wrap overlap.
+  return Math.max(2.1, fontSize * 1.25);
+}
+
+function polylineLength(pointsList) {
+  if (!pointsList || pointsList.length < 2) return 0;
+  var total = 0;
+  for (var i = 1; i < pointsList.length; i++) {
+    var dx = pointsList[i].x - pointsList[i - 1].x;
+    var dy = pointsList[i].y - pointsList[i - 1].y;
+    total += Math.sqrt(dx * dx + dy * dy);
+  }
+  return total;
+}
+
+function getPolygonVertex(cx, cy, radius, angleOffset, sides, sideIndex) {
+  var angle = angleOffset + ((2 * Math.PI * sideIndex) / sides);
+  return {
+    x: Math.round((cx + Math.cos(angle) * radius) * 1000) / 1000,
+    y: Math.round((cy + Math.sin(angle) * radius) * 1000) / 1000
+  };
+}
+
+function buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, wraps) {
+  var pointsList = [];
+  wraps = Math.max(1, wraps);
+
+  for (var wrap = 0; wrap <= wraps; wrap++) {
+    var t = wrap / wraps;
+    var radius = outer - ((outer - inner) * t);
+    // Alternate direction per ring so transitions between rings are inward/radial,
+    // avoiding diagonal jumps that can create acute corner artifacts.
+    if (wrap % 2 === 0) {
+      for (var side = 0; side < sides; side++) {
+        pointsList.push(getPolygonVertex(cx, cy, radius, angleOffset, sides, side));
+      }
+    } else {
+      for (var reverseSide = sides - 1; reverseSide >= 0; reverseSide--) {
+        pointsList.push(getPolygonVertex(cx, cy, radius, angleOffset, sides, reverseSide));
+      }
+    }
+  }
+
+  return pointsList;
+}
+
+function buildPolygonSpiralPath(shapeKey, width, height, targetLength, fontSize) {
+  var cx = width * 0.5;
+  var cy = height * 0.5;
+  var minDimension = Math.min(width, height);
+  var profile = getSongShapeProfile(shapeKey);
+  var outer = minDimension * profile.outerFactor;
+  var inner = minDimension * profile.innerFactor;
+  var sides = shapeKey === 'triangle' ? 3 : 4;
+  var angleOffset = shapeKey === 'triangle' ? -Math.PI / 2 : -Math.PI / 4;
+  var radialSpan = Math.max(0.001, outer - inner);
+  var minPitch = getMinimumWrapPitch(fontSize);
+  var maxWraps = Math.max(2, Math.floor(radialSpan / minPitch));
+  var minWraps = Math.min(3, maxWraps);
+
+  var bestPoints = buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, minWraps);
+  var fit = false;
+  for (var wraps = minWraps; wraps <= maxWraps; wraps++) {
+    var candidate = buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, wraps);
+    var len = polylineLength(candidate);
+    bestPoints = candidate;
+    if (len >= targetLength) {
+      fit = true;
+      break;
+    }
+  }
+
+  return {
+    path: pointsToSvgPath(bestPoints),
+    length: polylineLength(bestPoints),
+    startOffset: profile.startOffset,
+    fit: fit
+  };
+}
+
+function buildCurvedSpiralPath(shapeKey, width, height, targetLength, fontSize) {
+  var profile = getSongShapeProfile(shapeKey);
+  var cx = width * 0.5;
+  var cy = height * 0.5;
+  var minDimension = Math.min(width, height);
+  var inner = minDimension * profile.innerFactor;
+  var outer = minDimension * profile.outerFactor;
+  var radialSpan = Math.max(0.001, outer - inner);
+  var minPitch = getMinimumWrapPitch(fontSize);
+  var maxTurnsByPitch = Math.max(1.7, radialSpan / minPitch);
+
+  var bestPoints = [];
+  var bestLength = 0;
+  var bestTurns = Math.min(2.2, maxTurnsByPitch);
+  var samples = 260;
+  var fit = false;
+
+  for (var turns = 1.8; turns <= maxTurnsByPitch; turns += 0.12) {
+    var pointsList = [];
+    for (var i = 0; i <= samples; i++) {
+      var u = i / samples;
+      var angle = (-Math.PI / 2) + (u * turns * Math.PI * 2);
+      var spiralRadius = outer - ((outer - inner) * u);
+      var baseShape = getShapeRadiusFactor(shapeKey, angle);
+      var shapeBlend = mix(1, baseShape, Math.pow(1 - u, 0.97));
+      pointsList.push({
+        x: Math.round((cx + Math.cos(angle) * spiralRadius * shapeBlend) * 1000) / 1000,
+        y: Math.round((cy + Math.sin(angle) * spiralRadius * shapeBlend) * 1000) / 1000
+      });
+    }
+
+    var candidateLength = polylineLength(pointsList);
+    bestPoints = pointsList;
+    bestLength = candidateLength;
+    bestTurns = turns;
+    if (candidateLength >= targetLength) {
+      fit = true;
+      break;
+    }
+  }
+
+  return {
+    path: pointsToSvgPath(bestPoints),
+    length: bestLength,
+    startOffset: profile.startOffset,
+    turns: bestTurns,
+    fit: fit
+  };
+}
+
+function pointsToSvgPath(pointsList) {
+  if (!pointsList || !pointsList.length) return '';
+  var path = 'M ' + pointsList[0].x + ' ' + pointsList[0].y;
+  for (var i = 1; i < pointsList.length; i++) {
+    path += ' L ' + pointsList[i].x + ' ' + pointsList[i].y;
+  }
+  return path;
+}
+
+function buildSongSpiralPath(shapeKey, width, height) {
+  var label = arguments.length > 3 ? arguments[3] : '';
+  var profile = getSongShapeProfile(shapeKey);
+  var best = null;
+  var letterSpacingSteps = [0.03, 0.02, 0.01, 0, -0.01];
+
+  for (var s = 0; s < letterSpacingSteps.length; s++) {
+    var letterSpacingEm = letterSpacingSteps[s];
+
+    for (var fontSize = 10.6; fontSize >= 7.2; fontSize -= 0.4) {
+      var targetLength = Math.max(
+        78,
+        estimateMonospaceTextLength(label, fontSize, profile.charWidthFactor, letterSpacingEm) * 1.06
+      );
+
+      var result;
+      if (shapeKey === 'triangle' || shapeKey === 'square') {
+        result = buildPolygonSpiralPath(shapeKey, width, height, targetLength, fontSize);
+      } else {
+        result = buildCurvedSpiralPath(shapeKey, width, height, targetLength, fontSize);
+      }
+
+      result.fontSize = Math.round(fontSize * 10) / 10;
+      result.letterSpacingEm = letterSpacingEm;
+      best = result;
+      if (result.fit) {
+        return result;
+      }
+    }
+  }
+
+  return best || {
+    path: '',
+    length: 0,
+    startOffset: profile.startOffset,
+    fontSize: 7.2,
+    letterSpacingEm: 0,
+    fit: false
+  };
+}
+
+function repeatSongLabel(label) {
+  var clean = String(label || '').trim();
+  if (!clean) return '';
+  return clean.toUpperCase();
+}
+
 function renderSongPicker() {
   var hasUnlocked = unlockedSongIds.length > 0;
   songPickerWrap.hidden = !hasUnlocked;
   discoveredSongPicker.innerHTML = '';
+  songSelectedLine.textContent = '';
   if (!hasUnlocked) return;
 
   var optionIds = getSongPickerOptions();
-  for (var i = 0; i < optionIds.length; i++) {
-    var option = document.createElement('option');
-    option.value = optionIds[i];
-    option.textContent = MUSIC_LIBRARY[optionIds[i]].title;
-    discoveredSongPicker.appendChild(option);
-  }
-
   if (optionIds.indexOf(currentSongId) === -1) {
     currentSongId = 'bach';
   }
-  discoveredSongPicker.value = currentSongId;
+
+  var selectedLabel = getSongFilenameLabel(currentSongId);
+  songSelectedLine.textContent = 'Selected: ' + selectedLabel;
+  songSelectedLine.title = selectedLabel;
+
+  for (var i = 0; i < optionIds.length; i++) {
+    var songId = optionIds[i];
+    var fullLabel = getSongFilenameLabel(songId);
+    var shapeKey = getSongShapeKey(songId);
+    var profile = getSongShapeProfile(shapeKey);
+    var pathId = 'song-shape-path-' + songId;
+    var pathDataObj = buildSongSpiralPath(shapeKey, 56, 56, fullLabel);
+    var pathData = pathDataObj.path;
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'song-shape-item' + (songId === currentSongId ? ' is-active' : '');
+    button.dataset.songId = songId;
+    button.title = fullLabel;
+    button.setAttribute('role', 'option');
+    button.setAttribute('aria-selected', songId === currentSongId ? 'true' : 'false');
+    button.setAttribute('aria-label', fullLabel);
+
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'song-shape-svg');
+    svg.setAttribute('viewBox', '0 0 56 56');
+
+    var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('id', pathId);
+    path.setAttribute('d', pathData);
+    defs.appendChild(path);
+    svg.appendChild(defs);
+
+    var outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    outline.setAttribute('class', 'song-shape-outline');
+    outline.setAttribute('d', pathData);
+    svg.appendChild(outline);
+
+    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('class', 'song-shape-text');
+    text.setAttribute('font-size', String(pathDataObj.fontSize || 10.6));
+    text.setAttribute('letter-spacing', String(pathDataObj.letterSpacingEm || 0) + 'em');
+    var textPath = document.createElementNS('http://www.w3.org/2000/svg', 'textPath');
+    textPath.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + pathId);
+    textPath.setAttribute('href', '#' + pathId);
+    textPath.setAttribute('startOffset', pathDataObj.startOffset || profile.startOffset);
+    textPath.textContent = repeatSongLabel(fullLabel);
+    text.appendChild(textPath);
+    svg.appendChild(text);
+
+    button.appendChild(svg);
+    discoveredSongPicker.appendChild(button);
+  }
 }
 
 function renderDiscoveryLibrary() {
@@ -1308,6 +1702,7 @@ function unlockSong(songId) {
 
 function unlockDiscovery(shapeKey) {
   if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
+  if (shapeKey === 'rosette' && !ROSETTE_DISCOVERY_ENABLED) return;
   if (discoveredShapeKeys[shapeKey]) return;
 
   discoveredShapeKeys[shapeKey] = true;
@@ -1524,7 +1919,7 @@ function evaluateDiscoveryCandidates() {
   if (foundSquare) {
     unlockDiscovery('square');
   }
-  if (isRosetteDiscoveryCandidate()) {
+  if (ROSETTE_DISCOVERY_ENABLED && isRosetteDiscoveryCandidate()) {
     unlockDiscovery('rosette');
   }
 }
@@ -1617,8 +2012,9 @@ function updateKidControlValues() {
   jumpValue.textContent = jumpSlider.value;
   multiplyValue.textContent = multiplySlider.value;
   widthValue.textContent = widthSlider.value;
-  advancedHolesSlider.value = holesSlider.value;
-  advancedHolesValue.textContent = holesSlider.value;
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = holesSlider.value;
+  }
 }
 
 function syncBorderControls() {
@@ -1798,7 +2194,9 @@ function syncKidControlsFromSelectedThread() {
 
 function applyDefaultHoles() {
   holesSlider.value = String(DEFAULT_HOLES);
-  advancedHolesSlider.value = String(DEFAULT_HOLES);
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = String(DEFAULT_HOLES);
+  }
   updateKidControlValues();
 }
 
@@ -2737,6 +3135,14 @@ function normalizeExportBaseName(rawName) {
   return cleaned || fallback;
 }
 
+function parseBoundedInt(rawValue, minValue, maxValue, fallback) {
+  var parsed = parseInt(rawValue, 10);
+  if (!isFinite(parsed)) return fallback;
+  if (isFinite(minValue) && parsed < minValue) parsed = minValue;
+  if (isFinite(maxValue) && parsed > maxValue) parsed = maxValue;
+  return parsed;
+}
+
 function triggerBlobDownload(blob, fileName) {
   var url = URL.createObjectURL(blob);
   var anchor = document.createElement('a');
@@ -3311,10 +3717,10 @@ function renderThreadControls() {
         <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
       </select><br>
       ${isFixedMode ? `
-      Add by: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Add by: <input class="advanced-inline-number" type="number" min="1" max="100" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
       ` : ''}
       ${isFormulaMode ? `
-      Base add: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Base add: <input class="advanced-inline-number" type="number" min="1" max="100" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} base add value"><br>
       Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + i) mod n"><br>
       <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
       <div class="jump-help">Vars: i (step), n (holes), current, prev, skip</div>
@@ -3334,8 +3740,8 @@ function renderThreadControls() {
       <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
       ` : ''}
       ${isConnectMode ? `
-      Multiply by: <input type="range" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-${index}"><span class="advanced-inline-value" id="adv-connect-m-value-${index}">${thread.connectMultiplier}</span><br>
-      Offset (add-on): <input type="range" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-${index}"><span class="advanced-inline-value" id="adv-connect-offset-value-${index}">${thread.connectOffset}</span><br>
+      Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
+      Offset (add-on): <input class="advanced-inline-number" type="number" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-number-${index}" aria-label="Thread ${index + 1} offset value"><br>
       <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
       <div class="jump-preset-row">
         <select id="connect-preset-${index}">
@@ -3347,7 +3753,7 @@ function renderThreadControls() {
         <button type="button" id="use-connect-preset-${index}">Use</button>
       </div>
       ` : ''}
-      Size: <input type="range" min="1" max="10" value="${thread.width}" id="width-${index}"><span class="advanced-inline-value" id="adv-size-value-${index}">${thread.width}</span><br>
+      Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
       <button id="delete-${index}">Delete</button>
     `;
@@ -3367,19 +3773,21 @@ function renderThreadControls() {
       redrawAnimationInPlace();
     });
 
-    var skipInput = document.getElementById(`jump-${index}`);
-    if (skipInput) {
-      skipInput.addEventListener('input', e => {
-        thread.jump = parseInt(e.target.value, 10);
-        var skipValueChip = document.getElementById(`adv-skip-value-${index}`);
-        if (skipValueChip) {
-          skipValueChip.textContent = String(thread.jump);
-        }
+    var skipNumberInput = document.getElementById(`jump-number-${index}`);
+    if (skipNumberInput) {
+      skipNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.jump = parseBoundedInt(e.target.value, 1, 100, thread.jump || 1);
+        e.target.value = String(thread.jump);
         if (index === getKidTargetThreadIndex()) {
           jumpSlider.value = thread.jump;
           updateKidControlValues();
         }
         redrawForPathChange();
+      });
+      skipNumberInput.addEventListener('change', e => {
+        thread.jump = parseBoundedInt(e.target.value, 1, 100, thread.jump || 1);
+        e.target.value = String(thread.jump);
       });
     }
 
@@ -3421,29 +3829,37 @@ function renderThreadControls() {
       });
     }
 
-    var connectMultiplierInput = document.getElementById(`connect-m-${index}`);
-    if (connectMultiplierInput) {
-      connectMultiplierInput.addEventListener('input', e => {
-        thread.connectMultiplier = parseInt(e.target.value, 10);
-        var mChip = document.getElementById(`adv-connect-m-value-${index}`);
-        if (mChip) mChip.textContent = String(thread.connectMultiplier);
+    var connectMultiplierNumberInput = document.getElementById(`connect-m-number-${index}`);
+    if (connectMultiplierNumberInput) {
+      connectMultiplierNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
+        e.target.value = String(thread.connectMultiplier);
         if (index === getKidTargetThreadIndex()) {
           syncKidControlsFromSelectedThread();
         }
         redrawForPathChange();
       });
+      connectMultiplierNumberInput.addEventListener('change', e => {
+        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
+        e.target.value = String(thread.connectMultiplier);
+      });
     }
 
-    var connectOffsetInput = document.getElementById(`connect-offset-${index}`);
-    if (connectOffsetInput) {
-      connectOffsetInput.addEventListener('input', e => {
-        thread.connectOffset = parseInt(e.target.value, 10);
-        var offsetChip = document.getElementById(`adv-connect-offset-value-${index}`);
-        if (offsetChip) offsetChip.textContent = String(thread.connectOffset);
+    var connectOffsetNumberInput = document.getElementById(`connect-offset-number-${index}`);
+    if (connectOffsetNumberInput) {
+      connectOffsetNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
+        e.target.value = String(thread.connectOffset);
         if (index === getKidTargetThreadIndex()) {
           syncKidControlsFromSelectedThread();
         }
         redrawForPathChange();
+      });
+      connectOffsetNumberInput.addEventListener('change', e => {
+        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
+        e.target.value = String(thread.connectOffset);
       });
     }
 
@@ -3463,18 +3879,23 @@ function renderThreadControls() {
       });
     }
 
-    document.getElementById(`width-${index}`).addEventListener('input', e => {
-      thread.width = parseInt(e.target.value, 10);
-      var sizeValueChip = document.getElementById(`adv-size-value-${index}`);
-      if (sizeValueChip) {
-        sizeValueChip.textContent = String(thread.width);
-      }
-      if (index === getKidTargetThreadIndex()) {
-        widthSlider.value = thread.width;
-        updateKidControlValues();
-      }
-      redrawAnimationInPlace();
-    });
+    var widthNumberInput = document.getElementById(`width-number-${index}`);
+    if (widthNumberInput) {
+      widthNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
+        e.target.value = String(thread.width);
+        if (index === getKidTargetThreadIndex()) {
+          widthSlider.value = thread.width;
+          updateKidControlValues();
+        }
+        redrawAnimationInPlace();
+      });
+      widthNumberInput.addEventListener('change', e => {
+        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
+        e.target.value = String(thread.width);
+      });
+    }
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
       thread.color = e.target.checked ? 'rainbow' : '#000000';
@@ -3538,17 +3959,22 @@ function handleHolesSliderChange() {
   redrawForPathChange();
 }
 
-function handleAdvancedHolesSliderChange() {
-  holesSlider.value = advancedHolesSlider.value;
+function handleAdvancedHolesNumberChange() {
+  if (!advancedHolesNumberInput) return;
+  if (advancedHolesNumberInput.value === '') return;
+  var holeCount = parseBoundedInt(advancedHolesNumberInput.value, 3, MAX_HOLES, DEFAULT_HOLES);
+  advancedHolesNumberInput.value = String(holeCount);
+  holesSlider.value = String(holeCount);
   updateKidControlValues();
-  // Hole count changes point geometry and stitch path.
   redrawForPathChange();
 }
 
 holesSlider.addEventListener('input', handleHolesSliderChange);
 holesSlider.addEventListener('change', handleHolesSliderChange);
-advancedHolesSlider.addEventListener('input', handleAdvancedHolesSliderChange);
-advancedHolesSlider.addEventListener('change', handleAdvancedHolesSliderChange);
+if (advancedHolesNumberInput) {
+  advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberChange);
+  advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberChange);
+}
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
   syncHoleNumberToggles();
@@ -3627,8 +4053,12 @@ closeDiscoveryBtn.addEventListener('click', () => {
   syncDiscoveryToggleButton();
 });
 
-discoveredSongPicker.addEventListener('change', () => {
-  setCurrentSong(discoveredSongPicker.value);
+discoveredSongPicker.addEventListener('click', (event) => {
+  var songButton = event.target.closest('.song-shape-item');
+  if (!songButton) return;
+  var songId = songButton.dataset.songId;
+  if (!songId) return;
+  setCurrentSong(songId);
 });
 
 gearBtn.addEventListener('click', () => {
