@@ -141,6 +141,26 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+  .discovery-float-icon {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 2px solid #89a9e6;
+    background: #ffffff;
+    box-shadow: 0 6px 12px rgba(24, 44, 82, 0.22);
+    color: #1f3f75;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 90;
+    will-change: transform, opacity;
+  }
 
   /* --- CANVAS AREA --- */
   #canvas-container {
@@ -395,6 +415,17 @@
     font-size: 12px;
     color: #334b72;
   }
+  .kid-audio-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d7e0f3;
+    background: #eef3ff;
+    font-size: 12px;
+    color: #334b72;
+  }
   .kid-tempo-btn {
     border: 1px solid #cfd9ef;
     background: #fff;
@@ -484,11 +515,40 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    position: relative;
+  }
+  .kid-song-toggle:not(:disabled):hover {
+    background: #f4f7ff;
+  }
+  .kid-song-toggle:not(:disabled).is-active {
+    background: #e8f0ff;
+    border-color: #9fb8e8;
+    color: #1f3f75;
+  }
+  .kid-song-toggle.has-unseen {
+    box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
+    animation: discoveryPulse 1.15s ease-in-out infinite;
+  }
+  .kid-song-toggle.has-unseen::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #ff595e;
+    box-shadow: 0 0 0 2px #fff;
   }
   .kid-song-toggle:disabled {
     cursor: not-allowed;
     opacity: 0.45;
     filter: grayscale(0.15);
+  }
+  .kid-audio-btn {
+    width: 36px;
+    height: 30px;
+    font-size: 16px;
   }
   .kid-song-icon {
     font-size: 16px;
@@ -786,7 +846,6 @@
 <div id="shape-bar">
   <div class="top-bar-left">
     <button id="discovery-toggle" class="top-icon-btn" type="button" title="Open discovery library" aria-label="Open discovery library" aria-pressed="false">🧭</button>
-    <button id="toggle-music" class="top-icon-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
   </div>
   <div class="top-bar-center">
     <div class="shape-picker-group">
@@ -831,11 +890,14 @@
       <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed" aria-label="Just right speed">🚶</button>
       <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed" aria-label="Fast speed">🐇</button>
     </div>
-    <div class="kid-song-picker" id="kid-song-picker" aria-label="Song picker">
-      <button id="kid-song-toggle" class="kid-song-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Discover shapes to unlock songs" disabled>
-        <span class="kid-song-icon" aria-hidden="true">🎵</span>
-      </button>
-      <div id="kid-song-menu" class="kid-song-menu" role="listbox" hidden></div>
+    <div class="kid-audio-group" aria-label="Audio controls">
+      <div class="kid-song-picker" id="kid-song-picker" aria-label="Song picker">
+        <button id="kid-song-toggle" class="kid-song-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Discover shapes to unlock songs" disabled>
+          <span class="kid-song-icon" aria-hidden="true">🎵</span>
+        </button>
+        <div id="kid-song-menu" class="kid-song-menu" role="listbox" hidden></div>
+      </div>
+      <button id="toggle-music" class="kid-tempo-btn kid-audio-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
     </div>
   </div>
 
@@ -1008,6 +1070,7 @@ var kidThreadMenu = document.getElementById('kid-thread-menu');
 var kidSongPicker = document.getElementById('kid-song-picker');
 var kidSongToggle = document.getElementById('kid-song-toggle');
 var kidSongMenu = document.getElementById('kid-song-menu');
+var kidSongIcon = document.querySelector('#kid-song-toggle .kid-song-icon');
 var kidThreadActiveSwatch = document.getElementById('kid-thread-active-swatch');
 var kidThreadActiveLabel = document.getElementById('kid-thread-active-label');
 var holesValue  = document.getElementById('holes-value');
@@ -1108,11 +1171,13 @@ var DISCOVERY_LIBRARY = {
 };
 var DISCOVERY_STABILIZE_MS = 900;
 var ROSETTE_DISCOVERY_ENABLED = false;
+var DISCOVERY_FLOAT_DURATION_MS = 4400;
 var discoveryTimer = null;
 var discoveredShapeKeys = Object.create(null);
 var unlockedSongIds = [];
 var currentSongId = 'bach';
 var hasUnseenDiscoveries = false;
+var hasUnseenSongUnlock = false;
 var discoveryToastTimer = null;
 var SLIDER_MOTION_SETTLE_MS = 180;
 var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
@@ -1162,7 +1227,7 @@ function shouldMusicBePlaying() {
 
 function syncMusicToggleButton() {
   musicToggleBtn.textContent = isMusicMuted ? '🔇' : '🔊';
-  musicToggleBtn.classList.toggle('active', isMusicMuted);
+  musicToggleBtn.classList.toggle('is-active', isMusicMuted);
   musicToggleBtn.setAttribute('aria-pressed', isMusicMuted ? 'true' : 'false');
   musicToggleBtn.setAttribute('aria-label', isMusicMuted ? 'Unmute music' : 'Mute music');
   musicToggleBtn.title = isMusicMuted ? 'Unmute music' : 'Mute music';
@@ -1206,6 +1271,12 @@ function syncDiscoveryToggleButton() {
   discoveryToggleBtn.classList.toggle('has-unseen', hasUnseenDiscoveries && !isOpen);
 }
 
+function syncSongPickerToggleButton() {
+  if (!kidSongToggle) return;
+  var isOpen = kidSongToggle.getAttribute('aria-expanded') === 'true';
+  kidSongToggle.classList.toggle('has-unseen', hasUnseenSongUnlock && !isOpen && !kidSongToggle.disabled);
+}
+
 function showDiscoveryToast(message) {
   if (!discoveryToast) return;
   if (discoveryToastTimer) {
@@ -1220,6 +1291,103 @@ function showDiscoveryToast(message) {
     discoveryToast.classList.remove('show');
     discoveryToastTimer = null;
   }, 2500);
+}
+
+function getElementCenterPoint(element) {
+  if (!element || typeof element.getBoundingClientRect !== 'function') return null;
+  var rect = element.getBoundingClientRect();
+  if (!isFinite(rect.left) || !isFinite(rect.top)) return null;
+  return {
+    x: rect.left + (rect.width / 2),
+    y: rect.top + (rect.height / 2)
+  };
+}
+
+function animateFloatingDiscoveryIcon(iconText, startPoint, endPoint, delayMs) {
+  if (!iconText || !startPoint || !endPoint || !document.body) return;
+
+  var token = document.createElement('div');
+  token.className = 'discovery-float-icon';
+  token.textContent = iconText;
+  token.style.left = String(startPoint.x) + 'px';
+  token.style.top = String(startPoint.y) + 'px';
+  document.body.appendChild(token);
+
+  var dx = endPoint.x - startPoint.x;
+  var dy = endPoint.y - startPoint.y;
+  var durationMs = DISCOVERY_FLOAT_DURATION_MS;
+  var delay = Math.max(0, delayMs || 0);
+
+  if (typeof token.animate === 'function') {
+    var animation = token.animate(
+      [
+        { transform: 'translate(-50%, -50%) scale(0.86)', opacity: 0, offset: 0 },
+        { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.14 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(1)', opacity: 1, offset: 0.86 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(0.95)', opacity: 0, offset: 1 }
+      ],
+      {
+        duration: durationMs,
+        delay: delay,
+        easing: 'cubic-bezier(0.16, 0.84, 0.24, 1)',
+        fill: 'forwards'
+      }
+    );
+    animation.onfinish = function() {
+      token.remove();
+    };
+    animation.oncancel = function() {
+      token.remove();
+    };
+    return;
+  }
+
+  window.setTimeout(function() {
+    token.remove();
+  }, durationMs + delay + 120);
+}
+
+function pulseDiscoveryTarget(element, delayMs) {
+  if (!element || typeof element.animate !== 'function') return;
+  var delay = Math.max(0, delayMs || 0);
+
+  window.setTimeout(function() {
+    element.animate(
+      [
+        { boxShadow: '0 0 0 0 rgba(47, 95, 179, 0)', filter: 'brightness(1)' },
+        { boxShadow: '0 0 0 6px rgba(47, 95, 179, 0.28)', filter: 'brightness(1.06)', offset: 0.42 },
+        { boxShadow: '0 0 0 0 rgba(47, 95, 179, 0)', filter: 'brightness(1)' }
+      ],
+      {
+        duration: 430,
+        easing: 'cubic-bezier(0.22, 0.78, 0.2, 1)',
+        fill: 'none'
+      }
+    );
+  }, delay);
+}
+
+function animateDiscoveryUnlock(shapeKey) {
+  if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var toastCenter = getElementCenterPoint(discoveryToast);
+  var libraryCenter = getElementCenterPoint(discoveryToggleBtn);
+  if (!toastCenter || !libraryCenter) return;
+
+  var shapeIcon = DISCOVERY_LIBRARY[shapeKey].icon || '✨';
+  var shapeDelay = 20;
+  var shapeStart = { x: toastCenter.x - 18, y: toastCenter.y + 2 };
+  animateFloatingDiscoveryIcon(shapeIcon, shapeStart, libraryCenter, shapeDelay);
+  pulseDiscoveryTarget(discoveryToggleBtn, shapeDelay + DISCOVERY_FLOAT_DURATION_MS - 140);
+
+  var songPickerCenter = getElementCenterPoint(kidSongIcon || kidSongToggle);
+  if (songPickerCenter) {
+    var noteDelay = 140;
+    var noteStart = { x: toastCenter.x + 18, y: toastCenter.y + 4 };
+    animateFloatingDiscoveryIcon('♪', noteStart, songPickerCenter, noteDelay);
+    pulseDiscoveryTarget(kidSongToggle, noteDelay + DISCOVERY_FLOAT_DURATION_MS - 140);
+  }
 }
 
 function getTempoOptionsForSong(songId) {
@@ -1599,15 +1767,18 @@ function renderSongPicker() {
   if (!hasUnlocked) {
     kidSongToggle.disabled = true;
     kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.classList.remove('is-active');
     kidSongToggle.title = 'Discover a shape to unlock more songs';
     kidSongToggle.setAttribute('aria-label', 'Song picker disabled until shape discovery');
     kidSongMenu.setAttribute('hidden', '');
+    syncSongPickerToggleButton();
     return;
   }
 
   kidSongToggle.disabled = false;
   kidSongToggle.title = 'Choose song (current: ' + selectedLabel + ')';
   kidSongToggle.setAttribute('aria-label', 'Choose song. Current song is ' + selectedLabel);
+  syncSongPickerToggleButton();
 
   for (var i = 0; i < optionIds.length; i++) {
     var songId = optionIds[i];
@@ -1677,6 +1848,7 @@ function unlockSong(songId) {
   if (!songId || !MUSIC_LIBRARY[songId]) return;
   if (unlockedSongIds.indexOf(songId) !== -1) return;
   unlockedSongIds.push(songId);
+  hasUnseenSongUnlock = true;
 }
 
 function unlockDiscovery(shapeKey) {
@@ -1687,8 +1859,9 @@ function unlockDiscovery(shapeKey) {
   discoveredShapeKeys[shapeKey] = true;
   unlockSong(DISCOVERY_LIBRARY[shapeKey].songId);
   hasUnseenDiscoveries = true;
-  showDiscoveryToast('New discovery unlocked: ' + DISCOVERY_LIBRARY[shapeKey].title);
   renderDiscoveryLibrary();
+  showDiscoveryToast('New discovery unlocked: ' + DISCOVERY_LIBRARY[shapeKey].title);
+  animateDiscoveryUnlock(shapeKey);
 }
 
 function getDiscoveryCandidateThreads() {
@@ -4161,14 +4334,20 @@ kidThreadToggle.addEventListener('click', () => {
 
 kidSongToggle.addEventListener('click', () => {
   if (kidSongToggle.disabled) return;
+  if (hasUnseenSongUnlock) {
+    hasUnseenSongUnlock = false;
+  }
   var isOpen = !kidSongMenu.hasAttribute('hidden');
   if (isOpen) {
     kidSongMenu.setAttribute('hidden', '');
     kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.classList.remove('is-active');
   } else {
     kidSongMenu.removeAttribute('hidden');
     kidSongToggle.setAttribute('aria-expanded', 'true');
+    kidSongToggle.classList.add('is-active');
   }
+  syncSongPickerToggleButton();
 });
 
 kidThreadMenu.addEventListener('click', (event) => {
@@ -4190,6 +4369,8 @@ kidSongMenu.addEventListener('click', (event) => {
   if (!songId) return;
   kidSongMenu.setAttribute('hidden', '');
   kidSongToggle.setAttribute('aria-expanded', 'false');
+  kidSongToggle.classList.remove('is-active');
+  syncSongPickerToggleButton();
   setCurrentSong(songId);
 });
 
@@ -4201,6 +4382,8 @@ document.addEventListener('click', (event) => {
   if (!kidSongMenu.hasAttribute('hidden') && !kidSongPicker.contains(event.target)) {
     kidSongMenu.setAttribute('hidden', '');
     kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.classList.remove('is-active');
+    syncSongPickerToggleButton();
   }
 });
 
