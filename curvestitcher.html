@@ -1822,7 +1822,7 @@ function renderDiscoveryLibrary() {
     var action = document.createElement('button');
     action.type = 'button';
     action.className = 'advanced-reset-btn';
-    action.textContent = 'Return to ' + config.experienceName;
+    action.textContent = 'Travel to ' + config.experienceName;
     action.addEventListener('click', function(experienceName) {
       return function() {
         alert(experienceName + ' experience is not available yet, but this return path is now reserved in the discovery library.');
@@ -2773,8 +2773,9 @@ function shapePointAtAngle(t, center, radius) {
 
 function buildShapeBoundarySamples(sampleCount, center, radius) {
   var samples = [];
+  var angleOffset = currentShape === 'square' ? -Math.PI / 2 : 0;
   for (var i = 0; i < sampleCount; i++) {
-    var t = (2 * Math.PI * i) / sampleCount;
+    var t = angleOffset + ((2 * Math.PI * i) / sampleCount);
     samples.push(shapePointAtAngle(t, center, radius));
   }
   return samples;
