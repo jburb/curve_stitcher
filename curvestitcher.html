@@ -92,11 +92,6 @@
     outline-offset: 2px;
   }
 
-  #gear {
-    font-size: 28px;
-    cursor: pointer;
-  }
-
   #discovery-toggle.has-unseen {
     box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
     animation: discoveryPulse 1.15s ease-in-out infinite;
@@ -594,18 +589,21 @@
   #advanced-panel {
     position: absolute;
     top: 0;
-    right: -320px;
+    right: 0;
     width: 300px;
     height: 100%;
     box-sizing: border-box;
     background: #fafafa;
     border-left: 2px solid #ddd;
     padding: 16px;
-    transition: right 0.3s;
+    transform: translateX(calc(100% + 10px));
+    pointer-events: none;
+    transition: transform 0.3s ease;
     overflow-y: auto;
   }
   #advanced-panel.open {
-    right: 0;
+    transform: translateX(0);
+    pointer-events: auto;
   }
 
   #advanced-header,
@@ -858,7 +856,7 @@
     <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
   </div>
   <div class="top-bar-right">
-    <div id="gear">⚙️</div>
+    <button id="gear" class="top-icon-btn" type="button" title="Open advanced controls" aria-label="Open advanced controls" aria-pressed="false">⚙️</button>
   </div>
 </div>
 
