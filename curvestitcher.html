@@ -465,81 +465,70 @@
     color: #5f7090;
     margin: 2px 0 10px;
   }
-  .song-picker-wrap {
-    background: #fff;
-    border: 1px solid #d7e0f3;
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 10px;
+  .kid-song-picker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
   }
-  .song-picker-wrap[hidden] {
-    display: none;
-  }
-  .song-shape-picker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  .song-selected-line {
-    margin-top: 6px;
-    font-size: 11px;
-    color: #54698f;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .song-shape-item {
-    width: 46px;
-    height: 46px;
+  .kid-song-toggle {
+    width: 36px;
+    height: 30px;
+    padding: 0;
     border: 1px solid #cfd9ef;
     background: #fff;
+    color: #213047;
     border-radius: 999px;
-    padding: 2px;
-    cursor: pointer;
-    color: #2f4368;
+    font-size: 16px;
+    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.12s ease;
+    cursor: pointer;
   }
-  .song-shape-item:hover {
-    border-color: #aec3ea;
-    background: #f7faff;
-    transform: translateY(-1px);
+  .kid-song-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    filter: grayscale(0.15);
   }
-  .song-shape-item.is-active {
-    border-color: #2f5fb3;
-    background: #eaf1ff;
-    box-shadow: 0 0 0 2px rgba(47, 95, 179, 0.22);
+  .kid-song-icon {
+    font-size: 16px;
+    line-height: 1;
   }
-  .song-shape-svg {
-    width: 40px;
-    height: 40px;
+  .kid-song-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 250px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #d7e0f3;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    padding: 6px;
+    z-index: 20;
+  }
+  .kid-song-menu[hidden] {
+    display: none;
+  }
+  .kid-song-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 8px;
+    text-align: left;
     display: block;
-    border-radius: 999px;
-    background: radial-gradient(circle at 50% 50%, #fbfdff 0%, #eef4ff 70%, #e5eefc 100%);
+    font-size: 12px;
+    color: #213047;
+    cursor: pointer;
   }
-  .song-shape-outline {
-    stroke: #9eb4dd;
-    stroke-width: 1.2;
-    fill: none;
-    opacity: 0.8;
+  .kid-song-option:hover {
+    background: #f2f6ff;
   }
-  .song-shape-text {
-    fill: #2f4368;
-    font-size: 10.6px;
-    letter-spacing: 0.03em;
-    font-weight: 700;
-    font-family: "JetBrains Mono", "Fira Mono", "Cascadia Mono", "Consolas", "Courier New", monospace;
-  }
-  .song-shape-item.is-active .song-shape-outline {
-    stroke: #6f8fc8;
-    stroke-width: 1.5;
-    opacity: 1;
-  }
-  .song-shape-item.is-active .song-shape-text {
-    fill: #1f3f75;
+  .kid-song-option.active {
+    background: #e8f0ff;
+    font-weight: 600;
   }
 
   #advanced-panel {
@@ -821,14 +810,7 @@
     <h3>Discovery Library</h3>
     <button id="close-discovery" type="button">Close</button>
   </div>
-  <div class="discovery-subtitle">Unlocked shapes, songs, and future return paths to shape-specific worlds.</div>
-
-  <div id="song-picker-wrap" class="song-picker-wrap" hidden>
-    <strong>Song Shapes</strong>
-    <div class="advanced-global-help">Tap a shape token to switch songs.</div>
-    <div id="song-selected-line" class="song-selected-line" aria-live="polite"></div>
-    <div id="discovered-song-picker" class="song-shape-picker" role="listbox" aria-label="Discovered songs"></div>
-  </div>
+  <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
 
   <div id="discovery-cards"></div>
 </div>
@@ -848,6 +830,12 @@
       <button id="kid-tempo-slow" class="kid-tempo-btn" type="button" title="Slow speed" aria-label="Slow speed">🐢</button>
       <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed" aria-label="Just right speed">🚶</button>
       <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed" aria-label="Fast speed">🐇</button>
+    </div>
+    <div class="kid-song-picker" id="kid-song-picker" aria-label="Song picker">
+      <button id="kid-song-toggle" class="kid-song-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Discover shapes to unlock songs" disabled>
+        <span class="kid-song-icon" aria-hidden="true">🎵</span>
+      </button>
+      <div id="kid-song-menu" class="kid-song-menu" role="listbox" hidden></div>
     </div>
   </div>
 
@@ -1017,6 +1005,9 @@ var musicToggleBtn = document.getElementById('toggle-music');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
 var kidThreadMenu = document.getElementById('kid-thread-menu');
+var kidSongPicker = document.getElementById('kid-song-picker');
+var kidSongToggle = document.getElementById('kid-song-toggle');
+var kidSongMenu = document.getElementById('kid-song-menu');
 var kidThreadActiveSwatch = document.getElementById('kid-thread-active-swatch');
 var kidThreadActiveLabel = document.getElementById('kid-thread-active-label');
 var holesValue  = document.getElementById('holes-value');
@@ -1032,9 +1023,6 @@ var closeAdvancedBtn = document.getElementById('close-advanced');
 var advancedPanel = document.getElementById('advanced-panel');
 var discoveryPanel = document.getElementById('discovery-panel');
 var discoveryCards = document.getElementById('discovery-cards');
-var songPickerWrap = document.getElementById('song-picker-wrap');
-var songSelectedLine = document.getElementById('song-selected-line');
-var discoveredSongPicker = document.getElementById('discovered-song-picker');
 var discoveryToast = document.getElementById('discovery-toast');
 
 var threads = [
@@ -1057,7 +1045,7 @@ var animationActive = false;
 var animationState = null;
 var animationPlaybackState = 'idle';
 var canvasResizeObserver = null;
-var showHoleNumbers = false;
+var showHoleNumbers = true;
 var holeNumberLabelsByIndex = Object.create(null);
 var highlightedHoleNumbers = [];
 
@@ -1311,6 +1299,22 @@ function getSongFilenameLabel(songId) {
   var source = entry.path || entry.title || songId;
   var baseName = String(source).split('/').pop();
   return baseName.replace(/\.[a-z0-9]+$/i, '');
+}
+
+function getSongMenuLabel(songId) {
+  var label = getSongFilenameLabel(songId);
+  var shapeKey = getSongShapeKey(songId);
+  var shapeIcon = '◯';
+
+  if (shapeKey === 'triangle') {
+    shapeIcon = '△';
+  } else if (shapeKey === 'square') {
+    shapeIcon = '□';
+  } else if (shapeKey === 'rosette') {
+    shapeIcon = '✺';
+  }
+
+  return shapeIcon + ' ' + truncateSongLabel(label, 40);
 }
 
 function truncateSongLabel(label, maxChars) {
@@ -1580,69 +1584,44 @@ function repeatSongLabel(label) {
 }
 
 function renderSongPicker() {
-  var hasUnlocked = unlockedSongIds.length > 0;
-  songPickerWrap.hidden = !hasUnlocked;
-  discoveredSongPicker.innerHTML = '';
-  songSelectedLine.textContent = '';
-  if (!hasUnlocked) return;
+  if (!kidSongToggle || !kidSongMenu) return;
 
+  var hasUnlocked = unlockedSongIds.length > 0;
   var optionIds = getSongPickerOptions();
+  kidSongMenu.innerHTML = '';
+
   if (optionIds.indexOf(currentSongId) === -1) {
     currentSongId = 'bach';
   }
 
   var selectedLabel = getSongFilenameLabel(currentSongId);
-  songSelectedLine.textContent = 'Selected: ' + selectedLabel;
-  songSelectedLine.title = selectedLabel;
+
+  if (!hasUnlocked) {
+    kidSongToggle.disabled = true;
+    kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.title = 'Discover a shape to unlock more songs';
+    kidSongToggle.setAttribute('aria-label', 'Song picker disabled until shape discovery');
+    kidSongMenu.setAttribute('hidden', '');
+    return;
+  }
+
+  kidSongToggle.disabled = false;
+  kidSongToggle.title = 'Choose song (current: ' + selectedLabel + ')';
+  kidSongToggle.setAttribute('aria-label', 'Choose song. Current song is ' + selectedLabel);
 
   for (var i = 0; i < optionIds.length; i++) {
     var songId = optionIds[i];
     var fullLabel = getSongFilenameLabel(songId);
-    var shapeKey = getSongShapeKey(songId);
-    var profile = getSongShapeProfile(shapeKey);
-    var pathId = 'song-shape-path-' + songId;
-    var pathDataObj = buildSongSpiralPath(shapeKey, 56, 56, fullLabel);
-    var pathData = pathDataObj.path;
-
-    var button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'song-shape-item' + (songId === currentSongId ? ' is-active' : '');
-    button.dataset.songId = songId;
-    button.title = fullLabel;
-    button.setAttribute('role', 'option');
-    button.setAttribute('aria-selected', songId === currentSongId ? 'true' : 'false');
-    button.setAttribute('aria-label', fullLabel);
-
-    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'song-shape-svg');
-    svg.setAttribute('viewBox', '0 0 56 56');
-
-    var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('id', pathId);
-    path.setAttribute('d', pathData);
-    defs.appendChild(path);
-    svg.appendChild(defs);
-
-    var outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    outline.setAttribute('class', 'song-shape-outline');
-    outline.setAttribute('d', pathData);
-    svg.appendChild(outline);
-
-    var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('class', 'song-shape-text');
-    text.setAttribute('font-size', String(pathDataObj.fontSize || 10.6));
-    text.setAttribute('letter-spacing', String(pathDataObj.letterSpacingEm || 0) + 'em');
-    var textPath = document.createElementNS('http://www.w3.org/2000/svg', 'textPath');
-    textPath.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + pathId);
-    textPath.setAttribute('href', '#' + pathId);
-    textPath.setAttribute('startOffset', pathDataObj.startOffset || profile.startOffset);
-    textPath.textContent = repeatSongLabel(fullLabel);
-    text.appendChild(textPath);
-    svg.appendChild(text);
-
-    button.appendChild(svg);
-    discoveredSongPicker.appendChild(button);
+    var option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'kid-song-option' + (songId === currentSongId ? ' active' : '');
+    option.dataset.songId = songId;
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', songId === currentSongId ? 'true' : 'false');
+    option.setAttribute('aria-label', fullLabel);
+    option.title = fullLabel;
+    option.textContent = getSongMenuLabel(songId);
+    kidSongMenu.appendChild(option);
   }
 }
 
@@ -1686,7 +1665,7 @@ function renderDiscoveryLibrary() {
   if (!unlockedCount) {
     var empty = document.createElement('div');
     empty.className = 'advanced-global-help';
-    empty.textContent = 'No shape discoveries yet. Keep exploring shapes and stitch mappings to unlock cards.';
+    empty.textContent = 'No special shapes discovered yet. Keep exploring stitch patterns to find them!';
     discoveryCards.appendChild(empty);
   }
 
@@ -2540,9 +2519,31 @@ function rainbowColor(t) {
 var currentShape = "circle";
 
 function getShapeGeometry() {
+  var radius = Math.min(view.size.width, view.size.height) * 0.35;
+  var center = view.center.clone();
+  var sampleCount = 360;
+  var minX = Infinity;
+  var maxX = -Infinity;
+  var minY = Infinity;
+  var maxY = -Infinity;
+
+  // Auto-center by the shape's own bounding box so all frame types stay centered
+  // without maintaining hand-tuned per-shape offsets.
+  for (var i = 0; i < sampleCount; i++) {
+    var t = (2 * Math.PI * i) / sampleCount;
+    var p = shapePointAtAngle(t, new Point(0, 0), radius);
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  var shapeBoundsCenter = new Point((minX + maxX) * 0.5, (minY + maxY) * 0.5);
+  center = center.subtract(shapeBoundsCenter);
+
   return {
-    center: view.center,
-    radius: Math.min(view.size.width, view.size.height) * 0.35
+    center: center,
+    radius: radius
   };
 }
 
@@ -2559,7 +2560,8 @@ function polygonPoint(theta, sides, radius, center) {
 function shapePointAtAngle(t, center, radius) {
 
   if (currentShape === 'triangle') {
-    return polygonPoint(t - Math.PI / 2, 3, radius, center);
+    var trianglePoint = polygonPoint(t, 3, radius, center);
+    return trianglePoint.rotate(-90, center);
   }
 
   if (currentShape === 'square') {
@@ -2662,7 +2664,7 @@ function computePoints() {
   // Circle already has exact uniform spacing with equal-angle sampling.
   if (currentShape === 'circle') {
     for (var i = 0; i < n; i++) {
-      var t = (2 * Math.PI * i) / n;
+      var t = (-Math.PI / 2) + ((2 * Math.PI * i) / n);
       points.push(shapePointAtAngle(t, center, radius));
     }
     return;
@@ -2743,7 +2745,7 @@ function getPolygonCornerVertices() {
 
   if (currentShape === 'triangle') {
     for (var i = 0; i < 3; i++) {
-      var tTri = (Math.PI / 2) + (i * 2 * Math.PI / 3);
+      var tTri = i * 2 * Math.PI / 3;
       vertices.push(shapePointAtAngle(tTri, geometry.center, geometry.radius));
     }
     return vertices;
@@ -4053,14 +4055,6 @@ closeDiscoveryBtn.addEventListener('click', () => {
   syncDiscoveryToggleButton();
 });
 
-discoveredSongPicker.addEventListener('click', (event) => {
-  var songButton = event.target.closest('.song-shape-item');
-  if (!songButton) return;
-  var songId = songButton.dataset.songId;
-  if (!songId) return;
-  setCurrentSong(songId);
-});
-
 gearBtn.addEventListener('click', () => {
   advancedPanel.classList.toggle('open');
 });
@@ -4165,6 +4159,18 @@ kidThreadToggle.addEventListener('click', () => {
   }
 });
 
+kidSongToggle.addEventListener('click', () => {
+  if (kidSongToggle.disabled) return;
+  var isOpen = !kidSongMenu.hasAttribute('hidden');
+  if (isOpen) {
+    kidSongMenu.setAttribute('hidden', '');
+    kidSongToggle.setAttribute('aria-expanded', 'false');
+  } else {
+    kidSongMenu.removeAttribute('hidden');
+    kidSongToggle.setAttribute('aria-expanded', 'true');
+  }
+});
+
 kidThreadMenu.addEventListener('click', (event) => {
   var option = event.target.closest('.kid-thread-option');
   if (!option) return;
@@ -4177,11 +4183,25 @@ kidThreadMenu.addEventListener('click', (event) => {
   syncKidControlsFromSelectedThread();
 });
 
+kidSongMenu.addEventListener('click', (event) => {
+  var option = event.target.closest('.kid-song-option');
+  if (!option) return;
+  var songId = option.dataset.songId;
+  if (!songId) return;
+  kidSongMenu.setAttribute('hidden', '');
+  kidSongToggle.setAttribute('aria-expanded', 'false');
+  setCurrentSong(songId);
+});
+
 document.addEventListener('click', (event) => {
-  if (kidThreadMenu.hasAttribute('hidden')) return;
-  if (kidThreadPicker.contains(event.target)) return;
-  kidThreadMenu.setAttribute('hidden', '');
-  kidThreadToggle.setAttribute('aria-expanded', 'false');
+  if (!kidThreadMenu.hasAttribute('hidden') && !kidThreadPicker.contains(event.target)) {
+    kidThreadMenu.setAttribute('hidden', '');
+    kidThreadToggle.setAttribute('aria-expanded', 'false');
+  }
+  if (!kidSongMenu.hasAttribute('hidden') && !kidSongPicker.contains(event.target)) {
+    kidSongMenu.setAttribute('hidden', '');
+    kidSongToggle.setAttribute('aria-expanded', 'false');
+  }
 });
 
 if (window.ResizeObserver) {
