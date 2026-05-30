@@ -36,6 +36,7 @@
   }
   .top-bar-left {
     justify-content: flex-start;
+    gap: 10px;
   }
   .top-bar-right {
     justify-content: flex-end;
@@ -94,6 +95,71 @@
   #gear {
     font-size: 28px;
     cursor: pointer;
+  }
+
+  #discovery-toggle.has-unseen {
+    box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
+    animation: discoveryPulse 1.15s ease-in-out infinite;
+    position: relative;
+  }
+  #discovery-toggle.has-unseen::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: #ff595e;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  @keyframes discoveryPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.085); }
+    100% { transform: scale(1); }
+  }
+
+  #discovery-toast {
+    position: fixed;
+    top: 74px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-14px);
+    z-index: 85;
+    background: #1f3f75;
+    color: #fff;
+    border-radius: 12px;
+    border: 2px solid #89a9e6;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.22s ease;
+    box-shadow: 0 8px 16px rgba(24, 44, 82, 0.28);
+  }
+  #discovery-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .discovery-float-icon {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 2px solid #89a9e6;
+    background: #ffffff;
+    box-shadow: 0 6px 12px rgba(24, 44, 82, 0.22);
+    color: #1f3f75;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 90;
+    will-change: transform, opacity;
   }
 
   /* --- CANVAS AREA --- */
@@ -349,6 +415,17 @@
     font-size: 12px;
     color: #334b72;
   }
+  .kid-audio-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d7e0f3;
+    background: #eef3ff;
+    font-size: 12px;
+    color: #334b72;
+  }
   .kid-tempo-btn {
     border: 1px solid #cfd9ef;
     background: #fff;
@@ -377,6 +454,143 @@
   }
 
   /* --- ADVANCED PANEL --- */
+  #discovery-panel {
+    position: absolute;
+    top: 0;
+    left: -320px;
+    width: 300px;
+    height: 100%;
+    box-sizing: border-box;
+    background: #fafafa;
+    border-right: 2px solid #ddd;
+    padding: 16px;
+    transition: left 0.3s;
+    overflow-y: auto;
+    z-index: 40;
+  }
+  #discovery-panel.open {
+    left: 0;
+  }
+  .discovery-card {
+    background: #fff;
+    border: 1px solid #d7e0f3;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 0 0 10px;
+  }
+  .discovery-card h4 {
+    margin: 0 0 5px;
+    font-size: 14px;
+    color: #2f4368;
+  }
+  .discovery-card p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: #5f7090;
+  }
+  .discovery-card .advanced-reset-btn {
+    font-size: 12px;
+  }
+  .discovery-subtitle {
+    font-size: 12px;
+    color: #5f7090;
+    margin: 2px 0 10px;
+  }
+  .kid-song-picker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .kid-song-toggle {
+    width: 36px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #cfd9ef;
+    background: #fff;
+    color: #213047;
+    border-radius: 999px;
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+  }
+  .kid-song-toggle:not(:disabled):hover {
+    background: #f4f7ff;
+  }
+  .kid-song-toggle:not(:disabled).is-active {
+    background: #e8f0ff;
+    border-color: #9fb8e8;
+    color: #1f3f75;
+  }
+  .kid-song-toggle.has-unseen {
+    box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
+    animation: discoveryPulse 1.15s ease-in-out infinite;
+  }
+  .kid-song-toggle.has-unseen::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #ff595e;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .kid-song-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    filter: grayscale(0.15);
+  }
+  .kid-audio-btn {
+    width: 36px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .kid-song-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .kid-song-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 250px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #d7e0f3;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    padding: 6px;
+    z-index: 20;
+  }
+  .kid-song-menu[hidden] {
+    display: none;
+  }
+  .kid-song-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 8px;
+    text-align: left;
+    display: block;
+    font-size: 12px;
+    color: #213047;
+    cursor: pointer;
+  }
+  .kid-song-option:hover {
+    background: #f2f6ff;
+  }
+  .kid-song-option.active {
+    background: #e8f0ff;
+    font-weight: 600;
+  }
+
   #advanced-panel {
     position: absolute;
     top: 0;
@@ -394,14 +608,16 @@
     right: 0;
   }
 
-  #advanced-header {
+  #advanced-header,
+  #discovery-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
   }
 
-  #close-advanced {
+  #close-advanced,
+  #close-discovery {
     border: 1px solid #ddd;
     background: #fff;
     border-radius: 8px;
@@ -521,6 +737,18 @@
     margin-left: 6px;
   }
 
+  .advanced-inline-number {
+    width: 62px;
+    margin-left: 6px;
+    padding: 2px 6px;
+    border: 1px solid #cfd9ef;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #2f4368;
+    background: #fff;
+    vertical-align: middle;
+  }
+
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -617,7 +845,7 @@
 <!-- SHAPE PICKER -->
 <div id="shape-bar">
   <div class="top-bar-left">
-    <button id="toggle-music" class="top-icon-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
+    <button id="discovery-toggle" class="top-icon-btn" type="button" title="Open discovery library" aria-label="Open discovery library" aria-pressed="false">🧭</button>
   </div>
   <div class="top-bar-center">
     <div class="shape-picker-group">
@@ -632,6 +860,18 @@
   <div class="top-bar-right">
     <div id="gear">⚙️</div>
   </div>
+</div>
+
+<div id="discovery-toast" role="status" aria-live="polite"></div>
+
+<div id="discovery-panel" aria-label="Discovery library">
+  <div id="discovery-header">
+    <h3>Discovery Library</h3>
+    <button id="close-discovery" type="button">Close</button>
+  </div>
+  <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
+
+  <div id="discovery-cards"></div>
 </div>
 
 <!-- CANVAS -->
@@ -650,11 +890,15 @@
       <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed" aria-label="Just right speed">🚶</button>
       <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed" aria-label="Fast speed">🐇</button>
     </div>
-  </div>
-
-  <!-- FUN BUTTONS -->
-  <div id="float-buttons">
-    <button class="float-btn" id="surprise" type="button">🎲 Surprise me</button>
+    <div class="kid-audio-group" aria-label="Audio controls">
+      <div class="kid-song-picker" id="kid-song-picker" aria-label="Song picker">
+        <button id="kid-song-toggle" class="kid-song-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Discover shapes to unlock songs" disabled>
+          <span class="kid-song-icon" aria-hidden="true">🎵</span>
+        </button>
+        <div id="kid-song-menu" class="kid-song-menu" role="listbox" hidden></div>
+      </div>
+      <button id="toggle-music" class="kid-tempo-btn kid-audio-btn" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">🔊</button>
+    </div>
   </div>
 
   <!-- COLOR PALETTE -->
@@ -731,7 +975,7 @@
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Holes</div>
-      <div class="advanced-global-row">Holes: <input id="advanced-holes" type="range" min="3" max="140" value="35"><span class="advanced-inline-value" id="advanced-holes-value">35</span></div>
+      <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="140" value="35" aria-label="Holes value"></div>
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
       <div class="advanced-global-help">Hole numbers auto-hide when holes exceed 80.</div>
     </div>
@@ -798,8 +1042,7 @@ var kidStitchBySelect = document.getElementById('kid-stitch-by');
 var addSliderBlock = document.getElementById('add-slider-block');
 var multiplySliderBlock = document.getElementById('multiply-slider-block');
 var advancedShapeSelect = document.getElementById('advanced-shape');
-var advancedHolesSlider = document.getElementById('advanced-holes');
-var advancedHolesValue = document.getElementById('advanced-holes-value');
+var advancedHolesNumberInput = document.getElementById('advanced-holes-number');
 var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
 var advancedBorderEnabledInput = document.getElementById('advanced-border-enabled');
 var advancedTempoInput = document.getElementById('advanced-tempo');
@@ -818,10 +1061,16 @@ var canvasStage = document.getElementById('canvas-stage');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var holeNumbersToggleBtn = document.getElementById('toggle-hole-numbers');
+var discoveryToggleBtn = document.getElementById('discovery-toggle');
+var closeDiscoveryBtn = document.getElementById('close-discovery');
 var musicToggleBtn = document.getElementById('toggle-music');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
 var kidThreadMenu = document.getElementById('kid-thread-menu');
+var kidSongPicker = document.getElementById('kid-song-picker');
+var kidSongToggle = document.getElementById('kid-song-toggle');
+var kidSongMenu = document.getElementById('kid-song-menu');
+var kidSongIcon = document.querySelector('#kid-song-toggle .kid-song-icon');
 var kidThreadActiveSwatch = document.getElementById('kid-thread-active-swatch');
 var kidThreadActiveLabel = document.getElementById('kid-thread-active-label');
 var holesValue  = document.getElementById('holes-value');
@@ -829,13 +1078,15 @@ var jumpValue   = document.getElementById('jump-value');
 var multiplyValue = document.getElementById('multiply-value');
 var widthValue  = document.getElementById('width-value');
 var animateBtn  = document.getElementById('animate');
-var surpriseBtn = document.getElementById('surprise');
 var kidTempoSlowBtn = document.getElementById('kid-tempo-slow');
 var kidTempoNormalBtn = document.getElementById('kid-tempo-normal');
 var kidTempoFastBtn = document.getElementById('kid-tempo-fast');
 var gearBtn     = document.getElementById('gear');
 var closeAdvancedBtn = document.getElementById('close-advanced');
 var advancedPanel = document.getElementById('advanced-panel');
+var discoveryPanel = document.getElementById('discovery-panel');
+var discoveryCards = document.getElementById('discovery-cards');
+var discoveryToast = document.getElementById('discovery-toast');
 
 var threads = [
   {
@@ -857,7 +1108,7 @@ var animationActive = false;
 var animationState = null;
 var animationPlaybackState = 'idle';
 var canvasResizeObserver = null;
-var showHoleNumbers = false;
+var showHoleNumbers = true;
 var holeNumberLabelsByIndex = Object.create(null);
 var highlightedHoleNumbers = [];
 
@@ -869,13 +1120,65 @@ var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
 var DEFAULT_ANIMATION_BPM = 84;
 var BEATS_PER_STITCH_SEGMENT = 1;
 var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
-var ALLOWED_TEMPOS = [84, 168, 252, 336, 420];
-var KID_TEMPO_PRESETS = {
-  slow: 84,
-  normal: 168,
-  fast: 252
+var DEFAULT_TEMPO_OPTIONS = [84, 168, 252, 336, 420];
+var SONG_TEMPO_OPTIONS = {
+  bach: DEFAULT_TEMPO_OPTIONS.slice(),
+  triangle: [110, 220, 330, 440, 550],
+  square: [150, 300, 450, 600, 750],
+  // Placeholder values until measured BPM-based sets are finalized.
+  rosette: DEFAULT_TEMPO_OPTIONS.slice()
 };
-var MUSIC_TRACK_PATH = 'assets/audio/music_for_videos-bach-fugue-no21-110853.mp3';
+var MUSIC_LIBRARY = {
+  bach: {
+    title: 'Bach_Fugue_21_in_BbMajor',
+    path: 'assets/audio/Bach_Fugue_21_in_BbMajor.mp3'
+  },
+  triangle: {
+    title: 'Bach_Cantata_BWV_29_Sinfonia',
+    path: 'assets/audio/Bach_Cantata_BWV_29_Sinfonia.mp3'
+  },
+  square: {
+    title: 'GregorQuendel_Korobeiniki_for_Piano',
+    path: 'assets/audio/GregorQuendel_Korobeiniki_for_Piano.mp3'
+  },
+  rosette: {
+    title: 'djovan-the-voice-of-the-oud-258611',
+    path: 'assets/audio/djovan-the-voice-of-the-oud-258611.mp3'
+  }
+};
+var DISCOVERY_LIBRARY = {
+  triangle: {
+    title: 'Equilateral Triangle',
+    icon: '🔺',
+    description: 'Unlocked the path to Triangula.',
+    experienceName: 'Triangula',
+    songId: 'triangle'
+  },
+  square: {
+    title: 'Square',
+    icon: '⬜',
+    description: 'Unlocked the path to Squarus.',
+    experienceName: 'Squarus',
+    songId: 'square'
+  },
+  rosette: {
+    title: 'Mystic Rose / Rosette',
+    icon: '✺',
+    description: 'Unlocked the path to Mashrabiya.',
+    experienceName: 'Mashrabiya',
+    songId: 'rosette'
+  }
+};
+var DISCOVERY_STABILIZE_MS = 900;
+var ROSETTE_DISCOVERY_ENABLED = false;
+var DISCOVERY_FLOAT_DURATION_MS = 4400;
+var discoveryTimer = null;
+var discoveredShapeKeys = Object.create(null);
+var unlockedSongIds = [];
+var currentSongId = 'bach';
+var hasUnseenDiscoveries = false;
+var hasUnseenSongUnlock = false;
+var discoveryToastTimer = null;
 var SLIDER_MOTION_SETTLE_MS = 180;
 var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a slightly more relaxed feel
 var STITCH_PULL_SETTLE_OVERSHOOT = 0.027;
@@ -894,7 +1197,7 @@ var BORDER_INCLUDE_IN_SVG = true;
 var borderEnabled = true;
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
-var joyAudio = new Audio(MUSIC_TRACK_PATH);
+var joyAudio = new Audio(MUSIC_LIBRARY[currentSongId].path);
 joyAudio.preload = 'auto';
 var isMusicMuted = false;
 var hasMusicStartedSinceLoad = false;
@@ -924,7 +1227,7 @@ function shouldMusicBePlaying() {
 
 function syncMusicToggleButton() {
   musicToggleBtn.textContent = isMusicMuted ? '🔇' : '🔊';
-  musicToggleBtn.classList.toggle('active', isMusicMuted);
+  musicToggleBtn.classList.toggle('is-active', isMusicMuted);
   musicToggleBtn.setAttribute('aria-pressed', isMusicMuted ? 'true' : 'false');
   musicToggleBtn.setAttribute('aria-label', isMusicMuted ? 'Unmute music' : 'Mute music');
   musicToggleBtn.title = isMusicMuted ? 'Unmute music' : 'Mute music';
@@ -957,6 +1260,834 @@ function updateMusicPlaybackState() {
   if (!joyAudio.paused) {
     joyAudio.pause();
   }
+}
+
+function syncDiscoveryToggleButton() {
+  if (!discoveryToggleBtn) return;
+  var isOpen = discoveryPanel.classList.contains('open');
+  discoveryToggleBtn.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+  discoveryToggleBtn.title = isOpen ? 'Close discovery library' : 'Open discovery library';
+  discoveryToggleBtn.classList.toggle('active', isOpen);
+  discoveryToggleBtn.classList.toggle('has-unseen', hasUnseenDiscoveries && !isOpen);
+}
+
+function syncSongPickerToggleButton() {
+  if (!kidSongToggle) return;
+  var isOpen = kidSongToggle.getAttribute('aria-expanded') === 'true';
+  kidSongToggle.classList.toggle('has-unseen', hasUnseenSongUnlock && !isOpen && !kidSongToggle.disabled);
+}
+
+function showDiscoveryToast(message) {
+  if (!discoveryToast) return;
+  if (discoveryToastTimer) {
+    clearTimeout(discoveryToastTimer);
+    discoveryToastTimer = null;
+  }
+
+  discoveryToast.textContent = message;
+  discoveryToast.classList.add('show');
+
+  discoveryToastTimer = window.setTimeout(function() {
+    discoveryToast.classList.remove('show');
+    discoveryToastTimer = null;
+  }, 2500);
+}
+
+function getElementCenterPoint(element) {
+  if (!element || typeof element.getBoundingClientRect !== 'function') return null;
+  var rect = element.getBoundingClientRect();
+  if (!isFinite(rect.left) || !isFinite(rect.top)) return null;
+  return {
+    x: rect.left + (rect.width / 2),
+    y: rect.top + (rect.height / 2)
+  };
+}
+
+function animateFloatingDiscoveryIcon(iconText, startPoint, endPoint, delayMs) {
+  if (!iconText || !startPoint || !endPoint || !document.body) return;
+
+  var token = document.createElement('div');
+  token.className = 'discovery-float-icon';
+  token.textContent = iconText;
+  token.style.left = String(startPoint.x) + 'px';
+  token.style.top = String(startPoint.y) + 'px';
+  document.body.appendChild(token);
+
+  var dx = endPoint.x - startPoint.x;
+  var dy = endPoint.y - startPoint.y;
+  var durationMs = DISCOVERY_FLOAT_DURATION_MS;
+  var delay = Math.max(0, delayMs || 0);
+
+  if (typeof token.animate === 'function') {
+    var animation = token.animate(
+      [
+        { transform: 'translate(-50%, -50%) scale(0.86)', opacity: 0, offset: 0 },
+        { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.14 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(1)', opacity: 1, offset: 0.86 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(0.95)', opacity: 0, offset: 1 }
+      ],
+      {
+        duration: durationMs,
+        delay: delay,
+        easing: 'cubic-bezier(0.16, 0.84, 0.24, 1)',
+        fill: 'forwards'
+      }
+    );
+    animation.onfinish = function() {
+      token.remove();
+    };
+    animation.oncancel = function() {
+      token.remove();
+    };
+    return;
+  }
+
+  window.setTimeout(function() {
+    token.remove();
+  }, durationMs + delay + 120);
+}
+
+function pulseDiscoveryTarget(element, delayMs) {
+  if (!element || typeof element.animate !== 'function') return;
+  var delay = Math.max(0, delayMs || 0);
+
+  window.setTimeout(function() {
+    element.animate(
+      [
+        { boxShadow: '0 0 0 0 rgba(47, 95, 179, 0)', filter: 'brightness(1)' },
+        { boxShadow: '0 0 0 6px rgba(47, 95, 179, 0.28)', filter: 'brightness(1.06)', offset: 0.42 },
+        { boxShadow: '0 0 0 0 rgba(47, 95, 179, 0)', filter: 'brightness(1)' }
+      ],
+      {
+        duration: 430,
+        easing: 'cubic-bezier(0.22, 0.78, 0.2, 1)',
+        fill: 'none'
+      }
+    );
+  }, delay);
+}
+
+function animateDiscoveryUnlock(shapeKey) {
+  if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var toastCenter = getElementCenterPoint(discoveryToast);
+  var libraryCenter = getElementCenterPoint(discoveryToggleBtn);
+  if (!toastCenter || !libraryCenter) return;
+
+  var shapeIcon = DISCOVERY_LIBRARY[shapeKey].icon || '✨';
+  var shapeDelay = 20;
+  var shapeStart = { x: toastCenter.x - 18, y: toastCenter.y + 2 };
+  animateFloatingDiscoveryIcon(shapeIcon, shapeStart, libraryCenter, shapeDelay);
+  pulseDiscoveryTarget(discoveryToggleBtn, shapeDelay + DISCOVERY_FLOAT_DURATION_MS - 140);
+
+  var songPickerCenter = getElementCenterPoint(kidSongIcon || kidSongToggle);
+  if (songPickerCenter) {
+    var noteDelay = 140;
+    var noteStart = { x: toastCenter.x + 18, y: toastCenter.y + 4 };
+    animateFloatingDiscoveryIcon('♪', noteStart, songPickerCenter, noteDelay);
+    pulseDiscoveryTarget(kidSongToggle, noteDelay + DISCOVERY_FLOAT_DURATION_MS - 140);
+  }
+}
+
+function getTempoOptionsForSong(songId) {
+  var list = SONG_TEMPO_OPTIONS[songId];
+  if (!list || !list.length) {
+    return DEFAULT_TEMPO_OPTIONS.slice();
+  }
+  return list.slice();
+}
+
+function getActiveTempoOptions() {
+  return getTempoOptionsForSong(currentSongId);
+}
+
+function getKidTempoPresetsForSong(songId) {
+  var options = getTempoOptionsForSong(songId);
+  var slow = options[0];
+  var normal = options[Math.min(1, options.length - 1)];
+  var fast = options[Math.min(2, options.length - 1)];
+  return {
+    slow: slow,
+    normal: normal,
+    fast: fast
+  };
+}
+
+function renderAdvancedTempoOptions() {
+  if (!advancedTempoInput) return;
+  var options = getActiveTempoOptions();
+  advancedTempoInput.innerHTML = '';
+  for (var i = 0; i < options.length; i++) {
+    var option = document.createElement('option');
+    option.value = String(options[i]);
+    option.textContent = String(options[i]);
+    advancedTempoInput.appendChild(option);
+  }
+}
+
+function setCurrentSong(songId) {
+  if (!MUSIC_LIBRARY[songId]) return;
+  if (currentSongId === songId) return;
+
+  var shouldResume = shouldMusicBePlaying() && !isMusicMuted;
+  currentSongId = songId;
+  renderAdvancedTempoOptions();
+  var allowedTempos = getActiveTempoOptions();
+  if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
+    currentAnimationBpm = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
+  }
+  syncAdvancedTempoControls();
+  syncKidTempoPresetControls();
+  joyAudio.pause();
+  joyAudio.src = MUSIC_LIBRARY[currentSongId].path;
+  joyAudio.load();
+  hasMusicStartedSinceLoad = false;
+
+  if (shouldResume) {
+    playMusicFromCurrentState();
+  }
+  renderSongPicker();
+}
+
+function getSongPickerOptions() {
+  var options = ['bach'];
+  for (var i = 0; i < unlockedSongIds.length; i++) {
+    if (options.indexOf(unlockedSongIds[i]) === -1) {
+      options.push(unlockedSongIds[i]);
+    }
+  }
+  return options;
+}
+
+function getSongFilenameLabel(songId) {
+  var entry = MUSIC_LIBRARY[songId];
+  if (!entry) return songId;
+
+  var source = entry.path || entry.title || songId;
+  var baseName = String(source).split('/').pop();
+  return baseName.replace(/\.[a-z0-9]+$/i, '');
+}
+
+function getSongMenuLabel(songId) {
+  var label = getSongFilenameLabel(songId);
+  var shapeKey = getSongShapeKey(songId);
+  var shapeIcon = '◯';
+
+  if (shapeKey === 'triangle') {
+    shapeIcon = '△';
+  } else if (shapeKey === 'square') {
+    shapeIcon = '□';
+  } else if (shapeKey === 'rosette') {
+    shapeIcon = '✺';
+  }
+
+  return shapeIcon + ' ' + truncateSongLabel(label, 40);
+}
+
+function truncateSongLabel(label, maxChars) {
+  if (!label) return '';
+  if (label.length <= maxChars) return label;
+  return label.slice(0, Math.max(1, maxChars - 1)) + '…';
+}
+
+function getSongShapeKey(songId) {
+  if (songId === 'triangle') return 'triangle';
+  if (songId === 'square') return 'square';
+  if (songId === 'rosette') return 'rosette';
+  return 'circle';
+}
+
+function getPolygonRadiusFactor(angle, sides) {
+  var sector = (2 * Math.PI) / sides;
+  var normalized = ((angle % sector) + sector) % sector;
+  var local = normalized - (sector / 2);
+  return Math.cos(Math.PI / sides) / Math.cos(local);
+}
+
+function mix(a, b, t) {
+  return a + ((b - a) * t);
+}
+
+function getSongShapeProfile(shapeKey) {
+  if (shapeKey === 'triangle') {
+    return {
+      innerFactor: 0.09,
+      outerFactor: 0.44,
+      startOffset: '0%',
+      charWidthFactor: 0.62
+    };
+  }
+  if (shapeKey === 'square') {
+    return {
+      innerFactor: 0.09,
+      outerFactor: 0.44,
+      startOffset: '0%',
+      charWidthFactor: 0.62
+    };
+  }
+  if (shapeKey === 'rosette') {
+    return {
+      innerFactor: 0.08,
+      outerFactor: 0.43,
+      startOffset: '0%',
+      charWidthFactor: 0.62
+    };
+  }
+  return {
+    innerFactor: 0.09,
+    outerFactor: 0.43,
+    startOffset: '0%',
+    charWidthFactor: 0.62
+  };
+}
+
+function getShapeRadiusFactor(shapeKey, angle) {
+  if (shapeKey === 'triangle') {
+    return getPolygonRadiusFactor(angle - (Math.PI / 2), 3);
+  }
+  if (shapeKey === 'square') {
+    var c = Math.cos(angle);
+    var s = Math.sin(angle);
+    return 1 / Math.max(Math.abs(c), Math.abs(s));
+  }
+  if (shapeKey === 'rosette') {
+    return 0.86 + (0.14 * Math.cos(angle * 6));
+  }
+  return 1;
+}
+
+function estimateMonospaceTextLength(label, fontSize, charWidthFactor, letterSpacingEm) {
+  var text = String(label || '');
+  if (!text) return 0;
+  var spacing = isFinite(letterSpacingEm) ? (fontSize * letterSpacingEm) : 0;
+  return text.length * (fontSize * charWidthFactor + spacing);
+}
+
+function getMinimumWrapPitch(fontSize) {
+  // Keep wrap spacing above glyph-height footprint to avoid cross-wrap overlap.
+  return Math.max(2.1, fontSize * 1.25);
+}
+
+function polylineLength(pointsList) {
+  if (!pointsList || pointsList.length < 2) return 0;
+  var total = 0;
+  for (var i = 1; i < pointsList.length; i++) {
+    var dx = pointsList[i].x - pointsList[i - 1].x;
+    var dy = pointsList[i].y - pointsList[i - 1].y;
+    total += Math.sqrt(dx * dx + dy * dy);
+  }
+  return total;
+}
+
+function getPolygonVertex(cx, cy, radius, angleOffset, sides, sideIndex) {
+  var angle = angleOffset + ((2 * Math.PI * sideIndex) / sides);
+  return {
+    x: Math.round((cx + Math.cos(angle) * radius) * 1000) / 1000,
+    y: Math.round((cy + Math.sin(angle) * radius) * 1000) / 1000
+  };
+}
+
+function buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, wraps) {
+  var pointsList = [];
+  wraps = Math.max(1, wraps);
+
+  for (var wrap = 0; wrap <= wraps; wrap++) {
+    var t = wrap / wraps;
+    var radius = outer - ((outer - inner) * t);
+    // Alternate direction per ring so transitions between rings are inward/radial,
+    // avoiding diagonal jumps that can create acute corner artifacts.
+    if (wrap % 2 === 0) {
+      for (var side = 0; side < sides; side++) {
+        pointsList.push(getPolygonVertex(cx, cy, radius, angleOffset, sides, side));
+      }
+    } else {
+      for (var reverseSide = sides - 1; reverseSide >= 0; reverseSide--) {
+        pointsList.push(getPolygonVertex(cx, cy, radius, angleOffset, sides, reverseSide));
+      }
+    }
+  }
+
+  return pointsList;
+}
+
+function buildPolygonSpiralPath(shapeKey, width, height, targetLength, fontSize) {
+  var cx = width * 0.5;
+  var cy = height * 0.5;
+  var minDimension = Math.min(width, height);
+  var profile = getSongShapeProfile(shapeKey);
+  var outer = minDimension * profile.outerFactor;
+  var inner = minDimension * profile.innerFactor;
+  var sides = shapeKey === 'triangle' ? 3 : 4;
+  var angleOffset = shapeKey === 'triangle' ? -Math.PI / 2 : -Math.PI / 4;
+  var radialSpan = Math.max(0.001, outer - inner);
+  var minPitch = getMinimumWrapPitch(fontSize);
+  var maxWraps = Math.max(2, Math.floor(radialSpan / minPitch));
+  var minWraps = Math.min(3, maxWraps);
+
+  var bestPoints = buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, minWraps);
+  var fit = false;
+  for (var wraps = minWraps; wraps <= maxWraps; wraps++) {
+    var candidate = buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, wraps);
+    var len = polylineLength(candidate);
+    bestPoints = candidate;
+    if (len >= targetLength) {
+      fit = true;
+      break;
+    }
+  }
+
+  return {
+    path: pointsToSvgPath(bestPoints),
+    length: polylineLength(bestPoints),
+    startOffset: profile.startOffset,
+    fit: fit
+  };
+}
+
+function buildCurvedSpiralPath(shapeKey, width, height, targetLength, fontSize) {
+  var profile = getSongShapeProfile(shapeKey);
+  var cx = width * 0.5;
+  var cy = height * 0.5;
+  var minDimension = Math.min(width, height);
+  var inner = minDimension * profile.innerFactor;
+  var outer = minDimension * profile.outerFactor;
+  var radialSpan = Math.max(0.001, outer - inner);
+  var minPitch = getMinimumWrapPitch(fontSize);
+  var maxTurnsByPitch = Math.max(1.7, radialSpan / minPitch);
+
+  var bestPoints = [];
+  var bestLength = 0;
+  var bestTurns = Math.min(2.2, maxTurnsByPitch);
+  var samples = 260;
+  var fit = false;
+
+  for (var turns = 1.8; turns <= maxTurnsByPitch; turns += 0.12) {
+    var pointsList = [];
+    for (var i = 0; i <= samples; i++) {
+      var u = i / samples;
+      var angle = (-Math.PI / 2) + (u * turns * Math.PI * 2);
+      var spiralRadius = outer - ((outer - inner) * u);
+      var baseShape = getShapeRadiusFactor(shapeKey, angle);
+      var shapeBlend = mix(1, baseShape, Math.pow(1 - u, 0.97));
+      pointsList.push({
+        x: Math.round((cx + Math.cos(angle) * spiralRadius * shapeBlend) * 1000) / 1000,
+        y: Math.round((cy + Math.sin(angle) * spiralRadius * shapeBlend) * 1000) / 1000
+      });
+    }
+
+    var candidateLength = polylineLength(pointsList);
+    bestPoints = pointsList;
+    bestLength = candidateLength;
+    bestTurns = turns;
+    if (candidateLength >= targetLength) {
+      fit = true;
+      break;
+    }
+  }
+
+  return {
+    path: pointsToSvgPath(bestPoints),
+    length: bestLength,
+    startOffset: profile.startOffset,
+    turns: bestTurns,
+    fit: fit
+  };
+}
+
+function pointsToSvgPath(pointsList) {
+  if (!pointsList || !pointsList.length) return '';
+  var path = 'M ' + pointsList[0].x + ' ' + pointsList[0].y;
+  for (var i = 1; i < pointsList.length; i++) {
+    path += ' L ' + pointsList[i].x + ' ' + pointsList[i].y;
+  }
+  return path;
+}
+
+function buildSongSpiralPath(shapeKey, width, height) {
+  var label = arguments.length > 3 ? arguments[3] : '';
+  var profile = getSongShapeProfile(shapeKey);
+  var best = null;
+  var letterSpacingSteps = [0.03, 0.02, 0.01, 0, -0.01];
+
+  for (var s = 0; s < letterSpacingSteps.length; s++) {
+    var letterSpacingEm = letterSpacingSteps[s];
+
+    for (var fontSize = 10.6; fontSize >= 7.2; fontSize -= 0.4) {
+      var targetLength = Math.max(
+        78,
+        estimateMonospaceTextLength(label, fontSize, profile.charWidthFactor, letterSpacingEm) * 1.06
+      );
+
+      var result;
+      if (shapeKey === 'triangle' || shapeKey === 'square') {
+        result = buildPolygonSpiralPath(shapeKey, width, height, targetLength, fontSize);
+      } else {
+        result = buildCurvedSpiralPath(shapeKey, width, height, targetLength, fontSize);
+      }
+
+      result.fontSize = Math.round(fontSize * 10) / 10;
+      result.letterSpacingEm = letterSpacingEm;
+      best = result;
+      if (result.fit) {
+        return result;
+      }
+    }
+  }
+
+  return best || {
+    path: '',
+    length: 0,
+    startOffset: profile.startOffset,
+    fontSize: 7.2,
+    letterSpacingEm: 0,
+    fit: false
+  };
+}
+
+function repeatSongLabel(label) {
+  var clean = String(label || '').trim();
+  if (!clean) return '';
+  return clean.toUpperCase();
+}
+
+function renderSongPicker() {
+  if (!kidSongToggle || !kidSongMenu) return;
+
+  var hasUnlocked = unlockedSongIds.length > 0;
+  var optionIds = getSongPickerOptions();
+  kidSongMenu.innerHTML = '';
+
+  if (optionIds.indexOf(currentSongId) === -1) {
+    currentSongId = 'bach';
+  }
+
+  var selectedLabel = getSongFilenameLabel(currentSongId);
+
+  if (!hasUnlocked) {
+    kidSongToggle.disabled = true;
+    kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.classList.remove('is-active');
+    kidSongToggle.title = 'Discover a shape to unlock more songs';
+    kidSongToggle.setAttribute('aria-label', 'Song picker disabled until shape discovery');
+    kidSongMenu.setAttribute('hidden', '');
+    syncSongPickerToggleButton();
+    return;
+  }
+
+  kidSongToggle.disabled = false;
+  kidSongToggle.title = 'Choose song (current: ' + selectedLabel + ')';
+  kidSongToggle.setAttribute('aria-label', 'Choose song. Current song is ' + selectedLabel);
+  syncSongPickerToggleButton();
+
+  for (var i = 0; i < optionIds.length; i++) {
+    var songId = optionIds[i];
+    var fullLabel = getSongFilenameLabel(songId);
+    var option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'kid-song-option' + (songId === currentSongId ? ' active' : '');
+    option.dataset.songId = songId;
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', songId === currentSongId ? 'true' : 'false');
+    option.setAttribute('aria-label', fullLabel);
+    option.title = fullLabel;
+    option.textContent = getSongMenuLabel(songId);
+    kidSongMenu.appendChild(option);
+  }
+}
+
+function renderDiscoveryLibrary() {
+  discoveryCards.innerHTML = '';
+
+  var keys = Object.keys(DISCOVERY_LIBRARY);
+  var unlockedCount = 0;
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (!discoveredShapeKeys[key]) continue;
+    unlockedCount++;
+
+    var config = DISCOVERY_LIBRARY[key];
+    var card = document.createElement('div');
+    card.className = 'discovery-card';
+
+    var title = document.createElement('h4');
+    title.textContent = config.icon + ' ' + config.title;
+    card.appendChild(title);
+
+    var text = document.createElement('p');
+    text.textContent = config.description;
+    card.appendChild(text);
+
+    var action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'advanced-reset-btn';
+    action.textContent = 'Travel to ' + config.experienceName;
+    action.addEventListener('click', function(experienceName) {
+      return function() {
+        alert(experienceName + ' experience is not available yet, but this return path is now reserved in the discovery library.');
+      };
+    }(config.experienceName));
+    card.appendChild(action);
+
+    discoveryCards.appendChild(card);
+  }
+
+  if (!unlockedCount) {
+    var empty = document.createElement('div');
+    empty.className = 'advanced-global-help';
+    empty.textContent = 'No special shapes discovered yet. Keep exploring stitch patterns to find them!';
+    discoveryCards.appendChild(empty);
+  }
+
+  renderSongPicker();
+  syncDiscoveryToggleButton();
+}
+
+function unlockSong(songId) {
+  if (!songId || !MUSIC_LIBRARY[songId]) return;
+  if (unlockedSongIds.indexOf(songId) !== -1) return;
+  unlockedSongIds.push(songId);
+  hasUnseenSongUnlock = true;
+}
+
+function unlockDiscovery(shapeKey) {
+  if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
+  if (shapeKey === 'rosette' && !ROSETTE_DISCOVERY_ENABLED) return;
+  if (discoveredShapeKeys[shapeKey]) return;
+
+  discoveredShapeKeys[shapeKey] = true;
+  unlockSong(DISCOVERY_LIBRARY[shapeKey].songId);
+  hasUnseenDiscoveries = true;
+  renderDiscoveryLibrary();
+  showDiscoveryToast('New discovery unlocked: ' + DISCOVERY_LIBRARY[shapeKey].title);
+  animateDiscoveryUnlock(shapeKey);
+}
+
+function getDiscoveryCandidateThreads() {
+  if (selectedThreadIndex >= 0 && selectedThreadIndex < threads.length) {
+    return [threads[selectedThreadIndex]];
+  }
+  return threads.slice();
+}
+
+function buildUndirectedGraphFromSegments(segments, pointCount) {
+  var adjacency = [];
+  var neighbors = [];
+  for (var i = 0; i < pointCount; i++) {
+    adjacency.push(Object.create(null));
+    neighbors.push([]);
+  }
+
+  if (!segments || !segments.length) {
+    return {
+      adjacency: adjacency,
+      neighbors: neighbors
+    };
+  }
+
+  for (var s = 0; s < segments.length; s++) {
+    var fromIndex = segments[s][0];
+    var toIndex = segments[s][1];
+
+    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= pointCount || toIndex >= pointCount) continue;
+    if (fromIndex === toIndex) continue;
+    if (adjacency[fromIndex][toIndex]) continue;
+
+    adjacency[fromIndex][toIndex] = true;
+    adjacency[toIndex][fromIndex] = true;
+    neighbors[fromIndex].push(toIndex);
+    neighbors[toIndex].push(fromIndex);
+  }
+
+  return {
+    adjacency: adjacency,
+    neighbors: neighbors
+  };
+}
+
+function isApproxEquilateralTriangleByIndices(a, b, c) {
+  var pa = points[a];
+  var pb = points[b];
+  var pc = points[c];
+  if (!pa || !pb || !pc) return false;
+
+  var sideAB = pa.getDistance(pb);
+  var sideBC = pb.getDistance(pc);
+  var sideCA = pc.getDistance(pa);
+
+  var minSide = Math.min(sideAB, sideBC, sideCA);
+  var maxSide = Math.max(sideAB, sideBC, sideCA);
+  if (!isFinite(minSide) || !isFinite(maxSide) || minSide <= 1e-4) return false;
+
+  var areaTwice = Math.abs(pb.subtract(pa).cross(pc.subtract(pa)));
+  if (areaTwice <= (minSide * minSide * 0.08)) return false;
+
+  // Tight tolerance keeps Triangula strictly tied to equilateral stitching.
+  return (maxSide / minSide) <= 1.015;
+}
+
+function threadHasEquilateralTriangleDiscovery(thread) {
+  if (!thread || points.length < 3) return false;
+
+  var graph = buildUndirectedGraphFromSegments(computeSegments(thread), points.length);
+  var adjacency = graph.adjacency;
+  var neighbors = graph.neighbors;
+
+  for (var a = 0; a < neighbors.length; a++) {
+    for (var i = 0; i < neighbors[a].length; i++) {
+      var b = neighbors[a][i];
+      if (b <= a) continue;
+
+      for (var j = 0; j < neighbors[b].length; j++) {
+        var c = neighbors[b][j];
+        if (c <= b || c === a) continue;
+        if (!adjacency[a][c]) continue;
+
+        if (isApproxEquilateralTriangleByIndices(a, b, c)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function isApproxSquareCycleByIndices(a, b, c, d) {
+  var p0 = points[a];
+  var p1 = points[b];
+  var p2 = points[c];
+  var p3 = points[d];
+  if (!p0 || !p1 || !p2 || !p3) return false;
+
+  var v01 = p1.subtract(p0);
+  var v12 = p2.subtract(p1);
+  var v23 = p3.subtract(p2);
+  var v30 = p0.subtract(p3);
+
+  var l01 = v01.length;
+  var l12 = v12.length;
+  var l23 = v23.length;
+  var l30 = v30.length;
+  var minSide = Math.min(l01, l12, l23, l30);
+  var maxSide = Math.max(l01, l12, l23, l30);
+
+  if (!isFinite(minSide) || !isFinite(maxSide) || minSide <= 1e-4) return false;
+  if ((maxSide / minSide) > 1.03) return false;
+
+  var areaTwice = Math.abs(v01.cross(p3.subtract(p0))) + Math.abs(v12.cross(p0.subtract(p1)));
+  if (areaTwice <= (minSide * minSide * 0.12)) return false;
+
+  function isNearlyRightAngle(vA, vB) {
+    if (vA.length <= 1e-4 || vB.length <= 1e-4) return false;
+    var cosineAbs = Math.abs(vA.dot(vB) / (vA.length * vB.length));
+    return cosineAbs <= 0.2;
+  }
+
+  if (!isNearlyRightAngle(v01, v12)) return false;
+  if (!isNearlyRightAngle(v12, v23)) return false;
+  if (!isNearlyRightAngle(v23, v30)) return false;
+  if (!isNearlyRightAngle(v30, v01)) return false;
+
+  var d02 = p0.getDistance(p2);
+  var d13 = p1.getDistance(p3);
+  var minDiag = Math.min(d02, d13);
+  var maxDiag = Math.max(d02, d13);
+  if (!isFinite(minDiag) || minDiag <= 1e-4) return false;
+  if ((maxDiag / minDiag) > 1.03) return false;
+
+  return true;
+}
+
+function threadHasSquareDiscovery(thread) {
+  if (!thread || points.length < 4) return false;
+
+  var graph = buildUndirectedGraphFromSegments(computeSegments(thread), points.length);
+  var adjacency = graph.adjacency;
+  var neighbors = graph.neighbors;
+
+  for (var a = 0; a < neighbors.length; a++) {
+    for (var i = 0; i < neighbors[a].length; i++) {
+      var b = neighbors[a][i];
+      if (b === a) continue;
+
+      for (var j = 0; j < neighbors[b].length; j++) {
+        var c = neighbors[b][j];
+        if (c === b || c === a) continue;
+
+        for (var k = 0; k < neighbors[c].length; k++) {
+          var d = neighbors[c][k];
+          if (d === c || d === b || d === a) continue;
+          if (!adjacency[d][a]) continue;
+
+          if (isApproxSquareCycleByIndices(a, b, c, d)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function isRosetteDiscoveryCandidate() {
+  var holeCount = parseInt(holesSlider.value, 10);
+  if (!isFinite(holeCount) || holeCount < 24) return false;
+
+  var candidates = getDiscoveryCandidateThreads();
+  for (var i = 0; i < candidates.length; i++) {
+    var thread = candidates[i];
+    ensureThreadConnectConfig(thread);
+    if (thread.jumpMode === 'connect' && Number(thread.connectMultiplier) >= 3) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function evaluateDiscoveryCandidates() {
+  computePoints();
+
+  var candidates = getDiscoveryCandidateThreads();
+  var foundTriangle = false;
+  var foundSquare = false;
+
+  for (var i = 0; i < candidates.length; i++) {
+    if (!foundTriangle && threadHasEquilateralTriangleDiscovery(candidates[i])) {
+      foundTriangle = true;
+    }
+    if (!foundSquare && threadHasSquareDiscovery(candidates[i])) {
+      foundSquare = true;
+    }
+    if (foundTriangle && foundSquare) break;
+  }
+
+  if (foundTriangle) {
+    unlockDiscovery('triangle');
+  }
+  if (foundSquare) {
+    unlockDiscovery('square');
+  }
+  if (ROSETTE_DISCOVERY_ENABLED && isRosetteDiscoveryCandidate()) {
+    unlockDiscovery('rosette');
+  }
+}
+
+function scheduleDiscoveryEvaluation() {
+  if (discoveryTimer) {
+    clearTimeout(discoveryTimer);
+  }
+  discoveryTimer = window.setTimeout(function() {
+    discoveryTimer = null;
+    if (hasActiveSliderMotion()) {
+      scheduleDiscoveryEvaluation();
+      return;
+    }
+    evaluateDiscoveryCandidates();
+  }, DISCOVERY_STABILIZE_MS);
 }
 
 function markSliderAsMoving(slider) {
@@ -1033,8 +2164,9 @@ function updateKidControlValues() {
   jumpValue.textContent = jumpSlider.value;
   multiplyValue.textContent = multiplySlider.value;
   widthValue.textContent = widthSlider.value;
-  advancedHolesSlider.value = holesSlider.value;
-  advancedHolesValue.textContent = holesSlider.value;
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = holesSlider.value;
+  }
 }
 
 function syncBorderControls() {
@@ -1214,7 +2346,9 @@ function syncKidControlsFromSelectedThread() {
 
 function applyDefaultHoles() {
   holesSlider.value = String(DEFAULT_HOLES);
-  advancedHolesSlider.value = String(DEFAULT_HOLES);
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = String(DEFAULT_HOLES);
+  }
   updateKidControlValues();
 }
 
@@ -1230,8 +2364,9 @@ function applyDefaultSkipAndSize() {
 }
 
 function syncAdvancedTempoControls() {
-  if (ALLOWED_TEMPOS.indexOf(currentAnimationBpm) === -1) {
-    currentAnimationBpm = DEFAULT_ANIMATION_BPM;
+  var allowedTempos = getActiveTempoOptions();
+  if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
+    currentAnimationBpm = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
   }
   advancedTempoInput.value = String(currentAnimationBpm);
   advancedTempoValue.textContent = String(currentAnimationBpm);
@@ -1239,10 +2374,11 @@ function syncAdvancedTempoControls() {
 
 function syncKidTempoPresetControls() {
   if (!kidTempoSlowBtn || !kidTempoNormalBtn || !kidTempoFastBtn) return;
+  var presets = getKidTempoPresetsForSong(currentSongId);
   var activePreset = null;
-  if (currentAnimationBpm === KID_TEMPO_PRESETS.slow) activePreset = 'slow';
-  if (currentAnimationBpm === KID_TEMPO_PRESETS.normal) activePreset = 'normal';
-  if (currentAnimationBpm === KID_TEMPO_PRESETS.fast) activePreset = 'fast';
+  if (currentAnimationBpm === presets.slow) activePreset = 'slow';
+  if (currentAnimationBpm === presets.normal) activePreset = 'normal';
+  if (currentAnimationBpm === presets.fast) activePreset = 'fast';
 
   kidTempoSlowBtn.classList.toggle('is-active', activePreset === 'slow');
   kidTempoNormalBtn.classList.toggle('is-active', activePreset === 'normal');
@@ -1255,8 +2391,9 @@ function syncKidTempoPresetControls() {
 
 function applyTempoValue(bpm) {
   var parsed = Math.round(Number(bpm));
-  if (!isFinite(parsed) || ALLOWED_TEMPOS.indexOf(parsed) === -1) {
-    parsed = DEFAULT_ANIMATION_BPM;
+  var allowedTempos = getActiveTempoOptions();
+  if (!isFinite(parsed) || allowedTempos.indexOf(parsed) === -1) {
+    parsed = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
   }
   currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
@@ -1288,7 +2425,8 @@ function syncAnimateButtonLabel() {
 }
 
 function applyDefaultTempo() {
-  applyTempoValue(DEFAULT_ANIMATION_BPM);
+  var allowedTempos = getActiveTempoOptions();
+  applyTempoValue(allowedTempos[0] || DEFAULT_ANIMATION_BPM);
 }
 
 function stopAnimationIfActive() {
@@ -1315,6 +2453,7 @@ function redrawForPathChange() {
   // Path/topology changes invalidate the current stitch progression.
   stopAnimationIfActive();
   drawStatic();
+  scheduleDiscoveryEvaluation();
 }
 
 function drawAnimatedSegments(thread, segments, segmentCount) {
@@ -1474,10 +2613,12 @@ function redrawAnimationInPlace() {
   // Style-only updates should preserve current animation progress.
   if (!animationState) {
     drawStatic();
+    scheduleDiscoveryEvaluation();
     return;
   }
 
   renderAnimationFrame();
+  scheduleDiscoveryEvaluation();
 }
 
 function scheduleFitCanvasToStage() {
@@ -1551,9 +2692,31 @@ function rainbowColor(t) {
 var currentShape = "circle";
 
 function getShapeGeometry() {
+  var radius = Math.min(view.size.width, view.size.height) * 0.35;
+  var center = view.center.clone();
+  var sampleCount = 360;
+  var minX = Infinity;
+  var maxX = -Infinity;
+  var minY = Infinity;
+  var maxY = -Infinity;
+
+  // Auto-center by the shape's own bounding box so all frame types stay centered
+  // without maintaining hand-tuned per-shape offsets.
+  for (var i = 0; i < sampleCount; i++) {
+    var t = (2 * Math.PI * i) / sampleCount;
+    var p = shapePointAtAngle(t, new Point(0, 0), radius);
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  var shapeBoundsCenter = new Point((minX + maxX) * 0.5, (minY + maxY) * 0.5);
+  center = center.subtract(shapeBoundsCenter);
+
   return {
-    center: view.center,
-    radius: Math.min(view.size.width, view.size.height) * 0.35
+    center: center,
+    radius: radius
   };
 }
 
@@ -1570,7 +2733,8 @@ function polygonPoint(theta, sides, radius, center) {
 function shapePointAtAngle(t, center, radius) {
 
   if (currentShape === 'triangle') {
-    return polygonPoint(t - Math.PI / 2, 3, radius, center);
+    var trianglePoint = polygonPoint(t, 3, radius, center);
+    return trianglePoint.rotate(-90, center);
   }
 
   if (currentShape === 'square') {
@@ -1609,8 +2773,9 @@ function shapePointAtAngle(t, center, radius) {
 
 function buildShapeBoundarySamples(sampleCount, center, radius) {
   var samples = [];
+  var angleOffset = currentShape === 'square' ? -Math.PI / 2 : 0;
   for (var i = 0; i < sampleCount; i++) {
-    var t = (2 * Math.PI * i) / sampleCount;
+    var t = angleOffset + ((2 * Math.PI * i) / sampleCount);
     samples.push(shapePointAtAngle(t, center, radius));
   }
   return samples;
@@ -1673,7 +2838,7 @@ function computePoints() {
   // Circle already has exact uniform spacing with equal-angle sampling.
   if (currentShape === 'circle') {
     for (var i = 0; i < n; i++) {
-      var t = (2 * Math.PI * i) / n;
+      var t = (-Math.PI / 2) + ((2 * Math.PI * i) / n);
       points.push(shapePointAtAngle(t, center, radius));
     }
     return;
@@ -1754,7 +2919,7 @@ function getPolygonCornerVertices() {
 
   if (currentShape === 'triangle') {
     for (var i = 0; i < 3; i++) {
-      var tTri = (Math.PI / 2) + (i * 2 * Math.PI / 3);
+      var tTri = i * 2 * Math.PI / 3;
       vertices.push(shapePointAtAngle(tTri, geometry.center, geometry.radius));
     }
     return vertices;
@@ -2144,6 +3309,14 @@ function normalizeExportBaseName(rawName) {
     .replace(/_+/g, '_')
     .replace(/^[_\-.]+|[_\-.]+$/g, '');
   return cleaned || fallback;
+}
+
+function parseBoundedInt(rawValue, minValue, maxValue, fallback) {
+  var parsed = parseInt(rawValue, 10);
+  if (!isFinite(parsed)) return fallback;
+  if (isFinite(minValue) && parsed < minValue) parsed = minValue;
+  if (isFinite(maxValue) && parsed > maxValue) parsed = maxValue;
+  return parsed;
 }
 
 function triggerBlobDownload(blob, fileName) {
@@ -2720,10 +3893,10 @@ function renderThreadControls() {
         <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
       </select><br>
       ${isFixedMode ? `
-      Add by: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Add by: <input class="advanced-inline-number" type="number" min="1" max="100" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
       ` : ''}
       ${isFormulaMode ? `
-      Base add: <input type="range" min="1" max="100" value="${thread.jump}" id="jump-${index}"><span class="advanced-inline-value" id="adv-skip-value-${index}">${thread.jump}</span><br>
+      Base add: <input class="advanced-inline-number" type="number" min="1" max="100" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} base add value"><br>
       Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + i) mod n"><br>
       <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
       <div class="jump-help">Vars: i (step), n (holes), current, prev, skip</div>
@@ -2743,8 +3916,8 @@ function renderThreadControls() {
       <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
       ` : ''}
       ${isConnectMode ? `
-      Multiply by: <input type="range" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-${index}"><span class="advanced-inline-value" id="adv-connect-m-value-${index}">${thread.connectMultiplier}</span><br>
-      Offset (add-on): <input type="range" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-${index}"><span class="advanced-inline-value" id="adv-connect-offset-value-${index}">${thread.connectOffset}</span><br>
+      Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
+      Offset (add-on): <input class="advanced-inline-number" type="number" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-number-${index}" aria-label="Thread ${index + 1} offset value"><br>
       <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
       <div class="jump-preset-row">
         <select id="connect-preset-${index}">
@@ -2756,7 +3929,7 @@ function renderThreadControls() {
         <button type="button" id="use-connect-preset-${index}">Use</button>
       </div>
       ` : ''}
-      Size: <input type="range" min="1" max="10" value="${thread.width}" id="width-${index}"><span class="advanced-inline-value" id="adv-size-value-${index}">${thread.width}</span><br>
+      Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
       <button id="delete-${index}">Delete</button>
     `;
@@ -2776,19 +3949,21 @@ function renderThreadControls() {
       redrawAnimationInPlace();
     });
 
-    var skipInput = document.getElementById(`jump-${index}`);
-    if (skipInput) {
-      skipInput.addEventListener('input', e => {
-        thread.jump = parseInt(e.target.value, 10);
-        var skipValueChip = document.getElementById(`adv-skip-value-${index}`);
-        if (skipValueChip) {
-          skipValueChip.textContent = String(thread.jump);
-        }
+    var skipNumberInput = document.getElementById(`jump-number-${index}`);
+    if (skipNumberInput) {
+      skipNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.jump = parseBoundedInt(e.target.value, 1, 100, thread.jump || 1);
+        e.target.value = String(thread.jump);
         if (index === getKidTargetThreadIndex()) {
           jumpSlider.value = thread.jump;
           updateKidControlValues();
         }
         redrawForPathChange();
+      });
+      skipNumberInput.addEventListener('change', e => {
+        thread.jump = parseBoundedInt(e.target.value, 1, 100, thread.jump || 1);
+        e.target.value = String(thread.jump);
       });
     }
 
@@ -2830,29 +4005,37 @@ function renderThreadControls() {
       });
     }
 
-    var connectMultiplierInput = document.getElementById(`connect-m-${index}`);
-    if (connectMultiplierInput) {
-      connectMultiplierInput.addEventListener('input', e => {
-        thread.connectMultiplier = parseInt(e.target.value, 10);
-        var mChip = document.getElementById(`adv-connect-m-value-${index}`);
-        if (mChip) mChip.textContent = String(thread.connectMultiplier);
+    var connectMultiplierNumberInput = document.getElementById(`connect-m-number-${index}`);
+    if (connectMultiplierNumberInput) {
+      connectMultiplierNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
+        e.target.value = String(thread.connectMultiplier);
         if (index === getKidTargetThreadIndex()) {
           syncKidControlsFromSelectedThread();
         }
         redrawForPathChange();
       });
+      connectMultiplierNumberInput.addEventListener('change', e => {
+        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
+        e.target.value = String(thread.connectMultiplier);
+      });
     }
 
-    var connectOffsetInput = document.getElementById(`connect-offset-${index}`);
-    if (connectOffsetInput) {
-      connectOffsetInput.addEventListener('input', e => {
-        thread.connectOffset = parseInt(e.target.value, 10);
-        var offsetChip = document.getElementById(`adv-connect-offset-value-${index}`);
-        if (offsetChip) offsetChip.textContent = String(thread.connectOffset);
+    var connectOffsetNumberInput = document.getElementById(`connect-offset-number-${index}`);
+    if (connectOffsetNumberInput) {
+      connectOffsetNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
+        e.target.value = String(thread.connectOffset);
         if (index === getKidTargetThreadIndex()) {
           syncKidControlsFromSelectedThread();
         }
         redrawForPathChange();
+      });
+      connectOffsetNumberInput.addEventListener('change', e => {
+        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
+        e.target.value = String(thread.connectOffset);
       });
     }
 
@@ -2872,18 +4055,23 @@ function renderThreadControls() {
       });
     }
 
-    document.getElementById(`width-${index}`).addEventListener('input', e => {
-      thread.width = parseInt(e.target.value, 10);
-      var sizeValueChip = document.getElementById(`adv-size-value-${index}`);
-      if (sizeValueChip) {
-        sizeValueChip.textContent = String(thread.width);
-      }
-      if (index === getKidTargetThreadIndex()) {
-        widthSlider.value = thread.width;
-        updateKidControlValues();
-      }
-      redrawAnimationInPlace();
-    });
+    var widthNumberInput = document.getElementById(`width-number-${index}`);
+    if (widthNumberInput) {
+      widthNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
+        e.target.value = String(thread.width);
+        if (index === getKidTargetThreadIndex()) {
+          widthSlider.value = thread.width;
+          updateKidControlValues();
+        }
+        redrawAnimationInPlace();
+      });
+      widthNumberInput.addEventListener('change', e => {
+        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
+        e.target.value = String(thread.width);
+      });
+    }
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
       thread.color = e.target.checked ? 'rainbow' : '#000000';
@@ -2947,17 +4135,22 @@ function handleHolesSliderChange() {
   redrawForPathChange();
 }
 
-function handleAdvancedHolesSliderChange() {
-  holesSlider.value = advancedHolesSlider.value;
+function handleAdvancedHolesNumberChange() {
+  if (!advancedHolesNumberInput) return;
+  if (advancedHolesNumberInput.value === '') return;
+  var holeCount = parseBoundedInt(advancedHolesNumberInput.value, 3, MAX_HOLES, DEFAULT_HOLES);
+  advancedHolesNumberInput.value = String(holeCount);
+  holesSlider.value = String(holeCount);
   updateKidControlValues();
-  // Hole count changes point geometry and stitch path.
   redrawForPathChange();
 }
 
 holesSlider.addEventListener('input', handleHolesSliderChange);
 holesSlider.addEventListener('change', handleHolesSliderChange);
-advancedHolesSlider.addEventListener('input', handleAdvancedHolesSliderChange);
-advancedHolesSlider.addEventListener('change', handleAdvancedHolesSliderChange);
+if (advancedHolesNumberInput) {
+  advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberChange);
+  advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberChange);
+}
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
   syncHoleNumberToggles();
@@ -3023,18 +4216,17 @@ widthSlider.addEventListener('input', () => {
 
 animateBtn.addEventListener('click', toggleAnimationPlayback);
 
-surpriseBtn.addEventListener('click', () => {
-  var targetIndex = getKidTargetThreadIndex();
-  if (targetIndex < 0) return;
-  holesSlider.value = Math.floor(Math.random() * (MAX_HOLES - 19)) + 20;
-  jumpSlider.value = Math.floor(Math.random() * 50) + 1;
-  widthSlider.value = Math.floor(Math.random() * 8) + 1;
-  updateKidControlValues();
-  threads[targetIndex].jump = parseInt(jumpSlider.value, 10);
-  threads[targetIndex].width = parseInt(widthSlider.value, 10);
-  threads[targetIndex].color = 'rainbow';
-  renderThreadControls();
-  redrawForPathChange();
+discoveryToggleBtn.addEventListener('click', () => {
+  discoveryPanel.classList.toggle('open');
+  if (discoveryPanel.classList.contains('open')) {
+    hasUnseenDiscoveries = false;
+  }
+  syncDiscoveryToggleButton();
+});
+
+closeDiscoveryBtn.addEventListener('click', () => {
+  discoveryPanel.classList.remove('open');
+  syncDiscoveryToggleButton();
 });
 
 gearBtn.addEventListener('click', () => {
@@ -3077,15 +4269,18 @@ resetTempoBtn.addEventListener('click', () => {
 });
 
 kidTempoSlowBtn.addEventListener('click', () => {
-  applyTempoValue(KID_TEMPO_PRESETS.slow);
+  var presets = getKidTempoPresetsForSong(currentSongId);
+  applyTempoValue(presets.slow);
 });
 
 kidTempoNormalBtn.addEventListener('click', () => {
-  applyTempoValue(KID_TEMPO_PRESETS.normal);
+  var presets = getKidTempoPresetsForSong(currentSongId);
+  applyTempoValue(presets.normal);
 });
 
 kidTempoFastBtn.addEventListener('click', () => {
-  applyTempoValue(KID_TEMPO_PRESETS.fast);
+  var presets = getKidTempoPresetsForSong(currentSongId);
+  applyTempoValue(presets.fast);
 });
 
 exportSvgBtn.addEventListener('click', () => {
@@ -3108,8 +4303,15 @@ exportOptionsModal.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  if (!exportOptionsModal.classList.contains('open')) return;
-  closeExportOptionsModal();
+  if (exportOptionsModal.classList.contains('open')) {
+    closeExportOptionsModal();
+    return;
+  }
+  if (discoveryPanel.classList.contains('open')) {
+    discoveryPanel.classList.remove('open');
+    syncDiscoveryToggleButton();
+    return;
+  }
 });
 
 document.getElementById('add-thread').addEventListener('click', () => {
@@ -3131,6 +4333,24 @@ kidThreadToggle.addEventListener('click', () => {
   }
 });
 
+kidSongToggle.addEventListener('click', () => {
+  if (kidSongToggle.disabled) return;
+  if (hasUnseenSongUnlock) {
+    hasUnseenSongUnlock = false;
+  }
+  var isOpen = !kidSongMenu.hasAttribute('hidden');
+  if (isOpen) {
+    kidSongMenu.setAttribute('hidden', '');
+    kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.classList.remove('is-active');
+  } else {
+    kidSongMenu.removeAttribute('hidden');
+    kidSongToggle.setAttribute('aria-expanded', 'true');
+    kidSongToggle.classList.add('is-active');
+  }
+  syncSongPickerToggleButton();
+});
+
 kidThreadMenu.addEventListener('click', (event) => {
   var option = event.target.closest('.kid-thread-option');
   if (!option) return;
@@ -3143,11 +4363,29 @@ kidThreadMenu.addEventListener('click', (event) => {
   syncKidControlsFromSelectedThread();
 });
 
+kidSongMenu.addEventListener('click', (event) => {
+  var option = event.target.closest('.kid-song-option');
+  if (!option) return;
+  var songId = option.dataset.songId;
+  if (!songId) return;
+  kidSongMenu.setAttribute('hidden', '');
+  kidSongToggle.setAttribute('aria-expanded', 'false');
+  kidSongToggle.classList.remove('is-active');
+  syncSongPickerToggleButton();
+  setCurrentSong(songId);
+});
+
 document.addEventListener('click', (event) => {
-  if (kidThreadMenu.hasAttribute('hidden')) return;
-  if (kidThreadPicker.contains(event.target)) return;
-  kidThreadMenu.setAttribute('hidden', '');
-  kidThreadToggle.setAttribute('aria-expanded', 'false');
+  if (!kidThreadMenu.hasAttribute('hidden') && !kidThreadPicker.contains(event.target)) {
+    kidThreadMenu.setAttribute('hidden', '');
+    kidThreadToggle.setAttribute('aria-expanded', 'false');
+  }
+  if (!kidSongMenu.hasAttribute('hidden') && !kidSongPicker.contains(event.target)) {
+    kidSongMenu.setAttribute('hidden', '');
+    kidSongToggle.setAttribute('aria-expanded', 'false');
+    kidSongToggle.classList.remove('is-active');
+    syncSongPickerToggleButton();
+  }
 });
 
 if (window.ResizeObserver) {
@@ -3213,6 +4451,8 @@ musicToggleBtn.addEventListener('click', () => {
 renderThreadControls();
 setCurrentShape('circle', false);
 advancedPanel.classList.remove('open');
+discoveryPanel.classList.remove('open');
+renderAdvancedTempoOptions();
 applyDefaultHoles();
 applyDefaultSkipAndSize();
 applyDefaultTempo();
@@ -3221,8 +4461,11 @@ syncHoleNumberToggles();
 syncBorderControls();
 syncMusicToggleButton();
 refreshKidThreadPicker();
+renderDiscoveryLibrary();
+syncDiscoveryToggleButton();
 syncBasicMathSliderVisibility();
 fitCanvasToStage();
+scheduleDiscoveryEvaluation();
 
 </script>
 </body>
