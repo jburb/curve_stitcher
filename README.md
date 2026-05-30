@@ -24,8 +24,9 @@ Contributor terms:
 1. Dynamic add/multiply bounds guardrail
 2. Triangula experience (Sierpinski world)
 3. Mashrabiya experience (Islamic rosette world)
-4. Stitch library (offline-first)
-5. Advanced stitch ribbon motion (Option 4)
+4. Experience title bar (animated stitched reveal)
+5. Stitch library (offline-first)
+6. Advanced stitch ribbon motion (Option 4)
 
 ## Recently Completed
 
@@ -91,7 +92,14 @@ Contributor terms:
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-5. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+5. **Experience title bar (animated stitched reveal)**
+	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
+	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
+	- Trigger the reveal on initial page load and on transition into a new experience/world.
+	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
+	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
+
+6. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
@@ -110,5 +118,6 @@ Contributor terms:
 1. Dynamic add/multiply bounds guardrail
 2. Triangula experience (Sierpinski world)
 3. Mashrabiya experience (Islamic rosette world)
-4. Stitch library (offline-first)
-5. Advanced stitch ribbon motion (Option 4)
+4. Experience title bar (animated stitched reveal)
+5. Stitch library (offline-first)
+6. Advanced stitch ribbon motion (Option 4)
