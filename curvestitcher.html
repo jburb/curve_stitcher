@@ -658,6 +658,52 @@
   .discovery-card .advanced-reset-btn {
     font-size: 12px;
   }
+  .discovery-return-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0 0 10px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid #e2e9f7;
+  }
+  .discovery-return-row[hidden] {
+    display: none !important;
+  }
+  .discovery-back-btn {
+    border: 1px solid #c7d7ef;
+    background: #f4f8ff;
+    color: #274774;
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.15s;
+    white-space: nowrap;
+  }
+  .discovery-back-btn:hover {
+    transform: scale(1.03);
+  }
+  .return-thread-trail-line {
+    position: fixed;
+    height: 2px;
+    border-radius: 999px;
+    transform-origin: 0 50%;
+    pointer-events: none;
+    z-index: 95;
+    background: linear-gradient(90deg, rgba(33, 130, 196, 0.85) 0%, rgba(33, 130, 196, 0.15) 72%, rgba(33, 130, 196, 0) 100%);
+  }
+  .return-thread-trail-head {
+    position: fixed;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #1982c4;
+    box-shadow: 0 0 0 3px rgba(25, 130, 196, 0.22);
+    pointer-events: none;
+    z-index: 96;
+  }
   .discovery-subtitle {
     font-size: 12px;
     color: #5f7090;
@@ -1063,6 +1109,9 @@
     <h3>Discovery Library</h3>
     <button id="close-discovery" type="button">Close</button>
   </div>
+  <div class="discovery-return-row" id="discovery-return-row" hidden>
+    <button id="back-to-stitching" class="discovery-back-btn" type="button" title="Follow the thread back to Stitching" aria-label="Follow the thread back to Stitching">↩ Stitching</button>
+  </div>
   <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
 
   <div id="discovery-cards"></div>
@@ -1151,6 +1200,30 @@
     <div class="slider-label"><span class="thread-size-icon" aria-hidden="true">◍</span> Thread Size <span class="slider-value" id="width-value">2</span></div>
     <input id="width" type="range" min="1" max="10" value="2">
   </div>
+  <div class="slider-block" id="triangula-color-scope-block" style="display:none;">
+    <div class="slider-label">🎨 Triangles Color</div>
+    <select id="triangula-color-scope" class="curve-type-select">
+      <option value="all">All triangles</option>
+      <option value="band-1">1st triangle band</option>
+      <option value="band-2">2nd triangle band</option>
+      <option value="band-4">4th triangle band</option>
+    </select>
+  </div>
+  <div class="slider-block" id="triangula-mode-block" style="display:none;">
+    <div class="slider-label">🧭 Mode</div>
+    <select id="triangula-construction-mode" class="curve-type-select">
+      <option value="cut">Cutting mode</option>
+      <option value="shrink-duplicate">Shrinking + duplicating mode</option>
+    </select>
+  </div>
+  <div class="slider-block" id="triangula-start-block" style="display:none;">
+    <div class="slider-label">▶ Start triangles <span class="slider-value" id="triangula-start-value">3</span></div>
+    <input id="triangula-start-count" type="range" min="1" max="729" value="3">
+  </div>
+  <div class="slider-block" id="triangula-target-block" style="display:none;">
+    <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">81</span></div>
+    <input id="triangula-target-count" type="range" min="1" max="729" value="81">
+  </div>
 </div>
 
 <!-- ADVANCED PANEL -->
@@ -1189,6 +1262,18 @@
       <div class="advanced-global-title">Export</div>
       <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Export SVG</button></div>
       <div class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
+    </div>
+    <div class="advanced-subsection" id="triangula-advanced-subsection" style="display:none;">
+      <div class="advanced-global-title">Triangula Animation</div>
+      <div class="advanced-global-row">Fractal mode: <select id="triangula-fractal-mode">
+        <option value="series" selected>Series</option>
+        <option value="parallel">Parallel</option>
+      </select></div>
+      <div class="advanced-global-row">Canvas fit: <select id="triangula-fit-mode">
+        <option value="dynamic">Dynamic fit</option>
+        <option value="locked">Locked frame</option>
+      </select></div>
+      <div class="advanced-global-help">Dynamic fit keeps future recursive steps visible while animating.</div>
     </div>
   </div>
   <div class="advanced-section-title">Threads</div>
@@ -1253,11 +1338,36 @@ var exportConfirmBtn = document.getElementById('export-confirm-btn');
 var exportCancelBtn = document.getElementById('export-cancel-btn');
 var canvasContainer = document.getElementById('canvas-container');
 var canvasStage = document.getElementById('canvas-stage');
+var shapeButtons = Array.prototype.slice.call(document.querySelectorAll('.shape-btn'));
+var holesSliderBlock = holesSlider ? holesSlider.closest('.slider-block') : null;
+var stitchBySliderBlock = kidStitchBySelect ? kidStitchBySelect.closest('.slider-block') : null;
+var jumpSliderBlock = document.getElementById('add-slider-block');
+var multiplyMathSliderBlock = document.getElementById('multiply-slider-block');
+var widthSliderBlock = widthSlider ? widthSlider.closest('.slider-block') : null;
+var triangulaColorScopeBlock = document.getElementById('triangula-color-scope-block');
+var triangulaModeBlock = document.getElementById('triangula-mode-block');
+var triangulaStartBlock = document.getElementById('triangula-start-block');
+var triangulaTargetBlock = document.getElementById('triangula-target-block');
+var triangulaColorScopeSelect = document.getElementById('triangula-color-scope');
+var triangulaConstructionModeSelect = document.getElementById('triangula-construction-mode');
+var triangulaStartSlider = document.getElementById('triangula-start-count');
+var triangulaTargetSlider = document.getElementById('triangula-target-count');
+var triangulaStartValue = document.getElementById('triangula-start-value');
+var triangulaTargetValue = document.getElementById('triangula-target-value');
+var triangulaFractalModeSelect = document.getElementById('triangula-fractal-mode');
+var triangulaFitModeSelect = document.getElementById('triangula-fit-mode');
+var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-subsection');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
+var addThreadBtn = document.getElementById('add-thread');
+var threadControlsContainer = document.getElementById('thread-controls');
+var advancedThreadsTitle = document.querySelector('#advanced-panel .advanced-section-title');
 var holeNumbersToggleBtn = document.getElementById('toggle-hole-numbers');
+var backToStitchingBtn = document.getElementById('back-to-stitching');
+var discoveryReturnRow = document.getElementById('discovery-return-row');
 var discoveryToggleBtn = document.getElementById('discovery-toggle');
 var closeDiscoveryBtn = document.getElementById('close-discovery');
+var paletteContainer = document.getElementById('palette');
 var musicToggleBtn = document.getElementById('toggle-music');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
@@ -1412,17 +1522,75 @@ var EXPERIENCE_LIBRARY = {
     strokeColor: '#1f4f94',
     infoTitle: 'About Stitching',
     infoText: 'Stitching turns math into thread motion. Pick a shape, set holes, then stitch by adding or multiplying to explore geometric patterns and unlock new worlds.',
-    narrationText: 'Welcome to Stitching. Here, arithmetic becomes thread paths. Adjust holes, choose add or multiply, and watch geometry emerge one stitch at a time.'
+    narrationText: 'Welcome to Stitching. Here, arithmetic becomes thread paths. Adjust holes, choose add or multiply, and watch geometry emerge one stitch at a time.',
+    uiProfile: {
+      allowedShapes: ['circle', 'triangle', 'square', 'star', 'heart'],
+      fixedShape: null,
+      threadsEnabled: true,
+      allowMultipleThreads: true,
+      paletteMode: 'thread',
+      supportsHoleNumbers: true,
+      supportsBorder: true,
+      basicControls: {
+        holes: true,
+        stitchBy: true,
+        add: true,
+        multiply: true,
+        width: true
+      },
+      advancedControls: {
+        shape: true,
+        border: true,
+        holeNumbers: true,
+        holesNumber: true,
+        threads: true
+      }
+    }
   },
   triangula: {
     id: 'triangula',
-    title: 'Triangula',
+    title: 'TrIAnguLa',
     titleFontFamily: 'EiforyaTypeface',
     titleSvgPath: 'assets/images/experience_title_triangula.svg',
     strokeColor: '#256f7a',
     infoTitle: 'About Triangula',
     infoText: 'Triangula explores recursive triangle patterns inspired by Sierpinski structures. Zoom and iterate to discover repeating self-similarity.',
-    narrationText: 'Welcome to Triangula. This world explores self-similar triangle growth and recursive geometry.'
+    narrationText: 'Welcome to Triangula. This world explores self-similar triangle growth and recursive geometry.',
+    uiProfile: {
+      allowedShapes: ['triangle'],
+      fixedShape: 'triangle',
+      threadsEnabled: false,
+      allowMultipleThreads: false,
+      paletteMode: 'triangula-banded',
+      triangulaColorModes: ['all', 'band-1', 'band-2', 'band-4'],
+      triangulaConstructionModes: ['cut', 'shrink-duplicate'],
+      supportsHoleNumbers: false,
+      supportsBorder: false,
+      basicControls: {
+        holes: false,
+        stitchBy: false,
+        add: false,
+        multiply: false,
+        width: false,
+        triangulaColorScope: true,
+        triangulaConstructionMode: true,
+        triangulaStartCount: true,
+        triangulaTargetCount: true
+      },
+      advancedControls: {
+        shape: true,
+        border: false,
+        holeNumbers: false,
+        holesNumber: false,
+        threads: false,
+        triangulaAnimationFitMode: true
+      },
+      animationBehavior: {
+        cut: 'draw-cut-paths-then-remove',
+        shrinkDuplicate: 'draw-duplication-paths-then-scale',
+        viewportPolicy: 'fit-during-steps'
+      }
+    }
   },
   squarus: {
     id: 'squarus',
@@ -1432,7 +1600,30 @@ var EXPERIENCE_LIBRARY = {
     strokeColor: '#5a4bb2',
     infoTitle: 'About Squarus',
     infoText: 'Squarus will focus on polyonimo generation through square counts, with parametric exploration of filling shapes using polyonimoes at different square-count levels.',
-    narrationText: 'Welcome to Squarus. This upcoming world centers on polyonimo generation by square counts, with parametric exploration of filling shapes using different square-count polyonimoes.'
+    narrationText: 'Welcome to Squarus. This upcoming world centers on polyonimo generation by square counts, with parametric exploration of filling shapes using different square-count polyonimoes.',
+    uiProfile: {
+      allowedShapes: ['square'],
+      fixedShape: 'square',
+      threadsEnabled: false,
+      allowMultipleThreads: false,
+      paletteMode: 'global',
+      supportsHoleNumbers: false,
+      supportsBorder: false,
+      basicControls: {
+        holes: false,
+        stitchBy: false,
+        add: false,
+        multiply: false,
+        width: false
+      },
+      advancedControls: {
+        shape: true,
+        border: false,
+        holeNumbers: false,
+        holesNumber: false,
+        threads: false
+      }
+    }
   },
   mashrabiya: {
     id: 'mashrabiya',
@@ -1442,11 +1633,46 @@ var EXPERIENCE_LIBRARY = {
     strokeColor: '#82511f',
     infoTitle: 'About Mashrabiya',
     infoText: 'Mashrabiya will open into Islamic rosette and lattice explorations built from radial symmetry.',
-    narrationText: 'Welcome to Mashrabiya. This upcoming world explores radial rosette geometry and ornamental lattices.'
+    narrationText: 'Welcome to Mashrabiya. This upcoming world explores radial rosette geometry and ornamental lattices.',
+    uiProfile: {
+      allowedShapes: ['star'],
+      fixedShape: 'star',
+      threadsEnabled: false,
+      allowMultipleThreads: false,
+      paletteMode: 'global',
+      supportsHoleNumbers: false,
+      supportsBorder: false,
+      basicControls: {
+        holes: false,
+        stitchBy: false,
+        add: false,
+        multiply: false,
+        width: false
+      },
+      advancedControls: {
+        shape: true,
+        border: false,
+        holeNumbers: false,
+        holesNumber: false,
+        threads: false
+      }
+    }
   }
 };
 var currentExperienceId = 'stitching';
 var experienceNarrationUtterance = null;
+var triangulaColorMode = 'all';
+var triangulaConstructionMode = 'cut';
+var triangulaStartCount = 3;
+var triangulaTargetCount = 81;
+var triangulaFractalMode = 'series';
+var triangulaFitMode = 'locked';
+var triangulaAnimationState = null;
+var triangulaBandColors = {
+  band1: '#256f7a',
+  band2: '#4d9aad',
+  band4: '#88c4cf'
+};
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 var joyAudio = new Audio(MUSIC_LIBRARY[currentSongId].path);
@@ -1492,6 +1718,201 @@ function isReduceMotionPreferred() {
 
 function getExperienceById(experienceId) {
   return EXPERIENCE_LIBRARY[experienceId] || EXPERIENCE_LIBRARY.stitching;
+}
+
+function resolveExperienceId(experienceRef) {
+  if (!experienceRef) return null;
+  if (EXPERIENCE_LIBRARY[experienceRef]) return experienceRef;
+
+  var normalized = String(experienceRef).trim().toLowerCase();
+  if (!normalized) return null;
+
+  var keys = Object.keys(EXPERIENCE_LIBRARY);
+  for (var i = 0; i < keys.length; i++) {
+    var id = keys[i];
+    var entry = EXPERIENCE_LIBRARY[id];
+    if (!entry) continue;
+    if (id.toLowerCase() === normalized) return id;
+    if (entry.title && String(entry.title).trim().toLowerCase() === normalized) return id;
+  }
+  return null;
+}
+
+function getExperienceUiProfile(experienceId) {
+  var experience = getExperienceById(experienceId);
+  return experience.uiProfile || EXPERIENCE_LIBRARY.stitching.uiProfile;
+}
+
+function setElementDisplay(element, isVisible, displayValue) {
+  if (!element) return;
+  element.style.display = isVisible ? (displayValue || '') : 'none';
+}
+
+function applyShapePolicy(profile) {
+  var allowedShapes = (profile && profile.allowedShapes && profile.allowedShapes.length) ? profile.allowedShapes : ['circle', 'triangle', 'square', 'star', 'heart'];
+  var fixedShape = profile ? profile.fixedShape : null;
+
+  shapeButtons.forEach(function(btn) {
+    var shape = btn.getAttribute('data-shape') || '';
+    var allowed = allowedShapes.indexOf(shape) !== -1;
+    setElementDisplay(btn, allowed, 'flex');
+    btn.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+    if (!allowed) {
+      btn.classList.remove('active');
+      btn.tabIndex = -1;
+    } else {
+      btn.removeAttribute('tabindex');
+    }
+  });
+
+  if (advancedShapeSelect) {
+    var hasAllowedOption = false;
+    Array.prototype.forEach.call(advancedShapeSelect.options, function(option) {
+      var allowed = allowedShapes.indexOf(option.value) !== -1;
+      option.hidden = !allowed;
+      option.disabled = !allowed;
+      if (allowed) hasAllowedOption = true;
+    });
+    advancedShapeSelect.disabled = !!fixedShape || !hasAllowedOption;
+  }
+
+  if (fixedShape) {
+    setCurrentShape(fixedShape);
+    return;
+  }
+
+  if (allowedShapes.indexOf(currentShape) === -1 && allowedShapes.length) {
+    setCurrentShape(allowedShapes[0]);
+  }
+}
+
+function applyThreadPolicy(profile) {
+  var threadsEnabled = !profile || profile.threadsEnabled !== false;
+  var allowMultipleThreads = !profile || profile.allowMultipleThreads !== false;
+
+  if (!threadsEnabled || !allowMultipleThreads) {
+    if (threads.length > 1) {
+      threads.splice(1);
+    }
+    if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
+      selectedThreadIndex = threads.length ? 0 : -1;
+    }
+  }
+
+  setElementDisplay(addMagicThreadBtn, threadsEnabled && allowMultipleThreads, '');
+  setElementDisplay(removeLastThreadBtn, threadsEnabled && allowMultipleThreads && threads.length > 1, '');
+  setElementDisplay(kidThreadPicker, threadsEnabled && allowMultipleThreads && threads.length > 1, 'inline-flex');
+  setElementDisplay(addThreadBtn, threadsEnabled && allowMultipleThreads, '');
+  setElementDisplay(advancedThreadsTitle, threadsEnabled, '');
+  setElementDisplay(threadControlsContainer, threadsEnabled, '');
+
+  renderThreadControls();
+}
+
+function applyBasicControlPolicy(profile) {
+  var controls = profile && profile.basicControls ? profile.basicControls : null;
+  if (!controls) return;
+  setElementDisplay(holesSliderBlock, controls.holes !== false, '');
+  setElementDisplay(stitchBySliderBlock, controls.stitchBy !== false, '');
+  setElementDisplay(jumpSliderBlock, controls.add !== false, '');
+  setElementDisplay(multiplyMathSliderBlock, controls.multiply !== false, '');
+  setElementDisplay(widthSliderBlock, controls.width !== false, '');
+  setElementDisplay(triangulaColorScopeBlock, controls.triangulaColorScope === true, '');
+  setElementDisplay(triangulaModeBlock, controls.triangulaConstructionMode === true, '');
+  setElementDisplay(triangulaStartBlock, controls.triangulaStartCount === true, '');
+  setElementDisplay(triangulaTargetBlock, controls.triangulaTargetCount === true, '');
+}
+
+function applyAdvancedControlPolicy(profile) {
+  var controls = profile && profile.advancedControls ? profile.advancedControls : null;
+  if (!controls) return;
+  if (advancedShapeSelect) {
+    setElementDisplay(advancedShapeSelect.parentElement, controls.shape !== false, '');
+  }
+  if (advancedBorderEnabledInput) {
+    setElementDisplay(advancedBorderEnabledInput.parentElement, controls.border !== false, '');
+  }
+  if (advancedHoleNumbersToggle) {
+    setElementDisplay(advancedHoleNumbersToggle.parentElement, controls.holeNumbers !== false, '');
+  }
+  if (advancedHolesNumberInput) {
+    setElementDisplay(advancedHolesNumberInput.parentElement, controls.holesNumber !== false, '');
+  }
+  if (controls.threads === false) {
+    setElementDisplay(advancedThreadsTitle, false, '');
+    setElementDisplay(addThreadBtn, false, '');
+    setElementDisplay(threadControlsContainer, false, '');
+  }
+  setElementDisplay(triangulaAdvancedSubsection, controls.triangulaAnimationFitMode === true, '');
+}
+
+function syncDiscoveryReturnRowVisibility() {
+  if (!discoveryReturnRow) return;
+  var showReturn = currentExperienceId !== 'stitching';
+  if (showReturn) {
+    discoveryReturnRow.removeAttribute('hidden');
+  } else {
+    discoveryReturnRow.setAttribute('hidden', '');
+  }
+}
+
+function applyTopBarPolicy(profile) {
+  var supportsHoleNumbers = !profile || profile.supportsHoleNumbers !== false;
+  setElementDisplay(holeNumbersToggleBtn, supportsHoleNumbers, 'flex');
+  syncDiscoveryReturnRowVisibility();
+}
+
+function applyExperienceUiPolicy() {
+  var profile = getExperienceUiProfile(currentExperienceId);
+  applyShapePolicy(profile);
+  applyThreadPolicy(profile);
+  applyBasicControlPolicy(profile);
+  applyAdvancedControlPolicy(profile);
+  applyTopBarPolicy(profile);
+  if (paletteContainer) {
+    paletteContainer.dataset.paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
+  }
+  triangulaColorMode = (profile && profile.triangulaColorModes && profile.triangulaColorModes.length) ? profile.triangulaColorModes[0] : 'all';
+  if (triangulaColorScopeSelect) {
+    triangulaColorScopeSelect.value = triangulaColorMode;
+  }
+  if (triangulaConstructionModeSelect) {
+    triangulaConstructionModeSelect.value = triangulaConstructionMode;
+  }
+  syncTriangulaControls();
+}
+
+function syncTriangulaControls() {
+  if (triangulaStartCount < 1) triangulaStartCount = 1;
+
+  if (triangulaTargetCount < triangulaStartCount) {
+    triangulaTargetCount = triangulaStartCount;
+  }
+
+  if (triangulaStartSlider) {
+    triangulaStartSlider.value = String(triangulaStartCount);
+  }
+  if (triangulaTargetSlider) {
+    triangulaTargetSlider.value = String(triangulaTargetCount);
+  }
+  if (triangulaStartValue) {
+    triangulaStartValue.textContent = String(triangulaStartCount);
+  }
+  if (triangulaTargetValue) {
+    triangulaTargetValue.textContent = String(triangulaTargetCount);
+  }
+  if (triangulaColorScopeSelect) {
+    triangulaColorScopeSelect.value = triangulaColorMode;
+  }
+  if (triangulaConstructionModeSelect) {
+    triangulaConstructionModeSelect.value = triangulaConstructionMode;
+  }
+  if (triangulaFractalModeSelect) {
+    triangulaFractalModeSelect.value = triangulaFractalMode;
+  }
+  if (triangulaFitModeSelect) {
+    triangulaFitModeSelect.value = triangulaFitMode;
+  }
 }
 
 function applyExperienceOverlayPosition(positionClass) {
@@ -1619,6 +2040,7 @@ function setCurrentExperience(experienceId, options) {
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
+  applyExperienceUiPolicy();
   applyCurrentExperienceInfo();
   renderExperienceTitleStatic();
 }
@@ -1748,6 +2170,135 @@ function animateFloatingDiscoveryIcon(iconText, startPoint, endPoint, delayMs) {
   window.setTimeout(function() {
     token.remove();
   }, durationMs + delay + 120);
+}
+
+function animateReturnToStitchingTrail(startPoint, endPoint) {
+  if (!startPoint || !endPoint || !document.body) return;
+
+  var dx = endPoint.x - startPoint.x;
+  var dy = endPoint.y - startPoint.y;
+  var distance = Math.sqrt(dx * dx + dy * dy);
+  if (!isFinite(distance) || distance < 8) return;
+
+  var angle = Math.atan2(dy, dx);
+  var trailColor = getActiveTrailColor();
+  var trailColorStrong = toRgbaColor(trailColor, 0.85);
+  var trailColorSoft = toRgbaColor(trailColor, 0.18);
+  var trailColorNone = toRgbaColor(trailColor, 0);
+
+  var line = document.createElement('div');
+  line.className = 'return-thread-trail-line';
+  line.style.left = Math.round(startPoint.x) + 'px';
+  line.style.top = Math.round(startPoint.y) + 'px';
+  line.style.width = Math.round(distance) + 'px';
+  line.style.transform = 'rotate(' + angle + 'rad) scaleX(0.08)';
+  line.style.background = 'linear-gradient(90deg, ' + trailColorStrong + ' 0%, ' + trailColorSoft + ' 72%, ' + trailColorNone + ' 100%)';
+
+  var head = document.createElement('div');
+  head.className = 'return-thread-trail-head';
+  head.style.left = Math.round(startPoint.x - 3) + 'px';
+  head.style.top = Math.round(startPoint.y - 3) + 'px';
+  head.style.background = trailColor;
+  head.style.boxShadow = '0 0 0 3px ' + toRgbaColor(trailColor, 0.22);
+
+  document.body.appendChild(line);
+  document.body.appendChild(head);
+
+  if (typeof line.animate === 'function' && typeof head.animate === 'function') {
+    var lineAnim = line.animate(
+      [
+        { transform: 'rotate(' + angle + 'rad) scaleX(0.08)', opacity: 0 },
+        { transform: 'rotate(' + angle + 'rad) scaleX(1)', opacity: 1, offset: 0.42 },
+        { transform: 'rotate(' + angle + 'rad) scaleX(1)', opacity: 0, offset: 1 }
+      ],
+      {
+        duration: 520,
+        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+        fill: 'forwards'
+      }
+    );
+    lineAnim.onfinish = function() {
+      line.remove();
+    };
+    lineAnim.oncancel = function() {
+      line.remove();
+    };
+
+    var headAnim = head.animate(
+      [
+        { transform: 'translate(0, 0) scale(0.8)', opacity: 0 },
+        { transform: 'translate(' + Math.round(dx * 0.88) + 'px, ' + Math.round(dy * 0.88) + 'px) scale(1)', opacity: 1, offset: 0.78 },
+        { transform: 'translate(' + Math.round(dx) + 'px, ' + Math.round(dy) + 'px) scale(0.9)', opacity: 0, offset: 1 }
+      ],
+      {
+        duration: 520,
+        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+        fill: 'forwards'
+      }
+    );
+    headAnim.onfinish = function() {
+      head.remove();
+    };
+    headAnim.oncancel = function() {
+      head.remove();
+    };
+    return;
+  }
+
+  window.setTimeout(function() {
+    line.remove();
+    head.remove();
+  }, 560);
+}
+
+function getActiveTrailColor() {
+  var fallbackColor = '#1982c4';
+
+  if (currentExperienceId === 'triangula') {
+    if (triangulaColorMode === 'band-1') return triangulaBandColors.band1 || fallbackColor;
+    if (triangulaColorMode === 'band-2') return triangulaBandColors.band2 || fallbackColor;
+    if (triangulaColorMode === 'band-4') return triangulaBandColors.band4 || fallbackColor;
+    return normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1 || fallbackColor);
+  }
+
+  var targetIndex = getKidTargetThreadIndex();
+  if (targetIndex >= 0 && threads[targetIndex]) {
+    var chosen = threads[targetIndex].color;
+    if (chosen && chosen !== 'rainbow') return chosen;
+  }
+
+  return fallbackColor;
+}
+
+function toRgbaColor(colorValue, alpha) {
+  var fallback = 'rgba(25, 130, 196, ' + String(alpha) + ')';
+  var color = String(colorValue || '').trim();
+  if (!color) return fallback;
+
+  var shortHex = /^#([0-9a-f]{3})$/i.exec(color);
+  if (shortHex) {
+    var sh = shortHex[1];
+    var sr = parseInt(sh.charAt(0) + sh.charAt(0), 16);
+    var sg = parseInt(sh.charAt(1) + sh.charAt(1), 16);
+    var sb = parseInt(sh.charAt(2) + sh.charAt(2), 16);
+    return 'rgba(' + sr + ', ' + sg + ', ' + sb + ', ' + String(alpha) + ')';
+  }
+
+  var fullHex = /^#([0-9a-f]{6})$/i.exec(color);
+  if (fullHex) {
+    var fh = fullHex[1];
+    var fr = parseInt(fh.slice(0, 2), 16);
+    var fg = parseInt(fh.slice(2, 4), 16);
+    var fb = parseInt(fh.slice(4, 6), 16);
+    return 'rgba(' + fr + ', ' + fg + ', ' + fb + ', ' + String(alpha) + ')';
+  }
+
+  var rgb = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i.exec(color);
+  if (rgb) {
+    return 'rgba(' + rgb[1] + ', ' + rgb[2] + ', ' + rgb[3] + ', ' + String(alpha) + ')';
+  }
+
+  return fallback;
 }
 
 function pulseDiscoveryTarget(element, delayMs) {
@@ -2226,11 +2777,23 @@ function renderDiscoveryLibrary() {
     action.type = 'button';
     action.className = 'advanced-reset-btn';
     action.textContent = 'Travel to ' + config.experienceName;
-    action.addEventListener('click', function(experienceName) {
+    action.addEventListener('click', function(experienceName, songId) {
       return function() {
-        alert(experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
+        var experienceId = resolveExperienceId(experienceName);
+        if (!experienceId) {
+          alert(experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
+          return;
+        }
+
+        setCurrentExperience(experienceId);
+        redrawForPathChange();
+        if (songId) {
+          setCurrentSong(songId);
+        }
+        discoveryPanel.classList.remove('open');
+        syncDiscoveryToggleButton();
       };
-    }(config.experienceName));
+    }(config.experienceName, config.songId));
     card.appendChild(action);
 
     discoveryCards.appendChild(card);
@@ -2617,6 +3180,14 @@ function syncKidStitchByControl() {
 }
 
 function syncBasicMathSliderVisibility() {
+  if (currentExperienceId !== 'stitching') {
+    addSliderBlock.style.display = 'none';
+    multiplySliderBlock.style.display = 'none';
+    jumpSlider.disabled = true;
+    multiplySlider.disabled = true;
+    return;
+  }
+
   var index = getKidTargetThreadIndex();
   var isMultiplyMode = false;
 
@@ -2657,6 +3228,51 @@ function applyThreadSwatchStyle(element, color) {
   } else {
     element.style.background = color || '#1982c4';
   }
+}
+
+function applyExperiencePaletteColorChoice(colorValue) {
+  if (!threads.length) return;
+
+  var profile = getExperienceUiProfile(currentExperienceId);
+  var paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
+  var color = colorValue || '#1982c4';
+
+  if (paletteMode === 'global') {
+    threads.forEach(function(thread) {
+      thread.color = color;
+    });
+    return;
+  }
+
+  if (paletteMode === 'triangula-banded') {
+    var safeColor = normalizeTriangulaFillColor(color, triangulaBandColors.band1);
+    if (triangulaColorMode === 'all') {
+      threads[0].color = safeColor;
+      triangulaBandColors.band1 = safeColor;
+      triangulaBandColors.band2 = safeColor;
+      triangulaBandColors.band4 = safeColor;
+      return;
+    }
+    if (triangulaColorMode === 'band-1') {
+      triangulaBandColors.band1 = safeColor;
+      return;
+    }
+    if (triangulaColorMode === 'band-2') {
+      triangulaBandColors.band2 = safeColor;
+      return;
+    }
+    if (triangulaColorMode === 'band-4') {
+      triangulaBandColors.band4 = safeColor;
+      return;
+    }
+    return;
+  }
+
+  var targetIndex = selectedThreadIndex;
+  if (targetIndex < 0 || targetIndex >= threads.length) {
+    targetIndex = 0;
+  }
+  threads[targetIndex].color = color;
 }
 
 function syncHoleNumberToggles() {
@@ -2833,10 +3449,11 @@ function applyDefaultTempo() {
 }
 
 function stopAnimationIfActive() {
-  if (!animationActive && !animationState) return;
+  if (!animationActive && !animationState && !triangulaAnimationState) return;
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  triangulaAnimationState = null;
   animationPlaybackState = 'idle';
   syncAnimateButtonLabel();
   clearHighlightedHoleNumbers();
@@ -2844,7 +3461,7 @@ function stopAnimationIfActive() {
 }
 
 function pauseAnimationIfActive() {
-  if (!animationActive || !animationState) return;
+  if (!animationActive || (!animationState && !triangulaAnimationState)) return;
   animationActive = false;
   view.onFrame = null;
   animationPlaybackState = 'paused';
@@ -3014,6 +3631,12 @@ function renderAnimationFrame() {
 
 function redrawAnimationInPlace() {
   // Style-only updates should preserve current animation progress.
+  if (triangulaAnimationState) {
+    renderTriangulaAnimationStateFrame(triangulaAnimationState);
+    scheduleDiscoveryEvaluation();
+    return;
+  }
+
   if (!animationState) {
     drawStatic();
     scheduleDiscoveryEvaluation();
@@ -3079,6 +3702,7 @@ function fitCanvasToStage() {
     animationActive = false;
     view.onFrame = null;
     animationState = null;
+    triangulaAnimationState = null;
     updateMusicPlaybackState();
   }
 
@@ -3573,6 +4197,498 @@ function drawThread(thread) {
     seg.add(points[fromIndex]);
     seg.add(points[toIndex]);
   }
+}
+
+function triangulaCountToDepth(count) {
+  var safeCount = Math.max(1, Math.floor(Number(count) || 1));
+  var depth = Math.round(Math.log(safeCount) / Math.log(3));
+  if (!isFinite(depth) || depth < 0) depth = 0;
+  return Math.max(0, Math.min(6, depth));
+}
+
+function getTriangulaBaseTriangle(scaleFactor) {
+  var center = view.center;
+  var baseSize = Math.max(120, Math.min(view.size.width, view.size.height) - 56);
+  var scale = isFinite(scaleFactor) ? Math.max(0.45, Math.min(1, scaleFactor)) : 1;
+  var size = baseSize * scale;
+  var half = size / 2;
+  var height = Math.sqrt(3) * half;
+  return [
+    new Point(center.x, center.y - (height / 2)),
+    new Point(center.x - half, center.y + (height / 2)),
+    new Point(center.x + half, center.y + (height / 2))
+  ];
+}
+
+function normalizeTriangulaFillColor(colorValue, fallback) {
+  var fallbackColor = fallback || '#256f7a';
+  if (!colorValue || colorValue === 'rainbow') return fallbackColor;
+  return colorValue;
+}
+
+function getTriangulaFillColorForSlot(slot) {
+  var allColor = normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1);
+  if (triangulaColorMode === 'all') return allColor;
+  if (triangulaColorMode === 'band-1') return slot === 1 ? triangulaBandColors.band1 : '#d9e5ea';
+  if (triangulaColorMode === 'band-2') return slot === 2 ? triangulaBandColors.band2 : '#d9e5ea';
+  if (triangulaColorMode === 'band-4') return slot === 4 ? triangulaBandColors.band4 : '#d9e5ea';
+  return allColor;
+}
+
+function getTriangulaStrokeColorForSlot(slot) {
+  var fill = getTriangulaFillColorForSlot(slot);
+  if (fill === '#d9e5ea') return '#8ea4b0';
+  return '#234b61';
+}
+
+function getTriangulaSplit(vertices) {
+  var m01 = vertices[0].add(vertices[1]).divide(2);
+  var m12 = vertices[1].add(vertices[2]).divide(2);
+  var m20 = vertices[2].add(vertices[0]).divide(2);
+  return {
+    central: [m01, m12, m20],
+    children: [
+      { vertices: [vertices[0], m01, m20], slot: 1 },
+      { vertices: [m01, vertices[1], m12], slot: 2 },
+      { vertices: [m20, m12, vertices[2]], slot: 4 }
+    ]
+  };
+}
+
+function collectTrianglesAtDepth(vertices, depth, currentDepth, slot, collector) {
+  if (currentDepth === depth) {
+    collector.push({ vertices: vertices, slot: slot || 1 });
+    return;
+  }
+  if (currentDepth > depth) return;
+  var split = getTriangulaSplit(vertices);
+  for (var i = 0; i < split.children.length; i++) {
+    collectTrianglesAtDepth(split.children[i].vertices, depth, currentDepth + 1, split.children[i].slot, collector);
+  }
+}
+
+function collectCutTrianglesAtDepth(vertices, depth, currentDepth, collector) {
+  if (depth <= 0) return;
+  if (currentDepth >= depth) return;
+  var split = getTriangulaSplit(vertices);
+  if (currentDepth + 1 === depth) {
+    collector.push({ vertices: split.central });
+    return;
+  }
+  for (var i = 0; i < split.children.length; i++) {
+    collectCutTrianglesAtDepth(split.children[i].vertices, depth, currentDepth + 1, collector);
+  }
+}
+
+function collectParentChildTransitionsAtDepth(vertices, depth, currentDepth, collector) {
+  if (depth <= 0) return;
+  if (currentDepth >= depth) return;
+  var split = getTriangulaSplit(vertices);
+  if (currentDepth + 1 === depth) {
+    var parentCenter = vertices[0].add(vertices[1]).add(vertices[2]).divide(3);
+    for (var i = 0; i < split.children.length; i++) {
+      var child = split.children[i];
+      var childCenter = child.vertices[0].add(child.vertices[1]).add(child.vertices[2]).divide(3);
+      collector.push({
+        from: parentCenter,
+        to: childCenter,
+        child: child.vertices,
+        slot: child.slot
+      });
+    }
+    return;
+  }
+  for (var j = 0; j < split.children.length; j++) {
+    collectParentChildTransitionsAtDepth(split.children[j].vertices, depth, currentDepth + 1, collector);
+  }
+}
+
+function drawTriangleStrokeProgress(vertices, options, progress) {
+  var p = Math.max(0, Math.min(1, progress));
+  if (p <= 0) return;
+
+  var v0 = vertices[0];
+  var v1 = vertices[1];
+  var v2 = vertices[2];
+  var l01 = v0.getDistance(v1);
+  var l12 = v1.getDistance(v2);
+  var l20 = v2.getDistance(v0);
+  var total = l01 + l12 + l20;
+  var remaining = total * p;
+
+  var path = new Path();
+  path.strokeColor = options.strokeColor || '#2f4368';
+  path.strokeWidth = options.strokeWidth || 1.2;
+  path.opacity = isFinite(options.opacity) ? options.opacity : 1;
+  path.add(v0);
+
+  function addPartial(from, to, segLength) {
+    if (remaining <= 0) return;
+    if (remaining >= segLength) {
+      path.add(to);
+      remaining -= segLength;
+      return;
+    }
+    var t = remaining / segLength;
+    path.add(from.add(to.subtract(from).multiply(t)));
+    remaining = 0;
+  }
+
+  addPartial(v0, v1, l01);
+  addPartial(v1, v2, l12);
+  addPartial(v2, v0, l20);
+}
+
+function drawTrianglePath(vertices, options) {
+  var triangle = new Path();
+  triangle.closed = true;
+  triangle.add(vertices[0]);
+  triangle.add(vertices[1]);
+  triangle.add(vertices[2]);
+  if (options && options.strokeColor) {
+    triangle.strokeColor = options.strokeColor;
+    triangle.strokeWidth = options.strokeWidth || 1.4;
+  }
+  if (options && options.fillColor) {
+    triangle.fillColor = options.fillColor;
+  }
+  if (options && isFinite(options.opacity)) {
+    triangle.opacity = options.opacity;
+  }
+  return triangle;
+}
+
+function drawTriangulaDepth(depth, scale) {
+  var base = getTriangulaBaseTriangle(scale);
+  var baseColor = getTriangulaFillColorForSlot(1);
+  drawTrianglePath(base, {
+    strokeColor: '#234b61',
+    strokeWidth: triangulaConstructionMode === 'cut' ? 1.7 : 1.1,
+    fillColor: baseColor,
+    opacity: 0.95
+  });
+
+  var boundedDepth = Math.max(0, Math.min(6, depth));
+  if (triangulaConstructionMode === 'cut') {
+    for (var level = 1; level <= boundedDepth; level++) {
+      var cutTriangles = [];
+      collectCutTrianglesAtDepth(base, level, 0, cutTriangles);
+      for (var c = 0; c < cutTriangles.length; c++) {
+        drawTrianglePath(cutTriangles[c].vertices, {
+          fillColor: '#ffffff',
+          strokeColor: '#ffffff',
+          strokeWidth: 1.08,
+          opacity: 0.97
+        });
+      }
+    }
+  } else {
+    for (var d = 1; d <= boundedDepth; d++) {
+      var triangles = [];
+      collectTrianglesAtDepth(base, d, 0, 1, triangles);
+      for (var t = 0; t < triangles.length; t++) {
+        drawTrianglePath(triangles[t].vertices, {
+          strokeColor: getTriangulaStrokeColorForSlot(triangles[t].slot),
+          strokeWidth: Math.max(0.7, 1.3 - (d * 0.1)),
+          fillColor: getTriangulaFillColorForSlot(triangles[t].slot),
+          opacity: Math.max(0.45, 0.92 - (d * 0.08))
+        });
+      }
+    }
+  }
+}
+
+function getTriangulaItemCountForDepth(base, depth) {
+  if (triangulaConstructionMode === 'cut') {
+    var cuts = [];
+    collectCutTrianglesAtDepth(base, depth, 0, cuts);
+    return cuts.length;
+  }
+  var transitions = [];
+  collectParentChildTransitionsAtDepth(base, depth, 0, transitions);
+  return transitions.length;
+}
+
+function buildTriangulaSteps(startDepth, targetDepth) {
+  var steps = [];
+  var depthItemCounts = Object.create(null);
+  var base = getTriangulaBaseTriangle(1);
+
+  for (var d = startDepth + 1; d <= targetDepth; d++) {
+    var itemCount = getTriangulaItemCountForDepth(base, d);
+    depthItemCounts[d] = itemCount;
+    if (itemCount <= 0) continue;
+
+    if (triangulaFractalMode === 'parallel') {
+      if (triangulaConstructionMode === 'cut') {
+        steps.push({ type: 'cut-guides', depth: d, beats: 1.0, itemIndex: -1, itemCount: itemCount });
+        steps.push({ type: 'cut-apply', depth: d, beats: 0.85, itemIndex: -1, itemCount: itemCount });
+      } else {
+        steps.push({ type: 'shrink-paths', depth: d, beats: 0.95, itemIndex: -1, itemCount: itemCount });
+        steps.push({ type: 'shrink-materialize', depth: d, beats: 0.8, itemIndex: -1, itemCount: itemCount });
+      }
+      continue;
+    }
+
+    for (var idx = 0; idx < itemCount; idx++) {
+      if (triangulaConstructionMode === 'cut') {
+        steps.push({ type: 'cut-guides', depth: d, beats: 0.5, itemIndex: idx, itemCount: itemCount });
+        steps.push({ type: 'cut-apply', depth: d, beats: 0.45, itemIndex: idx, itemCount: itemCount });
+      } else {
+        steps.push({ type: 'shrink-paths', depth: d, beats: 0.48, itemIndex: idx, itemCount: itemCount });
+        steps.push({ type: 'shrink-materialize', depth: d, beats: 0.44, itemIndex: idx, itemCount: itemCount });
+      }
+    }
+  }
+  return {
+    steps: steps,
+    depthItemCounts: depthItemCounts
+  };
+}
+
+function getTriangulaStepDurationSeconds(step) {
+  var baseSeconds = getAnimationSecondsPerSegment();
+  var beats = step && isFinite(step.beats) ? Math.max(0.05, step.beats) : 0.5;
+  return Math.max(0.03, baseSeconds * beats);
+}
+
+function getTriangulaTimelineScale(state) {
+  if (triangulaFitMode !== 'dynamic') return 1;
+  if (!state || !state.steps || !state.steps.length) return 1;
+  var currentStep = state.steps[Math.min(state.stepIndex, state.steps.length - 1)];
+  var localProgress = 0;
+  if (currentStep) {
+    var currentDuration = getTriangulaStepDurationSeconds(currentStep);
+    localProgress = Math.max(0, Math.min(1, state.elapsed / currentDuration));
+  }
+  var phaseProgress = (state.stepIndex + localProgress) / Math.max(1, state.steps.length);
+  return Math.max(0.62, 1 - (0.3 * phaseProgress));
+}
+
+function triangulaStepFinalizesDepth(step) {
+  return !!step && (step.type === 'cut-apply' || step.type === 'shrink-materialize');
+}
+
+function getTriangulaFinalizedCountAtDepth(state, depth) {
+  if (!state || !state.steps) return 0;
+  var count = 0;
+  for (var i = 0; i < state.stepIndex; i++) {
+    var step = state.steps[i];
+    if (!step || step.depth !== depth || !triangulaStepFinalizesDepth(step)) continue;
+    count += step.itemIndex === -1 ? (step.itemCount || 0) : 1;
+  }
+  var maxCount = state.depthItemCounts && state.depthItemCounts[depth] ? state.depthItemCounts[depth] : 0;
+  return Math.min(count, maxCount);
+}
+
+function getTriangulaCompletedDepth(state) {
+  var depth = state ? state.startDepth : 0;
+  if (!state || !state.depthItemCounts) return depth;
+  for (var d = state.startDepth + 1; d <= state.targetDepth; d++) {
+    var needed = state.depthItemCounts[d] || 0;
+    if (!needed) {
+      depth = d;
+      continue;
+    }
+    if (getTriangulaFinalizedCountAtDepth(state, d) >= needed) {
+      depth = d;
+      continue;
+    }
+    break;
+  }
+  return depth;
+}
+
+function drawTriangulaFinalizedAtDepth(base, depth, finalizedCount) {
+  if (finalizedCount <= 0) return;
+
+  if (triangulaConstructionMode === 'cut') {
+    var cuts = [];
+    collectCutTrianglesAtDepth(base, depth, 0, cuts);
+    for (var i = 0; i < Math.min(finalizedCount, cuts.length); i++) {
+      drawTrianglePath(cuts[i].vertices, {
+        fillColor: '#ffffff',
+        strokeColor: '#ffffff',
+        strokeWidth: 1.06,
+        opacity: 0.97
+      });
+    }
+    return;
+  }
+
+  var triangles = [];
+  collectTrianglesAtDepth(base, depth, 0, 1, triangles);
+  for (var j = 0; j < Math.min(finalizedCount, triangles.length); j++) {
+    drawTrianglePath(triangles[j].vertices, {
+      strokeColor: getTriangulaStrokeColorForSlot(triangles[j].slot),
+      strokeWidth: Math.max(0.7, 1.3 - (depth * 0.1)),
+      fillColor: getTriangulaFillColorForSlot(triangles[j].slot),
+      opacity: Math.max(0.45, 0.92 - (depth * 0.08))
+    });
+  }
+}
+
+function stepAppliesToIndex(step, index) {
+  if (!step) return false;
+  return step.itemIndex === -1 || step.itemIndex === index;
+}
+
+function drawTriangulaStepOverlay(base, step, progress) {
+  if (!step) return;
+  var p = Math.max(0, Math.min(1, progress));
+
+  if (step.type === 'cut-guides' || step.type === 'cut-apply') {
+    var cuts = [];
+    collectCutTrianglesAtDepth(base, step.depth, 0, cuts);
+    for (var i = 0; i < cuts.length; i++) {
+      if (!stepAppliesToIndex(step, i)) continue;
+      drawTriangleStrokeProgress(cuts[i].vertices, {
+        strokeColor: '#2c5a7d',
+        strokeWidth: 1.2,
+        opacity: 0.55
+      }, step.type === 'cut-guides' ? p : 1);
+
+      if (step.type === 'cut-apply') {
+        drawTrianglePath(cuts[i].vertices, {
+          fillColor: '#ffffff',
+          strokeColor: '#ffffff',
+          strokeWidth: 1.08,
+          opacity: Math.max(0, Math.min(1, p))
+        });
+      }
+    }
+    return;
+  }
+
+  if (step.type === 'shrink-paths' || step.type === 'shrink-materialize') {
+    var transitions = [];
+    collectParentChildTransitionsAtDepth(base, step.depth, 0, transitions);
+    for (var j = 0; j < transitions.length; j++) {
+      if (!stepAppliesToIndex(step, j)) continue;
+      var link = transitions[j];
+      var connector = new Path();
+      connector.strokeColor = getTriangulaStrokeColorForSlot(link.slot);
+      connector.strokeWidth = 1.05;
+      connector.opacity = 0.42;
+      connector.add(link.from);
+      var connectorProgress = step.type === 'shrink-paths' ? p : 1;
+      connector.add(link.from.add(link.to.subtract(link.from).multiply(connectorProgress)));
+    }
+
+    if (step.type === 'shrink-materialize') {
+      for (var k = 0; k < transitions.length; k++) {
+        if (!stepAppliesToIndex(step, k)) continue;
+        var child = transitions[k];
+        drawTrianglePath(child.child, {
+          fillColor: getTriangulaFillColorForSlot(child.slot),
+          strokeColor: getTriangulaStrokeColorForSlot(child.slot),
+          strokeWidth: Math.max(0.7, 1.3 - (step.depth * 0.1)),
+          opacity: Math.max(0.2, p * (0.95 - (step.depth * 0.08)))
+        });
+        drawTriangleStrokeProgress(child.child, {
+          strokeColor: getTriangulaStrokeColorForSlot(child.slot),
+          strokeWidth: Math.max(0.7, 1.3 - (step.depth * 0.1)),
+          opacity: Math.max(0.36, 0.85 - (step.depth * 0.08))
+        }, p);
+      }
+    }
+  }
+}
+
+function renderTriangulaAnimationStateFrame(state) {
+  if (!state) return;
+  var step = state.steps[state.stepIndex] || null;
+  var completedDepth = getTriangulaCompletedDepth(state);
+  var scale = getTriangulaTimelineScale(state);
+  var base = getTriangulaBaseTriangle(scale);
+
+  project.activeLayer.removeChildren();
+  drawTriangulaDepth(completedDepth, scale);
+
+  if (step && step.depth > completedDepth) {
+    var finalizedAtStepDepth = getTriangulaFinalizedCountAtDepth(state, step.depth);
+    drawTriangulaFinalizedAtDepth(base, step.depth, finalizedAtStepDepth);
+  }
+
+  if (step) {
+    var stepDuration = getTriangulaStepDurationSeconds(step);
+    var stepProgress = Math.max(0, Math.min(1, state.elapsed / stepDuration));
+    drawTriangulaStepOverlay(base, step, stepProgress);
+  }
+}
+
+function drawTriangulaStatic() {
+  project.activeLayer.removeChildren();
+  var endDepth = triangulaCountToDepth(triangulaTargetCount);
+  drawTriangulaDepth(endDepth, 1);
+  clearHighlightedHoleNumbers();
+}
+
+function runTriangulaAnimationFrame(event) {
+  if (!animationActive || !triangulaAnimationState) return;
+  var delta = Math.min(event.delta || 0, 0.1);
+  triangulaAnimationState.elapsed += delta;
+
+  while (animationActive) {
+    var activeStep = triangulaAnimationState.steps[triangulaAnimationState.stepIndex];
+    if (!activeStep) break;
+    var stepDuration = getTriangulaStepDurationSeconds(activeStep);
+    if (triangulaAnimationState.elapsed < stepDuration) break;
+    triangulaAnimationState.elapsed -= stepDuration;
+    triangulaAnimationState.stepIndex += 1;
+
+    if (triangulaAnimationState.stepIndex >= triangulaAnimationState.steps.length) {
+      animationActive = false;
+      animationPlaybackState = 'idle';
+      triangulaAnimationState = null;
+      view.onFrame = null;
+      syncAnimateButtonLabel();
+      updateMusicPlaybackState();
+      drawTriangulaStatic();
+      return;
+    }
+  }
+
+  renderTriangulaAnimationStateFrame(triangulaAnimationState);
+}
+
+function animateTriangula() {
+  animationActive = false;
+  view.onFrame = null;
+  animationState = null;
+  triangulaAnimationState = null;
+
+  var startDepth = triangulaCountToDepth(triangulaStartCount);
+  var endDepth = triangulaCountToDepth(triangulaTargetCount);
+  if (endDepth < startDepth) {
+    endDepth = startDepth;
+  }
+
+  var timeline = buildTriangulaSteps(startDepth, endDepth);
+  if (!timeline.steps.length) {
+    animationPlaybackState = 'idle';
+    syncAnimateButtonLabel();
+    drawTriangulaStatic();
+    return;
+  }
+
+  triangulaAnimationState = {
+    startDepth: startDepth,
+    targetDepth: endDepth,
+    steps: timeline.steps,
+    depthItemCounts: timeline.depthItemCounts,
+    stepIndex: 0,
+    elapsed: 0,
+    mode: triangulaConstructionMode,
+    fractalMode: triangulaFractalMode
+  };
+
+  animationActive = true;
+  animationPlaybackState = 'playing';
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  renderTriangulaAnimationStateFrame(triangulaAnimationState);
+  view.onFrame = runTriangulaAnimationFrame;
 }
 
 function shouldShowHoleNumbersNow() {
@@ -4106,6 +5222,11 @@ function bringHoleNumbersToFront() {
    STATIC DRAW
 ------------------------------ */
 function drawStatic() {
+  if (currentExperienceId === 'triangula') {
+    drawTriangulaStatic();
+    return;
+  }
+
   project.activeLayer.removeChildren();
   computePoints();
 
@@ -4207,10 +5328,16 @@ function startAnimationLoop() {
 }
 
 function animateStitch() {
+  if (currentExperienceId === 'triangula') {
+    animateTriangula();
+    return;
+  }
+
   // Always treat this as a fresh run, even if a prior animation is active.
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  triangulaAnimationState = null;
   clearHighlightedHoleNumbers();
 
   project.activeLayer.removeChildren();
@@ -4235,11 +5362,16 @@ function animateStitch() {
 }
 
 function resumeAnimationIfPaused() {
-  if (animationActive || !animationState) return;
+  if (animationActive) return;
+  if (!animationState && !triangulaAnimationState) return;
   animationActive = true;
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
+  if (triangulaAnimationState) {
+    view.onFrame = runTriangulaAnimationFrame;
+    return;
+  }
   startAnimationLoop();
 }
 
@@ -4645,14 +5777,25 @@ closeAdvancedBtn.addEventListener('click', () => {
   syncAdvancedToggleButton();
 });
 
+if (backToStitchingBtn) {
+  backToStitchingBtn.addEventListener('click', () => {
+    var startPoint = getElementCenterPoint(backToStitchingBtn);
+    var endPoint = getElementCenterPoint(experienceInline) || getElementCenterPoint(canvasStage);
+    animateReturnToStitchingTrail(startPoint, endPoint);
+
+    window.setTimeout(function() {
+      setCurrentExperience('stitching');
+      redrawForPathChange();
+      discoveryPanel.classList.remove('open');
+      syncDiscoveryToggleButton();
+    }, 110);
+  });
+}
+
 document.querySelectorAll('.color-dot').forEach((dot) => {
   dot.addEventListener('click', () => {
     if (!threads.length) return;
-    var targetIndex = selectedThreadIndex;
-    if (targetIndex < 0 || targetIndex >= threads.length) {
-      targetIndex = 0;
-    }
-    threads[targetIndex].color = dot.getAttribute('data-color') || '#1982c4';
+    applyExperiencePaletteColorChoice(dot.getAttribute('data-color') || '#1982c4');
     renderThreadControls();
     redrawAnimationInPlace();
   });
@@ -4732,13 +5875,69 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-document.getElementById('add-thread').addEventListener('click', () => {
-  threads.push(buildMagicThread());
-  selectedThreadIndex = threads.length - 1;
-  renderThreadControls();
-  syncKidControlsFromSelectedThread();
-  redrawForPathChange();
-});
+if (addThreadBtn) {
+  addThreadBtn.addEventListener('click', () => {
+    threads.push(buildMagicThread());
+    selectedThreadIndex = threads.length - 1;
+    renderThreadControls();
+    syncKidControlsFromSelectedThread();
+    redrawForPathChange();
+  });
+}
+
+if (triangulaColorScopeSelect) {
+  triangulaColorScopeSelect.addEventListener('change', () => {
+    triangulaColorMode = triangulaColorScopeSelect.value || 'all';
+    syncTriangulaControls();
+    redrawAnimationInPlace();
+  });
+}
+
+if (triangulaConstructionModeSelect) {
+  triangulaConstructionModeSelect.addEventListener('change', () => {
+    triangulaConstructionMode = triangulaConstructionModeSelect.value || 'cut';
+    syncTriangulaControls();
+    redrawForPathChange();
+  });
+}
+
+if (triangulaStartSlider) {
+  triangulaStartSlider.addEventListener('input', () => {
+    triangulaStartCount = Math.max(1, parseInt(triangulaStartSlider.value, 10) || 1);
+    if (triangulaTargetCount < triangulaStartCount) {
+      triangulaTargetCount = triangulaStartCount;
+    }
+    syncTriangulaControls();
+    redrawForPathChange();
+  });
+}
+
+if (triangulaTargetSlider) {
+  triangulaTargetSlider.addEventListener('input', () => {
+    triangulaTargetCount = Math.max(1, parseInt(triangulaTargetSlider.value, 10) || 1);
+    if (triangulaTargetCount < triangulaStartCount) {
+      triangulaTargetCount = triangulaStartCount;
+    }
+    syncTriangulaControls();
+    redrawForPathChange();
+  });
+}
+
+if (triangulaFitModeSelect) {
+  triangulaFitModeSelect.addEventListener('change', () => {
+    triangulaFitMode = triangulaFitModeSelect.value || 'dynamic';
+    syncTriangulaControls();
+    redrawAnimationInPlace();
+  });
+}
+
+if (triangulaFractalModeSelect) {
+  triangulaFractalModeSelect.addEventListener('change', () => {
+    triangulaFractalMode = triangulaFractalModeSelect.value === 'parallel' ? 'parallel' : 'series';
+    syncTriangulaControls();
+    redrawForPathChange();
+  });
+}
 
 kidThreadToggle.addEventListener('click', () => {
   var isOpen = !kidThreadMenu.hasAttribute('hidden');
