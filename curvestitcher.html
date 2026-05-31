@@ -1579,7 +1579,7 @@ var EXPERIENCE_LIBRARY = {
       threadsEnabled: false,
       allowMultipleThreads: false,
       paletteMode: 'triangula-banded',
-      triangulaColorModes: ['band-1', 'band-2', 'band-4'],
+      triangulaColorModes: ['band-2', 'band-1', 'band-4'],
       triangulaConstructionModes: ['shrink-duplicate', 'cut'],
       supportsHoleNumbers: false,
       supportsBorder: false,
@@ -1678,7 +1678,7 @@ var EXPERIENCE_LIBRARY = {
 };
 var currentExperienceId = 'stitching';
 var experienceNarrationUtterance = null;
-var triangulaColorMode = 'band-1';
+var triangulaColorMode = 'band-2';
 var triangulaConstructionMode = 'shrink-duplicate';
 var triangulaStartCount = 1;
 var triangulaTargetCount = 3;
@@ -4607,16 +4607,28 @@ function stepAppliesToIndex(step, index) {
 function drawTriangulaPulseBorder(vertices, progress) {
   if (!vertices || vertices.length < 3) return;
   var p = Math.max(0, Math.min(1, progress));
-  var pulse = 0.5 - (0.5 * Math.cos(p * Math.PI * 2));
+  // Single-pass envelope with slight hold so emphasis does not fade too quickly.
+  var attackEnd = 0.44;
+  var holdEnd = 0.72;
+  var pulse;
+  if (p < attackEnd) {
+    pulse = p / attackEnd;
+  } else if (p < holdEnd) {
+    pulse = 1;
+  } else {
+    pulse = 1 - ((p - holdEnd) / (1 - holdEnd));
+  }
+  pulse = Math.max(0, Math.min(1, pulse));
+  var easedPulse = pulse * pulse * (3 - (2 * pulse));
   drawTrianglePath(vertices, {
-    strokeColor: toRgbaColor('#f6fbff', 0.2 + (0.22 * pulse)),
-    strokeWidth: 1.25 + (0.8 * pulse),
-    opacity: 0.3 + (0.26 * pulse)
+    strokeColor: toRgbaColor('#173b56', 0.38 + (0.42 * easedPulse)),
+    strokeWidth: 1.3 + (2.2 * easedPulse),
+    opacity: 0.36 + (0.44 * easedPulse)
   });
   drawTrianglePath(vertices, {
-    strokeColor: toRgbaColor('#ffffff', 0.1 + (0.12 * pulse)),
-    strokeWidth: 2.2 + (1.4 * pulse),
-    opacity: 0.18 + (0.18 * pulse)
+    strokeColor: toRgbaColor('#f8fcff', 0.06 + (0.14 * easedPulse)),
+    strokeWidth: 2.0 + (1.0 * easedPulse),
+    opacity: 0.06 + (0.16 * easedPulse)
   });
 }
 
@@ -4636,14 +4648,27 @@ function drawTriangulaPulseBordersForCutStep(cuts, step, progress) {
 function drawTriangulaPulseBordersForShrinkStep(transitions, step, progress) {
   if (!transitions || !transitions.length || !step) return;
   if (step.itemIndex === -1) {
+    var parallelPhase = step.type === 'shrink-materialize'
+      ? (0.5 + (0.5 * progress))
+      : (0.5 * progress);
     for (var i = 0; i < transitions.length; i += 3) {
-      drawTriangulaPulseBorder(transitions[i].parent, progress);
+      drawTriangulaPulseBorder(transitions[i].parent, parallelPhase);
     }
     return;
   }
+
+  // A parent set is 3 child transitions, each with 2 sub-steps.
+  // Map all of that to one 0..1 phase so highlight appears once per set:
+  // rise through child 1, peak by child 2, fade by end of child 3.
+  var childIndexWithinSet = step.itemIndex % 3;
+  var childSubstepPhase = step.type === 'shrink-materialize'
+    ? (0.5 + (0.5 * progress))
+    : (0.5 * progress);
+  var setPhase = (childIndexWithinSet + childSubstepPhase) / 3;
+
   var parentGroupIndex = Math.floor(step.itemIndex / 3) * 3;
   if (parentGroupIndex >= 0 && parentGroupIndex < transitions.length) {
-    drawTriangulaPulseBorder(transitions[parentGroupIndex].parent, progress);
+    drawTriangulaPulseBorder(transitions[parentGroupIndex].parent, setPhase);
   }
 }
 
@@ -4671,7 +4696,9 @@ function drawTriangulaStepOverlay(base, step, progress) {
         });
       }
     }
-    drawTriangulaPulseBordersForCutStep(cuts, step, p);
+    if (step.type === 'cut-guides') {
+      drawTriangulaPulseBordersForCutStep(cuts, step, p);
+    }
     return;
   }
 
