@@ -1201,9 +1201,8 @@
     <input id="width" type="range" min="1" max="10" value="2">
   </div>
   <div class="slider-block" id="triangula-color-scope-block" style="display:none;">
-    <div class="slider-label">🎨 Triangles Color</div>
+    <div class="slider-label">🎨 Color Mode</div>
     <select id="triangula-color-scope" class="curve-type-select">
-      <option value="all">All triangles</option>
       <option value="band-1">1st triangle band</option>
       <option value="band-2">2nd triangle band</option>
       <option value="band-4">4th triangle band</option>
@@ -1217,12 +1216,12 @@
     </select>
   </div>
   <div class="slider-block" id="triangula-start-block" style="display:none;">
-    <div class="slider-label">▶ Start triangles <span class="slider-value" id="triangula-start-value">3</span></div>
-    <input id="triangula-start-count" type="range" min="1" max="729" value="3">
+    <div class="slider-label">▶ Start triangles <span class="slider-value" id="triangula-start-value">1</span></div>
+    <input id="triangula-start-count" type="range" min="1" max="729" value="1">
   </div>
   <div class="slider-block" id="triangula-target-block" style="display:none;">
-    <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">81</span></div>
-    <input id="triangula-target-count" type="range" min="1" max="729" value="81">
+    <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">3</span></div>
+    <input id="triangula-target-count" type="range" min="1" max="729" value="3">
   </div>
 </div>
 
@@ -1562,8 +1561,8 @@ var EXPERIENCE_LIBRARY = {
       threadsEnabled: false,
       allowMultipleThreads: false,
       paletteMode: 'triangula-banded',
-      triangulaColorModes: ['all', 'band-1', 'band-2', 'band-4'],
-      triangulaConstructionModes: ['cut', 'shrink-duplicate'],
+      triangulaColorModes: ['band-1', 'band-2', 'band-4'],
+      triangulaConstructionModes: ['shrink-duplicate', 'cut'],
       supportsHoleNumbers: false,
       supportsBorder: false,
       basicControls: {
@@ -1661,10 +1660,10 @@ var EXPERIENCE_LIBRARY = {
 };
 var currentExperienceId = 'stitching';
 var experienceNarrationUtterance = null;
-var triangulaColorMode = 'all';
-var triangulaConstructionMode = 'cut';
-var triangulaStartCount = 3;
-var triangulaTargetCount = 81;
+var triangulaColorMode = 'band-1';
+var triangulaConstructionMode = 'shrink-duplicate';
+var triangulaStartCount = 1;
+var triangulaTargetCount = 3;
 var triangulaFractalMode = 'series';
 var triangulaFitMode = 'locked';
 var triangulaAnimationState = null;
@@ -1817,7 +1816,11 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(jumpSliderBlock, controls.add !== false, '');
   setElementDisplay(multiplyMathSliderBlock, controls.multiply !== false, '');
   setElementDisplay(widthSliderBlock, controls.width !== false, '');
-  setElementDisplay(triangulaColorScopeBlock, controls.triangulaColorScope === true, '');
+  setElementDisplay(
+    triangulaColorScopeBlock,
+    controls.triangulaColorScope === true && currentExperienceId === 'triangula' && triangulaConstructionMode === 'shrink-duplicate',
+    ''
+  );
   setElementDisplay(triangulaModeBlock, controls.triangulaConstructionMode === true, '');
   setElementDisplay(triangulaStartBlock, controls.triangulaStartCount === true, '');
   setElementDisplay(triangulaTargetBlock, controls.triangulaTargetCount === true, '');
@@ -1913,6 +1916,13 @@ function syncTriangulaControls() {
   if (triangulaFitModeSelect) {
     triangulaFitModeSelect.value = triangulaFitMode;
   }
+  var profile = getExperienceUiProfile(currentExperienceId);
+  var controls = profile && profile.basicControls ? profile.basicControls : null;
+  setElementDisplay(
+    triangulaColorScopeBlock,
+    !!(controls && controls.triangulaColorScope === true && currentExperienceId === 'triangula' && triangulaConstructionMode === 'shrink-duplicate'),
+    ''
+  );
 }
 
 function applyExperienceOverlayPosition(positionClass) {
@@ -5895,7 +5905,7 @@ if (triangulaColorScopeSelect) {
 
 if (triangulaConstructionModeSelect) {
   triangulaConstructionModeSelect.addEventListener('change', () => {
-    triangulaConstructionMode = triangulaConstructionModeSelect.value || 'cut';
+    triangulaConstructionMode = triangulaConstructionModeSelect.value || 'shrink-duplicate';
     syncTriangulaControls();
     redrawForPathChange();
   });
