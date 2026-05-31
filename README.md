@@ -58,6 +58,8 @@ Contributor terms:
 	  - Generate Sierpinski triangle constructions with increasing recursion/complexity levels.
 	  - Provide zoomed interval navigation so users can inspect progressively smaller triangles that become visually subtle at higher levels.
 	  - Support triangle-count specification for generated sets/instances.
+	  - Constrain count controls to valid calculable Sierpinski sets (powers of 3, for example 1, 3, 9, 27, 81, 243, 729).
+	  - Ensure render pipeline clamps to supported depth/count sets so requested values always produce stable drawable output.
 	  - Support style toggles for fill vs edge rendering.
 	  - Support full color control in both kid-friendly and advanced forms.
 	- Controls and UX consistency:
