@@ -589,20 +589,19 @@
   #advanced-panel {
     position: absolute;
     top: 0;
-    right: 0;
+    right: -320px;
     width: 300px;
     height: 100%;
     box-sizing: border-box;
     background: #fafafa;
     border-left: 2px solid #ddd;
     padding: 16px;
-    transform: translateX(calc(100% + 10px));
     pointer-events: none;
-    transition: transform 0.3s ease;
+    transition: right 0.3s ease;
     overflow-y: auto;
   }
   #advanced-panel.open {
-    transform: translateX(0);
+    right: 0;
     pointer-events: auto;
   }
 
@@ -1267,6 +1266,14 @@ function syncDiscoveryToggleButton() {
   discoveryToggleBtn.title = isOpen ? 'Close discovery library' : 'Open discovery library';
   discoveryToggleBtn.classList.toggle('active', isOpen);
   discoveryToggleBtn.classList.toggle('has-unseen', hasUnseenDiscoveries && !isOpen);
+}
+
+function syncAdvancedToggleButton() {
+  if (!gearBtn) return;
+  var isOpen = advancedPanel.classList.contains('open');
+  gearBtn.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+  gearBtn.title = isOpen ? 'Close advanced controls' : 'Open advanced controls';
+  gearBtn.classList.toggle('active', isOpen);
 }
 
 function syncSongPickerToggleButton() {
@@ -4229,10 +4236,12 @@ closeDiscoveryBtn.addEventListener('click', () => {
 
 gearBtn.addEventListener('click', () => {
   advancedPanel.classList.toggle('open');
+  syncAdvancedToggleButton();
 });
 
 closeAdvancedBtn.addEventListener('click', () => {
   advancedPanel.classList.remove('open');
+  syncAdvancedToggleButton();
 });
 
 document.querySelectorAll('.color-dot').forEach((dot) => {
@@ -4303,6 +4312,11 @@ document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (exportOptionsModal.classList.contains('open')) {
     closeExportOptionsModal();
+    return;
+  }
+  if (advancedPanel.classList.contains('open')) {
+    advancedPanel.classList.remove('open');
+    syncAdvancedToggleButton();
     return;
   }
   if (discoveryPanel.classList.contains('open')) {
@@ -4460,6 +4474,7 @@ syncBorderControls();
 syncMusicToggleButton();
 refreshKidThreadPicker();
 renderDiscoveryLibrary();
+syncAdvancedToggleButton();
 syncDiscoveryToggleButton();
 syncBasicMathSliderVisibility();
 fitCanvasToStage();
