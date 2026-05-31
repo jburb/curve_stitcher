@@ -1310,8 +1310,8 @@
       <label><input id="export-include-threads" type="checkbox"> Include stitched threads in SVG</label>
     </div>
     <div class="modal-row">
-      <label><input id="export-include-guide" type="checkbox" checked> Include stitching guide (.txt)</label>
-      <div class="modal-help">Adds full parameters and manual stitching instructions in one text file.</div>
+      <label><input id="export-include-guide" type="checkbox" checked> Include instructions (.txt)</label>
+      <div class="modal-help">Adds full parameters and reconstruction instructions in one text file.</div>
     </div>
     <div class="modal-row">
       <label><input id="export-include-preview" type="checkbox" checked> Include preview image (.png)</label>
@@ -1579,7 +1579,7 @@ var EXPERIENCE_LIBRARY = {
       threadsEnabled: false,
       allowMultipleThreads: false,
       paletteMode: 'triangula-banded',
-      triangulaColorModes: ['band-2', 'band-1', 'band-4'],
+      triangulaColorModes: ['band-1', 'band-2', 'band-4'],
       triangulaConstructionModes: ['shrink-duplicate', 'cut'],
       supportsHoleNumbers: false,
       supportsBorder: false,
@@ -1678,7 +1678,7 @@ var EXPERIENCE_LIBRARY = {
 };
 var currentExperienceId = 'stitching';
 var experienceNarrationUtterance = null;
-var triangulaColorMode = 'band-2';
+var triangulaColorMode = 'band-1';
 var triangulaConstructionMode = 'shrink-duplicate';
 var triangulaStartCount = 1;
 var triangulaTargetCount = 3;
@@ -4998,8 +4998,62 @@ function triggerBlobDownload(blob, fileName) {
   }, 0);
 }
 
+function buildTriangulaDesignSvgString() {
+  var width = Math.round(view.viewSize.width);
+  var height = Math.round(view.viewSize.height);
+  var lines = [];
+  var base = getTriangulaBaseTriangle(1);
+  var endDepth = triangulaCountToDepth(triangulaTargetCount);
+
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
+  lines.push('<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="#ffffff"/>');
+
+  lines.push(
+    '<path d="' + svgPathFromPoints(base) +
+    '" fill="' + colorToSvg(getTriangulaFillColorForSlot(1, 0)) +
+    '" stroke="#234b61" stroke-width="' + formatSvgNumber(triangulaConstructionMode === 'cut' ? 1.7 : 1.1) +
+    '" opacity="0.95"/>'
+  );
+
+  if (triangulaConstructionMode === 'cut') {
+    for (var level = 1; level <= endDepth; level++) {
+      var cutTriangles = [];
+      collectCutTrianglesAtDepth(base, level, 0, cutTriangles);
+      for (var c = 0; c < cutTriangles.length; c++) {
+        lines.push(
+          '<path d="' + svgPathFromPoints(cutTriangles[c].vertices) +
+          '" fill="#ffffff" stroke="#ffffff" stroke-width="1.08" opacity="0.97"/>'
+        );
+      }
+    }
+  } else {
+    for (var d = 1; d <= endDepth; d++) {
+      var triangles = [];
+      collectTrianglesAtDepth(base, d, 0, 1, triangles);
+      for (var t = 0; t < triangles.length; t++) {
+        lines.push(
+          '<path d="' + svgPathFromPoints(triangles[t].vertices) +
+          '" fill="' + colorToSvg(getTriangulaFillColorForSlot(triangles[t].slot, t)) +
+          '" stroke="' + colorToSvg(getTriangulaStrokeColorForSlot(triangles[t].slot, t)) +
+          '" stroke-width="' + formatSvgNumber(Math.max(0.7, 1.3 - (d * 0.1))) +
+          '" opacity="' + formatSvgNumber(Math.max(0.45, 0.92 - (d * 0.08))) +
+          '"/>'
+        );
+      }
+    }
+  }
+
+  lines.push('</svg>');
+  return lines.join('\n');
+}
+
 function buildCurrentDesignSvgString(options) {
   options = options || {};
+  if (currentExperienceId === 'triangula') {
+    return buildTriangulaDesignSvgString();
+  }
+
   var includeThreads = options.includeThreads !== false;
 
   // Export a fresh static snapshot independent from transient animation artifacts.
@@ -5201,14 +5255,65 @@ function buildStitchingGuideText(fileBaseName, options) {
   return lines.join('\n');
 }
 
+function buildTriangulaGuideText(fileBaseName, options) {
+  options = options || {};
+  var now = new Date();
+  var startDepth = triangulaCountToDepth(triangulaStartCount);
+  var targetDepth = triangulaCountToDepth(triangulaTargetCount);
+  var lines = [];
+
+  lines.push('curve_stitcher Triangula instructions');
+  lines.push('Generated: ' + now.toISOString());
+  lines.push('Export name: ' + fileBaseName);
+  lines.push('');
+  lines.push('Parameters');
+  lines.push('Experience: Triangula');
+  lines.push('Construction mode: ' + triangulaConstructionMode);
+  lines.push('Fractal mode: ' + triangulaFractalMode);
+  lines.push('Canvas fit mode: ' + triangulaFitMode);
+  lines.push('Color mode: ' + triangulaColorMode);
+  lines.push('Start triangles: ' + String(triangulaStartCount) + ' (depth ' + String(startDepth) + ')');
+  lines.push('Target triangles: ' + String(triangulaTargetCount) + ' (depth ' + String(targetDepth) + ')');
+  lines.push('Band 1 color: ' + String(triangulaBandColors.band1));
+  lines.push('Band 2 color: ' + String(triangulaBandColors.band2));
+  lines.push('Band 4 color: ' + String(triangulaBandColors.band4));
+  lines.push('Rainbow source color: ' + String(threads[0] ? threads[0].color : triangulaBandColors.band1));
+  lines.push('');
+  lines.push('Reconstruction');
+  lines.push('1. Open Triangula in curve_stitcher.');
+  lines.push('2. Set mode, color mode, and start/target values to match parameters above.');
+  lines.push('3. Apply band/rainbow colors as listed above.');
+  lines.push('4. Exported SVG captures the fully completed target-state triangle composition with colors.');
+  lines.push('');
+  lines.push('Notes');
+  lines.push('- Triangula exports intentionally skip preview PNG files.');
+  lines.push('- Include instructions controls whether this file is exported.');
+
+  return lines.join('\n');
+}
+
+function getExportGuideFileName(fileBaseName) {
+  if (currentExperienceId === 'triangula') {
+    return fileBaseName + '-triangula-instructions.txt';
+  }
+  return fileBaseName + '-stitching-guide.txt';
+}
+
+function buildExportGuideText(fileBaseName, options) {
+  if (currentExperienceId === 'triangula') {
+    return buildTriangulaGuideText(fileBaseName, options || {});
+  }
+  return buildStitchingGuideText(fileBaseName, options || {});
+}
+
 function downloadStitchingGuide(fileBaseName, options) {
-  var text = buildStitchingGuideText(fileBaseName, options || {});
+  var text = buildExportGuideText(fileBaseName, options || {});
   var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  triggerBlobDownload(blob, fileBaseName + '-stitching-guide.txt');
+  triggerBlobDownload(blob, getExportGuideFileName(fileBaseName));
 }
 
 function createStitchingGuideBlob(fileBaseName, options) {
-  var text = buildStitchingGuideText(fileBaseName, options || {});
+  var text = buildExportGuideText(fileBaseName, options || {});
   return new Blob([text], { type: 'text/plain;charset=utf-8' });
 }
 
@@ -5241,7 +5346,7 @@ async function downloadExportZipBundle(fileBaseName, options) {
   zip.file(fileBaseName + '.svg', createCurrentDesignSvgBlob(options));
 
   if (options.includeGuide) {
-    zip.file(fileBaseName + '-stitching-guide.txt', createStitchingGuideBlob(fileBaseName, options));
+    zip.file(getExportGuideFileName(fileBaseName), createStitchingGuideBlob(fileBaseName, options));
   }
 
   if (options.includePreview) {
@@ -5256,10 +5361,22 @@ async function downloadExportZipBundle(fileBaseName, options) {
 }
 
 function openExportOptionsModal() {
+  var isTriangulaExport = currentExperienceId === 'triangula';
+  var threadsRow = exportIncludeThreadsInput ? exportIncludeThreadsInput.closest('.modal-row') : null;
+  var previewRow = exportIncludePreviewInput ? exportIncludePreviewInput.closest('.modal-row') : null;
+
   exportNameInput.value = 'curve_stitcher-' + getTimestampLabel();
   exportIncludeThreadsInput.checked = false;
+  exportIncludeThreadsInput.disabled = isTriangulaExport;
   exportIncludeGuideInput.checked = true;
-  exportIncludePreviewInput.checked = true;
+  exportIncludePreviewInput.checked = isTriangulaExport ? false : true;
+  exportIncludePreviewInput.disabled = isTriangulaExport;
+  if (threadsRow) {
+    threadsRow.style.display = isTriangulaExport ? 'none' : '';
+  }
+  if (previewRow) {
+    previewRow.style.display = isTriangulaExport ? 'none' : '';
+  }
   exportOptionsModal.classList.add('open');
   exportNameInput.focus();
   exportNameInput.select();
@@ -5270,11 +5387,12 @@ function closeExportOptionsModal() {
 }
 
 async function runExportFromModalSelection() {
+  var isTriangulaExport = currentExperienceId === 'triangula';
   var baseName = normalizeExportBaseName(exportNameInput.value);
   var options = {
-    includeThreads: exportIncludeThreadsInput.checked,
+    includeThreads: isTriangulaExport ? false : exportIncludeThreadsInput.checked,
     includeGuide: exportIncludeGuideInput.checked,
-    includePreview: exportIncludePreviewInput.checked
+    includePreview: isTriangulaExport ? false : exportIncludePreviewInput.checked
   };
 
   try {

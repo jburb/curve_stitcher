@@ -22,7 +22,7 @@ Contributor terms:
 ## Current Milestones
 
 1. Dynamic add/multiply bounds guardrail
-2. Triangula experience (Sierpinski world)
+2. Triangula experience (Sierpinski world) [Completed]
 3. Squarus experience (polyonimo world)
 4. Mashrabiya experience (Islamic rosette world)
 5. Experience title bar (animated stitched reveal)
@@ -41,6 +41,7 @@ Contributor terms:
 8. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
 9. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
 10. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
+11. Triangula experience (Sierpinski world) core delivery complete (entry, controls, recursive rendering/animation, color modes, and export support)
 
 ## TODO Backlog
 
@@ -49,7 +50,8 @@ Contributor terms:
 	 - Keep behavior predictable when hole count changes (for example clamp/normalize with clear value feedback).
 	 - Preserve advanced-user intent where possible (for example optional free numeric entry in advanced mode).
 
-2. **Triangula experience (Sierpinski world)**
+2. **Triangula experience (Sierpinski world) [Completed]**
+	- Status: Core roadmap scope is complete. Remaining Triangula work should be treated as optional polish or regression follow-up only.
 	- Entry trigger and transition:
 	  - When the user stitches/discovers an equilateral triangle in Stitching mode, offer an optional prompt to "Enter Triangula".
 	  - If confirmed, transition by scrolling the current stitch shape out of canvas view along a path congruent with an edge of the equilateral triangle.
@@ -138,7 +140,7 @@ Contributor terms:
 ## Suggested Delivery Order
 
 1. Dynamic add/multiply bounds guardrail
-2. Triangula experience (Sierpinski world)
+2. Triangula experience (Sierpinski world) [Completed]
 3. Squarus experience (polyonimo world)
 4. Mashrabiya experience (Islamic rosette world)
 5. Experience title bar (animated stitched reveal)
