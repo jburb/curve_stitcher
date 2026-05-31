@@ -959,7 +959,8 @@
   </div>
   <div class="advanced-global-controls">
     <div class="advanced-subsection">
-      <div class="advanced-global-title">Shape</div>
+      <!--<div class="advanced-global-title">Shape</div>-->
+      <div class="advanced-global-title">Stitching Frame</div>
       <div class="advanced-global-row">Shape: <select id="advanced-shape">
         <option value="circle">Circle</option>
         <option value="triangle">Triangle</option>
@@ -968,13 +969,11 @@
         <option value="heart">Heart</option>
       </select></div>
       <div class="advanced-global-row">Border: <input id="advanced-border-enabled" type="checkbox"></div>
-      <div class="advanced-global-help">Paired inner + outer borders around holes (Stitching mode).</div>
-    </div>
-    <div class="advanced-subsection">
-      <div class="advanced-global-title">Holes</div>
-      <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="140" value="35" aria-label="Holes value"></div>
+    <!--</div>
+    <div class="advanced-subsection">-->
+      <!--<div class="advanced-global-title">Holes</div>-->
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
-      <div class="advanced-global-help">Hole numbers auto-hide when holes exceed 80.</div>
+      <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="140" value="35" aria-label="Holes value"></div>
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Stitch Tempo</div>
@@ -985,7 +984,7 @@
         <option value="336">336</option>
         <option value="420">420</option>
       </select><span class="advanced-inline-value" id="advanced-tempo-value">84</span><button id="reset-tempo" type="button" class="advanced-reset-btn">Reset</button></div>
-      <div class="advanced-global-help">Default tempo is 84 BPM. This affects stitch animation when you press "Watch it stitch".</div>
+      <div class="advanced-global-help">This affects stitch animation when you press play / "Watch it stitch".</div>
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Export</div>
@@ -1830,7 +1829,7 @@ function renderDiscoveryLibrary() {
     action.textContent = 'Travel to ' + config.experienceName;
     action.addEventListener('click', function(experienceName) {
       return function() {
-        alert(experienceName + ' experience is not available yet, but this return path is now reserved in the discovery library.');
+        alert(experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
       };
     }(config.experienceName));
     card.appendChild(action);
@@ -1841,7 +1840,7 @@ function renderDiscoveryLibrary() {
   if (!unlockedCount) {
     var empty = document.createElement('div');
     empty.className = 'advanced-global-help';
-    empty.textContent = 'No special shapes discovered yet. Keep exploring stitch patterns to find them!';
+    empty.textContent = 'No explorable shapes discovered yet. Keep stitching new patterns to find one!';
     discoveryCards.appendChild(empty);
   }
 
