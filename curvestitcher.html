@@ -672,8 +672,59 @@
     font-size: 12px;
     color: #5f7090;
   }
+  .discovery-card .discovery-passphrase {
+    margin-top: 2px;
+    margin-bottom: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px dashed #c8d7ef;
+    background: #f7fbff;
+    color: #36557f;
+    font-size: 11px;
+    line-height: 1.35;
+  }
   .discovery-card .advanced-reset-btn {
     font-size: 12px;
+  }
+  .discovery-passphrase-entry {
+    margin: 0 0 12px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #d7e0f3;
+    background: #ffffff;
+  }
+  .discovery-passphrase-entry label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2f4368;
+  }
+  .discovery-passphrase-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #discovery-passphrase-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #c7d7ef;
+    border-radius: 8px;
+    padding: 7px 8px;
+    font-size: 12px;
+    color: #213047;
+  }
+  .discovery-passphrase-feedback {
+    min-height: 16px;
+    margin: 7px 0 0;
+    font-size: 11px;
+    color: #5f7090;
+  }
+  .discovery-passphrase-feedback.is-success {
+    color: #1f7a43;
+  }
+  .discovery-passphrase-feedback.is-error {
+    color: #9c2f38;
   }
   .discovery-return-row {
     display: flex;
@@ -1143,6 +1194,15 @@
   </div>
   <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
 
+  <form id="discovery-passphrase-form" class="discovery-passphrase-entry" aria-label="Discovery passphrase entry">
+    <label for="discovery-passphrase-input">Speak a discovery passphrase</label>
+    <div class="discovery-passphrase-row">
+      <input id="discovery-passphrase-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type a passphrase" />
+      <button id="discovery-passphrase-submit" class="advanced-reset-btn" type="submit">Unlock</button>
+    </div>
+    <p id="discovery-passphrase-feedback" class="discovery-passphrase-feedback" role="status" aria-live="polite"></p>
+  </form>
+
   <div id="discovery-cards"></div>
 </div>
 
@@ -1433,6 +1493,9 @@ var advancedPanel = document.getElementById('advanced-panel');
 var discoveryPanel = document.getElementById('discovery-panel');
 var discoveryCards = document.getElementById('discovery-cards');
 var discoveryToast = document.getElementById('discovery-toast');
+var discoveryPassphraseForm = document.getElementById('discovery-passphrase-form');
+var discoveryPassphraseInput = document.getElementById('discovery-passphrase-input');
+var discoveryPassphraseFeedback = document.getElementById('discovery-passphrase-feedback');
 var experienceInline = document.getElementById('experience-inline');
 var experienceTitleLabel = document.getElementById('experience-title-label');
 var experienceSrTitle = document.getElementById('experience-sr-title');
@@ -1508,21 +1571,27 @@ var DISCOVERY_LIBRARY = {
     icon: '🔺',
     description: 'Unlocked the path to Triangula.',
     experienceName: 'Triangula',
-    songId: 'triangle'
+    songId: 'triangle',
+    passphrase: 'Holes of three and step of one do this tri-angled creature make, if they\'re set in even shape.',
+    passphraseInputEnabled: true
   },
   square: {
     title: 'Square',
     icon: '⬜',
     description: 'Unlocked the path to Squarus.',
     experienceName: 'Squarus',
-    songId: 'square'
+    songId: 'square',
+    passphrase: 'Square passphrase placeholder.',
+    passphraseInputEnabled: false
   },
   rosette: {
     title: 'Mystic Rose / Rosette',
     icon: '✺',
     description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
-    songId: 'rosette'
+    songId: 'rosette',
+    passphrase: 'Rosette passphrase placeholder.',
+    passphraseInputEnabled: false
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
@@ -1717,6 +1786,7 @@ var triangulaBandColors = {
 
 var APP_STATE_URL_VERSION = '1';
 var URL_SYNC_DEBOUNCE_MS = 800;
+var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
 var urlSyncTimer = null;
 var urlSyncSuspended = false;
 var appState = {
@@ -1760,10 +1830,37 @@ function withUrlSyncSuspended(work) {
   }
 }
 
-function sanitizeTriangulaCount(value, fallback) {
-  var parsed = parseInt(value, 10);
-  if (!isFinite(parsed)) return fallback;
-  return Math.max(1, Math.min(729, parsed));
+function normalizeTriangulaDrawableCount(value, role, fallback) {
+  var parsed = parseBoundedInt(value, 1, 729, fallback);
+  if (!isFinite(parsed)) {
+    parsed = parseBoundedInt(fallback, 1, 729, 1);
+  }
+
+  if (TRIANGULA_DRAWABLE_COUNTS.indexOf(parsed) !== -1) {
+    return parsed;
+  }
+
+  if (role === 'target') {
+    for (var i = 0; i < TRIANGULA_DRAWABLE_COUNTS.length; i++) {
+      if (TRIANGULA_DRAWABLE_COUNTS[i] >= parsed) {
+        return TRIANGULA_DRAWABLE_COUNTS[i];
+      }
+    }
+    return TRIANGULA_DRAWABLE_COUNTS[TRIANGULA_DRAWABLE_COUNTS.length - 1];
+  }
+
+  // Default/start behavior: snap downward to avoid overshooting requested start density.
+  for (var j = TRIANGULA_DRAWABLE_COUNTS.length - 1; j >= 0; j--) {
+    if (TRIANGULA_DRAWABLE_COUNTS[j] <= parsed) {
+      return TRIANGULA_DRAWABLE_COUNTS[j];
+    }
+  }
+
+  return TRIANGULA_DRAWABLE_COUNTS[0];
+}
+
+function sanitizeTriangulaCount(value, fallback, role) {
+  return normalizeTriangulaDrawableCount(value, role, fallback);
 }
 
 function sanitizeTriangulaColorMode(value, fallback) {
@@ -2052,7 +2149,9 @@ function applyStateFromCurrentUrl(options) {
     setCurrentShape(shapeFromUrl, false);
 
     var songIdFromUrl = sanitizeSongId(params.get('sg'), currentSongId);
-    setCurrentSong(songIdFromUrl);
+    if (canApplySongSelection(songIdFromUrl)) {
+      setCurrentSong(songIdFromUrl);
+    }
 
     var bpmFromUrl = sanitizeBpmForCurrentSong(params.get('tb'), currentAnimationBpm);
     applyTempoValue(bpmFromUrl);
@@ -2107,8 +2206,8 @@ function applyStateFromCurrentUrl(options) {
       }
       triangulaColorMode = sanitizeTriangulaColorMode(params.get('tcm'), triangulaColorMode);
       triangulaConstructionMode = sanitizeTriangulaConstructionMode(params.get('tm'), triangulaConstructionMode);
-      triangulaStartCount = sanitizeTriangulaCount(params.get('ts'), triangulaStartCount);
-      triangulaTargetCount = sanitizeTriangulaCount(params.get('tt'), triangulaTargetCount);
+      triangulaStartCount = sanitizeTriangulaCount(params.get('ts'), triangulaStartCount, 'start');
+      triangulaTargetCount = sanitizeTriangulaCount(params.get('tt'), triangulaTargetCount, 'target');
       if (triangulaTargetCount < triangulaStartCount) {
         triangulaTargetCount = triangulaStartCount;
       }
@@ -2214,6 +2313,20 @@ function resolveExperienceId(experienceRef) {
 function getExperienceUiProfile(experienceId) {
   var experience = getExperienceById(experienceId);
   return experience.uiProfile || EXPERIENCE_LIBRARY.stitching.uiProfile;
+}
+
+function getDefaultSongIdForExperience(experienceId) {
+  if (experienceId === 'triangula') return 'triangle';
+  if (experienceId === 'squarus') return 'square';
+  if (experienceId === 'mashrabiya') return 'rosette';
+  return 'bach';
+}
+
+function canApplySongSelection(songId) {
+  if (!songId || !MUSIC_LIBRARY[songId]) return false;
+  if (songId === 'bach') return true;
+  if (songId === getDefaultSongIdForExperience(currentExperienceId)) return true;
+  return unlockedSongIds.indexOf(songId) !== -1;
 }
 
 function setElementDisplay(element, isVisible, displayValue) {
@@ -2360,7 +2473,8 @@ function applyExperienceUiPolicy() {
 }
 
 function syncTriangulaControls() {
-  if (triangulaStartCount < 1) triangulaStartCount = 1;
+  triangulaStartCount = normalizeTriangulaDrawableCount(triangulaStartCount, 'start', 1);
+  triangulaTargetCount = normalizeTriangulaDrawableCount(triangulaTargetCount, 'target', triangulaStartCount);
 
   if (triangulaTargetCount < triangulaStartCount) {
     triangulaTargetCount = triangulaStartCount;
@@ -2406,8 +2520,8 @@ function syncTriangulaControls() {
 }
 
 function applyTriangulaCountUpdate(nextStart, nextTarget, shouldRedraw) {
-  triangulaStartCount = parseBoundedInt(nextStart, 1, 729, triangulaStartCount || 1);
-  triangulaTargetCount = parseBoundedInt(nextTarget, 1, 729, triangulaTargetCount || 1);
+  triangulaStartCount = normalizeTriangulaDrawableCount(nextStart, 'start', triangulaStartCount || 1);
+  triangulaTargetCount = normalizeTriangulaDrawableCount(nextTarget, 'target', triangulaTargetCount || triangulaStartCount || 1);
   if (triangulaTargetCount < triangulaStartCount) {
     triangulaTargetCount = triangulaStartCount;
   }
@@ -2560,7 +2674,13 @@ function setCurrentExperience(experienceId, options) {
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
+  if (!options.preserveSongOnExperienceChange) {
+    setCurrentSong(getDefaultSongIdForExperience(currentExperienceId));
+  }
+
   applyExperienceUiPolicy();
+  // Re-apply mode-specific slider visibility after base UI policy toggles.
+  syncKidControlsFromSelectedThread();
   applyCurrentExperienceInfo();
   renderExperienceTitleStatic();
 
@@ -3301,6 +3421,13 @@ function renderDiscoveryLibrary() {
     text.textContent = config.description;
     card.appendChild(text);
 
+    if (config.passphrase) {
+      var passphrase = document.createElement('p');
+      passphrase.className = 'discovery-passphrase';
+      passphrase.textContent = 'Passphrase: "' + config.passphrase + '"';
+      card.appendChild(passphrase);
+    }
+
     var action = document.createElement('button');
     action.type = 'button';
     action.className = 'advanced-reset-btn';
@@ -3336,6 +3463,66 @@ function renderDiscoveryLibrary() {
 
   renderSongPicker();
   syncDiscoveryToggleButton();
+}
+
+function normalizeDiscoveryPassphrase(text) {
+  return (text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function getDiscoveryKeyForPassphrase(passphraseText) {
+  var normalizedInput = normalizeDiscoveryPassphrase(passphraseText);
+  if (!normalizedInput) return null;
+
+  var keys = Object.keys(DISCOVERY_LIBRARY);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var config = DISCOVERY_LIBRARY[key];
+    if (!config || !config.passphrase || !config.passphraseInputEnabled) continue;
+    if (normalizeDiscoveryPassphrase(config.passphrase) === normalizedInput) {
+      return key;
+    }
+  }
+
+  return null;
+}
+
+function setDiscoveryPassphraseFeedback(message, status) {
+  if (!discoveryPassphraseFeedback) return;
+  discoveryPassphraseFeedback.textContent = message || '';
+  discoveryPassphraseFeedback.classList.remove('is-success');
+  discoveryPassphraseFeedback.classList.remove('is-error');
+  if (status === 'success') {
+    discoveryPassphraseFeedback.classList.add('is-success');
+  } else if (status === 'error') {
+    discoveryPassphraseFeedback.classList.add('is-error');
+  }
+}
+
+function submitDiscoveryPassphraseEntry() {
+  if (!discoveryPassphraseInput) return;
+
+  var attemptedPassphrase = discoveryPassphraseInput.value || '';
+  if (!normalizeDiscoveryPassphrase(attemptedPassphrase)) {
+    setDiscoveryPassphraseFeedback('Type a passphrase first.', 'error');
+    return;
+  }
+
+  var shapeKey = getDiscoveryKeyForPassphrase(attemptedPassphrase);
+  if (!shapeKey) {
+    setDiscoveryPassphraseFeedback('That passphrase does not match a discovery yet.', 'error');
+    return;
+  }
+
+  var alreadyDiscovered = !!discoveredShapeKeys[shapeKey];
+  unlockDiscovery(shapeKey);
+
+  if (alreadyDiscovered) {
+    setDiscoveryPassphraseFeedback(DISCOVERY_LIBRARY[shapeKey].title + ' was already discovered.', 'success');
+  } else {
+    setDiscoveryPassphraseFeedback('Passphrase accepted: ' + DISCOVERY_LIBRARY[shapeKey].title + ' unlocked.', 'success');
+  }
+
+  discoveryPassphraseInput.value = '';
 }
 
 function unlockSong(songId) {
@@ -6545,6 +6732,13 @@ closeDiscoveryBtn.addEventListener('click', () => {
   syncDiscoveryToggleButton();
 });
 
+if (discoveryPassphraseForm) {
+  discoveryPassphraseForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    submitDiscoveryPassphraseEntry();
+  });
+}
+
 gearBtn.addEventListener('click', () => {
   advancedPanel.classList.toggle('open');
   syncAdvancedToggleButton();
@@ -6696,6 +6890,10 @@ if (triangulaStartSlider) {
   triangulaStartSlider.addEventListener('input', () => {
     applyTriangulaCountUpdate(triangulaStartSlider.value, triangulaTargetCount, true);
   });
+  triangulaStartSlider.addEventListener('change', () => {
+    applyTriangulaCountUpdate(triangulaStartSlider.value, triangulaTargetCount, false);
+    settleSliderMotion(triangulaStartSlider);
+  });
 }
 
 if (triangulaStartNumberInput) {
@@ -6711,6 +6909,10 @@ if (triangulaStartNumberInput) {
 if (triangulaTargetSlider) {
   triangulaTargetSlider.addEventListener('input', () => {
     applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, true);
+  });
+  triangulaTargetSlider.addEventListener('change', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, false);
+    settleSliderMotion(triangulaTargetSlider);
   });
 }
 
