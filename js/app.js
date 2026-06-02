@@ -440,6 +440,10 @@ var triangulaBandColors = {
   band2: '#1982c4',
   band4: '#1982c4'
 };
+var experienceStateSlots = {
+  stitching: null,
+  triangula: null
+};
 
 var APP_STATE_URL_VERSION = '1';
 var URL_SYNC_DEBOUNCE_MS = 800;
@@ -624,6 +628,91 @@ function parseStitchingThreadState(value, fallbackList) {
     return sanitized;
   } catch (error) {
     return fallbackList.slice();
+  }
+}
+
+function captureStitchingExperienceState() {
+  return {
+    threads: threads.map(function(thread) {
+      return sanitizeThreadDescriptor(thread, thread);
+    }),
+    selectedThreadIndex: selectedThreadIndex,
+    holes: parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES),
+    shape: currentShape
+  };
+}
+
+function applyStitchingExperienceState(snapshot) {
+  if (!snapshot) return;
+
+  var nextThreads = Array.isArray(snapshot.threads)
+    ? snapshot.threads.map(function(thread) {
+        return sanitizeThreadDescriptor(thread, thread);
+      })
+    : [];
+
+  if (!nextThreads.length) {
+    nextThreads.push(sanitizeThreadDescriptor({}, null));
+  }
+
+  threads.splice(0, threads.length);
+  Array.prototype.push.apply(threads, nextThreads);
+
+  selectedThreadIndex = parseBoundedInt(
+    snapshot.selectedThreadIndex,
+    0,
+    Math.max(0, threads.length - 1),
+    0
+  );
+
+  var holes = parseBoundedInt(snapshot.holes, 3, MAX_HOLES, DEFAULT_HOLES);
+  holesSlider.value = String(holes);
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = String(holes);
+  }
+
+  var nextShape = sanitizeShape(snapshot.shape, currentShape);
+  setCurrentShape(nextShape, false);
+}
+
+function captureTriangulaExperienceState() {
+  return {
+    colorMode: triangulaColorMode,
+    constructionMode: triangulaConstructionMode,
+    startCount: triangulaStartCount,
+    targetCount: triangulaTargetCount,
+    fractalMode: triangulaFractalMode,
+    fitMode: triangulaFitMode,
+    band1: triangulaBandColors.band1,
+    band2: triangulaBandColors.band2,
+    band4: triangulaBandColors.band4,
+    sourceColor: threads[0] ? threads[0].color : '#1982c4'
+  };
+}
+
+function applyTriangulaExperienceState(snapshot) {
+  if (!snapshot) return;
+
+  triangulaColorMode = sanitizeTriangulaColorMode(snapshot.colorMode, triangulaColorMode);
+  triangulaConstructionMode = sanitizeTriangulaConstructionMode(snapshot.constructionMode, triangulaConstructionMode);
+  triangulaStartCount = sanitizeTriangulaCount(snapshot.startCount, triangulaStartCount, 'start');
+  triangulaTargetCount = sanitizeTriangulaCount(snapshot.targetCount, triangulaTargetCount, 'target');
+  if (triangulaTargetCount < triangulaStartCount) {
+    triangulaTargetCount = triangulaStartCount;
+  }
+  triangulaFractalMode = sanitizeTriangulaFractalMode(snapshot.fractalMode, triangulaFractalMode);
+  triangulaFitMode = sanitizeTriangulaFitMode(snapshot.fitMode, triangulaFitMode);
+
+  var sharedColor = sanitizeHexColor(
+    snapshot.band1 || snapshot.band2 || snapshot.band4 || snapshot.sourceColor,
+    triangulaBandColors.band1
+  );
+  triangulaBandColors.band1 = sharedColor;
+  triangulaBandColors.band2 = sharedColor;
+  triangulaBandColors.band4 = sharedColor;
+
+  if (threads[0]) {
+    threads[0].color = sanitizeThreadColor(snapshot.sourceColor, sharedColor);
   }
 }
 
@@ -1044,13 +1133,8 @@ function applyThreadPolicy(profile) {
   var threadsEnabled = !profile || profile.threadsEnabled !== false;
   var allowMultipleThreads = !profile || profile.allowMultipleThreads !== false;
 
-  if (!threadsEnabled || !allowMultipleThreads) {
-    if (threads.length > 1) {
-      threads.splice(1);
-    }
-    if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
-      selectedThreadIndex = threads.length ? 0 : -1;
-    }
+  if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
+    selectedThreadIndex = threads.length ? 0 : -1;
   }
 
   setElementDisplay(STITCHER_UI.addMagicThreadBtn, threadsEnabled && allowMultipleThreads, '');
@@ -1323,8 +1407,23 @@ function applyCurrentExperienceInfo() {
 function setCurrentExperience(experienceId, options) {
   options = options || {};
   var experience = getExperienceById(experienceId);
+  var previousExperienceId = currentExperienceId;
+
+  if (previousExperienceId === 'stitching') {
+    experienceStateSlots.stitching = captureStitchingExperienceState();
+  } else if (previousExperienceId === 'triangula') {
+    experienceStateSlots.triangula = captureTriangulaExperienceState();
+  }
+
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
+
+  if (currentExperienceId === 'stitching') {
+    applyStitchingExperienceState(experienceStateSlots.stitching);
+  } else if (currentExperienceId === 'triangula') {
+    applyTriangulaExperienceState(experienceStateSlots.triangula);
+  }
+
   dispatchRuntimeState({
     type: 'SET_EXPERIENCE',
     payload: { experienceId: currentExperienceId }
@@ -2700,10 +2799,22 @@ function setCurrentShape(shape, shouldDraw) {
 }
 
 function refreshKidThreadPicker() {
-  kidThreadPicker.style.display = threads.length > 1 ? 'inline-flex' : 'none';
-  removeLastThreadBtn.style.display = threads.length > 1 ? '' : 'none';
+  var profile = getExperienceUiProfile(currentExperienceId);
+  var threadsEnabled = !profile || profile.threadsEnabled !== false;
+  var allowMultipleThreads = !profile || profile.allowMultipleThreads !== false;
+  var showThreadPicker = threadsEnabled && allowMultipleThreads && threads.length > 1;
+
+  kidThreadPicker.style.display = showThreadPicker ? 'inline-flex' : 'none';
+  removeLastThreadBtn.style.display = showThreadPicker ? '' : 'none';
   kidThreadMenu.innerHTML = '';
-  removeLastThreadBtn.disabled = threads.length <= 1;
+  removeLastThreadBtn.disabled = !showThreadPicker;
+
+  if (!threadsEnabled || !allowMultipleThreads) {
+    kidThreadToggle.disabled = true;
+    kidThreadMenu.setAttribute('hidden', '');
+    kidThreadToggle.setAttribute('aria-expanded', 'false');
+    return;
+  }
 
   if (!threads.length) {
     kidThreadToggle.disabled = true;

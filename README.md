@@ -1,6 +1,10 @@
 # curve_stitcher
 An interactive, kid-friendly and advanced-friendly curve stitching playground inspired by Mary Everest Boole, focused on geometric pattern discovery, animated thread construction, and export-ready design workflows.
 
+## Development Docs
+
+- [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) - Practical playbooks for adding experiences, changing controls, and modifying animation/canvas behavior safely.
+
 ## License
 
 This project is licensed under GNU General Public License v3.0. See [LICENSE](LICENSE).
