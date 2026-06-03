@@ -3,13 +3,20 @@ var EXPERIENCE_ADAPTERS = window.EXPERIENCE_ADAPTERS || Object.freeze({});
 var DISCOVERY_LIBRARY = window.DISCOVERY_LIBRARY || Object.freeze({});
 var DISCOVERY_FEATURE_FLAGS = window.DISCOVERY_FEATURE_FLAGS || Object.freeze({ rosetteDiscovery: false });
 var STITCHING_LOGIC = window.STITCHING_LOGIC || Object.freeze({});
-var normalizeTriangulaDrawableCount = window.normalizeTriangulaDrawableCount;
-var sanitizeTriangulaCount = window.sanitizeTriangulaCount;
-var sanitizeTriangulaColorMode = window.sanitizeTriangulaColorMode;
-var sanitizeTriangulaConstructionMode = window.sanitizeTriangulaConstructionMode;
-var sanitizeTriangulaFractalMode = window.sanitizeTriangulaFractalMode;
-var sanitizeTriangulaFitMode = window.sanitizeTriangulaFitMode;
-var stepTriangulaCount = window.stepTriangulaCount;
+var TRIANGULA_LOGIC = window.TRIANGULA_LOGIC || Object.freeze({});
+var normalizeTriangulaDrawableCount = TRIANGULA_LOGIC.normalizeTriangulaDrawableCount;
+var sanitizeTriangulaCount = TRIANGULA_LOGIC.sanitizeTriangulaCount;
+var sanitizeTriangulaColorMode = TRIANGULA_LOGIC.sanitizeTriangulaColorMode;
+var sanitizeTriangulaConstructionMode = TRIANGULA_LOGIC.sanitizeTriangulaConstructionMode;
+var sanitizeTriangulaFractalMode = TRIANGULA_LOGIC.sanitizeTriangulaFractalMode;
+var sanitizeTriangulaFitMode = TRIANGULA_LOGIC.sanitizeTriangulaFitMode;
+var stepTriangulaCount = TRIANGULA_LOGIC.stepTriangulaCount;
+var isTriangulaColorScopeVisible = TRIANGULA_LOGIC.isTriangulaColorScopeVisible;
+var captureTriangulaState = TRIANGULA_LOGIC.captureTriangulaExperienceState;
+var applyTriangulaState = TRIANGULA_LOGIC.applyTriangulaExperienceState;
+var buildTriangulaUrlState = TRIANGULA_LOGIC.buildTriangulaUrlState;
+var hydrateTriangulaUrlState = TRIANGULA_LOGIC.hydrateTriangulaUrlState;
+var getTriangulaExportProfileForExperience = TRIANGULA_LOGIC.getExportProfileForExperience;
 var parseBoundedInt = STITCHING_LOGIC.parseBoundedInt;
 var sanitizeThreadJumpMode = STITCHING_LOGIC.sanitizeThreadJumpMode;
 var sanitizeThreadColor = STITCHING_LOGIC.sanitizeThreadColor;
@@ -19,6 +26,8 @@ var sanitizeThreadList = STITCHING_LOGIC.sanitizeThreadList;
 var ensureThreadList = STITCHING_LOGIC.ensureThreadList;
 var serializeStitchingThreadState = STITCHING_LOGIC.serializeStitchingThreadState;
 var parseStitchingThreadState = STITCHING_LOGIC.parseStitchingThreadState;
+var buildStitchingUrlState = STITCHING_LOGIC.buildStitchingUrlState;
+var hydrateStitchingUrlState = STITCHING_LOGIC.hydrateStitchingUrlState;
 
 paper.install(window);
 paper.setup('myCanvas');
@@ -261,7 +270,7 @@ var BASIC_CONTROL_CATALOG = Object.freeze({
   [CONTROL_KEYS.BASIC.triangulaColorScope]: {
     element: EXPERIENCE_UI.triangulaColorScopeBlock,
     visibleWhen: function(controls) {
-      return controls[CONTROL_KEYS.BASIC.triangulaColorScope] === true && currentExperienceId === 'triangula' && triangulaConstructionMode === 'shrink-duplicate';
+      return isTriangulaColorScopeVisible(controls, currentExperienceId, triangulaConstructionMode);
     }
   },
   [CONTROL_KEYS.BASIC.triangulaConstructionMode]: {
@@ -432,10 +441,11 @@ var BORDER_STROKE_COLOR = '#2f4368';
 var BORDER_INCLUDE_IN_SVG = true;
 // Other supported values: 'pos-bottom-center', 'pos-top-left', 'pos-top-right'.
 var EXPERIENCE_OVERLAY_POSITION_CLASS = 'pos-top-center';
+var DEFAULT_EXPERIENCE_ID = 'stitching';
 
 var borderEnabled = true;
 
-var currentExperienceId = 'stitching';
+var currentExperienceId = DEFAULT_EXPERIENCE_ID;
 var runtimeStateStore = null;
 var experienceNarrationUtterance = null;
 var triangulaColorMode = 'band-1';
@@ -452,27 +462,44 @@ var triangulaBandColors = {
 };
 var experienceStateManager = null;
 var EXPERIENCE_ENGINE_REGISTRY = Object.create(null);
+var EXPERIENCE_STATE_HANDLERS = Object.create(null);
+var EXPERIENCE_URL_HANDLERS = Object.create(null);
+var EXPERIENCE_TRAIL_COLOR_HANDLERS = Object.create(null);
+var EXPERIENCE_EXPORT_HANDLERS = Object.create(null);
+var EXPERIENCE_EXPORT_PROFILES = Object.create(null);
+var stitchingUiModule = null;
+var stitchingRenderModule = null;
+var stitchingExportModule = null;
+var triangulaUiModule = null;
+var triangulaRenderModule = null;
+var triangulaExportModule = null;
+var stitchingStateModule = null;
+var triangulaStateModule = null;
+var triangulaCoreModule = null;
+var urlStateService = null;
+var experienceStateCache = null;
 
 var APP_STATE_URL_VERSION = '1';
+var EXPERIENCE_STATE_CACHE_SCHEMA_VERSION = '1';
 var URL_SYNC_DEBOUNCE_MS = 800;
 var urlSyncTimer = null;
 var urlSyncSuspended = false;
 var appState = {
   version: APP_STATE_URL_VERSION,
-  experienceId: 'stitching',
+  experienceId: DEFAULT_EXPERIENCE_ID,
   common: {
     shape: 'circle',
     bpm: DEFAULT_ANIMATION_BPM,
     musicMuted: false,
-    songId: 'bach',
-    showHoleNumbers: true,
-    borderEnabled: true
+    songId: 'bach'
   },
   stitching: {
     holes: DEFAULT_HOLES,
     selectedThreadIndex: 0,
     threadColors: ['#1982c4'],
-    threadState: ''
+    threadState: '',
+    showHoleNumbers: true,
+    borderEnabled: true
   },
   triangula: {
     colorMode: 'band-1',
@@ -540,6 +567,449 @@ function withUrlSyncSuspended(work) {
   }
 }
 
+function getStitchingUiModule() {
+  if (stitchingUiModule || typeof window.createStitchingUiModule !== 'function') {
+    return stitchingUiModule;
+  }
+
+  stitchingUiModule = window.createStitchingUiModule({
+    holesValue: holesValue,
+    holesSlider: holesSlider,
+    jumpValue: jumpValue,
+    jumpSlider: jumpSlider,
+    multiplyValue: multiplyValue,
+    multiplySlider: multiplySlider,
+    widthValue: widthValue,
+    widthSlider: widthSlider,
+    advancedHolesNumberInput: advancedHolesNumberInput,
+    advancedBorderEnabledInput: advancedBorderEnabledInput,
+    addSliderBlock: addSliderBlock,
+    kidStitchBySelect: kidStitchBySelect,
+    multiplySliderBlock: multiplySliderBlock,
+    threadControlsContainer: threadControlsContainer,
+    parseBoundedInt: parseBoundedInt,
+    maxHoles: MAX_HOLES,
+    getThreads: function() { return threads; },
+    getCurrentExperienceId: function() { return currentExperienceId; },
+    getExperienceUiProfile: getExperienceUiProfile,
+    getTriangulaBandColors: function() { return triangulaBandColors; },
+    normalizeTriangulaFillColor: function(c, f) { return getTriangulaCoreModule().normalizeTriangulaFillColor(c, f); },
+    getSelectedThreadIndex: function() { return selectedThreadIndex; },
+    setSelectedThreadIndex: function(nextIndex) { selectedThreadIndex = nextIndex; },
+    getBorderEnabled: function() { return borderEnabled; },
+    getShowHoleNumbers: function() { return showHoleNumbers; },
+    getMagicThreadColors: function() { return magicThreadColors; },
+    getDefaultThreadSize: function() { return DEFAULT_THREAD_SIZE; },
+    ensureThreadConnectConfig: ensureThreadConnectConfig,
+    redrawForPathChange: redrawForPathChange,
+    redrawAnimationInPlace: redrawAnimationInPlace,
+    kidThreadPicker: kidThreadPicker,
+    kidThreadMenu: kidThreadMenu,
+    removeLastThreadBtn: removeLastThreadBtn,
+    kidThreadToggle: kidThreadToggle,
+    kidThreadActiveLabel: kidThreadActiveLabel,
+    kidThreadActiveSwatch: kidThreadActiveSwatch,
+    holeNumbersToggleBtn: holeNumbersToggleBtn,
+    advancedHoleNumbersToggle: advancedHoleNumbersToggle
+  });
+
+  return stitchingUiModule;
+}
+
+function getStitchingRenderModule() {
+  if (stitchingRenderModule || typeof window.createStitchingRenderModule !== 'function') {
+    return stitchingRenderModule;
+  }
+
+  stitchingRenderModule = window.createStitchingRenderModule({
+    getPoints: function() { return points; },
+    getThreads: function() { return threads; },
+    getAnimationState: function() { return animationState; },
+    getBorderEnabled: function() { return borderEnabled; },
+    getBorderStrokeColor: function() { return BORDER_STROKE_COLOR; },
+    getBorderStrokeWidth: function() { return BORDER_STROKE_WIDTH; },
+    getBorderGeometryForCurrentShape: getBorderGeometryForCurrentShape,
+    ensureThreadConnectConfig: ensureThreadConnectConfig,
+    rainbowColor: rainbowColor,
+    clearLayer: function() { project.activeLayer.removeChildren(); },
+    computePoints: computePoints,
+    drawHoles: function() {
+      if (stitchingRuntime && typeof stitchingRuntime.drawHoles === 'function') {
+        stitchingRuntime.drawHoles();
+      }
+    },
+    drawAnimatedSegments: drawAnimatedSegments,
+    drawAnimatedSegmentProgress: drawAnimatedSegmentProgress,
+    drawSegmentSettleAccent: drawSegmentSettleAccent,
+    getAnimationSecondsPerSegment: getAnimationSecondsPerSegment,
+    syncHoleNumberHighlightFromAnimationState: syncHoleNumberHighlightFromAnimationState,
+    bringHoleNumbersToFront: function() {
+      if (stitchingRuntime && typeof stitchingRuntime.bringHoleNumbersToFront === 'function') {
+        stitchingRuntime.bringHoleNumbersToFront();
+      }
+    },
+    drawStatic: drawStatic
+  });
+
+  return stitchingRenderModule;
+}
+
+function getStitchingExportModule() {
+  if (stitchingExportModule || typeof window.createStitchingExportModule !== 'function') {
+    return stitchingExportModule;
+  }
+
+  stitchingExportModule = window.createStitchingExportModule({
+    computePoints: computePoints,
+    getViewSize: function() { return view.viewSize; },
+    getBorderEnabled: function() { return borderEnabled; },
+    getBorderIncludeInSvg: function() { return BORDER_INCLUDE_IN_SVG; },
+    getBorderStrokeColor: function() { return BORDER_STROKE_COLOR; },
+    getBorderStrokeWidth: function() { return BORDER_STROKE_WIDTH; },
+    getBorderOuterGap: function() { return BORDER_OUTER_GAP; },
+    getBorderGeometryForCurrentShape: getBorderGeometryForCurrentShape,
+    svgPathFromPoints: svgPathFromPoints,
+    colorToSvg: colorToSvg,
+    formatSvgNumber: formatSvgNumber,
+    rainbowColor: rainbowColor,
+    computeSegments: computeSegments,
+    getThreads: function() { return threads; },
+    getPoints: function() { return points; },
+    shouldShowHoleNumbersNow: function() { return stitchingRuntime && typeof stitchingRuntime.shouldShowHoleNumbersNow === 'function' ? stitchingRuntime.shouldShowHoleNumbersNow() : false; },
+    getHolesValue: function() { return holesSlider.value; },
+    getDefaultHoles: function() { return DEFAULT_HOLES; },
+    getHoleNumberFontSize: function(holeCount) { return stitchingRuntime && typeof stitchingRuntime.getHoleNumberFontSize === 'function' ? stitchingRuntime.getHoleNumberFontSize(holeCount) : 9; },
+    signedAreaOfClosedPolyline: signedAreaOfClosedPolyline,
+    getOutwardDirectionAtHole: function(index, ccw) { return stitchingRuntime && typeof stitchingRuntime.getOutwardDirectionAtHole === 'function' ? stitchingRuntime.getOutwardDirectionAtHole(index, ccw) : new Point(0, -1); },
+    estimateTextExtentAlongDirection: function(text, fontSize) { return stitchingRuntime && typeof stitchingRuntime.estimateTextExtentAlongDirection === 'function' ? stitchingRuntime.estimateTextExtentAlongDirection(text, fontSize) : Math.max(0, Number(fontSize) || 0); },
+    getHoleLabelOffsetFromExtent: function(extent, bc, hc) { return stitchingRuntime && typeof stitchingRuntime.getHoleLabelOffsetFromExtent === 'function' ? stitchingRuntime.getHoleLabelOffsetFromExtent(extent, bc, hc) : { offset: 4, minOffset: 4, maxOffset: 4 }; },
+    getLabelBorderClearanceSvg: function() { return LABEL_BORDER_CLEARANCE_SVG; },
+    getLabelHoleClearanceSvg: function() { return LABEL_HOLE_CLEARANCE_SVG; },
+    getCurrentShape: function() { return currentShape; },
+    ensureThreadConnectConfig: ensureThreadConnectConfig
+  });
+
+  return stitchingExportModule;
+}
+
+function getTriangulaUiModule() {
+  if (triangulaUiModule || typeof window.createTriangulaUiModule !== 'function') {
+    return triangulaUiModule;
+  }
+
+  triangulaUiModule = window.createTriangulaUiModule({
+    normalizeTriangulaDrawableCount: normalizeTriangulaDrawableCount,
+    getTriangulaStartCount: function() { return triangulaStartCount; },
+    getTriangulaTargetCount: function() { return triangulaTargetCount; },
+    setTriangulaStartCount: function(nextValue) { triangulaStartCount = nextValue; },
+    setTriangulaTargetCount: function(nextValue) { triangulaTargetCount = nextValue; },
+    getTriangulaStartSlider: function() { return triangulaStartSlider; },
+    getTriangulaTargetSlider: function() { return triangulaTargetSlider; },
+    getTriangulaStartValue: function() { return triangulaStartValue; },
+    getTriangulaTargetValue: function() { return triangulaTargetValue; },
+    getTriangulaStartNumberInput: function() { return triangulaStartNumberInput; },
+    getTriangulaTargetNumberInput: function() { return triangulaTargetNumberInput; },
+    getTriangulaColorScopeSelect: function() { return triangulaColorScopeSelect; },
+    getTriangulaConstructionModeSelect: function() { return triangulaConstructionModeSelect; },
+    getTriangulaFractalModeSelect: function() { return triangulaFractalModeSelect; },
+    getTriangulaFitModeSelect: function() { return triangulaFitModeSelect; },
+    getTriangulaColorMode: function() { return triangulaColorMode; },
+    getTriangulaConstructionMode: function() { return triangulaConstructionMode; },
+    getTriangulaFractalMode: function() { return triangulaFractalMode; },
+    getTriangulaFitMode: function() { return triangulaFitMode; },
+    getExperienceUiProfile: getExperienceUiProfile,
+    getCurrentExperienceId: function() { return currentExperienceId; },
+    getTriangulaColorScopeBlock: function() { return triangulaColorScopeBlock; },
+    isTriangulaColorScopeVisible: isTriangulaColorScopeVisible,
+    setElementDisplay: setElementDisplay,
+    redrawForPathChange: redrawForPathChange
+  });
+
+  return triangulaUiModule;
+}
+
+function getTriangulaRenderModule() {
+  if (triangulaRenderModule || typeof window.createTriangulaRenderModule !== 'function') {
+    return triangulaRenderModule;
+  }
+
+  triangulaRenderModule = window.createTriangulaRenderModule({
+    getTriangulaBaseTriangle: function(s) { return getTriangulaCoreModule().getTriangulaBaseTriangle(s); },
+    getTriangulaFillColorForSlot: function(slot, seq) { return getTriangulaCoreModule().getTriangulaFillColorForSlot(slot, seq); },
+    getTriangulaStrokeColorForSlot: function(slot, seq) { return getTriangulaCoreModule().getTriangulaStrokeColorForSlot(slot, seq); },
+    drawTrianglePath: function(v, opts) { return getTriangulaCoreModule().drawTrianglePath(v, opts); },
+    drawTriangleStrokeProgress: function(v, opts, p) { return getTriangulaCoreModule().drawTriangleStrokeProgress(v, opts, p); },
+    collectCutTrianglesAtDepth: function(v, d, cd, col) { return getTriangulaCoreModule().collectCutTrianglesAtDepth(v, d, cd, col); },
+    collectTrianglesAtDepth: function(v, d, cd, s, col) { return getTriangulaCoreModule().collectTrianglesAtDepth(v, d, cd, s, col); },
+    collectParentChildTransitionsAtDepth: function(v, d, cd, col) { return getTriangulaCoreModule().collectParentChildTransitionsAtDepth(v, d, cd, col); },
+    toRgbaColor: toRgbaColor,
+    createPath: function() { return new Path(); },
+    getTriangulaConstructionMode: function() { return triangulaConstructionMode; }
+  });
+
+  return triangulaRenderModule;
+}
+
+function getTriangulaExportModule() {
+  if (triangulaExportModule || typeof window.createTriangulaExportModule !== 'function') {
+    return triangulaExportModule;
+  }
+
+  triangulaExportModule = window.createTriangulaExportModule({
+    getViewSize: function() { return view.viewSize; },
+    getTriangulaBaseTriangle: function(s) { return getTriangulaCoreModule().getTriangulaBaseTriangle(s); },
+    triangulaCountToDepth: function(c) { return getTriangulaCoreModule().triangulaCountToDepth(c); },
+    getTriangulaTargetCount: function() { return triangulaTargetCount; },
+    getTriangulaStartCount: function() { return triangulaStartCount; },
+    getTriangulaConstructionMode: function() { return triangulaConstructionMode; },
+    getTriangulaFractalMode: function() { return triangulaFractalMode; },
+    getTriangulaFitMode: function() { return triangulaFitMode; },
+    getTriangulaColorMode: function() { return triangulaColorMode; },
+    getTriangulaBandColors: function() { return triangulaBandColors; },
+    getTriangulaFillColorForSlot: function(slot, seq) { return getTriangulaCoreModule().getTriangulaFillColorForSlot(slot, seq); },
+    getTriangulaStrokeColorForSlot: function(slot, seq) { return getTriangulaCoreModule().getTriangulaStrokeColorForSlot(slot, seq); },
+    collectCutTrianglesAtDepth: function(v, d, cd, col) { return getTriangulaCoreModule().collectCutTrianglesAtDepth(v, d, cd, col); },
+    collectTrianglesAtDepth: function(v, d, cd, s, col) { return getTriangulaCoreModule().collectTrianglesAtDepth(v, d, cd, s, col); },
+    svgPathFromPoints: svgPathFromPoints,
+    colorToSvg: colorToSvg,
+    formatSvgNumber: formatSvgNumber,
+    getThreads: function() { return threads; }
+  });
+
+  return triangulaExportModule;
+}
+
+function getStitchingStateModule() {
+  if (stitchingStateModule || typeof window.createStitchingStateModule !== 'function') {
+    return stitchingStateModule;
+  }
+
+  stitchingStateModule = window.createStitchingStateModule({
+    getThreads: function() { return threads; },
+    replaceThreads: function(nextThreads) {
+      threads.splice(0, threads.length);
+      Array.prototype.push.apply(threads, nextThreads || []);
+    },
+    getSelectedThreadIndex: function() { return selectedThreadIndex; },
+    setSelectedThreadIndex: function(nextIndex) { selectedThreadIndex = nextIndex; },
+    getHolesValue: function() { return holesSlider.value; },
+    setHolesValue: function(nextValue) { holesSlider.value = nextValue; },
+    setAdvancedHolesValue: function(nextValue) {
+      if (advancedHolesNumberInput) advancedHolesNumberInput.value = nextValue;
+    },
+    getMaxHoles: function() { return MAX_HOLES; },
+    getDefaultHoles: function() { return DEFAULT_HOLES; },
+    getCurrentShape: function() { return currentShape; },
+    setCurrentShape: setCurrentShape,
+    getCurrentAnimationBpm: function() { return currentAnimationBpm; },
+    getCurrentSongId: function() { return currentSongId; },
+    canApplySongSelection: canApplySongSelection,
+    setCurrentSong: setCurrentSong,
+    applyTempoValue: applyTempoValue,
+    sanitizeBpmForCurrentSong: sanitizeBpmForCurrentSong,
+    parseBoundedInt: parseBoundedInt,
+    sanitizeThreadList: sanitizeThreadList,
+    ensureThreadList: ensureThreadList,
+    sanitizeShape: sanitizeShape,
+    sanitizeThreadColor: sanitizeThreadColor,
+    sanitizeBooleanParam: sanitizeBooleanParam,
+    serializeStitchingThreadState: serializeStitchingThreadState,
+    parseStitchingThreadState: parseStitchingThreadState,
+    sanitizeThreadColorList: sanitizeThreadColorList,
+    buildStitchingUrlState: buildStitchingUrlState,
+    hydrateStitchingUrlState: hydrateStitchingUrlState,
+    getAppState: function() { return appState; },
+    setUrlStateParam: setUrlStateParam,
+    getUrlStateParam: getUrlStateParam,
+    getShowHoleNumbers: function() { return showHoleNumbers; },
+    getBorderEnabled: function() { return borderEnabled; },
+    setShowHoleNumbers: setShowHoleNumbersState,
+    setBorderEnabled: setBorderEnabledState,
+    syncHoleNumberToggles: syncHoleNumberToggles,
+    syncBorderControls: syncBorderControls,
+    renderThreadControls: renderThreadControls,
+    syncKidControlsFromSelectedThread: syncKidControlsFromSelectedThread
+  });
+
+  return stitchingStateModule;
+}
+
+function getTriangulaStateModule() {
+  if (triangulaStateModule || typeof window.createTriangulaStateModule !== 'function') {
+    return triangulaStateModule;
+  }
+
+  triangulaStateModule = window.createTriangulaStateModule({
+    captureTriangulaState: captureTriangulaState,
+    applyTriangulaState: applyTriangulaState,
+    buildTriangulaUrlState: buildTriangulaUrlState,
+    hydrateTriangulaUrlState: hydrateTriangulaUrlState,
+    sanitizeTriangulaColorMode: sanitizeTriangulaColorMode,
+    sanitizeTriangulaConstructionMode: sanitizeTriangulaConstructionMode,
+    sanitizeTriangulaCount: sanitizeTriangulaCount,
+    sanitizeTriangulaFractalMode: sanitizeTriangulaFractalMode,
+    sanitizeTriangulaFitMode: sanitizeTriangulaFitMode,
+    sanitizeHexColor: sanitizeHexColor,
+    sanitizeThreadColor: sanitizeThreadColor,
+    sanitizeBpmForCurrentSong: sanitizeBpmForCurrentSong,
+    getTriangulaColorMode: function() { return triangulaColorMode; },
+    getTriangulaConstructionMode: function() { return triangulaConstructionMode; },
+    getTriangulaStartCount: function() { return triangulaStartCount; },
+    getTriangulaTargetCount: function() { return triangulaTargetCount; },
+    getTriangulaFractalMode: function() { return triangulaFractalMode; },
+    getTriangulaFitMode: function() { return triangulaFitMode; },
+    getTriangulaBandColors: function() { return triangulaBandColors; },
+    setTriangulaColorMode: function(nextValue) { triangulaColorMode = nextValue; },
+    setTriangulaConstructionMode: function(nextValue) { triangulaConstructionMode = nextValue; },
+    setTriangulaStartCount: function(nextValue) { triangulaStartCount = nextValue; },
+    setTriangulaTargetCount: function(nextValue) { triangulaTargetCount = nextValue; },
+    setTriangulaFractalMode: function(nextValue) { triangulaFractalMode = nextValue; },
+    setTriangulaFitMode: function(nextValue) { triangulaFitMode = nextValue; },
+    setTriangulaBandColors: function(b1, b2, b4) {
+      triangulaBandColors.band1 = b1;
+      triangulaBandColors.band2 = b2;
+      triangulaBandColors.band4 = b4;
+    },
+    getThreadZeroColor: function() { return threads[0] ? threads[0].color : '#1982c4'; },
+    setThreadZeroColor: function(nextColor) { if (threads[0]) threads[0].color = nextColor; },
+    getCurrentAnimationBpm: function() { return currentAnimationBpm; },
+    getCurrentSongId: function() { return currentSongId; },
+    canApplySongSelection: canApplySongSelection,
+    setCurrentSong: setCurrentSong,
+    applyTempoValue: applyTempoValue,
+    getAppState: function() { return appState; },
+    setUrlStateParam: setUrlStateParam,
+    getUrlStateParam: getUrlStateParam,
+    syncTriangulaControls: syncTriangulaControls
+  });
+
+  return triangulaStateModule;
+}
+
+function getTriangulaCoreModule() {
+  if (triangulaCoreModule || typeof window.createTriangulaCoreModule !== 'function') {
+    return triangulaCoreModule;
+  }
+
+  triangulaCoreModule = window.createTriangulaCoreModule({
+    getView: function() { return view; },
+    getTriangulaColorMode: function() { return triangulaColorMode; },
+    getTriangulaConstructionMode: function() { return triangulaConstructionMode; },
+    getTriangulaFractalMode: function() { return triangulaFractalMode; },
+    getTriangulaFitMode: function() { return triangulaFitMode; },
+    getTriangulaBandColors: function() { return triangulaBandColors; },
+    getThreadZeroColor: function() { return threads[0] ? threads[0].color : null; },
+    getAnimationSecondsPerSegment: getAnimationSecondsPerSegment
+  });
+
+  return triangulaCoreModule;
+}
+
+function getUrlStateService() {
+  if (urlStateService || typeof window.createUrlStateService !== 'function') {
+    return urlStateService;
+  }
+
+  urlStateService = window.createUrlStateService({
+    syncAppStateFromRuntime: syncAppStateFromRuntime,
+    setUrlStateParam: setUrlStateParam,
+    getUrlStateParam: getUrlStateParam,
+    hasUrlStateKey: hasUrlStateKey,
+    getAppStateUrlVersion: function() { return APP_STATE_URL_VERSION; },
+    getAppState: function() { return appState; },
+    getExperienceUrlHandlers: function() { return EXPERIENCE_URL_HANDLERS; },
+    getUrlSyncSuspended: function() { return urlSyncSuspended; },
+    getUrlSyncTimer: function() { return urlSyncTimer; },
+    setUrlSyncTimer: function(nextTimer) { urlSyncTimer = nextTimer; },
+    getUrlSyncDebounceMs: function() { return URL_SYNC_DEBOUNCE_MS; },
+    resolveExperienceId: resolveExperienceId,
+    setCurrentExperience: setCurrentExperience,
+    getCurrentExperienceId: function() { return currentExperienceId; },
+    getExperienceUiProfile: getExperienceUiProfile,
+    sanitizeShape: sanitizeShape,
+    getCurrentShape: function() { return currentShape; },
+    setCurrentShape: setCurrentShape,
+    sanitizeSongId: sanitizeSongId,
+    getCurrentSongId: function() { return currentSongId; },
+    canApplySongSelection: canApplySongSelection,
+    setCurrentSong: setCurrentSong,
+    sanitizeBpmForCurrentSong: sanitizeBpmForCurrentSong,
+    getCurrentAnimationBpm: function() { return currentAnimationBpm; },
+    applyTempoValue: applyTempoValue,
+    sanitizeBooleanParam: sanitizeBooleanParam,
+    getMusicMuted: function() { return isMusicMuted; },
+    setMusicMutedState: setMusicMutedState,
+    syncMusicToggleButton: syncMusicToggleButton,
+    dispatchRuntimeState: dispatchRuntimeState,
+    getExperienceUrlHandler: getExperienceUrlHandler,
+    redrawForPathChange: redrawForPathChange,
+    setAnimationPlaybackState: function(nextState) { animationPlaybackState = nextState; },
+    syncAnimateButtonLabel: syncAnimateButtonLabel,
+    updateMusicPlaybackState: updateMusicPlaybackState,
+    withUrlSyncSuspended: withUrlSyncSuspended
+  });
+
+  return urlStateService;
+}
+
+function getExperienceStateCache() {
+  if (experienceStateCache || typeof window.createExperienceStateCacheService !== 'function') {
+    return experienceStateCache;
+  }
+
+  experienceStateCache = window.createExperienceStateCacheService({
+    schemaVersion: EXPERIENCE_STATE_CACHE_SCHEMA_VERSION,
+    storageKey: 'curve_stitcher.experience_state_cache'
+  });
+
+  return experienceStateCache;
+}
+
+function registerExperienceStateHandler(experienceId, handler) {
+  if (!experienceId || !handler) return;
+  EXPERIENCE_STATE_HANDLERS[experienceId] = handler;
+}
+
+function getExperienceStateHandler(experienceId) {
+  return EXPERIENCE_STATE_HANDLERS[experienceId] || null;
+}
+
+function registerExperienceUrlHandler(experienceId, handler) {
+  if (!experienceId || !handler) return;
+  EXPERIENCE_URL_HANDLERS[experienceId] = handler;
+}
+
+function getExperienceUrlHandler(experienceId) {
+  return EXPERIENCE_URL_HANDLERS[experienceId] || null;
+}
+
+function registerExperienceTrailColorHandler(experienceId, resolver) {
+  if (!experienceId || typeof resolver !== 'function') return;
+  EXPERIENCE_TRAIL_COLOR_HANDLERS[experienceId] = resolver;
+}
+
+function getExperienceTrailColorHandler(experienceId) {
+  return EXPERIENCE_TRAIL_COLOR_HANDLERS[experienceId] || null;
+}
+
+function registerExperienceExportHandler(experienceId, handler) {
+  if (!experienceId || !handler) return;
+  EXPERIENCE_EXPORT_HANDLERS[experienceId] = handler;
+}
+
+function getRegisteredExperienceExportHandler(experienceId) {
+  return EXPERIENCE_EXPORT_HANDLERS[experienceId] || null;
+}
+
+function registerExperienceExportProfile(experienceId, profile) {
+  if (!experienceId || !profile) return;
+  EXPERIENCE_EXPORT_PROFILES[experienceId] = profile;
+}
+
+function getRegisteredExperienceExportProfile(experienceId) {
+  return EXPERIENCE_EXPORT_PROFILES[experienceId] || null;
+}
+
 function sanitizeShape(value, fallback) {
   var allowed = ['circle', 'triangle', 'square', 'star', 'heart'];
   if (allowed.indexOf(value) === -1) return fallback;
@@ -566,97 +1036,69 @@ function sanitizeBpmForCurrentSong(value, fallback) {
   return parsed;
 }
 
-function captureStitchingExperienceState() {
+function createModuleStateHandler(getModule) {
   return {
-    threads: sanitizeThreadList(threads),
-    selectedThreadIndex: selectedThreadIndex,
-    holes: parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES),
-    shape: currentShape
+    capture: function() {
+      var module = getModule();
+      if (module && typeof module.captureState === 'function') {
+        return module.captureState();
+      }
+      return null;
+    },
+    apply: function(snapshot) {
+      var module = getModule();
+      if (module && typeof module.applyState === 'function') {
+        module.applyState(snapshot);
+      }
+    }
   };
 }
 
-function applyStitchingExperienceState(snapshot) {
-  if (!snapshot) return;
-
-  var nextThreads = ensureThreadList(snapshot.threads);
-
-  threads.splice(0, threads.length);
-  Array.prototype.push.apply(threads, nextThreads);
-
-  selectedThreadIndex = parseBoundedInt(
-    snapshot.selectedThreadIndex,
-    0,
-    Math.max(0, threads.length - 1),
-    0
-  );
-
-  var holes = parseBoundedInt(snapshot.holes, 3, MAX_HOLES, DEFAULT_HOLES);
-  holesSlider.value = String(holes);
-  if (advancedHolesNumberInput) {
-    advancedHolesNumberInput.value = String(holes);
-  }
-
-  var nextShape = sanitizeShape(snapshot.shape, currentShape);
-  setCurrentShape(nextShape, false);
-}
-
-function captureTriangulaExperienceState() {
+function createModuleUrlHandler(getModule, options) {
+  options = options || {};
   return {
-    colorMode: triangulaColorMode,
-    constructionMode: triangulaConstructionMode,
-    startCount: triangulaStartCount,
-    targetCount: triangulaTargetCount,
-    fractalMode: triangulaFractalMode,
-    fitMode: triangulaFitMode,
-    band1: triangulaBandColors.band1,
-    band2: triangulaBandColors.band2,
-    band4: triangulaBandColors.band4,
-    sourceColor: threads[0] ? threads[0].color : '#1982c4'
+    syncToAppState: function() {
+      var module = getModule();
+      if (module && typeof module.syncToAppState === 'function') {
+        module.syncToAppState();
+      }
+    },
+    appendParams: function(params) {
+      if (options.appendGuard && !options.appendGuard()) return;
+      var module = getModule();
+      if (module && typeof module.appendUrlParams === 'function') {
+        module.appendUrlParams(params);
+      }
+    },
+    hydrateParams: function(params, requestedExperience) {
+      var module = getModule();
+      if (module && typeof module.hydrateUrlParams === 'function') {
+        module.hydrateUrlParams(params, requestedExperience);
+      }
+    }
   };
 }
 
-function applyTriangulaExperienceState(snapshot) {
-  if (!snapshot) return;
+registerExperienceStateHandler('stitching', createModuleStateHandler(getStitchingStateModule));
+registerExperienceStateHandler('triangula', createModuleStateHandler(getTriangulaStateModule));
 
-  triangulaColorMode = sanitizeTriangulaColorMode(snapshot.colorMode, triangulaColorMode);
-  triangulaConstructionMode = sanitizeTriangulaConstructionMode(snapshot.constructionMode, triangulaConstructionMode);
-  triangulaStartCount = sanitizeTriangulaCount(snapshot.startCount, triangulaStartCount, 'start');
-  triangulaTargetCount = sanitizeTriangulaCount(snapshot.targetCount, triangulaTargetCount, 'target');
-  if (triangulaTargetCount < triangulaStartCount) {
-    triangulaTargetCount = triangulaStartCount;
+registerExperienceUrlHandler('stitching', createModuleUrlHandler(getStitchingStateModule));
+registerExperienceUrlHandler('triangula', createModuleUrlHandler(getTriangulaStateModule, {
+  appendGuard: function() {
+    return appState.experienceId === 'triangula';
   }
-  triangulaFractalMode = sanitizeTriangulaFractalMode(snapshot.fractalMode, triangulaFractalMode);
-  triangulaFitMode = sanitizeTriangulaFitMode(snapshot.fitMode, triangulaFitMode);
-
-  var sharedColor = sanitizeHexColor(
-    snapshot.band1 || snapshot.band2 || snapshot.band4 || snapshot.sourceColor,
-    triangulaBandColors.band1
-  );
-  triangulaBandColors.band1 = sharedColor;
-  triangulaBandColors.band2 = sharedColor;
-  triangulaBandColors.band4 = sharedColor;
-
-  if (threads[0]) {
-    threads[0].color = sanitizeThreadColor(snapshot.sourceColor, sharedColor);
-  }
-}
+}));
 
 function ensureExperienceStateManager() {
   if (experienceStateManager) return experienceStateManager;
 
-  var handlers = {
-    stitching: {
-      capture: captureStitchingExperienceState,
-      apply: applyStitchingExperienceState
-    },
-    triangula: {
-      capture: captureTriangulaExperienceState,
-      apply: applyTriangulaExperienceState
-    }
-  };
+  var handlers = EXPERIENCE_STATE_HANDLERS;
+  var cache = getExperienceStateCache();
 
   if (typeof window.createExperienceStateManager === 'function') {
-    experienceStateManager = window.createExperienceStateManager(handlers);
+    experienceStateManager = window.createExperienceStateManager(handlers, {
+      cache: cache
+    });
     return experienceStateManager;
   }
 
@@ -664,14 +1106,25 @@ function ensureExperienceStateManager() {
   experienceStateManager = {
     capture: function(experienceId) {
       var handler = handlers[experienceId];
-      if (!handler || typeof handler.capture !== 'function') return;
+      if (!handler || typeof handler.capture !== 'function') return false;
       fallbackSlots[experienceId] = handler.capture();
+      if (cache && typeof cache.setExperienceSnapshot === 'function') {
+        cache.setExperienceSnapshot(experienceId, fallbackSlots[experienceId]);
+      }
+      return true;
     },
     restore: function(experienceId) {
       var handler = handlers[experienceId];
-      if (!handler || typeof handler.apply !== 'function') return;
-      if (!Object.prototype.hasOwnProperty.call(fallbackSlots, experienceId)) return;
+      if (!handler || typeof handler.apply !== 'function') return false;
+      if (!Object.prototype.hasOwnProperty.call(fallbackSlots, experienceId) && cache && typeof cache.getExperienceSnapshot === 'function') {
+        var persisted = cache.getExperienceSnapshot(experienceId);
+        if (persisted !== null && typeof persisted !== 'undefined') {
+          fallbackSlots[experienceId] = persisted;
+        }
+      }
+      if (!Object.prototype.hasOwnProperty.call(fallbackSlots, experienceId)) return false;
       handler.apply(fallbackSlots[experienceId]);
+      return true;
     }
   };
 
@@ -684,7 +1137,7 @@ function registerExperienceEngine(experienceId, engine) {
 }
 
 function getExperienceEngine(experienceId) {
-  return EXPERIENCE_ENGINE_REGISTRY[experienceId] || EXPERIENCE_ENGINE_REGISTRY.stitching || null;
+  return EXPERIENCE_ENGINE_REGISTRY[experienceId] || null;
 }
 
 function sanitizeHexColor(value, fallback) {
@@ -712,18 +1165,10 @@ function dispatchRuntimeState(action) {
 
 function setShowHoleNumbersState(nextValue) {
   showHoleNumbers = !!nextValue;
-  dispatchRuntimeState({
-    type: 'SET_SHOW_HOLE_NUMBERS',
-    payload: { showHoleNumbers: showHoleNumbers }
-  });
 }
 
 function setBorderEnabledState(nextValue) {
   borderEnabled = !!nextValue;
-  dispatchRuntimeState({
-    type: 'SET_BORDER_ENABLED',
-    payload: { borderEnabled: borderEnabled }
-  });
 }
 
 function setMusicMutedState(nextValue) {
@@ -742,32 +1187,20 @@ function syncAppStateFromRuntime() {
   appState.common.bpm = isFinite(runtimeSnapshot.bpm) ? Number(runtimeSnapshot.bpm) : currentAnimationBpm;
   appState.common.musicMuted = typeof runtimeSnapshot.musicMuted === 'boolean' ? runtimeSnapshot.musicMuted : !!isMusicMuted;
   appState.common.songId = runtimeSnapshot.songId || currentSongId;
-  appState.common.showHoleNumbers = typeof runtimeSnapshot.showHoleNumbers === 'boolean' ? runtimeSnapshot.showHoleNumbers : !!showHoleNumbers;
-  appState.common.borderEnabled = typeof runtimeSnapshot.borderEnabled === 'boolean' ? runtimeSnapshot.borderEnabled : !!borderEnabled;
 
-  appState.stitching.holes = parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES);
-  appState.stitching.selectedThreadIndex = Math.max(0, Math.min(threads.length - 1, selectedThreadIndex));
-  appState.stitching.threadColors = threads.map(function(thread) {
-    return sanitizeThreadColor(thread.color, '#1982c4');
+  Object.keys(EXPERIENCE_URL_HANDLERS).forEach(function(experienceId) {
+    var handler = EXPERIENCE_URL_HANDLERS[experienceId];
+    if (!handler || typeof handler.syncToAppState !== 'function') return;
+    handler.syncToAppState();
   });
-  appState.stitching.threadState = serializeStitchingThreadState(threads);
-
-  appState.triangula.colorMode = triangulaColorMode;
-  appState.triangula.constructionMode = triangulaConstructionMode;
-  appState.triangula.startCount = triangulaStartCount;
-  appState.triangula.targetCount = triangulaTargetCount;
-  appState.triangula.fractalMode = triangulaFractalMode;
-  appState.triangula.fitMode = triangulaFitMode;
-  appState.triangula.sourceColor = sanitizeThreadColor(
-    threads[0] ? threads[0].color : null,
-    appState.triangula.sourceColor || '#1982c4'
-  );
-  appState.triangula.band1Color = triangulaBandColors.band1;
-  appState.triangula.band2Color = triangulaBandColors.band2;
-  appState.triangula.band4Color = triangulaBandColors.band4;
 }
 
 function buildSearchParamsFromAppState() {
+  var service = getUrlStateService();
+  if (service && typeof service.buildSearchParamsFromAppState === 'function') {
+    return service.buildSearchParamsFromAppState();
+  }
+
   syncAppStateFromRuntime();
   var params = new URLSearchParams();
   setUrlStateParam(params, 'version', APP_STATE_URL_VERSION);
@@ -776,198 +1209,41 @@ function buildSearchParamsFromAppState() {
   setUrlStateParam(params, 'bpm', String(appState.common.bpm));
   setUrlStateParam(params, 'musicMuted', appState.common.musicMuted ? '1' : '0');
   setUrlStateParam(params, 'songId', appState.common.songId);
-  setUrlStateParam(params, 'showHoleNumbers', appState.common.showHoleNumbers ? '1' : '0');
-  setUrlStateParam(params, 'borderEnabled', appState.common.borderEnabled ? '1' : '0');
-  setUrlStateParam(params, 'stitchingHoles', String(appState.stitching.holes));
-  setUrlStateParam(params, 'selectedThreadIndex', String(appState.stitching.selectedThreadIndex));
-  setUrlStateParam(params, 'threadState', appState.stitching.threadState);
-
-  if (appState.stitching.threadColors && appState.stitching.threadColors.length) {
-    setUrlStateParam(params, 'threadColors', appState.stitching.threadColors.join(','));
-  }
-
-  if (appState.experienceId === 'triangula') {
-    setUrlStateParam(params, 'triangulaSourceColor', appState.triangula.sourceColor);
-    setUrlStateParam(params, 'triangulaColorMode', appState.triangula.colorMode);
-    setUrlStateParam(params, 'triangulaConstructionMode', appState.triangula.constructionMode);
-    setUrlStateParam(params, 'triangulaStartCount', String(appState.triangula.startCount));
-    setUrlStateParam(params, 'triangulaTargetCount', String(appState.triangula.targetCount));
-    setUrlStateParam(params, 'triangulaFractalMode', appState.triangula.fractalMode);
-    setUrlStateParam(params, 'triangulaFitMode', appState.triangula.fitMode);
-    setUrlStateParam(params, 'triangulaBand1Color', appState.triangula.band1Color);
-    setUrlStateParam(params, 'triangulaBand2Color', appState.triangula.band2Color);
-    setUrlStateParam(params, 'triangulaBand4Color', appState.triangula.band4Color);
-  }
-
   return params;
 }
 
 function flushUrlStateSync() {
-  if (urlSyncSuspended) return;
-  var params = buildSearchParamsFromAppState();
-  var nextSearch = params.toString();
-  var nextUrl = nextSearch ? (window.location.pathname + '?' + nextSearch) : window.location.pathname;
-  var currentUrl = window.location.pathname + window.location.search;
-  if (nextUrl === currentUrl) return;
-  history.replaceState({ appStateVersion: APP_STATE_URL_VERSION }, '', nextUrl);
+  var service = getUrlStateService();
+  if (service && typeof service.flushUrlStateSync === 'function') {
+    service.flushUrlStateSync();
+  }
 }
 
 function scheduleUrlStateSync(immediate) {
-  if (urlSyncSuspended) return;
-  if (urlSyncTimer) {
-    clearTimeout(urlSyncTimer);
-    urlSyncTimer = null;
+  var stateManager = ensureExperienceStateManager();
+  if (stateManager && typeof stateManager.capture === 'function') {
+    stateManager.capture(currentExperienceId);
   }
-  if (immediate) {
-    flushUrlStateSync();
-    return;
+
+  var service = getUrlStateService();
+  if (service && typeof service.scheduleUrlStateSync === 'function') {
+    service.scheduleUrlStateSync(immediate);
   }
-  urlSyncTimer = window.setTimeout(function() {
-    urlSyncTimer = null;
-    flushUrlStateSync();
-  }, URL_SYNC_DEBOUNCE_MS);
 }
 
 function applyStateFromCurrentUrl(options) {
-  options = options || {};
-  var params = new URLSearchParams(window.location.search || '');
-  var requestedExperience = resolveExperienceId(getUrlStateParam(params, 'experience'));
-
-  if (!requestedExperience) {
-    requestedExperience = currentExperienceId;
-  }
-
-  try {
-    withUrlSyncSuspended(function() {
-    if (resolveExperienceId(getUrlStateParam(params, 'experience'))) {
-      setCurrentExperience(requestedExperience, { suppressUrlSync: true });
-    }
-
-    var profile = getExperienceUiProfile(currentExperienceId);
-    var shapeFromUrl = sanitizeShape(getUrlStateParam(params, 'shape'), currentShape);
-    if (profile && profile.fixedShape) {
-      shapeFromUrl = profile.fixedShape;
-    }
-
-    setCurrentShape(shapeFromUrl, false);
-
-    var songIdFromUrl = sanitizeSongId(getUrlStateParam(params, 'songId'), currentSongId);
-    if (canApplySongSelection(songIdFromUrl)) {
-      setCurrentSong(songIdFromUrl);
-    }
-
-    var bpmFromUrl = sanitizeBpmForCurrentSong(getUrlStateParam(params, 'bpm'), currentAnimationBpm);
-    applyTempoValue(bpmFromUrl);
-
-    var mutedFromUrl = sanitizeBooleanParam(getUrlStateParam(params, 'musicMuted'), isMusicMuted);
-    setMusicMutedState(mutedFromUrl);
-    syncMusicToggleButton();
-
-    var showHoleNumbersFromUrl = sanitizeBooleanParam(getUrlStateParam(params, 'showHoleNumbers'), showHoleNumbers);
-    var borderEnabledFromUrl = sanitizeBooleanParam(getUrlStateParam(params, 'borderEnabled'), borderEnabled);
-    setShowHoleNumbersState(showHoleNumbersFromUrl);
-    setBorderEnabledState(borderEnabledFromUrl);
-    syncHoleNumberToggles();
-    syncBorderControls();
-
-    dispatchRuntimeState({
-      type: 'HYDRATE_URL_META',
-      payload: {
-        experienceId: requestedExperience,
-        shape: shapeFromUrl,
-        bpm: bpmFromUrl,
-        songId: songIdFromUrl,
-        musicMuted: mutedFromUrl,
-        showHoleNumbers: showHoleNumbersFromUrl,
-        borderEnabled: borderEnabledFromUrl
-      }
-    });
-
-    var fallbackThreads = sanitizeThreadList(threads);
-    var requestedThreadState = parseStitchingThreadState(getUrlStateParam(params, 'threadState'), fallbackThreads);
-
-    if (requestedThreadState.length) {
-      var hydratedThreads = sanitizeThreadList(requestedThreadState);
-      threads.splice(0, threads.length);
-      Array.prototype.push.apply(threads, hydratedThreads);
-    }
-
-    // Backward compatibility for older URLs that only carried color list.
-    var fallbackColors = threads.map(function(thread) {
-      return sanitizeThreadColor(thread.color, '#1982c4');
-    });
-    var requestedThreadColors = sanitizeThreadColorList(getUrlStateParam(params, 'threadColors'), fallbackColors);
-    for (var i = 0; i < threads.length && i < requestedThreadColors.length; i++) {
-      threads[i].color = requestedThreadColors[i];
-    }
-
-    if (!threads.length) {
-      Array.prototype.push.apply(threads, ensureThreadList(null));
-    }
-
-    var holesFromUrl = parseBoundedInt(getUrlStateParam(params, 'stitchingHoles'), 3, MAX_HOLES, parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES));
-    holesSlider.value = String(holesFromUrl);
-    if (advancedHolesNumberInput) {
-      advancedHolesNumberInput.value = String(holesFromUrl);
-    }
-
-    selectedThreadIndex = parseBoundedInt(getUrlStateParam(params, 'selectedThreadIndex'), 0, threads.length - 1, selectedThreadIndex);
-
-    renderThreadControls();
-    syncKidControlsFromSelectedThread();
-
-    if (requestedExperience === 'triangula') {
-      var sourceColor = sanitizeThreadColor(getUrlStateParam(params, 'triangulaSourceColor'), threads[0] ? threads[0].color : '#1982c4');
-      if (threads[0]) {
-        threads[0].color = sourceColor;
-      }
-      triangulaColorMode = sanitizeTriangulaColorMode(getUrlStateParam(params, 'triangulaColorMode'), triangulaColorMode);
-      triangulaConstructionMode = sanitizeTriangulaConstructionMode(getUrlStateParam(params, 'triangulaConstructionMode'), triangulaConstructionMode);
-      triangulaStartCount = sanitizeTriangulaCount(getUrlStateParam(params, 'triangulaStartCount'), triangulaStartCount, 'start');
-      triangulaTargetCount = sanitizeTriangulaCount(getUrlStateParam(params, 'triangulaTargetCount'), triangulaTargetCount, 'target');
-      if (triangulaTargetCount < triangulaStartCount) {
-        triangulaTargetCount = triangulaStartCount;
-      }
-      triangulaFractalMode = sanitizeTriangulaFractalMode(getUrlStateParam(params, 'triangulaFractalMode'), triangulaFractalMode);
-      triangulaFitMode = sanitizeTriangulaFitMode(getUrlStateParam(params, 'triangulaFitMode'), triangulaFitMode);
-
-      var sharedTriangulaColor = sanitizeHexColor(
-        getUrlStateParam(params, 'triangulaBand1Color') || getUrlStateParam(params, 'triangulaBand2Color') || getUrlStateParam(params, 'triangulaBand4Color') || sourceColor,
-        triangulaBandColors.band1
-      );
-      triangulaBandColors.band1 = sharedTriangulaColor;
-      triangulaBandColors.band2 = sharedTriangulaColor;
-      triangulaBandColors.band4 = sharedTriangulaColor;
-      if (threads[0]) {
-        threads[0].color = sharedTriangulaColor;
-      }
-
-      syncTriangulaControls();
-    }
-
-    redrawForPathChange();
-
-    // Always start from unstarted playback state on load/popstate.
-    animationPlaybackState = 'idle';
-    syncAnimateButtonLabel();
-
-    updateMusicPlaybackState();
-    });
-  } catch (error) {
-    console.error('URL state hydration failed:', error);
-  }
-
-  if (options.forceUrlSync !== false) {
-    scheduleUrlStateSync(true);
+  var service = getUrlStateService();
+  if (service && typeof service.applyStateFromCurrentUrl === 'function') {
+    service.applyStateFromCurrentUrl(options || {});
   }
 }
 
 function hasUrlStateParams() {
-  var params = new URLSearchParams(window.location.search || '');
-  if (!params || !params.toString()) return false;
-  if (hasUrlStateKey(params, 'version') || hasUrlStateKey(params, 'experience')) return true;
-  // Backward/partial URLs should still be treated as explicit state.
-  return params.toString().length > 0;
+  var service = getUrlStateService();
+  if (service && typeof service.hasUrlStateParams === 'function') {
+    return service.hasUrlStateParams();
+  }
+  return false;
 }
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
@@ -1182,7 +1458,14 @@ function applyExperienceUiPolicy() {
   if (CORE_UI.paletteContainer) {
     CORE_UI.paletteContainer.dataset.paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
   }
-  triangulaColorMode = (profile && profile.triangulaColorModes && profile.triangulaColorModes.length) ? profile.triangulaColorModes[0] : 'all';
+  var allowedTriangulaColorModes = (profile && profile.triangulaColorModes && profile.triangulaColorModes.length)
+    ? profile.triangulaColorModes.slice()
+    : null;
+  if (allowedTriangulaColorModes && allowedTriangulaColorModes.length) {
+    if (allowedTriangulaColorModes.indexOf(triangulaColorMode) === -1) {
+      triangulaColorMode = allowedTriangulaColorModes[0];
+    }
+  }
   if (EXPERIENCE_UI.triangulaColorScopeSelect) {
     EXPERIENCE_UI.triangulaColorScopeSelect.value = triangulaColorMode;
   }
@@ -1193,61 +1476,16 @@ function applyExperienceUiPolicy() {
 }
 
 function syncTriangulaControls() {
-  triangulaStartCount = normalizeTriangulaDrawableCount(triangulaStartCount, 'start', 1);
-  triangulaTargetCount = normalizeTriangulaDrawableCount(triangulaTargetCount, 'target', triangulaStartCount);
-
-  if (triangulaTargetCount < triangulaStartCount) {
-    triangulaTargetCount = triangulaStartCount;
+  var uiModule = getTriangulaUiModule();
+  if (uiModule && typeof uiModule.syncTriangulaControls === 'function') {
+    uiModule.syncTriangulaControls();
   }
-
-  if (triangulaStartSlider) {
-    triangulaStartSlider.value = String(triangulaStartCount);
-  }
-  if (triangulaTargetSlider) {
-    triangulaTargetSlider.value = String(triangulaTargetCount);
-  }
-  if (triangulaStartValue) {
-    triangulaStartValue.textContent = String(triangulaStartCount);
-  }
-  if (triangulaTargetValue) {
-    triangulaTargetValue.textContent = String(triangulaTargetCount);
-  }
-  if (triangulaStartNumberInput) {
-    triangulaStartNumberInput.value = String(triangulaStartCount);
-  }
-  if (triangulaTargetNumberInput) {
-    triangulaTargetNumberInput.value = String(triangulaTargetCount);
-  }
-  if (triangulaColorScopeSelect) {
-    triangulaColorScopeSelect.value = triangulaColorMode;
-  }
-  if (triangulaConstructionModeSelect) {
-    triangulaConstructionModeSelect.value = triangulaConstructionMode;
-  }
-  if (triangulaFractalModeSelect) {
-    triangulaFractalModeSelect.value = triangulaFractalMode;
-  }
-  if (triangulaFitModeSelect) {
-    triangulaFitModeSelect.value = triangulaFitMode;
-  }
-  var profile = getExperienceUiProfile(currentExperienceId);
-  var controls = profile && profile.basicControls ? profile.basicControls : null;
-  setElementDisplay(
-    triangulaColorScopeBlock,
-    !!(controls && controls.triangulaColorScope === true && currentExperienceId === 'triangula' && triangulaConstructionMode === 'shrink-duplicate'),
-    ''
-  );
 }
 
 function applyTriangulaCountUpdate(nextStart, nextTarget, shouldRedraw) {
-  triangulaStartCount = normalizeTriangulaDrawableCount(nextStart, 'start', triangulaStartCount || 1);
-  triangulaTargetCount = normalizeTriangulaDrawableCount(nextTarget, 'target', triangulaTargetCount || triangulaStartCount || 1);
-  if (triangulaTargetCount < triangulaStartCount) {
-    triangulaTargetCount = triangulaStartCount;
-  }
-  syncTriangulaControls();
-  if (shouldRedraw) {
-    redrawForPathChange();
+  var uiModule = getTriangulaUiModule();
+  if (uiModule && typeof uiModule.applyTriangulaCountUpdate === 'function') {
+    uiModule.applyTriangulaCountUpdate(nextStart, nextTarget, shouldRedraw);
   }
 }
 
@@ -1377,19 +1615,21 @@ function setCurrentExperience(experienceId, options) {
   var previousExperienceId = currentExperienceId;
   var stateManager = ensureExperienceStateManager();
 
-  stateManager.capture(previousExperienceId);
+  if (options.capturePrevious !== false) {
+    stateManager.capture(previousExperienceId);
+  }
 
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
-  stateManager.restore(currentExperienceId);
+  var restored = stateManager.restore(currentExperienceId);
 
   dispatchRuntimeState({
     type: 'SET_EXPERIENCE',
     payload: { experienceId: currentExperienceId }
   });
 
-  if (!options.preserveSongOnExperienceChange) {
+  if (!restored && !options.preserveSongOnExperienceChange) {
     setCurrentSong(getDefaultSongIdForExperience(currentExperienceId));
   }
 
@@ -1612,14 +1852,15 @@ function animateReturnToStitchingTrail(startPoint, endPoint) {
 
 function getActiveTrailColor() {
   var fallbackColor = '#1982c4';
-
-  if (currentExperienceId === 'triangula') {
-    if (triangulaColorMode === 'band-1') return triangulaBandColors.band1 || fallbackColor;
-    if (triangulaColorMode === 'band-2') return triangulaBandColors.band2 || fallbackColor;
-    if (triangulaColorMode === 'band-4') return triangulaBandColors.band4 || fallbackColor;
-    return normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1 || fallbackColor);
+  var resolver = getExperienceTrailColorHandler(currentExperienceId);
+  if (typeof resolver === 'function') {
+    return resolver(fallbackColor);
   }
 
+  return fallbackColor;
+}
+
+function resolveStitchingTrailColor(fallbackColor) {
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex >= 0 && threads[targetIndex]) {
     var chosen = threads[targetIndex].color;
@@ -1628,6 +1869,16 @@ function getActiveTrailColor() {
 
   return fallbackColor;
 }
+
+function resolveTriangulaTrailColor(fallbackColor) {
+  if (triangulaColorMode === 'band-1') return triangulaBandColors.band1 || fallbackColor;
+  if (triangulaColorMode === 'band-2') return triangulaBandColors.band2 || fallbackColor;
+  if (triangulaColorMode === 'band-4') return triangulaBandColors.band4 || fallbackColor;
+  return getTriangulaCoreModule().normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1 || fallbackColor);
+}
+
+registerExperienceTrailColorHandler('stitching', resolveStitchingTrailColor);
+registerExperienceTrailColorHandler('triangula', resolveTriangulaTrailColor);
 
 function toRgbaColor(colorValue, alpha) {
   var fallback = 'rgba(25, 130, 196, ' + String(alpha) + ')';
@@ -1835,248 +2086,6 @@ function getPolygonRadiusFactor(angle, sides) {
 
 function mix(a, b, t) {
   return a + ((b - a) * t);
-}
-
-function getSongShapeProfile(shapeKey) {
-  if (shapeKey === 'triangle') {
-    return {
-      innerFactor: 0.09,
-      outerFactor: 0.44,
-      startOffset: '0%',
-      charWidthFactor: 0.62
-    };
-  }
-  if (shapeKey === 'square') {
-    return {
-      innerFactor: 0.09,
-      outerFactor: 0.44,
-      startOffset: '0%',
-      charWidthFactor: 0.62
-    };
-  }
-  if (shapeKey === 'rosette') {
-    return {
-      innerFactor: 0.08,
-      outerFactor: 0.43,
-      startOffset: '0%',
-      charWidthFactor: 0.62
-    };
-  }
-  return {
-    innerFactor: 0.09,
-    outerFactor: 0.43,
-    startOffset: '0%',
-    charWidthFactor: 0.62
-  };
-}
-
-function getShapeRadiusFactor(shapeKey, angle) {
-  if (shapeKey === 'triangle') {
-    return getPolygonRadiusFactor(angle - (Math.PI / 2), 3);
-  }
-  if (shapeKey === 'square') {
-    var c = Math.cos(angle);
-    var s = Math.sin(angle);
-    return 1 / Math.max(Math.abs(c), Math.abs(s));
-  }
-  if (shapeKey === 'rosette') {
-    return 0.86 + (0.14 * Math.cos(angle * 6));
-  }
-  return 1;
-}
-
-function estimateMonospaceTextLength(label, fontSize, charWidthFactor, letterSpacingEm) {
-  var text = String(label || '');
-  if (!text) return 0;
-  var spacing = isFinite(letterSpacingEm) ? (fontSize * letterSpacingEm) : 0;
-  return text.length * (fontSize * charWidthFactor + spacing);
-}
-
-function getMinimumWrapPitch(fontSize) {
-  // Keep wrap spacing above glyph-height footprint to avoid cross-wrap overlap.
-  return Math.max(2.1, fontSize * 1.25);
-}
-
-function polylineLength(pointsList) {
-  if (!pointsList || pointsList.length < 2) return 0;
-  var total = 0;
-  for (var i = 1; i < pointsList.length; i++) {
-    var dx = pointsList[i].x - pointsList[i - 1].x;
-    var dy = pointsList[i].y - pointsList[i - 1].y;
-    total += Math.sqrt(dx * dx + dy * dy);
-  }
-  return total;
-}
-
-function getPolygonVertex(cx, cy, radius, angleOffset, sides, sideIndex) {
-  var angle = angleOffset + ((2 * Math.PI * sideIndex) / sides);
-  return {
-    x: Math.round((cx + Math.cos(angle) * radius) * 1000) / 1000,
-    y: Math.round((cy + Math.sin(angle) * radius) * 1000) / 1000
-  };
-}
-
-function buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, wraps) {
-  var pointsList = [];
-  wraps = Math.max(1, wraps);
-
-  for (var wrap = 0; wrap <= wraps; wrap++) {
-    var t = wrap / wraps;
-    var radius = outer - ((outer - inner) * t);
-    // Alternate direction per ring so transitions between rings are inward/radial,
-    // avoiding diagonal jumps that can create acute corner artifacts.
-    if (wrap % 2 === 0) {
-      for (var side = 0; side < sides; side++) {
-        pointsList.push(getPolygonVertex(cx, cy, radius, angleOffset, sides, side));
-      }
-    } else {
-      for (var reverseSide = sides - 1; reverseSide >= 0; reverseSide--) {
-        pointsList.push(getPolygonVertex(cx, cy, radius, angleOffset, sides, reverseSide));
-      }
-    }
-  }
-
-  return pointsList;
-}
-
-function buildPolygonSpiralPath(shapeKey, width, height, targetLength, fontSize) {
-  var cx = width * 0.5;
-  var cy = height * 0.5;
-  var minDimension = Math.min(width, height);
-  var profile = getSongShapeProfile(shapeKey);
-  var outer = minDimension * profile.outerFactor;
-  var inner = minDimension * profile.innerFactor;
-  var sides = shapeKey === 'triangle' ? 3 : 4;
-  var angleOffset = shapeKey === 'triangle' ? -Math.PI / 2 : -Math.PI / 4;
-  var radialSpan = Math.max(0.001, outer - inner);
-  var minPitch = getMinimumWrapPitch(fontSize);
-  var maxWraps = Math.max(2, Math.floor(radialSpan / minPitch));
-  var minWraps = Math.min(3, maxWraps);
-
-  var bestPoints = buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, minWraps);
-  var fit = false;
-  for (var wraps = minWraps; wraps <= maxWraps; wraps++) {
-    var candidate = buildPolygonSpiralPoints(cx, cy, outer, inner, sides, angleOffset, wraps);
-    var len = polylineLength(candidate);
-    bestPoints = candidate;
-    if (len >= targetLength) {
-      fit = true;
-      break;
-    }
-  }
-
-  return {
-    path: pointsToSvgPath(bestPoints),
-    length: polylineLength(bestPoints),
-    startOffset: profile.startOffset,
-    fit: fit
-  };
-}
-
-function buildCurvedSpiralPath(shapeKey, width, height, targetLength, fontSize) {
-  var profile = getSongShapeProfile(shapeKey);
-  var cx = width * 0.5;
-  var cy = height * 0.5;
-  var minDimension = Math.min(width, height);
-  var inner = minDimension * profile.innerFactor;
-  var outer = minDimension * profile.outerFactor;
-  var radialSpan = Math.max(0.001, outer - inner);
-  var minPitch = getMinimumWrapPitch(fontSize);
-  var maxTurnsByPitch = Math.max(1.7, radialSpan / minPitch);
-
-  var bestPoints = [];
-  var bestLength = 0;
-  var bestTurns = Math.min(2.2, maxTurnsByPitch);
-  var samples = 260;
-  var fit = false;
-
-  for (var turns = 1.8; turns <= maxTurnsByPitch; turns += 0.12) {
-    var pointsList = [];
-    for (var i = 0; i <= samples; i++) {
-      var u = i / samples;
-      var angle = (-Math.PI / 2) + (u * turns * Math.PI * 2);
-      var spiralRadius = outer - ((outer - inner) * u);
-      var baseShape = getShapeRadiusFactor(shapeKey, angle);
-      var shapeBlend = mix(1, baseShape, Math.pow(1 - u, 0.97));
-      pointsList.push({
-        x: Math.round((cx + Math.cos(angle) * spiralRadius * shapeBlend) * 1000) / 1000,
-        y: Math.round((cy + Math.sin(angle) * spiralRadius * shapeBlend) * 1000) / 1000
-      });
-    }
-
-    var candidateLength = polylineLength(pointsList);
-    bestPoints = pointsList;
-    bestLength = candidateLength;
-    bestTurns = turns;
-    if (candidateLength >= targetLength) {
-      fit = true;
-      break;
-    }
-  }
-
-  return {
-    path: pointsToSvgPath(bestPoints),
-    length: bestLength,
-    startOffset: profile.startOffset,
-    turns: bestTurns,
-    fit: fit
-  };
-}
-
-function pointsToSvgPath(pointsList) {
-  if (!pointsList || !pointsList.length) return '';
-  var path = 'M ' + pointsList[0].x + ' ' + pointsList[0].y;
-  for (var i = 1; i < pointsList.length; i++) {
-    path += ' L ' + pointsList[i].x + ' ' + pointsList[i].y;
-  }
-  return path;
-}
-
-function buildSongSpiralPath(shapeKey, width, height) {
-  var label = arguments.length > 3 ? arguments[3] : '';
-  var profile = getSongShapeProfile(shapeKey);
-  var best = null;
-  var letterSpacingSteps = [0.03, 0.02, 0.01, 0, -0.01];
-
-  for (var s = 0; s < letterSpacingSteps.length; s++) {
-    var letterSpacingEm = letterSpacingSteps[s];
-
-    for (var fontSize = 10.6; fontSize >= 7.2; fontSize -= 0.4) {
-      var targetLength = Math.max(
-        78,
-        estimateMonospaceTextLength(label, fontSize, profile.charWidthFactor, letterSpacingEm) * 1.06
-      );
-
-      var result;
-      if (shapeKey === 'triangle' || shapeKey === 'square') {
-        result = buildPolygonSpiralPath(shapeKey, width, height, targetLength, fontSize);
-      } else {
-        result = buildCurvedSpiralPath(shapeKey, width, height, targetLength, fontSize);
-      }
-
-      result.fontSize = Math.round(fontSize * 10) / 10;
-      result.letterSpacingEm = letterSpacingEm;
-      best = result;
-      if (result.fit) {
-        return result;
-      }
-    }
-  }
-
-  return best || {
-    path: '',
-    length: 0,
-    startOffset: profile.startOffset,
-    fontSize: 7.2,
-    letterSpacingEm: 0,
-    fit: false
-  };
-}
-
-function repeatSongLabel(label) {
-  var clean = String(label || '').trim();
-  if (!clean) return '';
-  return clean.toUpperCase();
 }
 
 function renderSongPicker() {
@@ -2596,31 +2605,13 @@ function syncHoleNumberHighlightFromAnimationState() {
 }
 
 function updateKidControlValues() {
-  holesValue.textContent = holesSlider.value;
-  jumpValue.textContent = jumpSlider.value;
-  multiplyValue.textContent = multiplySlider.value;
-  widthValue.textContent = widthSlider.value;
-  if (advancedHolesNumberInput) {
-    advancedHolesNumberInput.value = holesSlider.value;
-  }
+  var m = getStitchingUiModule();
+  if (m) m.updateKidControlValues();
 }
 
 function syncBorderControls() {
-  advancedBorderEnabledInput.checked = borderEnabled;
-}
-
-function createThread(config) {
-  return {
-    jump: config.jump,
-    width: config.width,
-    color: config.color,
-    sequence: null,
-    jumpMode: 'fixed',
-    jumpFormula: 'skip',
-    jumpSequence: '',
-    connectMultiplier: 2,
-    connectOffset: 0
-  };
+  var m = getStitchingUiModule();
+  if (m) m.syncBorderControls();
 }
 
 function ensureThreadConnectConfig(thread) {
@@ -2633,109 +2624,19 @@ function ensureThreadConnectConfig(thread) {
   }
 }
 
-function getKidStitchByForThread(thread) {
-  if (!thread || thread.jumpMode !== 'connect') {
-    return 'add';
-  }
-  return 'multiply';
-}
-
-function syncKidStitchByControl() {
-  var index = getKidTargetThreadIndex();
-  if (index < 0 || !threads[index]) {
-    kidStitchBySelect.value = 'add';
-    return;
-  }
-  kidStitchBySelect.value = getKidStitchByForThread(threads[index]);
-}
-
-function syncBasicMathSliderVisibility() {
-  if (currentExperienceId !== 'stitching') {
-    addSliderBlock.style.display = 'none';
-    multiplySliderBlock.style.display = 'none';
-    jumpSlider.disabled = true;
-    multiplySlider.disabled = true;
-    return;
-  }
-
-  var index = getKidTargetThreadIndex();
-  var isMultiplyMode = false;
-
-  if (index >= 0 && threads[index]) {
-    isMultiplyMode = threads[index].jumpMode === 'connect';
-  }
-
-  addSliderBlock.style.display = isMultiplyMode ? 'none' : '';
-  multiplySliderBlock.style.display = isMultiplyMode ? '' : 'none';
-
-  jumpSlider.disabled = isMultiplyMode;
-  multiplySlider.disabled = !isMultiplyMode;
-}
-
 function buildMagicThread() {
-  var baseIndex = threads.length ? Math.max(0, selectedThreadIndex) : 0;
-  var base = threads[baseIndex] || createThread({ jump: 22, width: 2, color: '#1982c4' });
-  var jumpShift = (Math.floor(Math.random() * 7) + 2);
-  var nextJump = base.jump + jumpShift;
-  if (nextJump > 100) nextJump = ((nextJump - 1) % 100) + 1;
-
-  var colorPick = magicThreadColors[Math.floor(Math.random() * magicThreadColors.length)];
-  if (threads.length && threads[threads.length - 1].color === colorPick) {
-    colorPick = magicThreadColors[(magicThreadColors.indexOf(colorPick) + 1) % magicThreadColors.length];
-  }
-
-  return createThread({
-    jump: nextJump,
-    width: DEFAULT_THREAD_SIZE,
-    color: colorPick
-  });
-}
-
-function applyThreadSwatchStyle(element, color) {
-  if (!element) return;
-  if (color === 'rainbow') {
-    element.style.background = 'linear-gradient(45deg, red, orange, yellow, green, blue, purple)';
-  } else {
-    element.style.background = color || '#1982c4';
-  }
+  var m = getStitchingUiModule();
+  return m ? m.buildMagicThread() : null;
 }
 
 function applyExperiencePaletteColorChoice(colorValue) {
-  if (!threads.length) return;
-
-  var profile = getExperienceUiProfile(currentExperienceId);
-  var paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
-  var color = colorValue || '#1982c4';
-
-  if (paletteMode === 'global') {
-    threads.forEach(function(thread) {
-      thread.color = color;
-    });
-    return;
-  }
-
-  if (paletteMode === 'triangula-banded') {
-    var safeColor = normalizeTriangulaFillColor(color, triangulaBandColors.band1);
-    // Keep all triangula bands aligned to the most recently picked color.
-    threads[0].color = safeColor;
-    triangulaBandColors.band1 = safeColor;
-    triangulaBandColors.band2 = safeColor;
-    triangulaBandColors.band4 = safeColor;
-    return;
-  }
-
-  var targetIndex = selectedThreadIndex;
-  if (targetIndex < 0 || targetIndex >= threads.length) {
-    targetIndex = 0;
-  }
-  threads[targetIndex].color = color;
+  var m = getStitchingUiModule();
+  if (m) m.applyExperiencePaletteColorChoice(colorValue);
 }
 
 function syncHoleNumberToggles() {
-  advancedHoleNumbersToggle.checked = showHoleNumbers;
-  holeNumbersToggleBtn.classList.toggle('active', showHoleNumbers);
-  holeNumbersToggleBtn.setAttribute('aria-pressed', showHoleNumbers ? 'true' : 'false');
-  holeNumbersToggleBtn.title = showHoleNumbers ? 'Hole numbers on' : 'Hole numbers off';
+  var m = getStitchingUiModule();
+  if (m) m.syncHoleNumberToggles();
 }
 
 function setCurrentShape(shape, shouldDraw) {
@@ -2759,80 +2660,20 @@ function setCurrentShape(shape, shouldDraw) {
 }
 
 function refreshKidThreadPicker() {
-  var profile = getExperienceUiProfile(currentExperienceId);
-  var threadsEnabled = !profile || profile.threadsEnabled !== false;
-  var allowMultipleThreads = !profile || profile.allowMultipleThreads !== false;
-  var showThreadPicker = threadsEnabled && allowMultipleThreads && threads.length > 1;
-
-  kidThreadPicker.style.display = showThreadPicker ? 'inline-flex' : 'none';
-  removeLastThreadBtn.style.display = showThreadPicker ? '' : 'none';
-  kidThreadMenu.innerHTML = '';
-  removeLastThreadBtn.disabled = !showThreadPicker;
-
-  if (!threadsEnabled || !allowMultipleThreads) {
-    kidThreadToggle.disabled = true;
-    kidThreadMenu.setAttribute('hidden', '');
-    kidThreadToggle.setAttribute('aria-expanded', 'false');
-    return;
-  }
-
-  if (!threads.length) {
-    kidThreadToggle.disabled = true;
-    kidThreadActiveLabel.textContent = 'No threads';
-    applyThreadSwatchStyle(kidThreadActiveSwatch, '#cccccc');
-    return;
-  }
-
-  kidThreadToggle.disabled = false;
-
-  for (var i = 0; i < threads.length; i++) {
-    var thread = threads[i];
-    var option = document.createElement('button');
-    option.type = 'button';
-    option.className = 'kid-thread-option' + (i === selectedThreadIndex ? ' active' : '');
-    option.setAttribute('role', 'option');
-    option.setAttribute('aria-selected', i === selectedThreadIndex ? 'true' : 'false');
-    option.dataset.index = String(i);
-
-    var swatch = document.createElement('span');
-    swatch.className = 'thread-swatch';
-    applyThreadSwatchStyle(swatch, thread.color);
-
-    var label = document.createElement('span');
-    label.textContent = 'Thread ' + (i + 1);
-
-    option.appendChild(swatch);
-    option.appendChild(label);
-    kidThreadMenu.appendChild(option);
-  }
-
-  var selectedIndex = getKidTargetThreadIndex();
-  var selectedThread = threads[selectedIndex];
-  if (selectedThread) {
-    kidThreadActiveLabel.textContent = 'Thread ' + (selectedIndex + 1);
-    applyThreadSwatchStyle(kidThreadActiveSwatch, selectedThread.color);
-  }
+  var m = getStitchingUiModule();
+  if (m) m.refreshKidThreadPicker();
 }
 
 function getKidTargetThreadIndex() {
-  if (!threads.length) return -1;
-  if (selectedThreadIndex >= 0 && selectedThreadIndex < threads.length) {
-    return selectedThreadIndex;
-  }
-  return 0;
+  var m = getStitchingUiModule();
+  return m ? m.getKidTargetThreadIndex() : -1;
 }
 
 function syncKidControlsFromSelectedThread() {
-  var index = getKidTargetThreadIndex();
-  refreshKidThreadPicker();
-  if (index < 0) return;
-  ensureThreadConnectConfig(threads[index]);
-  jumpSlider.value = threads[index].jump;
-  multiplySlider.value = threads[index].connectMultiplier;
-  widthSlider.value = threads[index].width;
-  syncKidStitchByControl();
-  syncBasicMathSliderVisibility();
-  updateKidControlValues();
+  var uiModule = getStitchingUiModule();
+  if (uiModule && typeof uiModule.syncKidControlsFromSelectedThread === 'function') {
+    uiModule.syncKidControlsFromSelectedThread();
+  }
 }
 
 function applyDefaultHoles() {
@@ -3074,41 +2915,6 @@ function drawSegmentSettleAccent(settle) {
   settleHead.opacity = 0.7 * ratio;
 }
 
-function renderAnimationFrame() {
-  if (!animationState) {
-    drawStatic();
-    return;
-  }
-
-  project.activeLayer.removeChildren();
-  computePoints();
-  drawShapeBorder();
-  drawHoles();
-
-  for (var i = 0; i < animationState.threadIndex; i++) {
-    drawAnimatedSegments(threads[i], animationState.segmentLists[i], (animationState.segmentLists[i] || []).length);
-  }
-
-  var activePair = null;
-  if (animationState.threadIndex >= 0 && animationState.threadIndex < threads.length) {
-    var activeThread = threads[animationState.threadIndex];
-    var activeSegments = animationState.segmentLists[animationState.threadIndex] || [];
-
-    drawAnimatedSegments(activeThread, activeSegments, animationState.step);
-
-    if (animationState.step < activeSegments.length) {
-      var segmentProgress = animationState.elapsed / getAnimationSecondsPerSegment();
-      activePair = drawAnimatedSegmentProgress(activeThread, activeSegments, animationState.step, segmentProgress);
-    }
-  }
-
-  drawSegmentSettleAccent(animationState.settle);
-
-  animationState.activeHolePair = activePair;
-  syncHoleNumberHighlightFromAnimationState();
-  bringHoleNumbersToFront();
-}
-
 function redrawAnimationInPlace() {
   // Style-only updates should preserve current animation progress.
   if (triangulaAnimationState) {
@@ -3125,7 +2931,10 @@ function redrawAnimationInPlace() {
     return;
   }
 
-  renderAnimationFrame();
+  var renderModule = getStitchingRenderModule();
+  if (renderModule && typeof renderModule.renderAnimationFrame === 'function') {
+    renderModule.renderAnimationFrame();
+  }
   STITCHER_BEHAVIOR.scheduleDiscoveryEvaluation();
   CORE_BEHAVIOR.scheduleUrlStateSync(false);
 }
@@ -3210,9 +3019,7 @@ if (typeof window.createRuntimeStateStore === 'function') {
     shape: currentShape,
     bpm: currentAnimationBpm,
     songId: currentSongId,
-    musicMuted: isMusicMuted,
-    showHoleNumbers: showHoleNumbers,
-    borderEnabled: borderEnabled
+    musicMuted: isMusicMuted
   });
 }
 
@@ -3502,33 +3309,6 @@ function offsetConvexPolygon(vertices, distance) {
   return result;
 }
 
-function drawShapeBorder() {
-  if (!borderEnabled) return;
-
-  var borderGeometry = getBorderGeometryForCurrentShape();
-  if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
-
-  var polygonVertices = borderGeometry.isPolygon ? borderGeometry.polygonVertices : null;
-  var outerSamples = borderGeometry.outerSamples;
-  var innerSamples = borderGeometry.innerSamples;
-
-  var outerPath = new Path(outerSamples);
-  outerPath.closed = true;
-  outerPath.strokeColor = BORDER_STROKE_COLOR;
-  outerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
-  outerPath.strokeCap = 'round';
-  outerPath.miterLimit = 8;
-
-  var innerPath = new Path(innerSamples);
-  innerPath.closed = true;
-  innerPath.strokeColor = BORDER_STROKE_COLOR;
-  innerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
-  innerPath.strokeCap = 'round';
-  innerPath.miterLimit = 8;
-}
-
 function getBorderGeometryForCurrentShape() {
   var polygonVertices = getPolygonCornerVertices();
   var outerSamples;
@@ -3558,838 +3338,100 @@ function getBorderGeometryForCurrentShape() {
 /* ------------------------------
    DRAWING THREADS
 ------------------------------ */
-function computeSequence(thread) {
-  var n = points.length;
-
-  if (thread.sequence && thread.sequence.type === 'custom') {
-    return thread.sequence.list;
-  }
-
-  var jumpMode = thread.jumpMode || 'fixed';
-  var visited = new Array(n).fill(false);
-  var current = 0;
-  var prev = 0;
-  var seq = [];
-  var maxSteps = n * 4;
-
-  function normalizeJump(value) {
-    var k = Math.round(Number(value));
-    if (!isFinite(k)) return 1;
-    k = k % n;
-    if (k === 0) return 1;
-    return k;
-  }
-
-  function parseJumpSequence(text) {
-    if (!text) return [];
-    return text
-      .split(/[\s,]+/)
-      .map(Number)
-      .filter((num) => isFinite(num))
-      .map((num) => Math.round(num))
-      .filter((num) => num !== 0);
-  }
-
-  function normalizeFormulaExpression(expression) {
-    if (!expression) return 'skip';
-    return String(expression)
-      .trim()
-      .replace(/[×·]/g, '*')
-      .replace(/÷/g, '/')
-      .replace(/\^/g, '**')
-      .replace(/\bmod\b/gi, '%');
-  }
-
-  var jumpResolver;
-  if (jumpMode === 'sequence') {
-    var stepList = parseJumpSequence(thread.jumpSequence);
-    jumpResolver = function(i) {
-      if (!stepList.length) return normalizeJump(thread.jump);
-      return normalizeJump(stepList[i % stepList.length]);
-    };
-  } else if (jumpMode === 'formula') {
-    var formula = normalizeFormulaExpression(thread.jumpFormula || 'skip');
-    jumpResolver = function(i, currentIndex, previousIndex) {
-      try {
-        var evaluate = new Function(
-          'i', 'n', 'current', 'prev', 'skip', 'jump',
-          'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
-          'return (' + formula + ');'
-        );
-        return normalizeJump(
-          evaluate(
-            i, n, currentIndex, previousIndex, thread.jump, thread.jump,
-            Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
-            Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
-          )
-        );
-      } catch (err) {
-        return normalizeJump(thread.jump);
-      }
-    };
-  } else {
-    jumpResolver = function() {
-      return normalizeJump(thread.sequence ? thread.sequence.k : thread.jump);
-    };
-  }
-
-  for (var i = 0; i < maxSteps; i++) {
-    if (visited[current]) break;
-    visited[current] = true;
-    seq.push(current);
-    var step = jumpResolver(i, current, prev);
-    prev = current;
-    current = (current + step) % n;
-    if (current < 0) current += n;
-  }
-  return seq;
-}
-
 function computeSegments(thread) {
-  var n = points.length;
-  if (!n || !thread) return [];
-
-  if (thread.jumpMode === 'connect') {
-    ensureThreadConnectConfig(thread);
-    var segments = [];
-    var multiplier = Math.round(Number(thread.connectMultiplier || 2));
-    var offset = Math.round(Number(thread.connectOffset || 0));
-    for (var i = 0; i < n; i++) {
-      // Use label-based (1..n) arithmetic so visible hole numbers match mapping behavior.
-      var sourceLabel = i + 1;
-      var mappedLabel = (multiplier * sourceLabel + offset - 1) % n;
-      if (mappedLabel < 0) mappedLabel += n;
-      var mapped = mappedLabel;
-      segments.push([i, mapped]);
-    }
-    return segments;
+  var renderModule = getStitchingRenderModule();
+  if (renderModule && typeof renderModule.computeSegments === 'function') {
+    return renderModule.computeSegments(thread);
   }
-
-  var seq = computeSequence(thread);
-  var chained = [];
-  for (var j = 0; j < seq.length; j++) {
-    chained.push([seq[j], seq[(j + 1) % seq.length]]);
-  }
-  return chained;
+  return [];
 }
 
-function drawThread(thread) {
-  var segments = computeSegments(thread);
-
-  for (var i = 0; i < segments.length; i++) {
-    var fromIndex = segments[i][0];
-    var toIndex = segments[i][1];
-    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
-    var seg = new Path();
-    seg.strokeWidth = thread.width;
-
-    if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
-    } else {
-      seg.strokeColor = thread.color;
-    }
-
-    seg.add(points[fromIndex]);
-    seg.add(points[toIndex]);
-  }
-}
-
-function triangulaCountToDepth(count) {
-  var safeCount = Math.max(1, Math.floor(Number(count) || 1));
-  var depth = Math.round(Math.log(safeCount) / Math.log(3));
-  if (!isFinite(depth) || depth < 0) depth = 0;
-  return Math.max(0, Math.min(6, depth));
-}
-
-function getTriangulaBaseTriangle(scaleFactor) {
-  var center = view.center;
-  var baseSize = Math.max(120, Math.min(view.size.width, view.size.height) - 56);
-  var scale = isFinite(scaleFactor) ? Math.max(0.45, Math.min(1, scaleFactor)) : 1;
-  var size = baseSize * scale;
-  var half = size / 2;
-  var height = Math.sqrt(3) * half;
-  return [
-    new Point(center.x, center.y - (height / 2)),
-    new Point(center.x - half, center.y + (height / 2)),
-    new Point(center.x + half, center.y + (height / 2))
-  ];
-}
-
-function normalizeTriangulaFillColor(colorValue, fallback) {
-  var fallbackColor = fallback || '#256f7a';
-  if (!colorValue) return fallbackColor;
-  return colorValue;
-}
-
-function getTriangulaAlternatingRainbowColor(sequenceIndex) {
-  // Fixed ROYGBIV order for predictable rainbow construction progression.
-  var palette = ['#ff0000', '#ff7f00', '#ffff00', '#00aa00', '#0066ff', '#4b0082', '#8f00ff'];
-  var index = Math.abs(Math.floor(Number(sequenceIndex) || 0)) % palette.length;
-  return palette[index];
-}
-
-function getTriangulaResolvedFillColor(colorValue, sequenceIndex, fallback) {
-  var normalized = normalizeTriangulaFillColor(colorValue, fallback);
-  if (normalized === 'rainbow') {
-    return getTriangulaAlternatingRainbowColor(sequenceIndex);
-  }
-  return normalized;
-}
-
-function getTriangulaEffectiveColorMode() {
-  if (triangulaConstructionMode === 'cut') return 'all';
-  return triangulaColorMode || 'band-1';
-}
-
-function getTriangulaRainbowSequenceIndex(slot, sequenceIndex, mode) {
-  var sequence = Math.floor(Number(sequenceIndex) || 0);
-  if (sequence < 0) sequence = 0;
-
-  if (mode === 'all') return sequence;
-  if ((mode === 'band-1' && slot === 1) || (mode === 'band-2' && slot === 2) || (mode === 'band-4' && slot === 4)) {
-    return Math.floor(sequence / 3);
-  }
-
-  return sequence;
-}
-
-function getTriangulaFillColorForSlot(slot, sequenceIndex) {
-  var mode = getTriangulaEffectiveColorMode();
-  var rainbowSequence = getTriangulaRainbowSequenceIndex(slot, sequenceIndex, mode);
-  var allColor = normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1);
-  if (mode === 'all') return getTriangulaResolvedFillColor(allColor, rainbowSequence, triangulaBandColors.band1);
-  if (mode === 'band-1') return slot === 1 ? getTriangulaResolvedFillColor(triangulaBandColors.band1, rainbowSequence, triangulaBandColors.band1) : '#ffffff';
-  if (mode === 'band-2') return slot === 2 ? getTriangulaResolvedFillColor(triangulaBandColors.band2, rainbowSequence, triangulaBandColors.band2) : '#ffffff';
-  if (mode === 'band-4') return slot === 4 ? getTriangulaResolvedFillColor(triangulaBandColors.band4, rainbowSequence, triangulaBandColors.band4) : '#ffffff';
-  return getTriangulaResolvedFillColor(allColor, rainbowSequence, triangulaBandColors.band1);
-}
-
-function getTriangulaStrokeColorForSlot(slot, sequenceIndex) {
-  var fill = getTriangulaFillColorForSlot(slot, sequenceIndex);
-  if (!fill || fill === '#ffffff') return '#8ea4b0';
-  return '#234b61';
-}
-
-function getTriangulaSplit(vertices) {
-  var m01 = vertices[0].add(vertices[1]).divide(2);
-  var m12 = vertices[1].add(vertices[2]).divide(2);
-  var m20 = vertices[2].add(vertices[0]).divide(2);
-  return {
-    central: [m01, m12, m20],
-    children: [
-      { vertices: [vertices[0], m01, m20], slot: 1 },
-      { vertices: [m01, vertices[1], m12], slot: 2 },
-      { vertices: [m20, m12, vertices[2]], slot: 4 }
-    ]
-  };
-}
-
-function collectTrianglesAtDepth(vertices, depth, currentDepth, slot, collector) {
-  if (currentDepth === depth) {
-    collector.push({ vertices: vertices, slot: slot || 1 });
-    return;
-  }
-  if (currentDepth > depth) return;
-  var split = getTriangulaSplit(vertices);
-  for (var i = 0; i < split.children.length; i++) {
-    collectTrianglesAtDepth(split.children[i].vertices, depth, currentDepth + 1, split.children[i].slot, collector);
-  }
-}
-
-function collectCutTrianglesAtDepth(vertices, depth, currentDepth, collector) {
-  if (depth <= 0) return;
-  if (currentDepth >= depth) return;
-  var split = getTriangulaSplit(vertices);
-  if (currentDepth + 1 === depth) {
-    collector.push({ vertices: split.central, parent: vertices });
-    return;
-  }
-  for (var i = 0; i < split.children.length; i++) {
-    collectCutTrianglesAtDepth(split.children[i].vertices, depth, currentDepth + 1, collector);
-  }
-}
-
-function collectParentChildTransitionsAtDepth(vertices, depth, currentDepth, collector) {
-  if (depth <= 0) return;
-  if (currentDepth >= depth) return;
-  var split = getTriangulaSplit(vertices);
-  if (currentDepth + 1 === depth) {
-    var parentCenter = vertices[0].add(vertices[1]).add(vertices[2]).divide(3);
-    for (var i = 0; i < split.children.length; i++) {
-      var child = split.children[i];
-      var childCenter = child.vertices[0].add(child.vertices[1]).add(child.vertices[2]).divide(3);
-      collector.push({
-        from: parentCenter,
-        to: childCenter,
-        child: child.vertices,
-        parent: vertices,
-        slot: child.slot
-      });
-    }
-    return;
-  }
-  for (var j = 0; j < split.children.length; j++) {
-    collectParentChildTransitionsAtDepth(split.children[j].vertices, depth, currentDepth + 1, collector);
-  }
-}
-
-function drawTriangleStrokeProgress(vertices, options, progress) {
-  var p = Math.max(0, Math.min(1, progress));
-  if (p <= 0) return;
-
-  var v0 = vertices[0];
-  var v1 = vertices[1];
-  var v2 = vertices[2];
-  var l01 = v0.getDistance(v1);
-  var l12 = v1.getDistance(v2);
-  var l20 = v2.getDistance(v0);
-  var total = l01 + l12 + l20;
-  var remaining = total * p;
-
-  var path = new Path();
-  path.strokeColor = options.strokeColor || '#2f4368';
-  path.strokeWidth = options.strokeWidth || 1.2;
-  path.opacity = isFinite(options.opacity) ? options.opacity : 1;
-  path.add(v0);
-
-  function addPartial(from, to, segLength) {
-    if (remaining <= 0) return;
-    if (remaining >= segLength) {
-      path.add(to);
-      remaining -= segLength;
-      return;
-    }
-    var t = remaining / segLength;
-    path.add(from.add(to.subtract(from).multiply(t)));
-    remaining = 0;
-  }
-
-  addPartial(v0, v1, l01);
-  addPartial(v1, v2, l12);
-  addPartial(v2, v0, l20);
-}
-
-function drawTrianglePath(vertices, options) {
-  var triangle = new Path();
-  triangle.closed = true;
-  triangle.add(vertices[0]);
-  triangle.add(vertices[1]);
-  triangle.add(vertices[2]);
-  if (options && options.strokeColor) {
-    triangle.strokeColor = options.strokeColor;
-    triangle.strokeWidth = options.strokeWidth || 1.4;
-  }
-  if (options && options.fillColor) {
-    triangle.fillColor = options.fillColor;
-  }
-  if (options && isFinite(options.opacity)) {
-    triangle.opacity = options.opacity;
-  }
-  return triangle;
-}
-
-function drawTriangulaDepth(depth, scale) {
-  var base = getTriangulaBaseTriangle(scale);
-  var baseColor = getTriangulaFillColorForSlot(1);
-  drawTrianglePath(base, {
-    strokeColor: '#234b61',
-    strokeWidth: triangulaConstructionMode === 'cut' ? 1.7 : 1.1,
-    fillColor: baseColor,
-    opacity: 0.95
-  });
-
-  var boundedDepth = Math.max(0, Math.min(6, depth));
-  if (triangulaConstructionMode === 'cut') {
-    for (var level = 1; level <= boundedDepth; level++) {
-      var cutTriangles = [];
-      collectCutTrianglesAtDepth(base, level, 0, cutTriangles);
-      for (var c = 0; c < cutTriangles.length; c++) {
-        drawTrianglePath(cutTriangles[c].vertices, {
-          fillColor: '#ffffff',
-          strokeColor: '#ffffff',
-          strokeWidth: 1.08,
-          opacity: 0.97
-        });
+var triangulaRuntime = typeof window.createTriangulaExperienceRuntime === 'function'
+  ? window.createTriangulaExperienceRuntime({
+      clearLayer: function() {
+        project.activeLayer.removeChildren();
+      },
+      drawTriangulaDepth: function(depth, scale) {
+        var rm = getTriangulaRenderModule();
+        if (rm) rm.drawTriangulaDepth(depth, scale);
+      },
+      triangulaCountToDepth: function(c) { return getTriangulaCoreModule().triangulaCountToDepth(c); },
+      getTriangulaTargetCount: function() {
+        return triangulaTargetCount;
+      },
+      getTriangulaStartCount: function() {
+        return triangulaStartCount;
+      },
+      clearHighlightedHoleNumbers: clearHighlightedHoleNumbers,
+      getAnimationActive: function() {
+        return animationActive;
+      },
+      setAnimationActive: function(nextValue) {
+        animationActive = !!nextValue;
+      },
+      getTriangulaAnimationState: function() {
+        return triangulaAnimationState;
+      },
+      setTriangulaAnimationState: function(nextState) {
+        triangulaAnimationState = nextState || null;
+      },
+      setAnimationState: function(nextState) {
+        animationState = nextState || null;
+      },
+      setAnimationPlaybackState: function(nextState) {
+        animationPlaybackState = nextState || 'idle';
+      },
+      setViewFrameHandler: function(handler) {
+        view.onFrame = handler;
+      },
+      syncAnimateButtonLabel: syncAnimateButtonLabel,
+      updateMusicPlaybackState: updateMusicPlaybackState,
+      scheduleUrlStateSync: scheduleUrlStateSync,
+      getTriangulaStepDurationSeconds: function(step) { return getTriangulaCoreModule().getTriangulaStepDurationSeconds(step); },
+      buildTriangulaSteps: function(base, tc, sc) { return getTriangulaCoreModule().buildTriangulaSteps(base, tc, sc); },
+      getTriangulaConstructionMode: function() {
+        return triangulaConstructionMode;
+      },
+      getTriangulaFractalMode: function() {
+        return triangulaFractalMode;
+      },
+      getTriangulaCompletedDepth: function(base, tc, sc) { return getTriangulaCoreModule().getTriangulaCompletedDepth(base, tc, sc); },
+      getTriangulaTimelineScale: function(steps) { return getTriangulaCoreModule().getTriangulaTimelineScale(steps); },
+      getTriangulaBaseTriangle: function(s) { return getTriangulaCoreModule().getTriangulaBaseTriangle(s); },
+      getTriangulaFinalizedCountAtDepth: function(base, d, finalDepth, steps) { return getTriangulaCoreModule().getTriangulaFinalizedCountAtDepth(base, d, finalDepth, steps); },
+      drawTriangulaFinalizedAtDepth: function(base, depth, finalizedCount) {
+        var rm = getTriangulaRenderModule();
+        if (rm) rm.drawTriangulaFinalizedAtDepth(base, depth, finalizedCount);
+      },
+      drawTriangulaStepOverlay: function(base, step, progress) {
+        var rm = getTriangulaRenderModule();
+        if (rm) rm.drawTriangulaStepOverlay(base, step, progress);
       }
-    }
-  } else {
-    for (var d = 1; d <= boundedDepth; d++) {
-      var triangles = [];
-      collectTrianglesAtDepth(base, d, 0, 1, triangles);
-      for (var t = 0; t < triangles.length; t++) {
-        drawTrianglePath(triangles[t].vertices, {
-          strokeColor: getTriangulaStrokeColorForSlot(triangles[t].slot, t),
-          strokeWidth: Math.max(0.7, 1.3 - (d * 0.1)),
-          fillColor: getTriangulaFillColorForSlot(triangles[t].slot, t),
-          opacity: Math.max(0.45, 0.92 - (d * 0.08))
-        });
-      }
-    }
-  }
-}
-
-function getTriangulaItemCountForDepth(base, depth) {
-  if (triangulaConstructionMode === 'cut') {
-    var cuts = [];
-    collectCutTrianglesAtDepth(base, depth, 0, cuts);
-    return cuts.length;
-  }
-  var transitions = [];
-  collectParentChildTransitionsAtDepth(base, depth, 0, transitions);
-  return transitions.length;
-}
-
-function buildTriangulaSteps(startDepth, targetDepth) {
-  var steps = [];
-  var depthItemCounts = Object.create(null);
-  var base = getTriangulaBaseTriangle(1);
-
-  for (var d = startDepth + 1; d <= targetDepth; d++) {
-    var itemCount = getTriangulaItemCountForDepth(base, d);
-    depthItemCounts[d] = itemCount;
-    if (itemCount <= 0) continue;
-
-    if (triangulaFractalMode === 'parallel') {
-      if (triangulaConstructionMode === 'cut') {
-        steps.push({ type: 'cut-guides', depth: d, beats: 1.0, itemIndex: -1, itemCount: itemCount });
-        steps.push({ type: 'cut-apply', depth: d, beats: 0.85, itemIndex: -1, itemCount: itemCount });
-      } else {
-        steps.push({ type: 'shrink-paths', depth: d, beats: 0.95, itemIndex: -1, itemCount: itemCount });
-        steps.push({ type: 'shrink-materialize', depth: d, beats: 0.8, itemIndex: -1, itemCount: itemCount });
-      }
-      continue;
-    }
-
-    for (var idx = 0; idx < itemCount; idx++) {
-      if (triangulaConstructionMode === 'cut') {
-        steps.push({ type: 'cut-guides', depth: d, beats: 0.5, itemIndex: idx, itemCount: itemCount });
-        steps.push({ type: 'cut-apply', depth: d, beats: 0.45, itemIndex: idx, itemCount: itemCount });
-      } else {
-        steps.push({ type: 'shrink-paths', depth: d, beats: 0.48, itemIndex: idx, itemCount: itemCount });
-        steps.push({ type: 'shrink-materialize', depth: d, beats: 0.44, itemIndex: idx, itemCount: itemCount });
-      }
-    }
-  }
-  return {
-    steps: steps,
-    depthItemCounts: depthItemCounts
-  };
-}
-
-function getTriangulaStepDurationSeconds(step) {
-  var baseSeconds = getAnimationSecondsPerSegment();
-  var beats = step && isFinite(step.beats) ? Math.max(0.05, step.beats) : 0.5;
-  return Math.max(0.03, baseSeconds * beats);
-}
-
-function getTriangulaTimelineScale(state) {
-  if (triangulaFitMode !== 'dynamic') return 1;
-  if (!state || !state.steps || !state.steps.length) return 1;
-  var currentStep = state.steps[Math.min(state.stepIndex, state.steps.length - 1)];
-  var localProgress = 0;
-  if (currentStep) {
-    var currentDuration = getTriangulaStepDurationSeconds(currentStep);
-    localProgress = Math.max(0, Math.min(1, state.elapsed / currentDuration));
-  }
-  var phaseProgress = (state.stepIndex + localProgress) / Math.max(1, state.steps.length);
-  return Math.max(0.62, 1 - (0.3 * phaseProgress));
-}
-
-function triangulaStepFinalizesDepth(step) {
-  return !!step && (step.type === 'cut-apply' || step.type === 'shrink-materialize');
-}
-
-function getTriangulaFinalizedCountAtDepth(state, depth) {
-  if (!state || !state.steps) return 0;
-  var count = 0;
-  for (var i = 0; i < state.stepIndex; i++) {
-    var step = state.steps[i];
-    if (!step || step.depth !== depth || !triangulaStepFinalizesDepth(step)) continue;
-    count += step.itemIndex === -1 ? (step.itemCount || 0) : 1;
-  }
-  var maxCount = state.depthItemCounts && state.depthItemCounts[depth] ? state.depthItemCounts[depth] : 0;
-  return Math.min(count, maxCount);
-}
-
-function getTriangulaCompletedDepth(state) {
-  var depth = state ? state.startDepth : 0;
-  if (!state || !state.depthItemCounts) return depth;
-  for (var d = state.startDepth + 1; d <= state.targetDepth; d++) {
-    var needed = state.depthItemCounts[d] || 0;
-    if (!needed) {
-      depth = d;
-      continue;
-    }
-    if (getTriangulaFinalizedCountAtDepth(state, d) >= needed) {
-      depth = d;
-      continue;
-    }
-    break;
-  }
-  return depth;
-}
-
-function drawTriangulaFinalizedAtDepth(base, depth, finalizedCount) {
-  if (finalizedCount <= 0) return;
-
-  if (triangulaConstructionMode === 'cut') {
-    var cuts = [];
-    collectCutTrianglesAtDepth(base, depth, 0, cuts);
-    for (var i = 0; i < Math.min(finalizedCount, cuts.length); i++) {
-      drawTrianglePath(cuts[i].vertices, {
-        fillColor: '#ffffff',
-        strokeColor: '#ffffff',
-        strokeWidth: 1.06,
-        opacity: 0.97
-      });
-    }
-    return;
-  }
-
-  var triangles = [];
-  collectTrianglesAtDepth(base, depth, 0, 1, triangles);
-  for (var j = 0; j < Math.min(finalizedCount, triangles.length); j++) {
-    drawTrianglePath(triangles[j].vertices, {
-      strokeColor: getTriangulaStrokeColorForSlot(triangles[j].slot, j),
-      strokeWidth: Math.max(0.7, 1.3 - (depth * 0.1)),
-      fillColor: getTriangulaFillColorForSlot(triangles[j].slot, j),
-      opacity: Math.max(0.45, 0.92 - (depth * 0.08))
-    });
-  }
-}
-
-function stepAppliesToIndex(step, index) {
-  if (!step) return false;
-  return step.itemIndex === -1 || step.itemIndex === index;
-}
-
-function drawTriangulaPulseBorder(vertices, progress) {
-  if (!vertices || vertices.length < 3) return;
-  var p = Math.max(0, Math.min(1, progress));
-  // Single-pass envelope with slight hold so emphasis does not fade too quickly.
-  var attackEnd = 0.44;
-  var holdEnd = 0.72;
-  var pulse;
-  if (p < attackEnd) {
-    pulse = p / attackEnd;
-  } else if (p < holdEnd) {
-    pulse = 1;
-  } else {
-    pulse = 1 - ((p - holdEnd) / (1 - holdEnd));
-  }
-  pulse = Math.max(0, Math.min(1, pulse));
-  var easedPulse = pulse * pulse * (3 - (2 * pulse));
-  drawTrianglePath(vertices, {
-    strokeColor: toRgbaColor('#173b56', 0.38 + (0.42 * easedPulse)),
-    strokeWidth: 1.3 + (2.2 * easedPulse),
-    opacity: 0.36 + (0.44 * easedPulse)
-  });
-  drawTrianglePath(vertices, {
-    strokeColor: toRgbaColor('#f8fcff', 0.06 + (0.14 * easedPulse)),
-    strokeWidth: 2.0 + (1.0 * easedPulse),
-    opacity: 0.06 + (0.16 * easedPulse)
-  });
-}
-
-function drawTriangulaPulseBordersForCutStep(cuts, step, progress) {
-  if (!cuts || !cuts.length || !step) return;
-  if (step.itemIndex === -1) {
-    for (var i = 0; i < cuts.length; i++) {
-      drawTriangulaPulseBorder(cuts[i].parent, progress);
-    }
-    return;
-  }
-  if (step.itemIndex >= 0 && step.itemIndex < cuts.length) {
-    drawTriangulaPulseBorder(cuts[step.itemIndex].parent, progress);
-  }
-}
-
-function drawTriangulaPulseBordersForShrinkStep(transitions, step, progress) {
-  if (!transitions || !transitions.length || !step) return;
-  if (step.itemIndex === -1) {
-    var parallelPhase = step.type === 'shrink-materialize'
-      ? (0.5 + (0.5 * progress))
-      : (0.5 * progress);
-    for (var i = 0; i < transitions.length; i += 3) {
-      drawTriangulaPulseBorder(transitions[i].parent, parallelPhase);
-    }
-    return;
-  }
-
-  // A parent set is 3 child transitions, each with 2 sub-steps.
-  // Map all of that to one 0..1 phase so highlight appears once per set:
-  // rise through child 1, peak by child 2, fade by end of child 3.
-  var childIndexWithinSet = step.itemIndex % 3;
-  var childSubstepPhase = step.type === 'shrink-materialize'
-    ? (0.5 + (0.5 * progress))
-    : (0.5 * progress);
-  var setPhase = (childIndexWithinSet + childSubstepPhase) / 3;
-
-  var parentGroupIndex = Math.floor(step.itemIndex / 3) * 3;
-  if (parentGroupIndex >= 0 && parentGroupIndex < transitions.length) {
-    drawTriangulaPulseBorder(transitions[parentGroupIndex].parent, setPhase);
-  }
-}
-
-function drawTriangulaStepOverlay(base, step, progress) {
-  if (!step) return;
-  var p = Math.max(0, Math.min(1, progress));
-
-  if (step.type === 'cut-guides' || step.type === 'cut-apply') {
-    var cuts = [];
-    collectCutTrianglesAtDepth(base, step.depth, 0, cuts);
-    for (var i = 0; i < cuts.length; i++) {
-      if (!stepAppliesToIndex(step, i)) continue;
-      drawTriangleStrokeProgress(cuts[i].vertices, {
-        strokeColor: '#2c5a7d',
-        strokeWidth: 1.2,
-        opacity: 0.55
-      }, step.type === 'cut-guides' ? p : 1);
-
-      if (step.type === 'cut-apply') {
-        drawTrianglePath(cuts[i].vertices, {
-          fillColor: '#ffffff',
-          strokeColor: '#ffffff',
-          strokeWidth: 1.08,
-          opacity: Math.max(0, Math.min(1, p))
-        });
-      }
-    }
-    if (step.type === 'cut-guides') {
-      drawTriangulaPulseBordersForCutStep(cuts, step, p);
-    }
-    return;
-  }
-
-  if (step.type === 'shrink-paths' || step.type === 'shrink-materialize') {
-    var transitions = [];
-    collectParentChildTransitionsAtDepth(base, step.depth, 0, transitions);
-    for (var j = 0; j < transitions.length; j++) {
-      if (!stepAppliesToIndex(step, j)) continue;
-      var link = transitions[j];
-      var connector = new Path();
-      connector.strokeColor = getTriangulaStrokeColorForSlot(link.slot, j);
-      connector.strokeWidth = 1.05;
-      connector.opacity = 0.42;
-      connector.add(link.from);
-      var connectorProgress = step.type === 'shrink-paths' ? p : 1;
-      connector.add(link.from.add(link.to.subtract(link.from).multiply(connectorProgress)));
-    }
-
-    if (step.type === 'shrink-materialize') {
-      for (var k = 0; k < transitions.length; k++) {
-        if (!stepAppliesToIndex(step, k)) continue;
-        var child = transitions[k];
-        drawTrianglePath(child.child, {
-          fillColor: getTriangulaFillColorForSlot(child.slot, k),
-          strokeColor: getTriangulaStrokeColorForSlot(child.slot, k),
-          strokeWidth: Math.max(0.7, 1.3 - (step.depth * 0.1)),
-          opacity: Math.max(0.2, p * (0.95 - (step.depth * 0.08)))
-        });
-        drawTriangleStrokeProgress(child.child, {
-          strokeColor: getTriangulaStrokeColorForSlot(child.slot, k),
-          strokeWidth: Math.max(0.7, 1.3 - (step.depth * 0.1)),
-          opacity: Math.max(0.36, 0.85 - (step.depth * 0.08))
-        }, p);
-      }
-    }
-
-    drawTriangulaPulseBordersForShrinkStep(transitions, step, p);
-  }
-}
+    })
+  : null;
 
 function renderTriangulaAnimationStateFrame(state) {
-  if (!state) return;
-  var step = state.steps[state.stepIndex] || null;
-  var completedDepth = getTriangulaCompletedDepth(state);
-  var scale = getTriangulaTimelineScale(state);
-  var base = getTriangulaBaseTriangle(scale);
-
-  project.activeLayer.removeChildren();
-  drawTriangulaDepth(completedDepth, scale);
-
-  if (step && step.depth > completedDepth) {
-    var finalizedAtStepDepth = getTriangulaFinalizedCountAtDepth(state, step.depth);
-    drawTriangulaFinalizedAtDepth(base, step.depth, finalizedAtStepDepth);
-  }
-
-  if (step) {
-    var stepDuration = getTriangulaStepDurationSeconds(step);
-    var stepProgress = Math.max(0, Math.min(1, state.elapsed / stepDuration));
-    drawTriangulaStepOverlay(base, step, stepProgress);
+  if (triangulaRuntime && typeof triangulaRuntime.renderAnimationStateFrame === 'function') {
+    triangulaRuntime.renderAnimationStateFrame(state);
   }
 }
 
 function drawTriangulaStatic() {
-  project.activeLayer.removeChildren();
-  var endDepth = triangulaCountToDepth(triangulaTargetCount);
-  drawTriangulaDepth(endDepth, 1);
-  clearHighlightedHoleNumbers();
+  if (triangulaRuntime && typeof triangulaRuntime.drawStatic === 'function') {
+    triangulaRuntime.drawStatic();
+  }
 }
 
 function runTriangulaAnimationFrame(event) {
-  if (!animationActive || !triangulaAnimationState) return;
-  var delta = Math.min(event.delta || 0, 0.1);
-  triangulaAnimationState.elapsed += delta;
-
-  while (animationActive) {
-    var activeStep = triangulaAnimationState.steps[triangulaAnimationState.stepIndex];
-    if (!activeStep) break;
-    var stepDuration = getTriangulaStepDurationSeconds(activeStep);
-    if (triangulaAnimationState.elapsed < stepDuration) break;
-    triangulaAnimationState.elapsed -= stepDuration;
-    triangulaAnimationState.stepIndex += 1;
-
-    if (triangulaAnimationState.stepIndex >= triangulaAnimationState.steps.length) {
-      animationActive = false;
-      animationPlaybackState = 'idle';
-      triangulaAnimationState = null;
-      view.onFrame = null;
-      syncAnimateButtonLabel();
-      updateMusicPlaybackState();
-      scheduleUrlStateSync(false);
-      drawTriangulaStatic();
-      return;
-    }
+  if (triangulaRuntime && typeof triangulaRuntime.runAnimationFrame === 'function') {
+    triangulaRuntime.runAnimationFrame(event);
   }
-
-  renderTriangulaAnimationStateFrame(triangulaAnimationState);
 }
 
 function animateTriangula() {
-  animationActive = false;
-  view.onFrame = null;
-  animationState = null;
-  triangulaAnimationState = null;
-
-  var startDepth = triangulaCountToDepth(triangulaStartCount);
-  var endDepth = triangulaCountToDepth(triangulaTargetCount);
-  if (endDepth < startDepth) {
-    endDepth = startDepth;
+  if (triangulaRuntime && typeof triangulaRuntime.animate === 'function') {
+    triangulaRuntime.animate();
   }
-
-  var timeline = buildTriangulaSteps(startDepth, endDepth);
-  if (!timeline.steps.length) {
-    animationPlaybackState = 'idle';
-    syncAnimateButtonLabel();
-    scheduleUrlStateSync(false);
-    drawTriangulaStatic();
-    return;
-  }
-
-  triangulaAnimationState = {
-    startDepth: startDepth,
-    targetDepth: endDepth,
-    steps: timeline.steps,
-    depthItemCounts: timeline.depthItemCounts,
-    stepIndex: 0,
-    elapsed: 0,
-    mode: triangulaConstructionMode,
-    fractalMode: triangulaFractalMode
-  };
-
-  animationActive = true;
-  animationPlaybackState = 'playing';
-  syncAnimateButtonLabel();
-  updateMusicPlaybackState();
-  scheduleUrlStateSync(false);
-  renderTriangulaAnimationStateFrame(triangulaAnimationState);
-  view.onFrame = runTriangulaAnimationFrame;
-}
-
-function shouldShowHoleNumbersNow() {
-  var holeCount = parseInt(holesSlider.value, 10);
-  if (!isFinite(holeCount)) return false;
-  return showHoleNumbers && holeCount <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
-}
-
-function getOutwardDirectionAtHole(index, ccw) {
-  if (!points.length) return new Point(0, -1);
-
-  var n = points.length;
-  var prev = points[(index - 1 + n) % n];
-  var curr = points[index];
-  var next = points[(index + 1) % n];
-  var tangent = next.subtract(prev);
-
-  if (tangent.length <= 0.001) {
-    var fromCenter = curr.subtract(view.center);
-    if (fromCenter.length <= 0.001) return new Point(0, -1);
-    return fromCenter.normalize(1);
-  }
-
-  var outwardRotation = ccw ? -90 : 90;
-  var outward = tangent.normalize(1).rotate(outwardRotation);
-  if (outward.length <= 0.001) {
-    var fallback = curr.subtract(view.center);
-    if (fallback.length <= 0.001) return new Point(0, -1);
-    return fallback.normalize(1);
-  }
-
-  // Ensure direction points away from center for stable "outer side" placement.
-  if (outward.dot(curr.subtract(view.center)) < 0) {
-    outward = outward.multiply(-1);
-  }
-
-  return outward.normalize(1);
-}
-
-function getBoundsExtentAlongDirection(item, direction) {
-  var dir = direction.normalize(1);
-  var center = item.position;
-  var corners = [
-    item.bounds.topLeft,
-    item.bounds.topRight,
-    item.bounds.bottomLeft,
-    item.bounds.bottomRight
-  ];
-  var maxProjection = 0;
-  for (var i = 0; i < corners.length; i++) {
-    var projection = corners[i].subtract(center).dot(dir);
-    if (projection > maxProjection) {
-      maxProjection = projection;
-    }
-  }
-  return Math.max(0, maxProjection);
-}
-
-function getHoleNumberFontSize(holeCount) {
-  if (holeCount >= 70) return 8;
-  if (holeCount >= 55) return 8.5;
-  return 9;
-}
-
-function getHoleLabelOffsetFromExtent(extent, borderClearance, holeClearance) {
-  var borderPad = isFinite(borderClearance) ? borderClearance : LABEL_BORDER_CLEARANCE;
-  var holePad = isFinite(holeClearance) ? holeClearance : LABEL_HOLE_CLEARANCE;
-  var minOffset = 3 + holePad + extent;
-  var maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + borderPad + extent);
-  var preferredOffset = Math.max(minOffset, BORDER_OUTER_GAP * LABEL_OUTER_BIAS);
-  var clampedOffset;
-
-  if (maxOffset >= minOffset) {
-    clampedOffset = Math.max(minOffset, Math.min(preferredOffset, maxOffset));
-  } else {
-    // Fallback: prioritize staying inside the outer border band.
-    clampedOffset = Math.max(3.8, maxOffset);
-  }
-
-  if (!isFinite(clampedOffset)) {
-    clampedOffset = Math.max(4, BORDER_OUTER_GAP * 0.6);
-  }
-
-  return {
-    offset: clampedOffset,
-    minOffset: minOffset,
-    maxOffset: maxOffset
-  };
-}
-
-function estimateTextExtentAlongDirection(text, fontSize) {
-  var len = String(text || '').length;
-  if (len <= 1) return fontSize * 0.28;
-  if (len === 2) return fontSize * 0.46;
-  return fontSize * (0.56 + Math.min(2, len - 2) * 0.1);
 }
 
 function formatSvgNumber(value) {
@@ -4453,146 +3495,66 @@ function triggerBlobDownload(blob, fileName) {
 }
 
 function buildTriangulaDesignSvgString() {
-  var width = Math.round(view.viewSize.width);
-  var height = Math.round(view.viewSize.height);
-  var lines = [];
-  var base = getTriangulaBaseTriangle(1);
-  var endDepth = triangulaCountToDepth(triangulaTargetCount);
-
-  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
-  lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
-  lines.push('<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="#ffffff"/>');
-
-  lines.push(
-    '<path d="' + svgPathFromPoints(base) +
-    '" fill="' + colorToSvg(getTriangulaFillColorForSlot(1, 0)) +
-    '" stroke="#234b61" stroke-width="' + formatSvgNumber(triangulaConstructionMode === 'cut' ? 1.7 : 1.1) +
-    '" opacity="0.95"/>'
-  );
-
-  if (triangulaConstructionMode === 'cut') {
-    for (var level = 1; level <= endDepth; level++) {
-      var cutTriangles = [];
-      collectCutTrianglesAtDepth(base, level, 0, cutTriangles);
-      for (var c = 0; c < cutTriangles.length; c++) {
-        lines.push(
-          '<path d="' + svgPathFromPoints(cutTriangles[c].vertices) +
-          '" fill="#ffffff" stroke="#ffffff" stroke-width="1.08" opacity="0.97"/>'
-        );
-      }
-    }
-  } else {
-    for (var d = 1; d <= endDepth; d++) {
-      var triangles = [];
-      collectTrianglesAtDepth(base, d, 0, 1, triangles);
-      for (var t = 0; t < triangles.length; t++) {
-        lines.push(
-          '<path d="' + svgPathFromPoints(triangles[t].vertices) +
-          '" fill="' + colorToSvg(getTriangulaFillColorForSlot(triangles[t].slot, t)) +
-          '" stroke="' + colorToSvg(getTriangulaStrokeColorForSlot(triangles[t].slot, t)) +
-          '" stroke-width="' + formatSvgNumber(Math.max(0.7, 1.3 - (d * 0.1))) +
-          '" opacity="' + formatSvgNumber(Math.max(0.45, 0.92 - (d * 0.08))) +
-          '"/>'
-        );
-      }
-    }
+  var exportModule = getTriangulaExportModule();
+  if (exportModule && typeof exportModule.buildTriangulaDesignSvgString === 'function') {
+    return exportModule.buildTriangulaDesignSvgString();
   }
+  return '';
+}
 
-  lines.push('</svg>');
-  return lines.join('\n');
+function getExperienceExportHandlers(experienceId) {
+  return getRegisteredExperienceExportHandler(experienceId);
+}
+
+function getExperienceExportProfile(experienceId) {
+  return getRegisteredExperienceExportProfile(experienceId) || {
+    supportsThreads: true,
+    supportsPreview: true,
+    defaultIncludeThreads: false,
+    defaultIncludePreview: true,
+    guideFileSuffix: '-guide.txt'
+  };
+}
+
+registerExperienceExportHandler('stitching', {
+  buildDesignSvgString: function(options) {
+    return buildStitchingDesignSvgString(options);
+  },
+  buildGuideText: buildStitchingGuideText
+});
+
+registerExperienceExportHandler('triangula', {
+  buildDesignSvgString: buildTriangulaDesignSvgString,
+  buildGuideText: buildTriangulaGuideText
+});
+
+registerExperienceExportProfile('stitching', {
+  supportsThreads: true,
+  supportsPreview: true,
+  defaultIncludeThreads: false,
+  defaultIncludePreview: true,
+  guideFileSuffix: '-stitching-guide.txt'
+});
+
+if (typeof getTriangulaExportProfileForExperience === 'function') {
+  registerExperienceExportProfile('triangula', getTriangulaExportProfileForExperience('triangula'));
+}
+
+function buildStitchingDesignSvgString(options) {
+  var exportModule = getStitchingExportModule();
+  if (exportModule && typeof exportModule.buildStitchingDesignSvgString === 'function') {
+    return exportModule.buildStitchingDesignSvgString(options || {});
+  }
+  return '';
 }
 
 function buildCurrentDesignSvgString(options) {
   options = options || {};
-  if (currentExperienceId === 'triangula') {
-    return buildTriangulaDesignSvgString();
+  var handlers = getExperienceExportHandlers(currentExperienceId);
+  if (!handlers || typeof handlers.buildDesignSvgString !== 'function') {
+    return '';
   }
-
-  var includeThreads = options.includeThreads !== false;
-
-  // Export a fresh static snapshot independent from transient animation artifacts.
-  computePoints();
-
-  var width = Math.round(view.viewSize.width);
-  var height = Math.round(view.viewSize.height);
-  var lines = [];
-
-  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
-  lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
-
-  if (borderEnabled && BORDER_INCLUDE_IN_SVG) {
-    var borderGeometry = getBorderGeometryForCurrentShape();
-    if (borderGeometry && borderGeometry.outerSamples && borderGeometry.innerSamples) {
-      var lineJoin = borderGeometry.isPolygon ? 'miter' : 'round';
-      var outerPathData = svgPathFromPoints(borderGeometry.outerSamples);
-      var innerPathData = svgPathFromPoints(borderGeometry.innerSamples);
-      lines.push('<path d="' + outerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
-      lines.push('<path d="' + innerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
-    }
-  }
-
-  if (includeThreads) {
-    for (var t = 0; t < threads.length; t++) {
-      var thread = threads[t];
-      var segments = computeSegments(thread);
-      for (var s = 0; s < segments.length; s++) {
-        var fromPoint = points[segments[s][0]];
-        var toPoint = points[segments[s][1]];
-        if (!fromPoint || !toPoint) continue;
-
-        var strokeColor = thread.color === 'rainbow'
-          ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
-          : colorToSvg(thread.color);
-
-        lines.push(
-          '<line x1="' + formatSvgNumber(fromPoint.x) + '" y1="' + formatSvgNumber(fromPoint.y) +
-          '" x2="' + formatSvgNumber(toPoint.x) + '" y2="' + formatSvgNumber(toPoint.y) +
-          '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
-          '" stroke-linecap="round" stroke-linejoin="round"/>'
-        );
-      }
-    }
-  }
-
-  for (var i = 0; i < points.length; i++) {
-    lines.push('<circle cx="' + formatSvgNumber(points[i].x) + '" cy="' + formatSvgNumber(points[i].y) + '" r="3" fill="#333"/>');
-  }
-
-  if (shouldShowHoleNumbersNow()) {
-    var holeCount = parseInt(holesSlider.value, 10);
-    if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
-    var fontSize = getHoleNumberFontSize(holeCount);
-    var ccw = signedAreaOfClosedPolyline(points) > 0;
-
-    for (var j = 0; j < points.length; j++) {
-      var text = String(j + 1);
-      var outward = getOutwardDirectionAtHole(j, ccw);
-      var extent = estimateTextExtentAlongDirection(text, fontSize);
-      var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
-
-      if (metrics.maxOffset < metrics.minOffset) {
-        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
-        var reducedFont = Math.max(6, Math.min(fontSize, availableBand * 1.6));
-        if (reducedFont < fontSize) {
-          fontSize = reducedFont;
-          extent = estimateTextExtentAlongDirection(text, fontSize);
-          metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
-        }
-      }
-
-      var labelPos = points[j].add(outward.multiply(metrics.offset));
-      lines.push(
-        '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
-        '" fill="#555" font-size="' + formatSvgNumber(fontSize) +
-        '" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="middle">' +
-        text +
-        '</text>'
-      );
-    }
-  }
-
-  lines.push('</svg>');
-  return lines.join('\n');
+  return handlers.buildDesignSvgString(options);
 }
 
 function downloadCurrentDesignSvg(fileBaseName, options) {
@@ -4607,157 +3569,32 @@ function createCurrentDesignSvgBlob(options) {
 }
 
 function buildStitchingGuideText(fileBaseName, options) {
-  function getReadableStitchMode(mode) {
-    if (mode === 'connect') return 'Multiplication';
-    if (mode === 'sequence') return 'Step list';
-    if (mode === 'formula') return 'Expression';
-    return 'Addition';
+  var exportModule = getStitchingExportModule();
+  if (exportModule && typeof exportModule.buildStitchingGuideText === 'function') {
+    return exportModule.buildStitchingGuideText(fileBaseName, options || {});
   }
-
-  function appendConnections(targetLines, segments) {
-    for (var idx = 0; idx < segments.length; idx++) {
-      targetLines.push('    ' + String(segments[idx][0] + 1) + ' -> ' + String(segments[idx][1] + 1));
-    }
-  }
-
-  computePoints();
-
-  var lines = [];
-  var now = new Date();
-  lines.push('curve_stitcher manual stitching guide');
-  lines.push('Generated: ' + now.toISOString());
-  lines.push('Export name: ' + fileBaseName);
-  lines.push('');
-  lines.push('Parameters');
-  lines.push('Global');
-  lines.push('Shape: ' + currentShape);
-  lines.push('Holes: ' + holesSlider.value);
-  lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
-  lines.push('Hole numbers visible in export: ' + (shouldShowHoleNumbersNow() ? 'yes' : 'no'));
-  lines.push('Include stitched threads in SVG: ' + (options.includeThreads ? 'yes' : 'no'));
-  lines.push('');
-  lines.push('Threads');
-
-  for (var p = 0; p < threads.length; p++) {
-    var paramThread = threads[p];
-    ensureThreadConnectConfig(paramThread);
-    lines.push('Thread ' + (p + 1));
-    lines.push('  Color: ' + String(paramThread.color));
-    lines.push('  Size: ' + String(paramThread.width));
-    lines.push('  Stitch mode: ' + getReadableStitchMode(paramThread.jumpMode));
-    lines.push('  Add value: ' + String(paramThread.jump));
-    if (paramThread.jumpMode === 'connect') {
-      lines.push('  Multiply by: ' + String(paramThread.connectMultiplier));
-      lines.push('  Offset: ' + String(paramThread.connectOffset));
-    }
-    if (paramThread.jumpMode === 'sequence') {
-      lines.push('  Step list: ' + String(paramThread.jumpSequence || ''));
-    }
-    if (paramThread.jumpMode === 'formula') {
-      lines.push('  Expression: ' + String(paramThread.jumpFormula || 'skip'));
-    }
-  }
-
-  lines.push('');
-  lines.push('Preparation');
-  lines.push('1. Manufacture the board with shape "' + currentShape + '" and ' + String(points.length) + ' numbered holes.');
-  lines.push('2. Number holes clockwise as shown in the preview/export from 1 to ' + String(points.length) + '.');
-  lines.push('3. Use one thread sequence section per listed thread below.');
-  lines.push('');
-
-  for (var i = 0; i < threads.length; i++) {
-    var thread = threads[i];
-    ensureThreadConnectConfig(thread);
-    var segments = computeSegments(thread);
-    var modeName = getReadableStitchMode(thread.jumpMode);
-    lines.push('Thread ' + (i + 1));
-    lines.push('  Mode: ' + modeName);
-    lines.push('  Color: ' + String(thread.color));
-    lines.push('  Width: ' + String(thread.width));
-
-    if (thread.jumpMode === 'connect') {
-      lines.push('  Rule: target = ((multiplier * source + offset - 1) mod n) + 1, using labels 1..n.');
-      lines.push('  Multiplier: ' + String(thread.connectMultiplier));
-      lines.push('  Offset: ' + String(thread.connectOffset));
-      lines.push('  Full connections:');
-      appendConnections(lines, segments);
-    } else if (thread.jumpMode === 'sequence') {
-      lines.push('  Rule: repeat the provided step list from each current hole, wrapping modulo n.');
-      lines.push('  Step list: ' + String(thread.jumpSequence || ''));
-      lines.push('  Full connections:');
-      appendConnections(lines, segments);
-    } else if (thread.jumpMode === 'formula') {
-      lines.push('  Rule: evaluate expression per step, then connect current -> (current + step) mod n.');
-      lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
-      lines.push('  Base add value: ' + String(thread.jump));
-      lines.push('  Full connections:');
-      appendConnections(lines, segments);
-    } else {
-      lines.push('  Rule: next = ((current + add - 1) mod n) + 1, using labels 1..n.');
-      lines.push('  Add value: ' + String(thread.jump));
-      lines.push('  Full connections:');
-      appendConnections(lines, segments);
-    }
-
-    lines.push('');
-  }
-
-  lines.push('Notes');
-  lines.push('- If threads are hidden in the exported SVG, use this guide for reconstruction.');
-  lines.push('- Keep consistent thread tension to match the on-screen reference closely.');
-
-  return lines.join('\n');
+  return '';
 }
 
 function buildTriangulaGuideText(fileBaseName, options) {
-  options = options || {};
-  var now = new Date();
-  var startDepth = triangulaCountToDepth(triangulaStartCount);
-  var targetDepth = triangulaCountToDepth(triangulaTargetCount);
-  var lines = [];
-
-  lines.push('curve_stitcher Triangula instructions');
-  lines.push('Generated: ' + now.toISOString());
-  lines.push('Export name: ' + fileBaseName);
-  lines.push('');
-  lines.push('Parameters');
-  lines.push('Experience: Triangula');
-  lines.push('Construction mode: ' + triangulaConstructionMode);
-  lines.push('Fractal mode: ' + triangulaFractalMode);
-  lines.push('Canvas fit mode: ' + triangulaFitMode);
-  lines.push('Color mode: ' + triangulaColorMode);
-  lines.push('Start triangles: ' + String(triangulaStartCount) + ' (depth ' + String(startDepth) + ')');
-  lines.push('Target triangles: ' + String(triangulaTargetCount) + ' (depth ' + String(targetDepth) + ')');
-  lines.push('Band 1 color: ' + String(triangulaBandColors.band1));
-  lines.push('Band 2 color: ' + String(triangulaBandColors.band2));
-  lines.push('Band 4 color: ' + String(triangulaBandColors.band4));
-  lines.push('Rainbow source color: ' + String(threads[0] ? threads[0].color : triangulaBandColors.band1));
-  lines.push('');
-  lines.push('Reconstruction');
-  lines.push('1. Open Triangula in curve_stitcher.');
-  lines.push('2. Set mode, color mode, and start/target values to match parameters above.');
-  lines.push('3. Apply band/rainbow colors as listed above.');
-  lines.push('4. Exported SVG captures the fully completed target-state triangle composition with colors.');
-  lines.push('');
-  lines.push('Notes');
-  lines.push('- Triangula exports intentionally skip preview PNG files.');
-  lines.push('- Include instructions controls whether this file is exported.');
-
-  return lines.join('\n');
+  var exportModule = getTriangulaExportModule();
+  if (exportModule && typeof exportModule.buildTriangulaGuideText === 'function') {
+    return exportModule.buildTriangulaGuideText(fileBaseName, options || {});
+  }
+  return '';
 }
 
 function getExportGuideFileName(fileBaseName) {
-  if (currentExperienceId === 'triangula') {
-    return fileBaseName + '-triangula-instructions.txt';
-  }
-  return fileBaseName + '-stitching-guide.txt';
+  var profile = getExperienceExportProfile(currentExperienceId);
+  return fileBaseName + (profile.guideFileSuffix || '-stitching-guide.txt');
 }
 
 function buildExportGuideText(fileBaseName, options) {
-  if (currentExperienceId === 'triangula') {
-    return buildTriangulaGuideText(fileBaseName, options || {});
+  var handlers = getExperienceExportHandlers(currentExperienceId);
+  if (!handlers || typeof handlers.buildGuideText !== 'function') {
+    return '';
   }
-  return buildStitchingGuideText(fileBaseName, options || {});
+  return handlers.buildGuideText(fileBaseName, options || {});
 }
 
 function downloadStitchingGuide(fileBaseName, options) {
@@ -4815,21 +3652,21 @@ async function downloadExportZipBundle(fileBaseName, options) {
 }
 
 function openExportOptionsModal() {
-  var isTriangulaExport = currentExperienceId === 'triangula';
+  var profile = getExperienceExportProfile(currentExperienceId);
   var threadsRow = exportIncludeThreadsInput ? exportIncludeThreadsInput.closest('.modal-row') : null;
   var previewRow = exportIncludePreviewInput ? exportIncludePreviewInput.closest('.modal-row') : null;
 
   exportNameInput.value = 'curve_stitcher-' + getTimestampLabel();
-  exportIncludeThreadsInput.checked = false;
-  exportIncludeThreadsInput.disabled = isTriangulaExport;
+  exportIncludeThreadsInput.checked = !!profile.defaultIncludeThreads;
+  exportIncludeThreadsInput.disabled = profile.supportsThreads === false;
   exportIncludeGuideInput.checked = true;
-  exportIncludePreviewInput.checked = isTriangulaExport ? false : true;
-  exportIncludePreviewInput.disabled = isTriangulaExport;
+  exportIncludePreviewInput.checked = !!profile.defaultIncludePreview;
+  exportIncludePreviewInput.disabled = profile.supportsPreview === false;
   if (threadsRow) {
-    threadsRow.style.display = isTriangulaExport ? 'none' : '';
+    threadsRow.style.display = profile.supportsThreads === false ? 'none' : '';
   }
   if (previewRow) {
-    previewRow.style.display = isTriangulaExport ? 'none' : '';
+    previewRow.style.display = profile.supportsPreview === false ? 'none' : '';
   }
   exportOptionsModal.classList.add('open');
   exportNameInput.focus();
@@ -4841,12 +3678,12 @@ function closeExportOptionsModal() {
 }
 
 async function runExportFromModalSelection() {
-  var isTriangulaExport = currentExperienceId === 'triangula';
+  var profile = getExperienceExportProfile(currentExperienceId);
   var baseName = normalizeExportBaseName(exportNameInput.value);
   var options = {
-    includeThreads: isTriangulaExport ? false : exportIncludeThreadsInput.checked,
+    includeThreads: profile.supportsThreads === false ? false : exportIncludeThreadsInput.checked,
     includeGuide: exportIncludeGuideInput.checked,
-    includePreview: isTriangulaExport ? false : exportIncludePreviewInput.checked
+    includePreview: profile.supportsPreview === false ? false : exportIncludePreviewInput.checked
   };
 
   try {
@@ -4870,90 +3707,113 @@ async function runExportFromModalSelection() {
   closeExportOptionsModal();
 }
 
-function drawHoles() {
-  var numbersVisible = shouldShowHoleNumbersNow();
-  var holeCount = parseInt(holesSlider.value, 10);
-  if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
-  var fontSize = getHoleNumberFontSize(holeCount);
-  var ccw = signedAreaOfClosedPolyline(points) > 0;
-  holeNumberLabelsByIndex = Object.create(null);
-  highlightedHoleNumbers = [];
-  for (var i = 0; i < points.length; i++) {
-    new Path.Circle(points[i], 3).fillColor = '#333';
-    if (numbersVisible) {
-      var outward = getOutwardDirectionAtHole(i, ccw);
-
-      var label = new PointText(points[i]);
-      label.justification = 'center';
-      label.fillColor = '#555';
-      label.fontSize = fontSize;
-      label.fontWeight = 'normal';
-      label.content = String(i + 1);
-
-      var extent = getBoundsExtentAlongDirection(label, outward);
-      var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
-      var minOffset = metrics.minOffset;
-      var maxOffset = metrics.maxOffset;
-
-      // If space is tight, reduce label size before final placement.
-      if (maxOffset < minOffset) {
-        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE) - (3 + LABEL_HOLE_CLEARANCE);
-        var targetFont = Math.max(6, Math.min(label.fontSize, availableBand * 1.6));
-        if (targetFont < label.fontSize) {
-          label.fontSize = targetFont;
-          extent = getBoundsExtentAlongDirection(label, outward);
-          metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
-          minOffset = metrics.minOffset;
-          maxOffset = metrics.maxOffset;
-        }
-      }
-
-      var clampedOffset = metrics.offset;
-      if (maxOffset < minOffset) {
-        // Recompute fallback offset against latest bounds when tight.
-        clampedOffset = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE).offset;
-      }
-      label.position = points[i].add(outward.multiply(clampedOffset));
-
-      holeNumberLabelsByIndex[i] = label;
-    }
-  }
-}
-
-function bringHoleNumbersToFront() {
-  if (!shouldShowHoleNumbersNow()) return;
-  var children = project.activeLayer.children;
-  var labels = [];
-  for (var i = 0; i < children.length; i++) {
-    if (children[i] instanceof PointText) {
-      labels.push(children[i]);
-    }
-  }
-  for (var j = 0; j < labels.length; j++) {
-    labels[j].bringToFront();
-  }
-}
-
 /* ------------------------------
    STATIC DRAW
 ------------------------------ */
+var stitchingRuntime = typeof window.createStitchingExperienceRuntime === 'function'
+  ? window.createStitchingExperienceRuntime({
+      clearLayer: function() {
+        project.activeLayer.removeChildren();
+      },
+      computePoints: computePoints,
+      drawShapeBorder: function() {
+        var renderModule = getStitchingRenderModule();
+        if (renderModule && typeof renderModule.drawShapeBorder === 'function') {
+          renderModule.drawShapeBorder();
+        }
+      },
+      drawThread: function(thread) {
+        var renderModule = getStitchingRenderModule();
+        if (renderModule && typeof renderModule.drawThread === 'function') {
+          renderModule.drawThread(thread);
+        }
+      },
+      clearHighlightedHoleNumbers: clearHighlightedHoleNumbers,
+      getPoints: function() {
+        return points;
+      },
+      getHolesValue: function() {
+        return holesSlider ? holesSlider.value : DEFAULT_HOLES;
+      },
+      getDefaultHoles: function() {
+        return DEFAULT_HOLES;
+      },
+      getShowHoleNumbers: function() {
+        return showHoleNumbers;
+      },
+      getHoleNumberAutoHideThreshold: function() {
+        return HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
+      },
+      signedAreaOfClosedPolyline: signedAreaOfClosedPolyline,
+      getLabelBorderClearance: function() {
+        return LABEL_BORDER_CLEARANCE;
+      },
+      getLabelHoleClearance: function() {
+        return LABEL_HOLE_CLEARANCE;
+      },
+      getLabelOuterBias: function() {
+        return LABEL_OUTER_BIAS;
+      },
+      getBorderOuterGap: function() {
+        return BORDER_OUTER_GAP;
+      },
+      getBorderStrokeWidth: function() {
+        return BORDER_STROKE_WIDTH;
+      },
+      setHoleNumberLabelsByIndex: function(nextLabels) {
+        holeNumberLabelsByIndex = nextLabels || Object.create(null);
+      },
+      setHighlightedHoleNumbers: function(nextHighlighted) {
+        highlightedHoleNumbers = Array.isArray(nextHighlighted) ? nextHighlighted : [];
+      },
+      getThreads: function() {
+        return threads;
+      },
+      getAnimationActive: function() {
+        return animationActive;
+      },
+      setAnimationActive: function(nextValue) {
+        animationActive = !!nextValue;
+      },
+      getAnimationState: function() {
+        return animationState;
+      },
+      setAnimationState: function(nextState) {
+        animationState = nextState || null;
+      },
+      setTriangulaAnimationState: function(nextState) {
+        triangulaAnimationState = nextState || null;
+      },
+      setAnimationPlaybackState: function(nextState) {
+        animationPlaybackState = nextState || 'idle';
+      },
+      syncAnimateButtonLabel: syncAnimateButtonLabel,
+      updateMusicPlaybackState: updateMusicPlaybackState,
+      scheduleUrlStateSync: scheduleUrlStateSync,
+      drawStatic: function() {
+        drawStatic();
+      },
+      renderAnimationFrame: function() {
+        var renderModule = getStitchingRenderModule();
+        if (renderModule && typeof renderModule.renderAnimationFrame === 'function') {
+          renderModule.renderAnimationFrame();
+        }
+      },
+      computeSegments: computeSegments,
+      getAnimationSecondsPerSegment: getAnimationSecondsPerSegment,
+      getStitchPullSettleSeconds: function() {
+        return STITCH_PULL_SETTLE_SECONDS;
+      },
+      setViewFrameHandler: function(handler) {
+        view.onFrame = handler;
+      }
+    })
+  : null;
+
 function drawStitchingStatic() {
-  project.activeLayer.removeChildren();
-  computePoints();
-
-  // Border is a style-only layer for Stitching mode and should sit behind holes/threads.
-  drawShapeBorder();
-
-  // Draw holes
-  drawHoles();
-
-  // Draw threads
-  for (var i = 0; i < threads.length; i++) {
-    drawThread(threads[i]);
+  if (stitchingRuntime && typeof stitchingRuntime.drawStatic === 'function') {
+    stitchingRuntime.drawStatic();
   }
-
-  clearHighlightedHoleNumbers();
-  bringHoleNumbersToFront();
 }
 
 function drawStatic() {
@@ -4969,115 +3829,21 @@ function drawStatic() {
    ANIMATION
 ------------------------------ */
 function runAnimationFrameTick(event) {
-  if (!animationActive) return;
-
-  if (!animationState || !animationState.segmentLists.length) {
-    animationActive = false;
-    view.onFrame = null;
-    animationState = null;
-    animationPlaybackState = 'idle';
-    syncAnimateButtonLabel();
-    clearHighlightedHoleNumbers();
-    updateMusicPlaybackState();
-    scheduleUrlStateSync(false);
-    drawStatic();
-    return;
+  if (stitchingRuntime && typeof stitchingRuntime.runAnimationFrameTick === 'function') {
+    stitchingRuntime.runAnimationFrameTick(event);
   }
-
-  // Clamp long frame gaps so a resumed tab or hitch cannot skip ahead visibly.
-  var frameDelta = Math.min(event.delta, 0.1);
-  animationState.elapsed += frameDelta;
-
-  if (animationState.settle) {
-    animationState.settle.remaining = Math.max(0, animationState.settle.remaining - frameDelta);
-    if (animationState.settle.remaining <= 0) {
-      animationState.settle = null;
-    }
-  }
-
-  var secondsPerSegment = getAnimationSecondsPerSegment();
-
-  while (animationState.elapsed >= secondsPerSegment && animationActive) {
-    animationState.elapsed -= secondsPerSegment;
-
-    var threadIndex = animationState.threadIndex;
-    if (threadIndex < 0 || threadIndex >= threads.length) {
-      animationActive = false;
-      animationState = null;
-      animationPlaybackState = 'idle';
-      view.onFrame = null;
-      syncAnimateButtonLabel();
-      clearHighlightedHoleNumbers();
-      updateMusicPlaybackState();
-      scheduleUrlStateSync(false);
-      drawStatic();
-      return;
-    }
-
-    var segments = animationState.segmentLists[threadIndex] || [];
-
-    if (animationState.step < segments.length) {
-      animationState.settle = {
-        threadIndex: threadIndex,
-        segmentIndex: animationState.step,
-        segments: segments,
-        duration: STITCH_PULL_SETTLE_SECONDS,
-        remaining: STITCH_PULL_SETTLE_SECONDS
-      };
-      animationState.step++;
-    } else {
-      animationState.threadIndex++;
-      if (animationState.threadIndex >= threads.length) {
-        animationActive = false;
-        animationState = null;
-        animationPlaybackState = 'idle';
-        view.onFrame = null;
-        syncAnimateButtonLabel();
-        clearHighlightedHoleNumbers();
-        updateMusicPlaybackState();
-        scheduleUrlStateSync(false);
-        drawStatic();
-        return;
-      }
-      animationState.step = 0;
-    }
-  }
-
-  renderAnimationFrame();
 }
 
 function startAnimationLoop() {
-  view.onFrame = runAnimationFrameTick;
+  if (stitchingRuntime && typeof stitchingRuntime.startAnimationLoop === 'function') {
+    stitchingRuntime.startAnimationLoop();
+  }
 }
 
 function animateStitchingExperience() {
-  // Always treat this as a fresh run, even if a prior animation is active.
-  animationActive = false;
-  view.onFrame = null;
-  animationState = null;
-  triangulaAnimationState = null;
-  clearHighlightedHoleNumbers();
-
-  project.activeLayer.removeChildren();
-  computePoints();
-
-  animationState = {
-    threadIndex: 0,
-    step: 0,
-    elapsed: 0,
-    activeHolePair: null,
-    settle: null,
-    segmentLists: threads.map(function(thread) {
-      return computeSegments(thread);
-    })
-  };
-  animationActive = true;
-  animationPlaybackState = 'playing';
-  syncAnimateButtonLabel();
-  updateMusicPlaybackState();
-  scheduleUrlStateSync(false);
-  renderAnimationFrame();
-  startAnimationLoop();
+  if (stitchingRuntime && typeof stitchingRuntime.animate === 'function') {
+    stitchingRuntime.animate();
+  }
 }
 
 function drawSquarusStatic() {
@@ -5179,246 +3945,10 @@ joyAudio.addEventListener('ended', function() {
    THREAD UI
 ------------------------------ */
 function renderThreadControls() {
-  var container = document.getElementById('thread-controls');
-  container.innerHTML = '';
-
-  if (!threads.length) {
-    selectedThreadIndex = -1;
-    refreshKidThreadPicker();
-    return;
+  var uiModule = getStitchingUiModule();
+  if (uiModule && typeof uiModule.renderThreadControls === 'function') {
+    uiModule.renderThreadControls();
   }
-  if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
-    selectedThreadIndex = 0;
-  }
-
-  threads.forEach((thread, index) => {
-    ensureThreadConnectConfig(thread);
-
-    var div = document.createElement('div');
-    div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
-
-    var isFixedMode = thread.jumpMode === 'fixed';
-    var isFormulaMode = thread.jumpMode === 'formula';
-    var isSequenceMode = thread.jumpMode === 'sequence';
-    var isConnectMode = thread.jumpMode === 'connect';
-
-    div.innerHTML = `
-      <strong>Thread ${index + 1}</strong><br>
-      Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
-      Stitch by:
-      <select id="jump-mode-${index}">
-        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
-        <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
-        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Step list</option>
-        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
-      </select><br>
-      ${isFixedMode ? `
-      Add by: <input class="advanced-inline-number" type="number" min="1" max="100" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
-      ` : ''}
-      ${isFormulaMode ? `
-      Base add: <input class="advanced-inline-number" type="number" min="1" max="100" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} base add value"><br>
-      Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + i) mod n"><br>
-      <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
-      <div class="jump-help">Vars: i (step), n (holes), current, prev, skip</div>
-      <div class="jump-preset-row">
-        <select id="jump-preset-${index}">
-          <option value="">Preset formulas...</option>
-          <option value="(skip + i) mod n">Growing spiral ((skip + i) mod n)</option>
-          <option value="skip + (i mod 5)">Wobble (skip + (i mod 5))</option>
-          <option value="skip × ((i mod 3) + 1)">Pulse (skip × ((i mod 3) + 1))</option>
-          <option value="(current mod 7) + skip">Current-based ((current mod 7) + skip)</option>
-        </select>
-        <button type="button" id="use-preset-${index}">Use</button>
-      </div>
-      ` : ''}
-      ${isSequenceMode ? `
-      Step list: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
-      <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
-      ` : ''}
-      ${isConnectMode ? `
-      Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      Offset (add-on): <input class="advanced-inline-number" type="number" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-number-${index}" aria-label="Thread ${index + 1} offset value"><br>
-      <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
-      <div class="jump-preset-row">
-        <select id="connect-preset-${index}">
-          <option value="">Preset multiplier...</option>
-          <option value="2,0">Cardioid (m=2, offset=0)</option>
-          <option value="3,0">Nephroid (m=3, offset=0)</option>
-          <option value="4,0">Times 4 (m=4, offset=0)</option>
-        </select>
-        <button type="button" id="use-connect-preset-${index}">Use</button>
-      </div>
-      ` : ''}
-      Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
-      Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
-      <button id="delete-${index}">Delete</button>
-    `;
-
-    container.appendChild(div);
-
-    div.addEventListener('click', (event) => {
-      if (event.target.closest('input, select, button')) return;
-      selectedThreadIndex = index;
-      renderThreadControls();
-      syncKidControlsFromSelectedThread();
-    });
-
-    document.getElementById(`color-${index}`).addEventListener('input', e => {
-      var profile = getExperienceUiProfile(currentExperienceId);
-      var paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
-      if (paletteMode === 'triangula-banded' && index === 0) {
-        applyExperiencePaletteColorChoice(e.target.value);
-      } else {
-        thread.color = e.target.value;
-      }
-      syncKidControlsFromSelectedThread();
-      redrawAnimationInPlace();
-    });
-
-    var skipNumberInput = document.getElementById(`jump-number-${index}`);
-    if (skipNumberInput) {
-      skipNumberInput.addEventListener('input', e => {
-        if (e.target.value === '') return;
-        thread.jump = parseBoundedInt(e.target.value, 1, 100, thread.jump || 1);
-        e.target.value = String(thread.jump);
-        if (index === getKidTargetThreadIndex()) {
-          jumpSlider.value = thread.jump;
-          updateKidControlValues();
-        }
-        redrawForPathChange();
-      });
-      skipNumberInput.addEventListener('change', e => {
-        thread.jump = parseBoundedInt(e.target.value, 1, 100, thread.jump || 1);
-        e.target.value = String(thread.jump);
-      });
-    }
-
-    document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
-      thread.jumpMode = e.target.value;
-      renderThreadControls();
-      redrawForPathChange();
-    });
-
-    var formulaInput = document.getElementById(`jump-formula-${index}`);
-    if (formulaInput) {
-      formulaInput.addEventListener('input', e => {
-        thread.jumpFormula = e.target.value;
-        if (thread.jumpMode === 'formula') {
-          redrawForPathChange();
-        }
-      });
-    }
-
-    var usePresetBtn = document.getElementById(`use-preset-${index}`);
-    if (usePresetBtn) {
-      usePresetBtn.addEventListener('click', () => {
-        var preset = document.getElementById(`jump-preset-${index}`).value;
-        if (!preset) return;
-        thread.jumpFormula = preset;
-        thread.jumpMode = 'formula';
-        renderThreadControls();
-        redrawForPathChange();
-      });
-    }
-
-    var sequenceInput = document.getElementById(`jump-sequence-${index}`);
-    if (sequenceInput) {
-      sequenceInput.addEventListener('input', e => {
-        thread.jumpSequence = e.target.value;
-        if (thread.jumpMode === 'sequence') {
-          redrawForPathChange();
-        }
-      });
-    }
-
-    var connectMultiplierNumberInput = document.getElementById(`connect-m-number-${index}`);
-    if (connectMultiplierNumberInput) {
-      connectMultiplierNumberInput.addEventListener('input', e => {
-        if (e.target.value === '') return;
-        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
-        e.target.value = String(thread.connectMultiplier);
-        if (index === getKidTargetThreadIndex()) {
-          syncKidControlsFromSelectedThread();
-        }
-        redrawForPathChange();
-      });
-      connectMultiplierNumberInput.addEventListener('change', e => {
-        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
-        e.target.value = String(thread.connectMultiplier);
-      });
-    }
-
-    var connectOffsetNumberInput = document.getElementById(`connect-offset-number-${index}`);
-    if (connectOffsetNumberInput) {
-      connectOffsetNumberInput.addEventListener('input', e => {
-        if (e.target.value === '') return;
-        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
-        e.target.value = String(thread.connectOffset);
-        if (index === getKidTargetThreadIndex()) {
-          syncKidControlsFromSelectedThread();
-        }
-        redrawForPathChange();
-      });
-      connectOffsetNumberInput.addEventListener('change', e => {
-        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
-        e.target.value = String(thread.connectOffset);
-      });
-    }
-
-    var useConnectPresetBtn = document.getElementById(`use-connect-preset-${index}`);
-    if (useConnectPresetBtn) {
-      useConnectPresetBtn.addEventListener('click', () => {
-        var raw = document.getElementById(`connect-preset-${index}`).value;
-        if (!raw) return;
-        var parts = raw.split(',');
-        if (parts.length !== 2) return;
-        thread.jumpMode = 'connect';
-        thread.connectMultiplier = parseInt(parts[0], 10);
-        thread.connectOffset = parseInt(parts[1], 10);
-        renderThreadControls();
-        syncKidControlsFromSelectedThread();
-        redrawForPathChange();
-      });
-    }
-
-    var widthNumberInput = document.getElementById(`width-number-${index}`);
-    if (widthNumberInput) {
-      widthNumberInput.addEventListener('input', e => {
-        if (e.target.value === '') return;
-        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
-        e.target.value = String(thread.width);
-        if (index === getKidTargetThreadIndex()) {
-          widthSlider.value = thread.width;
-          updateKidControlValues();
-        }
-        redrawAnimationInPlace();
-      });
-      widthNumberInput.addEventListener('change', e => {
-        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
-        e.target.value = String(thread.width);
-      });
-    }
-
-    document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
-      thread.color = e.target.checked ? 'rainbow' : '#000000';
-      syncKidControlsFromSelectedThread();
-      redrawAnimationInPlace();
-    });
-
-    document.getElementById(`delete-${index}`).addEventListener('click', () => {
-      threads.splice(index, 1);
-      if (!threads.length) {
-        selectedThreadIndex = -1;
-      } else if (selectedThreadIndex >= threads.length) {
-        selectedThreadIndex = threads.length - 1;
-      }
-      renderThreadControls();
-      syncKidControlsFromSelectedThread();
-      redrawForPathChange();
-    });
-  });
-
-  syncKidControlsFromSelectedThread();
 }
 
 /* ------------------------------
@@ -5536,7 +4066,7 @@ var adapterContextBundle = window.createAdapterContextBundle({
   getTriangulaColorMode: function() { return triangulaColorMode; },
   getCurrentExperienceId: function() { return currentExperienceId; },
   getTriangulaConstructionMode: function() { return triangulaConstructionMode; },
-  normalizeTriangulaFillColor: normalizeTriangulaFillColor,
+  normalizeTriangulaFillColor: function(c, f) { return getTriangulaCoreModule().normalizeTriangulaFillColor(c, f); },
   getTriangulaBandColors: function() { return triangulaBandColors; },
   syncTriangulaControls: syncTriangulaControls,
   triangulaConstructionModeSelect: triangulaConstructionModeSelect,
@@ -5663,10 +4193,10 @@ applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
 if (hasUrlStateParams()) {
   var initialParams = new URLSearchParams(window.location.search || '');
   var initialExperience = resolveExperienceId(getUrlStateParam(initialParams, 'experience')) || 'stitching';
-  EXPERIENCE_BEHAVIOR.setCurrentExperience(initialExperience, { suppressUrlSync: true });
+  EXPERIENCE_BEHAVIOR.setCurrentExperience(initialExperience, { suppressUrlSync: true, capturePrevious: false });
   setCurrentShape(sanitizeShape(getUrlStateParam(initialParams, 'shape'), currentShape), false);
 } else {
-  EXPERIENCE_BEHAVIOR.setCurrentExperience('stitching');
+  EXPERIENCE_BEHAVIOR.setCurrentExperience('stitching', { capturePrevious: false });
   setCurrentShape('circle', false);
 }
 advancedPanel.classList.remove('open');

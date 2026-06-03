@@ -5,6 +5,12 @@ An interactive, kid-friendly and advanced-friendly curve stitching playground in
 
 - [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) - Practical playbooks for adding experiences, changing controls, and modifying animation/canvas behavior safely.
 
+## Architecture Notes
+
+- `js/app.js` is orchestration-first; Stitching-specific sanitization and URL-state transforms live in `js/experiences/stitchingLogic.js`.
+- URL state now uses descriptive parameter names only (no short-key alias compatibility layer).
+- `js/app.js` binds directly to `window.STITCHING_LOGIC` exports, so script load order in `curvestitcher.html` must remain explicit.
+
 ## License
 
 This project is licensed under GNU General Public License v3.0. See [LICENSE](LICENSE).

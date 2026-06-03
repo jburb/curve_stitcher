@@ -179,6 +179,83 @@
     }
   }
 
+  function buildStitchingUrlState(runtime, options) {
+    runtime = runtime || {};
+    options = options || {};
+
+    var parseIntSafe = options.parseBoundedInt || parseBoundedInt;
+    var sanitizeColor = options.sanitizeThreadColor || sanitizeThreadColor;
+    var serializeState = options.serializeStitchingThreadState || serializeStitchingThreadState;
+    var defaultThreadColor = options.defaultThreadColor || '#1982c4';
+    var maxHoles = isFinite(options.maxHoles) ? options.maxHoles : 140;
+    var defaultHoles = isFinite(options.defaultHoles) ? options.defaultHoles : 60;
+    var threads = Array.isArray(runtime.threads) ? runtime.threads : [];
+
+    return {
+      holes: parseIntSafe(runtime.holesValue, 3, maxHoles, defaultHoles),
+      selectedThreadIndex: parseIntSafe(runtime.selectedThreadIndex, 0, Math.max(0, threads.length - 1), 0),
+      threadColors: threads.map(function(thread) {
+        return sanitizeColor(thread.color, defaultThreadColor);
+      }),
+      threadState: serializeState(threads, options.serializeOptions)
+    };
+  }
+
+  function hydrateStitchingUrlState(runtime, options) {
+    runtime = runtime || {};
+    options = options || {};
+
+    var parseIntSafe = options.parseBoundedInt || parseBoundedInt;
+    var sanitizeList = options.sanitizeThreadList || sanitizeThreadList;
+    var parseState = options.parseStitchingThreadState || parseStitchingThreadState;
+    var sanitizeColorList = options.sanitizeThreadColorList || sanitizeThreadColorList;
+    var ensureList = options.ensureThreadList || ensureThreadList;
+    var defaultThreadColor = options.defaultThreadColor || '#1982c4';
+    var maxHoles = isFinite(options.maxHoles) ? options.maxHoles : 140;
+    var defaultHoles = isFinite(options.defaultHoles) ? options.defaultHoles : 60;
+    var baseThreads = Array.isArray(runtime.threads) ? runtime.threads : [];
+    var nextThreads = baseThreads.slice();
+
+    var fallbackThreads = sanitizeList(baseThreads);
+    var requestedThreadState = parseState(runtime.threadStateParam, fallbackThreads, options.parseStateOptions);
+
+    if (requestedThreadState.length) {
+      nextThreads = sanitizeList(requestedThreadState);
+    }
+
+    var fallbackColors = nextThreads.map(function(thread) {
+      return sanitizeThreadColor(thread.color, defaultThreadColor);
+    });
+    var requestedThreadColors = sanitizeColorList(runtime.threadColorsParam, fallbackColors);
+    for (var i = 0; i < nextThreads.length && i < requestedThreadColors.length; i++) {
+      nextThreads[i].color = requestedThreadColors[i];
+    }
+
+    if (!nextThreads.length) {
+      nextThreads = ensureList(null);
+    }
+
+    var holes = parseIntSafe(
+      runtime.stitchingHolesParam,
+      3,
+      maxHoles,
+      parseIntSafe(runtime.currentHolesValue, 3, maxHoles, defaultHoles)
+    );
+
+    var selectedThreadIndex = parseIntSafe(
+      runtime.selectedThreadIndexParam,
+      0,
+      nextThreads.length - 1,
+      isFinite(runtime.selectedThreadIndex) ? runtime.selectedThreadIndex : 0
+    );
+
+    return {
+      threads: nextThreads,
+      holes: holes,
+      selectedThreadIndex: selectedThreadIndex
+    };
+  }
+
   window.STITCHING_LOGIC = Object.freeze({
     parseBoundedInt: parseBoundedInt,
     sanitizeThreadJumpMode: sanitizeThreadJumpMode,
@@ -188,6 +265,8 @@
     sanitizeThreadList: sanitizeThreadList,
     ensureThreadList: ensureThreadList,
     serializeStitchingThreadState: serializeStitchingThreadState,
-    parseStitchingThreadState: parseStitchingThreadState
+    parseStitchingThreadState: parseStitchingThreadState,
+    buildStitchingUrlState: buildStitchingUrlState,
+    hydrateStitchingUrlState: hydrateStitchingUrlState
   });
 })();

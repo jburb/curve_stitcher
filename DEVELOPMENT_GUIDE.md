@@ -12,8 +12,14 @@ The app is a classic-script SPA with experience-driven behavior.
 - Experience adapters: `js/experiences/adapters/*.js` and `js/experiences/adapters.js`
 - Adapter dependency bundle: `js/experiences/adapterContextFactory.js`
 - Domain event binders: `js/events/*.js`
+- Stitching domain logic and URL-state helpers: `js/experiences/stitchingLogic.js`
+- Experience state capture/restore helpers: `js/experiences/experienceStateManager.js`
 - Main runtime orchestration: `js/app.js`
 - Script load order: `curvestitcher.html`
+
+Current boundary rule:
+- `js/app.js` should orchestrate flows and UI wiring.
+- Stitching sanitization, serialization, and stitching-specific URL state transforms belong in `js/experiences/stitchingLogic.js`.
 
 ## Guardrails (Read First)
 
@@ -28,11 +34,20 @@ These prevent the regressions hit during recent refactors:
 3. Keep script order explicit in `curvestitcher.html`.
 - Experience files and adapters must load before `js/app.js`.
 
+3a. Keep direct module bindings stable.
+- `js/app.js` now binds directly to required `window.STITCHING_LOGIC` functions.
+- There is no fallback binder path in app anymore.
+- If script order changes or exports are removed, startup will fail fast.
+
 4. Treat adapter binding as experience-specific, but keep critical shared handlers in one canonical location.
 - Avoid duplicate/competing button listeners for the same action.
 
 5. Validate controls by switching experiences and returning.
 - Most bugs show up at state-boundary transitions.
+
+6. URL params use descriptive names only.
+- Legacy short aliases were removed.
+- Update any hardcoded links/tests to the descriptive key set.
 
 ---
 
@@ -217,6 +232,10 @@ Adjust rendering behavior, animation pacing/logic, or canvas fit behavior.
 - Stitching -> target experience -> Stitching.
 5. URL hydration tested with full query params.
 6. No diagnostics errors in touched files.
+
+URL-state checklist details:
+- Use descriptive keys (for example `experience`, `shape`, `threadState`, `threadColors`, `selectedThreadIndex`, `stitchingHoles`).
+- Do not introduce new single-letter aliases.
 
 ---
 
