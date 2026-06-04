@@ -1894,8 +1894,8 @@ var squarusPieceCount = null;
 var squarusSequenceSeed = 0;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
-var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0.06;
-var SQUARUS_SCATTER_WOBBLE_SPEED = 1.35;
+var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0;
+var SQUARUS_SCATTER_WOBBLE_SPEED = 0;
 var squarusPolyominoCache = Object.create(null);
 var squarusDiscoveredLayouts = Object.create(null);
 var triangulaBandColors = {
@@ -5812,6 +5812,20 @@ function easeOutBack(value) {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
+function normalizeAngleRadians(angle) {
+  var a = Number(angle) || 0;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function interpolateAngleShortest(fromAngle, toAngle, t) {
+  var from = normalizeAngleRadians(fromAngle);
+  var to = normalizeAngleRadians(toAngle);
+  var delta = normalizeAngleRadians(to - from);
+  return from + (delta * clamp01(t));
+}
+
 function squarusCellKey(x, y) {
   return String(x) + ',' + String(y);
 }
@@ -6100,10 +6114,117 @@ function squarusHilbertD2XY(side, index) {
   return { x: x, y: y };
 }
 
+function squarusHexToRgb(color) {
+  var value = String(color || '').trim();
+  var match = /^#([0-9a-f]{6})$/i.exec(value);
+  if (!match) return { r: 90, g: 75, b: 178 };
+  var hex = match[1];
+  return {
+    r: parseInt(hex.slice(0, 2), 16),
+    g: parseInt(hex.slice(2, 4), 16),
+    b: parseInt(hex.slice(4, 6), 16)
+  };
+}
+
+function squarusRgbToHex(r, g, b) {
+  function channelHex(value) {
+    var safe = Math.max(0, Math.min(255, Math.round(value)));
+    var hex = safe.toString(16);
+    return hex.length === 1 ? ('0' + hex) : hex;
+  }
+  return '#' + channelHex(r) + channelHex(g) + channelHex(b);
+}
+
+function squarusBlendHexColor(colorA, colorB, t) {
+  var a = squarusHexToRgb(colorA);
+  var b = squarusHexToRgb(colorB);
+  var blend = Math.max(0, Math.min(1, Number(t) || 0));
+  return squarusRgbToHex(
+    a.r + ((b.r - a.r) * blend),
+    a.g + ((b.g - a.g) * blend),
+    a.b + ((b.b - a.b) * blend)
+  );
+}
+
+function squarusGreatestCommonDivisor(a, b) {
+  var x = Math.abs(Math.floor(a));
+  var y = Math.abs(Math.floor(b));
+  while (y !== 0) {
+    var temp = y;
+    y = x % y;
+    x = temp;
+  }
+  return x || 1;
+}
+
+function squarusReorderColorsForContrast(colors) {
+  var count = colors.length;
+  if (count <= 2) return colors.slice();
+
+  // Walk the same set of generated colors with a large coprime step so
+  // consecutive pieces are assigned farther-apart gradient positions.
+  var step = Math.floor(count / 2) + 1;
+  while (squarusGreatestCommonDivisor(step, count) !== 1) {
+    step += 1;
+  }
+
+  var reordered = [];
+  var index = 0;
+  for (var i = 0; i < count; i++) {
+    reordered.push(colors[index]);
+    index = (index + step) % count;
+  }
+  return reordered;
+}
+
+function squarusApplyShade(color, shadeAmount) {
+  var amount = Math.max(-1, Math.min(1, Number(shadeAmount) || 0));
+  if (amount > 0) {
+    return squarusBlendHexColor(color, '#ffffff', amount);
+  }
+  if (amount < 0) {
+    return squarusBlendHexColor(color, '#000000', Math.abs(amount));
+  }
+  return color;
+}
+
+function getSquarusPieceColorSequence(total) {
+  var count = Math.max(0, Math.floor(total || 0));
+  var basePalette = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
+  if (!count) return [];
+
+  if (count <= basePalette.length) {
+    return basePalette.slice(0, count);
+  }
+
+  var sequence = [];
+  var segmentCount = basePalette.length - 1;
+  for (var i = 0; i < count; i++) {
+    var t = count <= 1 ? 0 : (i / (count - 1));
+    var pos = t * segmentCount;
+    var lower = Math.floor(pos);
+    var upper = Math.min(basePalette.length - 1, lower + 1);
+    var local = pos - lower;
+    var color = squarusBlendHexColor(basePalette[lower], basePalette[upper], local);
+
+    if (i > 0 && String(color).toLowerCase() === String(sequence[i - 1]).toLowerCase()) {
+      if (upper < basePalette.length - 1) {
+        color = squarusBlendHexColor(basePalette[upper], basePalette[upper + 1], 0.16);
+      } else {
+        color = squarusBlendHexColor(basePalette[Math.max(0, lower - 1)], basePalette[lower], 0.84);
+      }
+    }
+
+    sequence.push(color);
+  }
+
+  return squarusReorderColorsForContrast(sequence);
+}
+
 function getSquarusPieceColor(index, total) {
-  var fixedPalette = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
-  if (total <= 1) return fixedPalette[0];
-  return fixedPalette[Math.abs(Math.floor(index)) % fixedPalette.length];
+  var sequence = getSquarusPieceColorSequence(total);
+  if (!sequence.length) return '#5a4bb2';
+  return sequence[Math.abs(Math.floor(index)) % sequence.length];
 }
 
 function getSquarusPieceRenderRadius(piece, scale) {
@@ -6313,6 +6434,80 @@ function getMaxRadiusAlongAngleFromCenter(angle) {
   return Math.max(0, maxRadius);
 }
 
+function applySquarusTargetsFitToCanvas(pieces, targets) {
+  if (!pieces || !targets || pieces.length !== targets.length || !targets.length) return;
+
+  var canvasEl = document.getElementById('myCanvas');
+  var titleBottomOnCanvas = 0;
+  if (canvasEl && experienceInline && typeof canvasEl.getBoundingClientRect === 'function' && typeof experienceInline.getBoundingClientRect === 'function') {
+    var canvasRect = canvasEl.getBoundingClientRect();
+    var titleRect = experienceInline.getBoundingClientRect();
+    titleBottomOnCanvas = Math.max(0, titleRect.bottom - canvasRect.top);
+  }
+
+  var center = view.center;
+  var padding = 10;
+  var safeLeft = padding;
+  var safeRight = view.size.width - padding;
+  var safeTop = Math.max(padding, titleBottomOnCanvas + 6);
+  var safeBottom = view.size.height - padding;
+  if (safeBottom <= safeTop + 1) {
+    safeTop = padding;
+  }
+
+  var fitScale = 1;
+  var minX = Infinity;
+  var maxX = -Infinity;
+  var minY = Infinity;
+  var maxY = -Infinity;
+
+  for (var i = 0; i < targets.length; i++) {
+    var dx = targets[i].x - center.x;
+    var dy = targets[i].y - center.y;
+    var radius = getSquarusPieceRenderRadius(pieces[i], targets[i].scale);
+    minX = Math.min(minX, targets[i].x - radius);
+    maxX = Math.max(maxX, targets[i].x + radius);
+    minY = Math.min(minY, targets[i].y - radius);
+    maxY = Math.max(maxY, targets[i].y + radius);
+
+    var needX = Math.abs(dx) + radius;
+    var needY = Math.abs(dy) + radius;
+    if (needX > 1e-6) fitScale = Math.min(fitScale, (view.size.width * 0.5 - padding) / needX);
+    if (needY > 1e-6) fitScale = Math.min(fitScale, (view.size.height * 0.5 - padding) / needY);
+  }
+
+  var spanX = Math.max(1e-6, maxX - minX);
+  var spanY = Math.max(1e-6, maxY - minY);
+  fitScale = Math.min(fitScale, Math.max(0.08, (safeRight - safeLeft) / spanX));
+  fitScale = Math.min(fitScale, Math.max(0.08, (safeBottom - safeTop) / spanY));
+
+  if (!isFinite(fitScale) || fitScale >= 1) return;
+  fitScale = Math.max(0.08, fitScale);
+
+  for (var t = 0; t < targets.length; t++) {
+    targets[t].x = center.x + ((targets[t].x - center.x) * fitScale);
+    targets[t].y = center.y + ((targets[t].y - center.y) * fitScale);
+    targets[t].scale = targets[t].scale * fitScale;
+  }
+
+  var postMinY = Infinity;
+  var postMaxY = -Infinity;
+  for (var p = 0; p < targets.length; p++) {
+    var postRadius = getSquarusPieceRenderRadius(pieces[p], targets[p].scale);
+    postMinY = Math.min(postMinY, targets[p].y - postRadius);
+    postMaxY = Math.max(postMaxY, targets[p].y + postRadius);
+  }
+
+  var shiftY = 0;
+  if (postMinY < safeTop) shiftY = safeTop - postMinY;
+  if ((postMaxY + shiftY) > safeBottom) shiftY = Math.min(shiftY, safeBottom - postMaxY);
+  if (Math.abs(shiftY) > 1e-6) {
+    for (var s = 0; s < targets.length; s++) {
+      targets[s].y += shiftY;
+    }
+  }
+}
+
 function buildSquarusTargets(pieces, layoutKey) {
   var count = pieces.length;
   var center = view.center;
@@ -6511,6 +6706,7 @@ function buildSquarusTargets(pieces, layoutKey) {
     }
   }
 
+  var colorSequence = getSquarusPieceColorSequence(count);
   var targets = [];
   for (var t = 0; t < count; t++) {
     var baseScale = Math.max(7, scales[t] || (defaultScale * 0.58));
@@ -6519,13 +6715,15 @@ function buildSquarusTargets(pieces, layoutKey) {
       y: points[t].y,
       rotation: isFinite(rotations[t]) ? rotations[t] : pieces[t].longAxis,
       scale: Math.max(6, baseScale * SQUARUS_PIECE_SCALE_FACTOR),
-      color: getSquarusPieceColor(t, count)
+      color: colorSequence[t] || getSquarusPieceColor(t, count)
     });
   }
 
   if (squarusContactMode === 'connected-touch') {
     applySquarusConnectedTouchConstraint(pieces, targets);
   }
+
+  applySquarusTargetsFitToCanvas(pieces, targets);
 
   return targets;
 }
@@ -6555,11 +6753,12 @@ function drawSquarusGuide(layoutKey, targets, opacity) {
   }
 }
 
-function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity) {
+function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity, sharedEdgeMap, pieceIndex) {
   var cosR = Math.cos(rotation);
   var sinR = Math.sin(rotation);
   var edgeMap = Object.create(null);
-  var strokeWidth = Math.max(0.9, scale * 0.06);
+  var outerStrokeWidth = Math.max(0.9, scale * 0.06);
+  var innerStrokeWidth = Math.max(0.45, outerStrokeWidth * 0.58);
 
   function edgeKey(x1, y1, x2, y2) {
     if (x1 > x2 || (x1 === x2 && y1 > y2)) {
@@ -6590,6 +6789,17 @@ function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity) {
     );
   }
 
+  function worldEdgeKey(p1, p2) {
+    var a = { x: p1.x, y: p1.y };
+    var b = { x: p2.x, y: p2.y };
+    if (a.x > b.x || (a.x === b.x && a.y > b.y)) {
+      var temp = a;
+      a = b;
+      b = temp;
+    }
+    return a.x.toFixed(4) + ',' + a.y.toFixed(4) + '|' + b.x.toFixed(4) + ',' + b.y.toFixed(4);
+  }
+
   for (var i = 0; i < piece.cells.length; i++) {
     var cellX = piece.cells[i][0];
     var cellY = piece.cells[i][1];
@@ -6618,13 +6828,67 @@ function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity) {
   var edgeKeys = Object.keys(edgeMap);
   for (var e = 0; e < edgeKeys.length; e++) {
     var edge = edgeMap[edgeKeys[e]];
+    var p1 = toWorldPoint(edge.x1, edge.y1);
+    var p2 = toWorldPoint(edge.x2, edge.y2);
+    var width = edge.count > 1 ? innerStrokeWidth : outerStrokeWidth;
+
+    if (sharedEdgeMap) {
+      var sharedKey = worldEdgeKey(p1, p2);
+      if (!sharedEdgeMap[sharedKey]) {
+        sharedEdgeMap[sharedKey] = {
+          p1: p1,
+          p2: p2,
+          count: 0,
+          owners: Object.create(null),
+          innerStrokeWidth: innerStrokeWidth,
+          outerStrokeWidth: outerStrokeWidth,
+          opacity: opacity
+        };
+      }
+      sharedEdgeMap[sharedKey].count += edge.count;
+      if (isFinite(pieceIndex)) {
+        sharedEdgeMap[sharedKey].owners[pieceIndex] = true;
+      }
+      sharedEdgeMap[sharedKey].innerStrokeWidth = Math.max(sharedEdgeMap[sharedKey].innerStrokeWidth, innerStrokeWidth);
+      sharedEdgeMap[sharedKey].outerStrokeWidth = Math.max(sharedEdgeMap[sharedKey].outerStrokeWidth, outerStrokeWidth);
+      sharedEdgeMap[sharedKey].opacity = Math.max(sharedEdgeMap[sharedKey].opacity, opacity);
+      continue;
+    }
+
     var line = new Path();
-    line.add(toWorldPoint(edge.x1, edge.y1));
-    line.add(toWorldPoint(edge.x2, edge.y2));
+    line.add(p1);
+    line.add(p2);
+    line.strokeColor = '#000000';
+    line.strokeWidth = width;
+    line.strokeCap = 'butt';
+    line.opacity = opacity;
+  }
+}
+
+function drawSquarusSharedEdges(sharedEdgeMap) {
+  if (!sharedEdgeMap) return;
+  var keys = Object.keys(sharedEdgeMap);
+  for (var i = 0; i < keys.length; i++) {
+    var edge = sharedEdgeMap[keys[i]];
+    var ownerCount = 0;
+    for (var owner in edge.owners) {
+      if (edge.owners[owner]) ownerCount += 1;
+    }
+
+    var isInterPieceSharedEdge = ownerCount > 1;
+    var isInternalCellEdge = ownerCount <= 1 && edge.count > 1;
+    var strokeWidth = isInternalCellEdge ? edge.innerStrokeWidth : edge.outerStrokeWidth;
+    if (isInterPieceSharedEdge) {
+      strokeWidth = edge.outerStrokeWidth * 1.08;
+    }
+
+    var line = new Path();
+    line.add(edge.p1);
+    line.add(edge.p2);
     line.strokeColor = '#000000';
     line.strokeWidth = strokeWidth;
     line.strokeCap = 'butt';
-    line.opacity = opacity;
+    line.opacity = edge.opacity;
   }
 }
 
@@ -6714,6 +6978,7 @@ function renderSquarusAnimationStateFrame(state) {
     guideOpacity = 1 - clamp01((t - timelineCoreEnd) / d.fade);
   }
   drawSquarusGuide(state.layout, state.targets.slice(0, state.placedCount), guideOpacity);
+  var sharedEdgeMap = Object.create(null);
 
   for (var i = 0; i < state.items.length; i++) {
     var item = state.items[i];
@@ -6726,31 +6991,23 @@ function renderSquarusAnimationStateFrame(state) {
     var opacity = 0.94;
 
     if (!isPlacedPiece) {
-      if (t < d.scatter) {
-        var unplacedScatterP = clamp01(t / d.scatter);
-        var unplacedOrbit = SQUARUS_SCATTER_WOBBLE_AMPLITUDE * (1 - unplacedScatterP);
-        x = item.scatterX + Math.cos(item.scatterRotation + t * SQUARUS_SCATTER_WOBBLE_SPEED) * unplacedOrbit * scale;
-        y = item.scatterY + Math.sin(item.scatterRotation + t * SQUARUS_SCATTER_WOBBLE_SPEED) * unplacedOrbit * scale;
-      }
-      drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
+      drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity, sharedEdgeMap, i);
       continue;
     }
 
     if (localT <= 0) {
-      drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
+      drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity, sharedEdgeMap, i);
       continue;
     }
 
     if (localT < d.scatter) {
-      var scatterP = clamp01(localT / d.scatter);
-      var orbit = SQUARUS_SCATTER_WOBBLE_AMPLITUDE * (1 - scatterP);
-      x = item.scatterX + Math.cos(item.scatterRotation + localT * SQUARUS_SCATTER_WOBBLE_SPEED) * orbit * scale;
-      y = item.scatterY + Math.sin(item.scatterRotation + localT * SQUARUS_SCATTER_WOBBLE_SPEED) * orbit * scale;
+      x = item.scatterX;
+      y = item.scatterY;
     } else if (localT < (d.scatter + d.reveal + d.travel)) {
       var travelP = easeInOutCubic(clamp01((localT - d.scatter - d.reveal) / d.travel));
       x = item.scatterX + (item.target.x - item.scatterX) * travelP;
       y = item.scatterY + (item.target.y - item.scatterY) * travelP;
-      rotation = item.scatterRotation + (item.target.rotation - item.scatterRotation) * travelP;
+      rotation = interpolateAngleShortest(item.scatterRotation, item.target.rotation, travelP);
     } else if (localT < pieceMotionDuration) {
       x = item.target.x;
       y = item.target.y;
@@ -6761,8 +7018,10 @@ function renderSquarusAnimationStateFrame(state) {
       rotation = item.target.rotation;
     }
 
-    drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
+    drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity, sharedEdgeMap, i);
   }
+
+  drawSquarusSharedEdges(sharedEdgeMap);
 
   if (t >= tEnd) {
     drawSquarusGuide(state.layout, state.targets.slice(0, state.placedCount), 0);
