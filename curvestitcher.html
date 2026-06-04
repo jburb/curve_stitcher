@@ -1896,6 +1896,10 @@ var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0;
 var SQUARUS_SCATTER_WOBBLE_SPEED = 0;
+var SQUARUS_ENTRY_FADE_MS = 220;
+var squarusEntryFadeStartMs = 0;
+var squarusEntryFadeActive = false;
+var squarusEntryFadeRafPending = false;
 var squarusPolyominoCache = Object.create(null);
 var triangulaBandColors = {
   band1: '#1982c4',
@@ -2985,11 +2989,18 @@ function applyCurrentExperienceInfo() {
 function setCurrentExperience(experienceId, options) {
   options = options || {};
   var experience = getExperienceById(experienceId);
+  var previousExperienceId = currentExperienceId;
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
   if (currentExperienceId === 'squarus') {
     squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
+    if (previousExperienceId !== 'squarus') {
+      squarusEntryFadeStartMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      squarusEntryFadeActive = true;
+    }
+  } else {
+    squarusEntryFadeActive = false;
   }
 
   if (!options.preserveSongOnExperienceChange) {
@@ -6964,8 +6975,38 @@ function buildSquarusAnimationState() {
   };
 }
 
-function renderSquarusAnimationStateFrame(state) {
+function getSquarusEntryFadeOpacity() {
+  if (!squarusEntryFadeActive) return 1;
+  var nowMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  var elapsedMs = Math.max(0, nowMs - squarusEntryFadeStartMs);
+  var t = clamp01(elapsedMs / Math.max(1, SQUARUS_ENTRY_FADE_MS));
+  var eased = t * t * (3 - (2 * t));
+  if (t >= 1) {
+    squarusEntryFadeActive = false;
+    return 1;
+  }
+  return eased;
+}
+
+function scheduleSquarusEntryFadeRedraw() {
+  if (squarusEntryFadeRafPending || !squarusEntryFadeActive) return;
+  squarusEntryFadeRafPending = true;
+  requestAnimationFrame(function() {
+    squarusEntryFadeRafPending = false;
+    if (!squarusEntryFadeActive || currentExperienceId !== 'squarus') {
+      squarusEntryFadeActive = false;
+      return;
+    }
+    if (animationActive && squarusAnimationState) {
+      return;
+    }
+    drawSquarusStatic();
+  });
+}
+
+function renderSquarusAnimationStateFrame(state, opacityScale) {
   if (!state) return;
+  var sceneOpacityScale = clamp01(isFinite(opacityScale) ? opacityScale : 1);
   var d = getSquarusAnimationDurations();
   state.durations = d;
   var t = state.elapsed;
@@ -6986,7 +7027,7 @@ function renderSquarusAnimationStateFrame(state) {
   } else if (t >= timelineCoreEnd) {
     guideOpacity = 1 - clamp01((t - timelineCoreEnd) / d.fade);
   }
-  drawSquarusGuide(state.layout, state.targets.slice(0, state.placedCount), guideOpacity);
+  drawSquarusGuide(state.layout, state.targets.slice(0, state.placedCount), guideOpacity * sceneOpacityScale);
   var sharedEdgeMap = Object.create(null);
 
   for (var i = 0; i < state.items.length; i++) {
@@ -6997,7 +7038,7 @@ function renderSquarusAnimationStateFrame(state) {
     var y = item.scatterY;
     var rotation = item.scatterRotation;
     var scale = item.target.scale;
-    var opacity = 0.94;
+    var opacity = 0.94 * sceneOpacityScale;
 
     if (!isPlacedPiece) {
       drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity, sharedEdgeMap, i);
@@ -7051,7 +7092,11 @@ function drawSquarusStatic() {
   } else {
     state.elapsed = d.scatter + 0.01;
   }
-  renderSquarusAnimationStateFrame(state);
+  var entryOpacity = getSquarusEntryFadeOpacity();
+  renderSquarusAnimationStateFrame(state, entryOpacity);
+  if (entryOpacity < 1) {
+    scheduleSquarusEntryFadeRedraw();
+  }
   clearHighlightedHoleNumbers();
 }
 
