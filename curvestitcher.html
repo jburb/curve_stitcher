@@ -1206,7 +1206,7 @@
     <button id="close-discovery" type="button">Close</button>
   </div>
   <div class="discovery-return-row" id="discovery-return-row" hidden>
-    <button id="back-to-stitching" class="discovery-back-btn" type="button" title="Follow the thread back to Stitching" aria-label="Follow the thread back to Stitching">↩ Stitching</button>
+    <button id="back-to-stitching" class="discovery-back-btn" type="button" title="Return to Stitching" aria-label="Return to Stitching">🧵 Return to Stitching</button>
   </div>
   <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
 
@@ -1326,8 +1326,8 @@
     <input id="triangula-start-count" type="range" min="1" max="729" value="1">
   </div>
   <div class="slider-block" id="triangula-target-block" style="display:none;">
-    <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">3</span></div>
-    <input id="triangula-target-count" type="range" min="1" max="729" value="3">
+    <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">27</span></div>
+    <input id="triangula-target-count" type="range" min="1" max="729" value="27">
   </div>
   <div class="slider-block" id="squarus-order-block" style="display:none;">
     <div class="slider-label">⬛ Squares</div>
@@ -1401,12 +1401,10 @@
     <div class="advanced-subsection">
       <div class="advanced-global-title">Export</div>
       <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Export SVG</button></div>
-      <div class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
+      <div id="advanced-export-help" class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
     </div>
     <div class="advanced-subsection" id="triangula-advanced-subsection" style="display:none;">
       <div class="advanced-global-title">Triangula Animation</div>
-      <div class="advanced-global-row">Start triangles: <input id="triangula-start-number" class="advanced-inline-number" type="number" min="1" max="729" value="1" aria-label="Triangula start triangles value"><span class="triangula-step-buttons"><button id="triangula-start-div3" type="button" class="advanced-reset-btn triangula-step-btn">÷3</button><button id="triangula-start-mul3" type="button" class="advanced-reset-btn triangula-step-btn">×3</button><button id="triangula-start-dec10" type="button" class="advanced-reset-btn triangula-step-btn">-10</button><button id="triangula-start-inc10" type="button" class="advanced-reset-btn triangula-step-btn">+10</button></span></div>
-      <div class="advanced-global-row">Target triangles: <input id="triangula-target-number" class="advanced-inline-number" type="number" min="1" max="729" value="3" aria-label="Triangula target triangles value"><span class="triangula-step-buttons"><button id="triangula-target-div3" type="button" class="advanced-reset-btn triangula-step-btn">÷3</button><button id="triangula-target-mul3" type="button" class="advanced-reset-btn triangula-step-btn">×3</button><button id="triangula-target-dec10" type="button" class="advanced-reset-btn triangula-step-btn">-10</button><button id="triangula-target-inc10" type="button" class="advanced-reset-btn triangula-step-btn">+10</button></span></div>
       <div class="advanced-global-row">Fractal mode: <select id="triangula-fractal-mode">
         <option value="series" selected>Series</option>
         <option value="parallel">Parallel</option>
@@ -1497,6 +1495,7 @@ var kidStitchBySelect = document.getElementById('kid-stitch-by');
 var addSliderBlock = document.getElementById('add-slider-block');
 var multiplySliderBlock = document.getElementById('multiply-slider-block');
 var advancedShapeSelect = document.getElementById('advanced-shape');
+var advancedStitchingFrameSubsection = advancedShapeSelect ? advancedShapeSelect.closest('.advanced-subsection') : null;
 var advancedHolesNumberInput = document.getElementById('advanced-holes-number');
 var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
 var advancedBorderEnabledInput = document.getElementById('advanced-border-enabled');
@@ -1504,7 +1503,9 @@ var advancedTempoInput = document.getElementById('advanced-tempo');
 var advancedTempoValue = document.getElementById('advanced-tempo-value');
 var resetTempoBtn = document.getElementById('reset-tempo');
 var exportSvgBtn = document.getElementById('advanced-export-svg');
+var advancedExportHelp = document.getElementById('advanced-export-help');
 var exportOptionsModal = document.getElementById('export-options-modal');
+var exportOptionsTitle = document.getElementById('export-options-title');
 var exportNameInput = document.getElementById('export-name-input');
 var exportIncludeThreadsInput = document.getElementById('export-include-threads');
 var exportIncludeGuideInput = document.getElementById('export-include-guide');
@@ -1529,16 +1530,6 @@ var triangulaStartSlider = document.getElementById('triangula-start-count');
 var triangulaTargetSlider = document.getElementById('triangula-target-count');
 var triangulaStartValue = document.getElementById('triangula-start-value');
 var triangulaTargetValue = document.getElementById('triangula-target-value');
-var triangulaStartNumberInput = document.getElementById('triangula-start-number');
-var triangulaTargetNumberInput = document.getElementById('triangula-target-number');
-var triangulaStartDiv3Btn = document.getElementById('triangula-start-div3');
-var triangulaStartMul3Btn = document.getElementById('triangula-start-mul3');
-var triangulaStartDec10Btn = document.getElementById('triangula-start-dec10');
-var triangulaStartInc10Btn = document.getElementById('triangula-start-inc10');
-var triangulaTargetDiv3Btn = document.getElementById('triangula-target-div3');
-var triangulaTargetMul3Btn = document.getElementById('triangula-target-mul3');
-var triangulaTargetDec10Btn = document.getElementById('triangula-target-dec10');
-var triangulaTargetInc10Btn = document.getElementById('triangula-target-inc10');
 var triangulaFractalModeSelect = document.getElementById('triangula-fractal-mode');
 var triangulaFitModeSelect = document.getElementById('triangula-fit-mode');
 var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-subsection');
@@ -1882,7 +1873,7 @@ var experienceNarrationUtterance = null;
 var triangulaColorMode = 'band-1';
 var triangulaConstructionMode = 'shrink-duplicate';
 var triangulaStartCount = 1;
-var triangulaTargetCount = 3;
+var triangulaTargetCount = 27;
 var triangulaFractalMode = 'series';
 var triangulaFitMode = 'locked';
 var triangulaAnimationState = null;
@@ -1902,11 +1893,11 @@ var squarusEntryFadeActive = false;
 var squarusEntryFadeRafPending = false;
 var squarusPolyominoCache = Object.create(null);
 var triangulaBandColors = {
-  band1: '#1982c4',
+  band1: '#8ac926',
   band2: '#6a4c93',
   band4: '#8ac926'
 };
-var triangulaSourceColor = '#1982c4';
+var triangulaSourceColor = '#8ac926';
 
 var APP_STATE_URL_VERSION = '2';
 var URL_STATE_PARAM_KEYS = Object.freeze({
@@ -1964,11 +1955,11 @@ var appState = {
     colorMode: 'band-1',
     constructionMode: 'shrink-duplicate',
     startCount: 1,
-    targetCount: 3,
+    targetCount: 27,
     fractalMode: 'series',
     fitMode: 'locked',
-    sourceColor: '#1982c4',
-    band1Color: '#1982c4',
+    sourceColor: '#8ac926',
+    band1Color: '#8ac926',
     band2Color: '#6a4c93',
     band4Color: '#8ac926'
   },
@@ -2686,6 +2677,9 @@ function applyBasicControlPolicy(profile) {
 function applyAdvancedControlPolicy(profile) {
   var controls = profile && profile.advancedControls ? profile.advancedControls : null;
   if (!controls) return;
+  if (advancedStitchingFrameSubsection) {
+    setElementDisplay(advancedStitchingFrameSubsection, currentExperienceId === 'stitching', '');
+  }
   if (advancedShapeSelect) {
     setElementDisplay(advancedShapeSelect.parentElement, controls.shape !== false, '');
   }
@@ -2810,12 +2804,6 @@ function syncTriangulaControls() {
   if (triangulaTargetValue) {
     triangulaTargetValue.textContent = String(triangulaTargetCount);
   }
-  if (triangulaStartNumberInput) {
-    triangulaStartNumberInput.value = String(triangulaStartCount);
-  }
-  if (triangulaTargetNumberInput) {
-    triangulaTargetNumberInput.value = String(triangulaTargetCount);
-  }
   if (triangulaColorScopeSelect) {
     triangulaColorScopeSelect.value = triangulaColorMode;
   }
@@ -2847,23 +2835,6 @@ function applyTriangulaCountUpdate(nextStart, nextTarget, shouldRedraw) {
   if (shouldRedraw) {
     redrawForPathChange();
   }
-}
-
-function stepTriangulaCount(baseValue, stepAction) {
-  var value = parseBoundedInt(baseValue, 1, 729, 1);
-  if (stepAction === 'div3') {
-    return Math.max(1, Math.floor(value / 3));
-  }
-  if (stepAction === 'mul3') {
-    return Math.min(729, value * 3);
-  }
-  if (stepAction === 'dec10') {
-    return Math.max(1, value - 10);
-  }
-  if (stepAction === 'inc10') {
-    return Math.min(729, value + 10);
-  }
-  return value;
 }
 
 function applyExperienceOverlayPosition(positionClass) {
@@ -3011,6 +2982,7 @@ function setCurrentExperience(experienceId, options) {
   // Re-apply mode-specific slider visibility after base UI policy toggles.
   syncKidControlsFromSelectedThread();
   applyCurrentExperienceInfo();
+  syncExportUiCopy();
   renderExperienceTitleStatic();
 
   if (currentExperienceId === 'stitching') {
@@ -7431,10 +7403,169 @@ function buildTriangulaDesignSvgString() {
   return lines.join('\n');
 }
 
+function getExportExperiencePrefix() {
+  var id = String(currentExperienceId || 'stitching').toLowerCase();
+  return 'curve_stitcher-' + id;
+}
+
+function ensureExportBaseNameHasExperiencePrefix(baseName) {
+  var raw = String(baseName || '').trim();
+  var prefix = getExportExperiencePrefix();
+  var prefixWithDash = prefix + '-';
+  if (!raw) {
+    return prefixWithDash + getTimestampLabel();
+  }
+  if (raw === prefix || raw.indexOf(prefixWithDash) === 0) {
+    return raw;
+  }
+  return prefixWithDash + raw;
+}
+
+function syncExportUiCopy() {
+  var exportExperience = currentExperienceId;
+
+  if (advancedExportHelp) {
+    if (exportExperience === 'triangula') {
+      advancedExportHelp.textContent = 'Exports Triangula target composition as SVG with instructions (preview PNG is omitted for this experience).';
+    } else if (exportExperience === 'squarus') {
+      advancedExportHelp.textContent = 'Exports Squarus cut-sheet SVG, parameterized PNG preview, and Squarus assembly instructions.';
+    } else {
+      advancedExportHelp.textContent = 'Exports current Stitching view (borders, threads, holes, and visible hole numbers).';
+    }
+  }
+
+  if (exportOptionsTitle) {
+    if (exportExperience === 'triangula') {
+      exportOptionsTitle.textContent = 'Triangula Export Options';
+    } else if (exportExperience === 'squarus') {
+      exportOptionsTitle.textContent = 'Squarus Export Options';
+    } else {
+      exportOptionsTitle.textContent = 'Stitching Export Options';
+    }
+  }
+
+  if (exportNameInput) {
+    exportNameInput.placeholder = ensureExportBaseNameHasExperiencePrefix('') ;
+  }
+}
+
+function buildSquarusCutSheetSvgString() {
+  var pieces = getSquarusPolyominoes(squarusOrder);
+  var unit = 28;
+  var spacing = Math.round(unit * 1.4);
+  var padding = Math.round(unit * 0.9);
+  var titleBand = Math.round(unit * 1.25);
+  var labelBand = Math.round(unit * 0.95);
+  var strokeWidth = 1.6;
+  var maxHeightCells = 1;
+  var maxWidthCells = 1;
+  var i;
+
+  for (i = 0; i < pieces.length; i++) {
+    maxHeightCells = Math.max(maxHeightCells, pieces[i].height || 1);
+    maxWidthCells = Math.max(maxWidthCells, pieces[i].width || 1);
+  }
+
+  var contentHeight = maxHeightCells * unit;
+  var xCursor = padding;
+  var placements = [];
+
+  for (i = 0; i < pieces.length; i++) {
+    var piece = pieces[i];
+    var pieceWidth = Math.max(1, piece.width || 1) * unit;
+    var offsetX = xCursor - (Math.min.apply(null, piece.cells.map(function(cell) { return cell[0]; })) * unit);
+    var minY = Math.min.apply(null, piece.cells.map(function(cell) { return cell[1]; }));
+    var yPadding = (contentHeight - (Math.max(1, piece.height || 1) * unit)) * 0.5;
+    var offsetY = titleBand + padding + yPadding - (minY * unit);
+
+    placements.push({
+      piece: piece,
+      offsetX: offsetX,
+      offsetY: offsetY,
+      centerX: xCursor + (pieceWidth * 0.5)
+    });
+
+    xCursor += pieceWidth + spacing;
+  }
+
+  var width = Math.max(240, Math.round(xCursor - spacing + padding));
+  var height = Math.max(160, Math.round(titleBand + padding + contentHeight + labelBand + padding));
+  var lines = [];
+
+  function edgeKey(x1, y1, x2, y2) {
+    if (x1 > x2 || (x1 === x2 && y1 > y2)) {
+      var tx = x1;
+      var ty = y1;
+      x1 = x2;
+      y1 = y2;
+      x2 = tx;
+      y2 = ty;
+    }
+    return String(x1) + ',' + String(y1) + '|' + String(x2) + ',' + String(y2);
+  }
+
+  function collectBoundaryEdges(cells) {
+    var edgeMap = Object.create(null);
+    for (var c = 0; c < cells.length; c++) {
+      var cellX = cells[c][0];
+      var cellY = cells[c][1];
+      var edges = [
+        [cellX, cellY, cellX + 1, cellY],
+        [cellX + 1, cellY, cellX + 1, cellY + 1],
+        [cellX + 1, cellY + 1, cellX, cellY + 1],
+        [cellX, cellY + 1, cellX, cellY]
+      ];
+      for (var e = 0; e < edges.length; e++) {
+        var key = edgeKey(edges[e][0], edges[e][1], edges[e][2], edges[e][3]);
+        if (!edgeMap[key]) {
+          edgeMap[key] = { x1: edges[e][0], y1: edges[e][1], x2: edges[e][2], y2: edges[e][3], count: 0 };
+        }
+        edgeMap[key].count += 1;
+      }
+    }
+    return edgeMap;
+  }
+
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
+  lines.push('<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="#ffffff"/>');
+  lines.push('<text x="' + formatSvgNumber(width * 0.5) + '" y="' + formatSvgNumber(padding) + '" fill="#1d1d1d" font-size="16" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="hanging">Squarus cut sheet - Order ' + String(squarusOrder) + '</text>');
+
+  for (i = 0; i < placements.length; i++) {
+    var placement = placements[i];
+    var boundaryEdges = collectBoundaryEdges(placement.piece.cells);
+    var keys = Object.keys(boundaryEdges);
+
+    for (var k = 0; k < keys.length; k++) {
+      var edge = boundaryEdges[keys[k]];
+      if (edge.count !== 1) continue;
+      lines.push(
+        '<line x1="' + formatSvgNumber(placement.offsetX + edge.x1 * unit) +
+        '" y1="' + formatSvgNumber(placement.offsetY + edge.y1 * unit) +
+        '" x2="' + formatSvgNumber(placement.offsetX + edge.x2 * unit) +
+        '" y2="' + formatSvgNumber(placement.offsetY + edge.y2 * unit) +
+        '" stroke="#111111" stroke-width="' + formatSvgNumber(strokeWidth) + '" stroke-linecap="square"/>'
+      );
+    }
+
+    lines.push(
+      '<text x="' + formatSvgNumber(placement.centerX) +
+      '" y="' + formatSvgNumber(titleBand + padding + contentHeight + (labelBand * 0.65)) +
+      '" fill="#444444" font-size="12" font-family="Nunito, sans-serif" text-anchor="middle">P' + String(i + 1) + '</text>'
+    );
+  }
+
+  lines.push('</svg>');
+  return lines.join('\n');
+}
+
 function buildCurrentDesignSvgString(options) {
   options = options || {};
   if (currentExperienceId === 'triangula') {
     return buildTriangulaDesignSvgString();
+  }
+  if (currentExperienceId === 'squarus') {
+    return buildSquarusCutSheetSvgString();
   }
 
   var includeThreads = options.includeThreads !== false;
@@ -7675,9 +7806,82 @@ function buildTriangulaGuideText(fileBaseName, options) {
   return lines.join('\n');
 }
 
+function buildSquarusGuideText(fileBaseName, options) {
+  options = options || {};
+  var now = new Date();
+  var catalogPieces = getSquarusPolyominoes(squarusOrder);
+  var totalPieces = getSquarusTotalPiecesForOrder(squarusOrder);
+  var orderedPieces = getSquarusSequencedPieces(squarusOrder, squarusSequenceSeed);
+  var colorSequence = getSquarusPieceColorSequence(Math.max(1, orderedPieces.length));
+  var visibleCount = getSquarusVisiblePieceCount(totalPieces);
+  var signatureToPieceNumber = Object.create(null);
+  var orderedPieceNumbers = [];
+  var linesForConnections = [];
+  var lines = [];
+
+  for (var c = 0; c < catalogPieces.length; c++) {
+    if (catalogPieces[c] && catalogPieces[c].signature) {
+      signatureToPieceNumber[catalogPieces[c].signature] = c + 1;
+    }
+  }
+
+  for (var o = 0; o < orderedPieces.length; o++) {
+    var sig = orderedPieces[o] && orderedPieces[o].signature ? orderedPieces[o].signature : '';
+    orderedPieceNumbers.push(signatureToPieceNumber[sig] || (o + 1));
+  }
+
+  var visiblePieceNumbers = orderedPieceNumbers.slice(0, Math.max(0, visibleCount));
+  for (var step = 1; step < visiblePieceNumbers.length; step++) {
+    linesForConnections.push('  Step ' + String(step) + ': P' + String(visiblePieceNumbers[step - 1]) + ' -> P' + String(visiblePieceNumbers[step]));
+  }
+
+  lines.push('curve_stitcher Squarus instructions');
+  lines.push('Generated: ' + now.toISOString());
+  lines.push('Export name: ' + fileBaseName);
+  lines.push('');
+  lines.push('Parameters');
+  lines.push('Experience: Squarus');
+  lines.push('Squares order: ' + String(squarusOrder));
+  lines.push('Polyomino set size: ' + String(totalPieces));
+  lines.push('Layout formula: ' + String(squarusLayout));
+  lines.push('Animation mode: ' + String(squarusAnimationMode));
+  lines.push('Contact mode: ' + String(squarusContactMode));
+  lines.push('Piece order seed: ' + String(squarusSequenceSeed));
+  lines.push('Pieces placed: ' + String(visibleCount) + ' / ' + String(totalPieces));
+  lines.push('Include preview PNG: ' + (options.includePreview ? 'yes' : 'no'));
+  lines.push('SVG piece IDs are enumerated left-to-right as P1..P' + String(totalPieces) + '.');
+  lines.push('');
+  lines.push('Export outputs');
+  lines.push('1. SVG: linear, evenly spaced cut sheet of the selected-order polyomino set (outline-only pieces for printing/cutting).');
+  lines.push('2. PNG: on-canvas Squarus arrangement using active parameters and colors.');
+  lines.push('3. This instructions file: parameter snapshot and assembly notes.');
+  lines.push('');
+  lines.push('Assembly notes');
+  lines.push('1. Print the SVG at 100% scale to keep all pieces dimensionally consistent.');
+  lines.push('2. Cut each outlined polyomino as an individual piece.');
+  lines.push('3. Use the PNG preview as the reference arrangement for the selected layout formula and piece order.');
+  lines.push('4. Deterministic piece placement order by SVG piece ID (full sequence): ' + orderedPieceNumbers.map(function(id) { return 'P' + String(id); }).join(' -> '));
+  if (visiblePieceNumbers.length > 1) {
+    lines.push('5. Piece connection order for current Pieces Placed setting:');
+    for (var li = 0; li < linesForConnections.length; li++) {
+      lines.push(linesForConnections[li]);
+    }
+  } else if (visiblePieceNumbers.length === 1) {
+    lines.push('5. Piece connection order for current Pieces Placed setting: only P' + String(visiblePieceNumbers[0]) + ' is placed.');
+  } else {
+    lines.push('5. Piece connection order for current Pieces Placed setting: no pieces currently placed.');
+  }
+  lines.push('6. Color sequence preview (piece order): ' + colorSequence.join(', '));
+
+  return lines.join('\n');
+}
+
 function getExportGuideFileName(fileBaseName) {
   if (currentExperienceId === 'triangula') {
     return fileBaseName + '-triangula-instructions.txt';
+  }
+  if (currentExperienceId === 'squarus') {
+    return fileBaseName + '-squarus-instructions.txt';
   }
   return fileBaseName + '-stitching-guide.txt';
 }
@@ -7685,6 +7889,9 @@ function getExportGuideFileName(fileBaseName) {
 function buildExportGuideText(fileBaseName, options) {
   if (currentExperienceId === 'triangula') {
     return buildTriangulaGuideText(fileBaseName, options || {});
+  }
+  if (currentExperienceId === 'squarus') {
+    return buildSquarusGuideText(fileBaseName, options || {});
   }
   return buildStitchingGuideText(fileBaseName, options || {});
 }
@@ -7745,17 +7952,20 @@ async function downloadExportZipBundle(fileBaseName, options) {
 
 function openExportOptionsModal() {
   var isTriangulaExport = currentExperienceId === 'triangula';
+  var isSquarusExport = currentExperienceId === 'squarus';
+  var hideThreadsControl = isTriangulaExport || isSquarusExport;
   var threadsRow = exportIncludeThreadsInput ? exportIncludeThreadsInput.closest('.modal-row') : null;
   var previewRow = exportIncludePreviewInput ? exportIncludePreviewInput.closest('.modal-row') : null;
 
-  exportNameInput.value = 'curve_stitcher-' + getTimestampLabel();
+  syncExportUiCopy();
+  exportNameInput.value = ensureExportBaseNameHasExperiencePrefix(getTimestampLabel());
   exportIncludeThreadsInput.checked = false;
-  exportIncludeThreadsInput.disabled = isTriangulaExport;
+  exportIncludeThreadsInput.disabled = hideThreadsControl;
   exportIncludeGuideInput.checked = true;
   exportIncludePreviewInput.checked = isTriangulaExport ? false : true;
   exportIncludePreviewInput.disabled = isTriangulaExport;
   if (threadsRow) {
-    threadsRow.style.display = isTriangulaExport ? 'none' : '';
+    threadsRow.style.display = hideThreadsControl ? 'none' : '';
   }
   if (previewRow) {
     previewRow.style.display = isTriangulaExport ? 'none' : '';
@@ -7771,9 +7981,11 @@ function closeExportOptionsModal() {
 
 async function runExportFromModalSelection() {
   var isTriangulaExport = currentExperienceId === 'triangula';
-  var baseName = normalizeExportBaseName(exportNameInput.value);
+  var isSquarusExport = currentExperienceId === 'squarus';
+  var includeThreadsAllowed = !isTriangulaExport && !isSquarusExport;
+  var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(exportNameInput.value));
   var options = {
-    includeThreads: isTriangulaExport ? false : exportIncludeThreadsInput.checked,
+    includeThreads: includeThreadsAllowed ? exportIncludeThreadsInput.checked : false,
     includeGuide: exportIncludeGuideInput.checked,
     includePreview: isTriangulaExport ? false : exportIncludePreviewInput.checked
   };
@@ -8595,16 +8807,6 @@ if (triangulaStartSlider) {
   });
 }
 
-if (triangulaStartNumberInput) {
-  triangulaStartNumberInput.addEventListener('input', () => {
-    if (triangulaStartNumberInput.value === '') return;
-    applyTriangulaCountUpdate(triangulaStartNumberInput.value, triangulaTargetCount, true);
-  });
-  triangulaStartNumberInput.addEventListener('change', () => {
-    applyTriangulaCountUpdate(triangulaStartNumberInput.value, triangulaTargetCount, false);
-  });
-}
-
 if (triangulaTargetSlider) {
   triangulaTargetSlider.addEventListener('input', () => {
     applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, true);
@@ -8612,64 +8814,6 @@ if (triangulaTargetSlider) {
   triangulaTargetSlider.addEventListener('change', () => {
     applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, false);
     settleSliderMotion(triangulaTargetSlider);
-  });
-}
-
-if (triangulaTargetNumberInput) {
-  triangulaTargetNumberInput.addEventListener('input', () => {
-    if (triangulaTargetNumberInput.value === '') return;
-    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetNumberInput.value, true);
-  });
-  triangulaTargetNumberInput.addEventListener('change', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetNumberInput.value, false);
-  });
-}
-
-if (triangulaStartDiv3Btn) {
-  triangulaStartDiv3Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'div3'), triangulaTargetCount, true);
-  });
-}
-
-if (triangulaStartMul3Btn) {
-  triangulaStartMul3Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'mul3'), triangulaTargetCount, true);
-  });
-}
-
-if (triangulaStartDec10Btn) {
-  triangulaStartDec10Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'dec10'), triangulaTargetCount, true);
-  });
-}
-
-if (triangulaStartInc10Btn) {
-  triangulaStartInc10Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'inc10'), triangulaTargetCount, true);
-  });
-}
-
-if (triangulaTargetDiv3Btn) {
-  triangulaTargetDiv3Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'div3'), true);
-  });
-}
-
-if (triangulaTargetMul3Btn) {
-  triangulaTargetMul3Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'mul3'), true);
-  });
-}
-
-if (triangulaTargetDec10Btn) {
-  triangulaTargetDec10Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'dec10'), true);
-  });
-}
-
-if (triangulaTargetInc10Btn) {
-  triangulaTargetInc10Btn.addEventListener('click', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'inc10'), true);
   });
 }
 
@@ -9004,6 +9148,7 @@ if (hasUrlStateParams()) {
   redrawForPathChange();
 }
 scheduleDiscoveryEvaluation();
+syncExportUiCopy();
 scheduleUrlStateSync(true);
 window.setCurrentExperience = setCurrentExperience;
 
