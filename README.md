@@ -23,7 +23,7 @@ Contributor terms:
 
 1. Dynamic add/multiply bounds guardrail
 2. Triangula experience (Sierpinski world) [Completed]
-3. Squarus experience (polyonimo world)
+3. Squarus experience (polyonimo world) [Essentially Complete]
 4. Mashrabiya experience (Islamic rosette world)
 5. Experience title bar (animated stitched reveal)
 6. Stitch library (offline-first)
@@ -72,7 +72,8 @@ Contributor terms:
 	- Audio/animation behavior parity:
 	  - Preserve music behavior exactly: play continuously while animation is running and while sliders are actively moving; pause when animation is idle and controls are at rest.
 
-3. **Squarus experience (polyonimo world)**
+3. **Squarus experience (polyonimo world) [Essentially Complete]**
+	- Status: Core roadmap scope is essentially complete. Remaining work should be treated as optional polish or regression follow-up only.
 	- Entry trigger and transition:
 	  - When the user stitches/discovers a square in Stitching mode, offer an optional prompt to "Enter Squarus".
 	  - Reuse the same polished transition language used by other world entries so Squarus feels native to the same product family.
@@ -141,7 +142,7 @@ Contributor terms:
 
 1. Dynamic add/multiply bounds guardrail
 2. Triangula experience (Sierpinski world) [Completed]
-3. Squarus experience (polyonimo world)
+3. Squarus experience (polyonimo world) [Essentially Complete]
 4. Mashrabiya experience (Islamic rosette world)
 5. Experience title bar (animated stitched reveal)
 6. Stitch library (offline-first)
