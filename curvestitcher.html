@@ -672,8 +672,59 @@
     font-size: 12px;
     color: #5f7090;
   }
+  .discovery-card .discovery-passphrase {
+    margin-top: 2px;
+    margin-bottom: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px dashed #c8d7ef;
+    background: #f7fbff;
+    color: #36557f;
+    font-size: 11px;
+    line-height: 1.35;
+  }
   .discovery-card .advanced-reset-btn {
     font-size: 12px;
+  }
+  .discovery-passphrase-entry {
+    margin: 0 0 12px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #d7e0f3;
+    background: #ffffff;
+  }
+  .discovery-passphrase-entry label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2f4368;
+  }
+  .discovery-passphrase-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #discovery-passphrase-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #c7d7ef;
+    border-radius: 8px;
+    padding: 7px 8px;
+    font-size: 12px;
+    color: #213047;
+  }
+  .discovery-passphrase-feedback {
+    min-height: 16px;
+    margin: 7px 0 0;
+    font-size: 11px;
+    color: #5f7090;
+  }
+  .discovery-passphrase-feedback.is-success {
+    color: #1f7a43;
+  }
+  .discovery-passphrase-feedback.is-error {
+    color: #9c2f38;
   }
   .discovery-return-row {
     display: flex;
@@ -981,6 +1032,18 @@
     vertical-align: middle;
   }
 
+  .triangula-step-buttons {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .triangula-step-btn {
+    margin-left: 0;
+    padding: 2px 6px;
+  }
+
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -1130,6 +1193,15 @@
     <button id="back-to-stitching" class="discovery-back-btn" type="button" title="Follow the thread back to Stitching" aria-label="Follow the thread back to Stitching">↩ Stitching</button>
   </div>
   <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
+
+  <form id="discovery-passphrase-form" class="discovery-passphrase-entry" aria-label="Discovery passphrase entry">
+    <label for="discovery-passphrase-input">Speak a discovery passphrase</label>
+    <div class="discovery-passphrase-row">
+      <input id="discovery-passphrase-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type a passphrase" />
+      <button id="discovery-passphrase-submit" class="advanced-reset-btn" type="submit">Unlock</button>
+    </div>
+    <p id="discovery-passphrase-feedback" class="discovery-passphrase-feedback" role="status" aria-live="polite"></p>
+  </form>
 
   <div id="discovery-cards"></div>
 </div>
@@ -1282,6 +1354,8 @@
     </div>
     <div class="advanced-subsection" id="triangula-advanced-subsection" style="display:none;">
       <div class="advanced-global-title">Triangula Animation</div>
+      <div class="advanced-global-row">Start triangles: <input id="triangula-start-number" class="advanced-inline-number" type="number" min="1" max="729" value="1" aria-label="Triangula start triangles value"><span class="triangula-step-buttons"><button id="triangula-start-div3" type="button" class="advanced-reset-btn triangula-step-btn">÷3</button><button id="triangula-start-mul3" type="button" class="advanced-reset-btn triangula-step-btn">×3</button><button id="triangula-start-dec10" type="button" class="advanced-reset-btn triangula-step-btn">-10</button><button id="triangula-start-inc10" type="button" class="advanced-reset-btn triangula-step-btn">+10</button></span></div>
+      <div class="advanced-global-row">Target triangles: <input id="triangula-target-number" class="advanced-inline-number" type="number" min="1" max="729" value="3" aria-label="Triangula target triangles value"><span class="triangula-step-buttons"><button id="triangula-target-div3" type="button" class="advanced-reset-btn triangula-step-btn">÷3</button><button id="triangula-target-mul3" type="button" class="advanced-reset-btn triangula-step-btn">×3</button><button id="triangula-target-dec10" type="button" class="advanced-reset-btn triangula-step-btn">-10</button><button id="triangula-target-inc10" type="button" class="advanced-reset-btn triangula-step-btn">+10</button></span></div>
       <div class="advanced-global-row">Fractal mode: <select id="triangula-fractal-mode">
         <option value="series" selected>Series</option>
         <option value="parallel">Parallel</option>
@@ -1371,6 +1445,16 @@ var triangulaStartSlider = document.getElementById('triangula-start-count');
 var triangulaTargetSlider = document.getElementById('triangula-target-count');
 var triangulaStartValue = document.getElementById('triangula-start-value');
 var triangulaTargetValue = document.getElementById('triangula-target-value');
+var triangulaStartNumberInput = document.getElementById('triangula-start-number');
+var triangulaTargetNumberInput = document.getElementById('triangula-target-number');
+var triangulaStartDiv3Btn = document.getElementById('triangula-start-div3');
+var triangulaStartMul3Btn = document.getElementById('triangula-start-mul3');
+var triangulaStartDec10Btn = document.getElementById('triangula-start-dec10');
+var triangulaStartInc10Btn = document.getElementById('triangula-start-inc10');
+var triangulaTargetDiv3Btn = document.getElementById('triangula-target-div3');
+var triangulaTargetMul3Btn = document.getElementById('triangula-target-mul3');
+var triangulaTargetDec10Btn = document.getElementById('triangula-target-dec10');
+var triangulaTargetInc10Btn = document.getElementById('triangula-target-inc10');
 var triangulaFractalModeSelect = document.getElementById('triangula-fractal-mode');
 var triangulaFitModeSelect = document.getElementById('triangula-fit-mode');
 var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-subsection');
@@ -1409,6 +1493,9 @@ var advancedPanel = document.getElementById('advanced-panel');
 var discoveryPanel = document.getElementById('discovery-panel');
 var discoveryCards = document.getElementById('discovery-cards');
 var discoveryToast = document.getElementById('discovery-toast');
+var discoveryPassphraseForm = document.getElementById('discovery-passphrase-form');
+var discoveryPassphraseInput = document.getElementById('discovery-passphrase-input');
+var discoveryPassphraseFeedback = document.getElementById('discovery-passphrase-feedback');
 var experienceInline = document.getElementById('experience-inline');
 var experienceTitleLabel = document.getElementById('experience-title-label');
 var experienceSrTitle = document.getElementById('experience-sr-title');
@@ -1484,21 +1571,27 @@ var DISCOVERY_LIBRARY = {
     icon: '🔺',
     description: 'Unlocked the path to Triangula.',
     experienceName: 'Triangula',
-    songId: 'triangle'
+    songId: 'triangle',
+    passphrase: 'Holes of three and step of one do this tri-angled creature make, if they\'re set in even shape.',
+    passphraseInputEnabled: true
   },
   square: {
     title: 'Square',
     icon: '⬜',
     description: 'Unlocked the path to Squarus.',
     experienceName: 'Squarus',
-    songId: 'square'
+    songId: 'square',
+    passphrase: 'Square passphrase placeholder.',
+    passphraseInputEnabled: false
   },
   rosette: {
     title: 'Mystic Rose / Rosette',
     icon: '✺',
     description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
-    songId: 'rosette'
+    songId: 'rosette',
+    passphrase: 'Rosette passphrase placeholder.',
+    passphraseInputEnabled: false
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
@@ -1686,10 +1779,472 @@ var triangulaFractalMode = 'series';
 var triangulaFitMode = 'locked';
 var triangulaAnimationState = null;
 var triangulaBandColors = {
-  band1: '#256f7a',
-  band2: '#4d9aad',
-  band4: '#88c4cf'
+  band1: '#1982c4',
+  band2: '#6a4c93',
+  band4: '#8ac926'
 };
+
+var APP_STATE_URL_VERSION = '1';
+var URL_SYNC_DEBOUNCE_MS = 800;
+var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
+var urlSyncTimer = null;
+var urlSyncSuspended = false;
+var appState = {
+  version: APP_STATE_URL_VERSION,
+  experienceId: 'stitching',
+  common: {
+    shape: 'circle',
+    bpm: DEFAULT_ANIMATION_BPM,
+    musicMuted: false,
+    songId: 'bach',
+    showHoleNumbers: true,
+    borderEnabled: true
+  },
+  stitching: {
+    holes: DEFAULT_HOLES,
+    selectedThreadIndex: 0,
+    threadColors: ['#1982c4'],
+    threadState: ''
+  },
+  triangula: {
+    colorMode: 'band-1',
+    constructionMode: 'shrink-duplicate',
+    startCount: 1,
+    targetCount: 3,
+    fractalMode: 'series',
+    fitMode: 'locked',
+    sourceColor: '#1982c4',
+    band1Color: '#1982c4',
+    band2Color: '#6a4c93',
+    band4Color: '#8ac926'
+  }
+};
+
+function withUrlSyncSuspended(work) {
+  var wasSuspended = urlSyncSuspended;
+  urlSyncSuspended = true;
+  try {
+    work();
+  } finally {
+    urlSyncSuspended = wasSuspended;
+  }
+}
+
+function normalizeTriangulaDrawableCount(value, role, fallback) {
+  var parsed = parseBoundedInt(value, 1, 729, fallback);
+  if (!isFinite(parsed)) {
+    parsed = parseBoundedInt(fallback, 1, 729, 1);
+  }
+
+  if (TRIANGULA_DRAWABLE_COUNTS.indexOf(parsed) !== -1) {
+    return parsed;
+  }
+
+  if (role === 'target') {
+    for (var i = 0; i < TRIANGULA_DRAWABLE_COUNTS.length; i++) {
+      if (TRIANGULA_DRAWABLE_COUNTS[i] >= parsed) {
+        return TRIANGULA_DRAWABLE_COUNTS[i];
+      }
+    }
+    return TRIANGULA_DRAWABLE_COUNTS[TRIANGULA_DRAWABLE_COUNTS.length - 1];
+  }
+
+  // Default/start behavior: snap downward to avoid overshooting requested start density.
+  for (var j = TRIANGULA_DRAWABLE_COUNTS.length - 1; j >= 0; j--) {
+    if (TRIANGULA_DRAWABLE_COUNTS[j] <= parsed) {
+      return TRIANGULA_DRAWABLE_COUNTS[j];
+    }
+  }
+
+  return TRIANGULA_DRAWABLE_COUNTS[0];
+}
+
+function sanitizeTriangulaCount(value, fallback, role) {
+  return normalizeTriangulaDrawableCount(value, role, fallback);
+}
+
+function sanitizeTriangulaColorMode(value, fallback) {
+  var allowed = ['band-1', 'band-2', 'band-4'];
+  if (allowed.indexOf(value) === -1) return fallback;
+  return value;
+}
+
+function sanitizeTriangulaConstructionMode(value, fallback) {
+  if (value !== 'cut' && value !== 'shrink-duplicate') return fallback;
+  return value;
+}
+
+function sanitizeTriangulaFractalMode(value, fallback) {
+  if (value !== 'parallel' && value !== 'series') return fallback;
+  return value;
+}
+
+function sanitizeTriangulaFitMode(value, fallback) {
+  if (value !== 'dynamic' && value !== 'locked') return fallback;
+  return value;
+}
+
+function sanitizeShape(value, fallback) {
+  var allowed = ['circle', 'triangle', 'square', 'star', 'heart'];
+  if (allowed.indexOf(value) === -1) return fallback;
+  return value;
+}
+
+function sanitizeBooleanParam(value, fallback) {
+  if (value === '1' || value === 'true') return true;
+  if (value === '0' || value === 'false') return false;
+  return fallback;
+}
+
+function sanitizeSongId(value, fallback) {
+  if (value && MUSIC_LIBRARY[value]) return value;
+  return fallback;
+}
+
+function sanitizeBpmForCurrentSong(value, fallback) {
+  var parsed = Math.round(Number(value));
+  var allowedTempos = getActiveTempoOptions();
+  if (!isFinite(parsed) || allowedTempos.indexOf(parsed) === -1) {
+    return fallback;
+  }
+  return parsed;
+}
+
+function sanitizeThreadColor(value, fallback) {
+  return sanitizeHexColor(value, fallback);
+}
+
+function sanitizeThreadColorList(value, fallbackList) {
+  if (typeof value !== 'string' || !value.trim()) return fallbackList.slice();
+  var raw = value.split(',');
+  var sanitized = [];
+  for (var i = 0; i < raw.length; i++) {
+    var color = sanitizeThreadColor(raw[i], null);
+    if (color) sanitized.push(color);
+  }
+  if (!sanitized.length) return fallbackList.slice();
+  return sanitized;
+}
+
+function sanitizeThreadJumpMode(value, fallback) {
+  var allowed = ['fixed', 'connect', 'sequence', 'formula'];
+  if (allowed.indexOf(value) === -1) return fallback;
+  return value;
+}
+
+function sanitizeThreadDescriptor(raw, fallback) {
+  fallback = fallback || {
+    jump: DEFAULT_SKIP,
+    width: DEFAULT_THREAD_SIZE,
+    color: '#1982c4',
+    jumpMode: 'fixed',
+    jumpFormula: 'skip',
+    jumpSequence: '',
+    connectMultiplier: 2,
+    connectOffset: 0
+  };
+
+  raw = raw || {};
+  var jumpMode = sanitizeThreadJumpMode(raw.m || raw.jumpMode, fallback.jumpMode || 'fixed');
+  var thread = {
+    jump: parseBoundedInt(raw.j != null ? raw.j : raw.jump, 1, 100, fallback.jump || DEFAULT_SKIP),
+    width: parseBoundedInt(raw.w != null ? raw.w : raw.width, 1, 10, fallback.width || DEFAULT_THREAD_SIZE),
+    color: sanitizeThreadColor(raw.c != null ? raw.c : raw.color, fallback.color || '#1982c4'),
+    sequence: null,
+    jumpMode: jumpMode,
+    jumpFormula: String(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'skip'))),
+    jumpSequence: String(raw.s != null ? raw.s : (raw.jumpSequence != null ? raw.jumpSequence : (fallback.jumpSequence || ''))),
+    connectMultiplier: parseBoundedInt(raw.cm != null ? raw.cm : raw.connectMultiplier, 1, 12, fallback.connectMultiplier || 2),
+    connectOffset: parseBoundedInt(raw.co != null ? raw.co : raw.connectOffset, 0, MAX_HOLES, fallback.connectOffset || 0)
+  };
+
+  if (thread.jumpMode !== 'formula') {
+    thread.jumpFormula = fallback.jumpFormula || 'skip';
+  }
+  if (thread.jumpMode !== 'sequence') {
+    thread.jumpSequence = '';
+  }
+
+  return thread;
+}
+
+function serializeStitchingThreadState(threadList) {
+  var compact = (threadList || []).map(function(thread) {
+    return {
+      j: parseBoundedInt(thread.jump, 1, 100, DEFAULT_SKIP),
+      w: parseBoundedInt(thread.width, 1, 10, DEFAULT_THREAD_SIZE),
+      c: sanitizeThreadColor(thread.color, '#1982c4'),
+      m: sanitizeThreadJumpMode(thread.jumpMode, 'fixed'),
+      f: String(thread.jumpFormula || 'skip'),
+      s: String(thread.jumpSequence || ''),
+      cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),
+      co: parseBoundedInt(thread.connectOffset, 0, MAX_HOLES, 0)
+    };
+  });
+
+  if (!compact.length) {
+    compact.push({
+      j: DEFAULT_SKIP,
+      w: DEFAULT_THREAD_SIZE,
+      c: '#1982c4',
+      m: 'fixed',
+      f: 'skip',
+      s: '',
+      cm: 2,
+      co: 0
+    });
+  }
+
+  return encodeURIComponent(JSON.stringify(compact));
+}
+
+function parseStitchingThreadState(value, fallbackList) {
+  fallbackList = fallbackList || [];
+  if (typeof value !== 'string' || !value.trim()) {
+    return fallbackList.slice();
+  }
+
+  try {
+    var decoded = decodeURIComponent(value);
+    var parsed = JSON.parse(decoded);
+    if (!Array.isArray(parsed)) {
+      return fallbackList.slice();
+    }
+    var sanitized = parsed.map(function(entry, index) {
+      var fallback = fallbackList[index] || fallbackList[0];
+      return sanitizeThreadDescriptor(entry, fallback);
+    }).filter(function(thread) {
+      return !!thread;
+    });
+    if (!sanitized.length) {
+      return fallbackList.slice();
+    }
+    return sanitized;
+  } catch (error) {
+    return fallbackList.slice();
+  }
+}
+
+function sanitizeHexColor(value, fallback) {
+  if (typeof value !== 'string') return fallback;
+  var trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed.toLowerCase();
+  if (trimmed === 'rainbow') return 'rainbow';
+  return fallback;
+}
+
+function syncAppStateFromRuntime() {
+  appState.version = APP_STATE_URL_VERSION;
+  appState.experienceId = currentExperienceId;
+  appState.common.shape = currentShape;
+  appState.common.bpm = currentAnimationBpm;
+  appState.common.musicMuted = !!isMusicMuted;
+  appState.common.songId = currentSongId;
+  appState.common.showHoleNumbers = !!showHoleNumbers;
+  appState.common.borderEnabled = !!borderEnabled;
+
+  appState.stitching.holes = parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES);
+  appState.stitching.selectedThreadIndex = Math.max(0, Math.min(threads.length - 1, selectedThreadIndex));
+  appState.stitching.threadColors = threads.map(function(thread) {
+    return sanitizeThreadColor(thread.color, '#1982c4');
+  });
+  appState.stitching.threadState = serializeStitchingThreadState(threads);
+
+  appState.triangula.colorMode = triangulaColorMode;
+  appState.triangula.constructionMode = triangulaConstructionMode;
+  appState.triangula.startCount = triangulaStartCount;
+  appState.triangula.targetCount = triangulaTargetCount;
+  appState.triangula.fractalMode = triangulaFractalMode;
+  appState.triangula.fitMode = triangulaFitMode;
+  appState.triangula.sourceColor = sanitizeThreadColor(
+    threads[0] ? threads[0].color : null,
+    appState.triangula.sourceColor || '#1982c4'
+  );
+  appState.triangula.band1Color = triangulaBandColors.band1;
+  appState.triangula.band2Color = triangulaBandColors.band2;
+  appState.triangula.band4Color = triangulaBandColors.band4;
+}
+
+function buildSearchParamsFromAppState() {
+  syncAppStateFromRuntime();
+  var params = new URLSearchParams();
+  params.set('v', APP_STATE_URL_VERSION);
+  params.set('e', appState.experienceId);
+  params.set('sh', appState.common.shape);
+  params.set('tb', String(appState.common.bpm));
+  params.set('mm', appState.common.musicMuted ? '1' : '0');
+  params.set('sg', appState.common.songId);
+  params.set('hn', appState.common.showHoleNumbers ? '1' : '0');
+  params.set('be', appState.common.borderEnabled ? '1' : '0');
+  params.set('sn', String(appState.stitching.holes));
+  params.set('ssi', String(appState.stitching.selectedThreadIndex));
+  params.set('st', appState.stitching.threadState);
+
+  if (appState.stitching.threadColors && appState.stitching.threadColors.length) {
+    params.set('sc', appState.stitching.threadColors.join(','));
+  }
+
+  if (appState.experienceId === 'triangula') {
+    params.set('tc0', appState.triangula.sourceColor);
+    params.set('tcm', appState.triangula.colorMode);
+    params.set('tm', appState.triangula.constructionMode);
+    params.set('ts', String(appState.triangula.startCount));
+    params.set('tt', String(appState.triangula.targetCount));
+    params.set('tf', appState.triangula.fractalMode);
+    params.set('tfit', appState.triangula.fitMode);
+    params.set('tc1', appState.triangula.band1Color);
+    params.set('tc2', appState.triangula.band2Color);
+    params.set('tc4', appState.triangula.band4Color);
+  }
+
+  return params;
+}
+
+function flushUrlStateSync() {
+  if (urlSyncSuspended) return;
+  var params = buildSearchParamsFromAppState();
+  var nextSearch = params.toString();
+  var nextUrl = nextSearch ? (window.location.pathname + '?' + nextSearch) : window.location.pathname;
+  var currentUrl = window.location.pathname + window.location.search;
+  if (nextUrl === currentUrl) return;
+  history.replaceState({ appStateVersion: APP_STATE_URL_VERSION }, '', nextUrl);
+}
+
+function scheduleUrlStateSync(immediate) {
+  if (urlSyncSuspended) return;
+  if (urlSyncTimer) {
+    clearTimeout(urlSyncTimer);
+    urlSyncTimer = null;
+  }
+  if (immediate) {
+    flushUrlStateSync();
+    return;
+  }
+  urlSyncTimer = window.setTimeout(function() {
+    urlSyncTimer = null;
+    flushUrlStateSync();
+  }, URL_SYNC_DEBOUNCE_MS);
+}
+
+function applyStateFromCurrentUrl(options) {
+  options = options || {};
+  var params = new URLSearchParams(window.location.search || '');
+  var requestedExperience = resolveExperienceId(params.get('e'));
+
+  if (!requestedExperience) {
+    requestedExperience = currentExperienceId;
+  }
+
+  try {
+    withUrlSyncSuspended(function() {
+    if (resolveExperienceId(params.get('e'))) {
+      setCurrentExperience(requestedExperience, { suppressUrlSync: true });
+    }
+
+    var profile = getExperienceUiProfile(currentExperienceId);
+    var shapeFromUrl = sanitizeShape(params.get('sh'), currentShape);
+    if (profile && profile.fixedShape) {
+      shapeFromUrl = profile.fixedShape;
+    }
+    setCurrentShape(shapeFromUrl, false);
+
+    var songIdFromUrl = sanitizeSongId(params.get('sg'), currentSongId);
+    if (canApplySongSelection(songIdFromUrl)) {
+      setCurrentSong(songIdFromUrl);
+    }
+
+    var bpmFromUrl = sanitizeBpmForCurrentSong(params.get('tb'), currentAnimationBpm);
+    applyTempoValue(bpmFromUrl);
+
+    isMusicMuted = sanitizeBooleanParam(params.get('mm'), isMusicMuted);
+    syncMusicToggleButton();
+
+    showHoleNumbers = sanitizeBooleanParam(params.get('hn'), showHoleNumbers);
+    borderEnabled = sanitizeBooleanParam(params.get('be'), borderEnabled);
+    syncHoleNumberToggles();
+    syncBorderControls();
+
+    var fallbackThreads = threads.map(function(thread) {
+      return sanitizeThreadDescriptor(thread, thread);
+    });
+    var requestedThreadState = parseStitchingThreadState(params.get('st'), fallbackThreads);
+
+    if (requestedThreadState.length) {
+      threads = requestedThreadState.map(function(thread) {
+        return sanitizeThreadDescriptor(thread, thread);
+      });
+    }
+
+    // Backward compatibility for older URLs that only carried color list.
+    var fallbackColors = threads.map(function(thread) {
+      return sanitizeThreadColor(thread.color, '#1982c4');
+    });
+    var requestedThreadColors = sanitizeThreadColorList(params.get('sc'), fallbackColors);
+    for (var i = 0; i < threads.length && i < requestedThreadColors.length; i++) {
+      threads[i].color = requestedThreadColors[i];
+    }
+
+    if (!threads.length) {
+      threads = [sanitizeThreadDescriptor({}, null)];
+    }
+
+    var holesFromUrl = parseBoundedInt(params.get('sn'), 3, MAX_HOLES, parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES));
+    holesSlider.value = String(holesFromUrl);
+    if (advancedHolesNumberInput) {
+      advancedHolesNumberInput.value = String(holesFromUrl);
+    }
+
+    selectedThreadIndex = parseBoundedInt(params.get('ssi'), 0, threads.length - 1, selectedThreadIndex);
+
+    renderThreadControls();
+    syncKidControlsFromSelectedThread();
+
+    if (requestedExperience === 'triangula') {
+      var sourceColor = sanitizeThreadColor(params.get('tc0'), threads[0] ? threads[0].color : '#1982c4');
+      if (threads[0]) {
+        threads[0].color = sourceColor;
+      }
+      triangulaColorMode = sanitizeTriangulaColorMode(params.get('tcm'), triangulaColorMode);
+      triangulaConstructionMode = sanitizeTriangulaConstructionMode(params.get('tm'), triangulaConstructionMode);
+      triangulaStartCount = sanitizeTriangulaCount(params.get('ts'), triangulaStartCount, 'start');
+      triangulaTargetCount = sanitizeTriangulaCount(params.get('tt'), triangulaTargetCount, 'target');
+      if (triangulaTargetCount < triangulaStartCount) {
+        triangulaTargetCount = triangulaStartCount;
+      }
+      triangulaFractalMode = sanitizeTriangulaFractalMode(params.get('tf'), triangulaFractalMode);
+      triangulaFitMode = sanitizeTriangulaFitMode(params.get('tfit'), triangulaFitMode);
+
+      triangulaBandColors.band1 = sanitizeHexColor(params.get('tc1'), triangulaBandColors.band1);
+      triangulaBandColors.band2 = sanitizeHexColor(params.get('tc2'), triangulaBandColors.band2);
+      triangulaBandColors.band4 = sanitizeHexColor(params.get('tc4'), triangulaBandColors.band4);
+
+      syncTriangulaControls();
+    }
+
+    redrawForPathChange();
+
+    // Always start from unstarted playback state on load/popstate.
+    animationPlaybackState = 'idle';
+    syncAnimateButtonLabel();
+
+    updateMusicPlaybackState();
+    });
+  } catch (error) {
+    console.error('URL state hydration failed:', error);
+  }
+
+  if (options.forceUrlSync !== false) {
+    scheduleUrlStateSync(true);
+  }
+}
+
+function hasUrlStateParams() {
+  var params = new URLSearchParams(window.location.search || '');
+  if (!params || !params.toString()) return false;
+  if (params.has('v') || params.has('e')) return true;
+  // Backward/partial URLs should still be treated as explicit state.
+  return params.toString().length > 0;
+}
 
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 var joyAudio = new Audio(MUSIC_LIBRARY[currentSongId].path);
@@ -1758,6 +2313,20 @@ function resolveExperienceId(experienceRef) {
 function getExperienceUiProfile(experienceId) {
   var experience = getExperienceById(experienceId);
   return experience.uiProfile || EXPERIENCE_LIBRARY.stitching.uiProfile;
+}
+
+function getDefaultSongIdForExperience(experienceId) {
+  if (experienceId === 'triangula') return 'triangle';
+  if (experienceId === 'squarus') return 'square';
+  if (experienceId === 'mashrabiya') return 'rosette';
+  return 'bach';
+}
+
+function canApplySongSelection(songId) {
+  if (!songId || !MUSIC_LIBRARY[songId]) return false;
+  if (songId === 'bach') return true;
+  if (songId === getDefaultSongIdForExperience(currentExperienceId)) return true;
+  return unlockedSongIds.indexOf(songId) !== -1;
 }
 
 function setElementDisplay(element, isVisible, displayValue) {
@@ -1904,7 +2473,8 @@ function applyExperienceUiPolicy() {
 }
 
 function syncTriangulaControls() {
-  if (triangulaStartCount < 1) triangulaStartCount = 1;
+  triangulaStartCount = normalizeTriangulaDrawableCount(triangulaStartCount, 'start', 1);
+  triangulaTargetCount = normalizeTriangulaDrawableCount(triangulaTargetCount, 'target', triangulaStartCount);
 
   if (triangulaTargetCount < triangulaStartCount) {
     triangulaTargetCount = triangulaStartCount;
@@ -1921,6 +2491,12 @@ function syncTriangulaControls() {
   }
   if (triangulaTargetValue) {
     triangulaTargetValue.textContent = String(triangulaTargetCount);
+  }
+  if (triangulaStartNumberInput) {
+    triangulaStartNumberInput.value = String(triangulaStartCount);
+  }
+  if (triangulaTargetNumberInput) {
+    triangulaTargetNumberInput.value = String(triangulaTargetCount);
   }
   if (triangulaColorScopeSelect) {
     triangulaColorScopeSelect.value = triangulaColorMode;
@@ -1941,6 +2517,35 @@ function syncTriangulaControls() {
     !!(controls && controls.triangulaColorScope === true && currentExperienceId === 'triangula' && triangulaConstructionMode === 'shrink-duplicate'),
     ''
   );
+}
+
+function applyTriangulaCountUpdate(nextStart, nextTarget, shouldRedraw) {
+  triangulaStartCount = normalizeTriangulaDrawableCount(nextStart, 'start', triangulaStartCount || 1);
+  triangulaTargetCount = normalizeTriangulaDrawableCount(nextTarget, 'target', triangulaTargetCount || triangulaStartCount || 1);
+  if (triangulaTargetCount < triangulaStartCount) {
+    triangulaTargetCount = triangulaStartCount;
+  }
+  syncTriangulaControls();
+  if (shouldRedraw) {
+    redrawForPathChange();
+  }
+}
+
+function stepTriangulaCount(baseValue, stepAction) {
+  var value = parseBoundedInt(baseValue, 1, 729, 1);
+  if (stepAction === 'div3') {
+    return Math.max(1, Math.floor(value / 3));
+  }
+  if (stepAction === 'mul3') {
+    return Math.min(729, value * 3);
+  }
+  if (stepAction === 'dec10') {
+    return Math.max(1, value - 10);
+  }
+  if (stepAction === 'inc10') {
+    return Math.min(729, value + 10);
+  }
+  return value;
 }
 
 function applyExperienceOverlayPosition(positionClass) {
@@ -2064,13 +2669,24 @@ function applyCurrentExperienceInfo() {
 }
 
 function setCurrentExperience(experienceId, options) {
+  options = options || {};
   var experience = getExperienceById(experienceId);
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
+  if (!options.preserveSongOnExperienceChange) {
+    setCurrentSong(getDefaultSongIdForExperience(currentExperienceId));
+  }
+
   applyExperienceUiPolicy();
+  // Re-apply mode-specific slider visibility after base UI policy toggles.
+  syncKidControlsFromSelectedThread();
   applyCurrentExperienceInfo();
   renderExperienceTitleStatic();
+
+  if (!options.suppressUrlSync) {
+    scheduleUrlStateSync(false);
+  }
 }
 
 function refreshExperienceInfoPanelPlacement() {
@@ -2430,10 +3046,14 @@ function setCurrentSong(songId) {
     playMusicFromCurrentState();
   }
   renderSongPicker();
+  scheduleUrlStateSync(false);
 }
 
 function getSongPickerOptions() {
   var options = ['bach'];
+  if (currentSongId && MUSIC_LIBRARY[currentSongId] && options.indexOf(currentSongId) === -1) {
+    options.push(currentSongId);
+  }
   for (var i = 0; i < unlockedSongIds.length; i++) {
     if (options.indexOf(unlockedSongIds[i]) === -1) {
       options.push(unlockedSongIds[i]);
@@ -2801,6 +3421,13 @@ function renderDiscoveryLibrary() {
     text.textContent = config.description;
     card.appendChild(text);
 
+    if (config.passphrase) {
+      var passphrase = document.createElement('p');
+      passphrase.className = 'discovery-passphrase';
+      passphrase.textContent = 'Passphrase: "' + config.passphrase + '"';
+      card.appendChild(passphrase);
+    }
+
     var action = document.createElement('button');
     action.type = 'button';
     action.className = 'advanced-reset-btn';
@@ -2836,6 +3463,66 @@ function renderDiscoveryLibrary() {
 
   renderSongPicker();
   syncDiscoveryToggleButton();
+}
+
+function normalizeDiscoveryPassphrase(text) {
+  return (text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function getDiscoveryKeyForPassphrase(passphraseText) {
+  var normalizedInput = normalizeDiscoveryPassphrase(passphraseText);
+  if (!normalizedInput) return null;
+
+  var keys = Object.keys(DISCOVERY_LIBRARY);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var config = DISCOVERY_LIBRARY[key];
+    if (!config || !config.passphrase || !config.passphraseInputEnabled) continue;
+    if (normalizeDiscoveryPassphrase(config.passphrase) === normalizedInput) {
+      return key;
+    }
+  }
+
+  return null;
+}
+
+function setDiscoveryPassphraseFeedback(message, status) {
+  if (!discoveryPassphraseFeedback) return;
+  discoveryPassphraseFeedback.textContent = message || '';
+  discoveryPassphraseFeedback.classList.remove('is-success');
+  discoveryPassphraseFeedback.classList.remove('is-error');
+  if (status === 'success') {
+    discoveryPassphraseFeedback.classList.add('is-success');
+  } else if (status === 'error') {
+    discoveryPassphraseFeedback.classList.add('is-error');
+  }
+}
+
+function submitDiscoveryPassphraseEntry() {
+  if (!discoveryPassphraseInput) return;
+
+  var attemptedPassphrase = discoveryPassphraseInput.value || '';
+  if (!normalizeDiscoveryPassphrase(attemptedPassphrase)) {
+    setDiscoveryPassphraseFeedback('Type a passphrase first.', 'error');
+    return;
+  }
+
+  var shapeKey = getDiscoveryKeyForPassphrase(attemptedPassphrase);
+  if (!shapeKey) {
+    setDiscoveryPassphraseFeedback('That passphrase does not match a discovery yet.', 'error');
+    return;
+  }
+
+  var alreadyDiscovered = !!discoveredShapeKeys[shapeKey];
+  unlockDiscovery(shapeKey);
+
+  if (alreadyDiscovered) {
+    setDiscoveryPassphraseFeedback(DISCOVERY_LIBRARY[shapeKey].title + ' was already discovered.', 'success');
+  } else {
+    setDiscoveryPassphraseFeedback('Passphrase accepted: ' + DISCOVERY_LIBRARY[shapeKey].title + ' unlocked.', 'success');
+  }
+
+  discoveryPassphraseInput.value = '';
 }
 
 function unlockSong(songId) {
@@ -3115,6 +3802,7 @@ function settleAllSliderMotion() {
   for (var key in sliderMotionKeys) {
     settleSliderMotionByKey(key);
   }
+  scheduleUrlStateSync(true);
 }
 
 function setHoleNumberHighlight(index, isHighlighted) {
@@ -3455,6 +4143,7 @@ function applyTempoValue(bpm) {
   syncKidTempoPresetControls();
   // Tempo change updates playback speed without resetting progress.
   redrawAnimationInPlace();
+  scheduleUrlStateSync(false);
 }
 
 function syncAnimateButtonLabel() {
@@ -3494,6 +4183,7 @@ function stopAnimationIfActive() {
   syncAnimateButtonLabel();
   clearHighlightedHoleNumbers();
   updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
 }
 
 function pauseAnimationIfActive() {
@@ -3503,6 +4193,7 @@ function pauseAnimationIfActive() {
   animationPlaybackState = 'paused';
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
 }
 
 function redrawForPathChange() {
@@ -3510,6 +4201,7 @@ function redrawForPathChange() {
   stopAnimationIfActive();
   drawStatic();
   scheduleDiscoveryEvaluation();
+  scheduleUrlStateSync(false);
 }
 
 function drawAnimatedSegments(thread, segments, segmentCount) {
@@ -3670,17 +4362,20 @@ function redrawAnimationInPlace() {
   if (triangulaAnimationState) {
     renderTriangulaAnimationStateFrame(triangulaAnimationState);
     scheduleDiscoveryEvaluation();
+    scheduleUrlStateSync(false);
     return;
   }
 
   if (!animationState) {
     drawStatic();
     scheduleDiscoveryEvaluation();
+    scheduleUrlStateSync(false);
     return;
   }
 
   renderAnimationFrame();
   scheduleDiscoveryEvaluation();
+  scheduleUrlStateSync(false);
 }
 
 function scheduleFitCanvasToStage() {
@@ -4788,6 +5483,7 @@ function runTriangulaAnimationFrame(event) {
       view.onFrame = null;
       syncAnimateButtonLabel();
       updateMusicPlaybackState();
+      scheduleUrlStateSync(false);
       drawTriangulaStatic();
       return;
     }
@@ -4812,6 +5508,7 @@ function animateTriangula() {
   if (!timeline.steps.length) {
     animationPlaybackState = 'idle';
     syncAnimateButtonLabel();
+    scheduleUrlStateSync(false);
     drawTriangulaStatic();
     return;
   }
@@ -4831,6 +5528,7 @@ function animateTriangula() {
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
   renderTriangulaAnimationStateFrame(triangulaAnimationState);
   view.onFrame = runTriangulaAnimationFrame;
 }
@@ -5521,6 +6219,7 @@ function runAnimationFrameTick(event) {
     syncAnimateButtonLabel();
     clearHighlightedHoleNumbers();
     updateMusicPlaybackState();
+    scheduleUrlStateSync(false);
     drawStatic();
     return;
   }
@@ -5550,6 +6249,7 @@ function runAnimationFrameTick(event) {
       syncAnimateButtonLabel();
       clearHighlightedHoleNumbers();
       updateMusicPlaybackState();
+      scheduleUrlStateSync(false);
       drawStatic();
       return;
     }
@@ -5575,6 +6275,7 @@ function runAnimationFrameTick(event) {
         syncAnimateButtonLabel();
         clearHighlightedHoleNumbers();
         updateMusicPlaybackState();
+        scheduleUrlStateSync(false);
         drawStatic();
         return;
       }
@@ -5619,6 +6320,7 @@ function animateStitch() {
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
   renderAnimationFrame();
   startAnimationLoop();
 }
@@ -5630,6 +6332,7 @@ function resumeAnimationIfPaused() {
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
   if (triangulaAnimationState) {
     view.onFrame = runTriangulaAnimationFrame;
     return;
@@ -6029,6 +6732,13 @@ closeDiscoveryBtn.addEventListener('click', () => {
   syncDiscoveryToggleButton();
 });
 
+if (discoveryPassphraseForm) {
+  discoveryPassphraseForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    submitDiscoveryPassphraseEntry();
+  });
+}
+
 gearBtn.addEventListener('click', () => {
   advancedPanel.classList.toggle('open');
   syncAdvancedToggleButton();
@@ -6178,23 +6888,89 @@ if (triangulaConstructionModeSelect) {
 
 if (triangulaStartSlider) {
   triangulaStartSlider.addEventListener('input', () => {
-    triangulaStartCount = Math.max(1, parseInt(triangulaStartSlider.value, 10) || 1);
-    if (triangulaTargetCount < triangulaStartCount) {
-      triangulaTargetCount = triangulaStartCount;
-    }
-    syncTriangulaControls();
-    redrawForPathChange();
+    applyTriangulaCountUpdate(triangulaStartSlider.value, triangulaTargetCount, true);
+  });
+  triangulaStartSlider.addEventListener('change', () => {
+    applyTriangulaCountUpdate(triangulaStartSlider.value, triangulaTargetCount, false);
+    settleSliderMotion(triangulaStartSlider);
+  });
+}
+
+if (triangulaStartNumberInput) {
+  triangulaStartNumberInput.addEventListener('input', () => {
+    if (triangulaStartNumberInput.value === '') return;
+    applyTriangulaCountUpdate(triangulaStartNumberInput.value, triangulaTargetCount, true);
+  });
+  triangulaStartNumberInput.addEventListener('change', () => {
+    applyTriangulaCountUpdate(triangulaStartNumberInput.value, triangulaTargetCount, false);
   });
 }
 
 if (triangulaTargetSlider) {
   triangulaTargetSlider.addEventListener('input', () => {
-    triangulaTargetCount = Math.max(1, parseInt(triangulaTargetSlider.value, 10) || 1);
-    if (triangulaTargetCount < triangulaStartCount) {
-      triangulaTargetCount = triangulaStartCount;
-    }
-    syncTriangulaControls();
-    redrawForPathChange();
+    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, true);
+  });
+  triangulaTargetSlider.addEventListener('change', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, false);
+    settleSliderMotion(triangulaTargetSlider);
+  });
+}
+
+if (triangulaTargetNumberInput) {
+  triangulaTargetNumberInput.addEventListener('input', () => {
+    if (triangulaTargetNumberInput.value === '') return;
+    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetNumberInput.value, true);
+  });
+  triangulaTargetNumberInput.addEventListener('change', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetNumberInput.value, false);
+  });
+}
+
+if (triangulaStartDiv3Btn) {
+  triangulaStartDiv3Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'div3'), triangulaTargetCount, true);
+  });
+}
+
+if (triangulaStartMul3Btn) {
+  triangulaStartMul3Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'mul3'), triangulaTargetCount, true);
+  });
+}
+
+if (triangulaStartDec10Btn) {
+  triangulaStartDec10Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'dec10'), triangulaTargetCount, true);
+  });
+}
+
+if (triangulaStartInc10Btn) {
+  triangulaStartInc10Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(stepTriangulaCount(triangulaStartCount, 'inc10'), triangulaTargetCount, true);
+  });
+}
+
+if (triangulaTargetDiv3Btn) {
+  triangulaTargetDiv3Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'div3'), true);
+  });
+}
+
+if (triangulaTargetMul3Btn) {
+  triangulaTargetMul3Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'mul3'), true);
+  });
+}
+
+if (triangulaTargetDec10Btn) {
+  triangulaTargetDec10Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'dec10'), true);
+  });
+}
+
+if (triangulaTargetInc10Btn) {
+  triangulaTargetInc10Btn.addEventListener('click', () => {
+    applyTriangulaCountUpdate(triangulaStartCount, stepTriangulaCount(triangulaTargetCount, 'inc10'), true);
   });
 }
 
@@ -6330,15 +7106,24 @@ if (window.visualViewport) {
 }
 
 window.addEventListener('pageshow', () => {
-  applyDefaultHoles();
-  applyDefaultSkipAndSize();
-  applyDefaultTempo();
-  animationPlaybackState = 'idle';
-  syncAnimateButtonLabel();
-  renderThreadControls();
-  redrawForPathChange();
+  if (!hasUrlStateParams()) {
+    applyDefaultHoles();
+    applyDefaultSkipAndSize();
+    applyDefaultTempo();
+    animationPlaybackState = 'idle';
+    syncAnimateButtonLabel();
+    renderThreadControls();
+    syncKidControlsFromSelectedThread();
+    redrawForPathChange();
+  }
   applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
   renderExperienceTitleStatic();
+  applyStateFromCurrentUrl({ forceUrlSync: false });
+  syncKidControlsFromSelectedThread();
+});
+
+window.addEventListener('popstate', function() {
+  applyStateFromCurrentUrl({ forceUrlSync: false });
 });
 
 addMagicThreadBtn.addEventListener('click', () => {
@@ -6370,6 +7155,7 @@ musicToggleBtn.addEventListener('click', () => {
   isMusicMuted = !isMusicMuted;
   syncMusicToggleButton();
   updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
 });
 
 /* ------------------------------
@@ -6378,25 +7164,39 @@ musicToggleBtn.addEventListener('click', () => {
 renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
-setCurrentExperience('stitching');
-setCurrentShape('circle', false);
+if (hasUrlStateParams()) {
+  var initialParams = new URLSearchParams(window.location.search || '');
+  var initialExperience = resolveExperienceId(initialParams.get('e')) || 'stitching';
+  setCurrentExperience(initialExperience, { suppressUrlSync: true });
+  setCurrentShape(sanitizeShape(initialParams.get('sh'), currentShape), false);
+} else {
+  setCurrentExperience('stitching');
+  setCurrentShape('circle', false);
+}
 advancedPanel.classList.remove('open');
 discoveryPanel.classList.remove('open');
 renderAdvancedTempoOptions();
-applyDefaultHoles();
-applyDefaultSkipAndSize();
-applyDefaultTempo();
+if (!hasUrlStateParams()) {
+  applyDefaultHoles();
+  applyDefaultSkipAndSize();
+  applyDefaultTempo();
+}
 syncAnimateButtonLabel();
 syncHoleNumberToggles();
 syncBorderControls();
 syncMusicToggleButton();
-refreshKidThreadPicker();
+syncKidControlsFromSelectedThread();
 renderDiscoveryLibrary();
 syncAdvancedToggleButton();
 syncDiscoveryToggleButton();
-syncBasicMathSliderVisibility();
 fitCanvasToStage();
+if (hasUrlStateParams()) {
+  applyStateFromCurrentUrl({ forceUrlSync: false });
+} else {
+  redrawForPathChange();
+}
 scheduleDiscoveryEvaluation();
+scheduleUrlStateSync(true);
 window.setCurrentExperience = setCurrentExperience;
 
 </script>
