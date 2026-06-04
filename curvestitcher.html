@@ -1866,6 +1866,8 @@ var squarusAnimationMode = 'sequential';
 var squarusPieceCount = null;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
+var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0.06;
+var SQUARUS_SCATTER_WOBBLE_SPEED = 1.35;
 var squarusPolyominoCache = Object.create(null);
 var squarusDiscoveredLayouts = Object.create(null);
 var triangulaBandColors = {
@@ -6292,7 +6294,7 @@ function buildSquarusAnimationState() {
     var seedAngle = i * (Math.PI * (3 - Math.sqrt(5)));
     var desiredScatterRadius = minDim * (0.52 + ((i % 5) * 0.035));
     var pieceRadius = getSquarusPieceRenderRadius(allPieces[i], allTargets[i].scale);
-    var orbitAllowance = (0.35 * allTargets[i].scale) + 2;
+    var orbitAllowance = (SQUARUS_SCATTER_WOBBLE_AMPLITUDE * allTargets[i].scale) + 2;
     var edgeAllowance = pieceRadius + orbitAllowance + SQUARUS_SCATTER_EDGE_PADDING;
     var maxRadius = getMaxRadiusAlongAngleFromCenter(seedAngle) - edgeAllowance;
     var scatterRadius = Math.max(0, Math.min(desiredScatterRadius, maxRadius));
@@ -6354,9 +6356,9 @@ function renderSquarusAnimationStateFrame(state) {
     if (!isPlacedPiece) {
       if (t < d.scatter) {
         var unplacedScatterP = clamp01(t / d.scatter);
-        var unplacedOrbit = 0.35 * (1 - unplacedScatterP);
-        x = item.scatterX + Math.cos(item.scatterRotation + t * 2.1) * unplacedOrbit * scale;
-        y = item.scatterY + Math.sin(item.scatterRotation + t * 2.1) * unplacedOrbit * scale;
+        var unplacedOrbit = SQUARUS_SCATTER_WOBBLE_AMPLITUDE * (1 - unplacedScatterP);
+        x = item.scatterX + Math.cos(item.scatterRotation + t * SQUARUS_SCATTER_WOBBLE_SPEED) * unplacedOrbit * scale;
+        y = item.scatterY + Math.sin(item.scatterRotation + t * SQUARUS_SCATTER_WOBBLE_SPEED) * unplacedOrbit * scale;
       }
       drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
       continue;
@@ -6369,9 +6371,9 @@ function renderSquarusAnimationStateFrame(state) {
 
     if (localT < d.scatter) {
       var scatterP = clamp01(localT / d.scatter);
-      var orbit = 0.35 * (1 - scatterP);
-      x = item.scatterX + Math.cos(item.scatterRotation + localT * 2.1) * orbit * scale;
-      y = item.scatterY + Math.sin(item.scatterRotation + localT * 2.1) * orbit * scale;
+      var orbit = SQUARUS_SCATTER_WOBBLE_AMPLITUDE * (1 - scatterP);
+      x = item.scatterX + Math.cos(item.scatterRotation + localT * SQUARUS_SCATTER_WOBBLE_SPEED) * orbit * scale;
+      y = item.scatterY + Math.sin(item.scatterRotation + localT * SQUARUS_SCATTER_WOBBLE_SPEED) * orbit * scale;
     } else if (localT < (d.scatter + d.reveal + d.travel)) {
       var travelP = easeInOutCubic(clamp01((localT - d.scatter - d.reveal) / d.travel));
       x = item.scatterX + (item.target.x - item.scatterX) * travelP;
