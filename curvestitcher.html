@@ -1335,8 +1335,8 @@
       <option value="1">1 (Monomino)</option>
       <option value="2">2 (Domino)</option>
       <option value="3">3 (Tromino)</option>
-      <option value="4" selected>4 (Tetromino)</option>
-      <option value="5">5 (Pentomino)</option>
+      <option value="4">4 (Tetromino)</option>
+      <option value="5" selected>5 (Pentomino)</option>
       <option value="6">6 (Hexomino)</option>
     </select>
   </div>
@@ -1352,7 +1352,7 @@
       <option value="golden-phyllotaxis">Golden-Angle Phyllotaxis</option>
       <option value="circle-packing">Circle Packing</option>
       <option value="radial-tree">Radial Tree</option>
-      <option value="force-directed">Force-Directed</option>
+      <option value="force-directed" selected>Force-Directed</option>
     </select>
   </div>
   <div class="slider-block" id="squarus-piece-count-block" style="display:none;">
@@ -1360,8 +1360,8 @@
     <input id="squarus-piece-count" type="range" min="0" max="0" value="0">
   </div>
   <div class="slider-block" id="squarus-sequence-block" style="display:none;">
-    <div class="slider-label">🎲 Piece Order <span class="slider-value" id="squarus-sequence-value">0</span></div>
-    <input id="squarus-sequence-seed" type="range" min="0" max="999" value="0">
+    <div class="slider-label">🎲 Piece Order <span class="slider-value" id="squarus-sequence-value">1</span></div>
+    <input id="squarus-sequence-seed" type="range" min="0" max="999" value="1">
     <button id="squarus-sequence-randomize" type="button" class="advanced-reset-btn" style="margin-top:8px;">Randomize</button>
   </div>
 </div>
@@ -1423,8 +1423,8 @@
         <option value="1">1 (Monomino)</option>
         <option value="2">2 (Domino)</option>
         <option value="3">3 (Tromino)</option>
-        <option value="4" selected>4 (Tetromino)</option>
-        <option value="5">5 (Pentomino)</option>
+        <option value="4">4 (Tetromino)</option>
+        <option value="5" selected>5 (Pentomino)</option>
         <option value="6">6 (Hexomino)</option>
       </select></div>
       <div class="advanced-global-row">Layout: <select id="squarus-layout">
@@ -1437,7 +1437,7 @@
         <option value="golden-phyllotaxis">Golden-Angle Phyllotaxis</option>
         <option value="circle-packing">Circle Packing</option>
         <option value="radial-tree">Radial Tree</option>
-        <option value="force-directed">Force-Directed</option>
+        <option value="force-directed" selected>Force-Directed</option>
       </select></div>
       <div class="advanced-global-row">Animation mode: <select id="squarus-animation-mode">
         <option value="sequential" selected>Sequential</option>
@@ -1447,7 +1447,7 @@
         <option value="connected-touch" selected>Connected touching</option>
         <option value="formula-only">Formula only</option>
       </select></div>
-      <div class="advanced-global-row">Piece Order: <input id="squarus-sequence-number" class="advanced-inline-number" type="number" min="0" max="999" value="0" aria-label="Squarus sequence seed"><button id="squarus-sequence-randomize-advanced" type="button" class="advanced-reset-btn">Randomize</button></div>
+      <div class="advanced-global-row">Piece Order: <input id="squarus-sequence-number" class="advanced-inline-number" type="number" min="0" max="999" value="1" aria-label="Squarus sequence seed"><button id="squarus-sequence-randomize-advanced" type="button" class="advanced-reset-btn">Randomize</button></div>
       <div class="advanced-global-help">Choose a polyomino order and deterministic arrangement formula.</div>
     </div>
   </div>
@@ -1639,7 +1639,7 @@ var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
 var MAX_HOLES = 140;
 var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
-var DEFAULT_ANIMATION_BPM = 84;
+var DEFAULT_ANIMATION_BPM = 168;
 var BEATS_PER_STITCH_SEGMENT = 1;
 var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
 var DEFAULT_TEMPO_OPTIONS = [84, 168, 252, 336, 420];
@@ -1886,18 +1886,17 @@ var triangulaTargetCount = 3;
 var triangulaFractalMode = 'series';
 var triangulaFitMode = 'locked';
 var triangulaAnimationState = null;
-var squarusOrder = 4;
-var squarusLayout = 'grid-packing';
+var squarusOrder = 5;
+var squarusLayout = 'force-directed';
 var squarusAnimationMode = 'sequential';
 var squarusContactMode = 'connected-touch';
 var squarusPieceCount = null;
-var squarusSequenceSeed = 0;
+var squarusSequenceSeed = 1;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0;
 var SQUARUS_SCATTER_WOBBLE_SPEED = 0;
 var squarusPolyominoCache = Object.create(null);
-var squarusDiscoveredLayouts = Object.create(null);
 var triangulaBandColors = {
   band1: '#1982c4',
   band2: '#6a4c93',
@@ -1945,7 +1944,7 @@ var appState = {
   experienceId: 'stitching',
   common: {
     shape: 'circle',
-    bpm: DEFAULT_ANIMATION_BPM,
+    bpm: currentAnimationBpm,
     musicMuted: false,
     songId: 'bach'
   },
@@ -2381,6 +2380,7 @@ function applyStateFromCurrentUrl(options) {
   var params = new URLSearchParams(window.location.search || '');
   var requestedExperience = resolveExperienceId(getUrlStateParam(params, 'experienceId'));
   var hasExplicitExperienceParam = !!resolveExperienceId(getUrlStateParam(params, 'experienceId'));
+  var allowSquarusUrlDiscoveryUnlock = options.initialLoad === true;
 
   if (!requestedExperience) {
     requestedExperience = currentExperienceId;
@@ -2392,7 +2392,7 @@ function applyStateFromCurrentUrl(options) {
       setCurrentExperience(requestedExperience, { suppressUrlSync: true });
     }
 
-    if (hasExplicitExperienceParam && requestedExperience === 'squarus') {
+    if (allowSquarusUrlDiscoveryUnlock && hasExplicitExperienceParam && requestedExperience === 'squarus') {
       unlockDiscovery('square');
     }
 
@@ -3355,7 +3355,7 @@ function setCurrentSong(songId) {
   renderAdvancedTempoOptions();
   var allowedTempos = getActiveTempoOptions();
   if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
-    currentAnimationBpm = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
+    currentAnimationBpm = getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM;
   }
   syncAdvancedTempoControls();
   syncKidTempoPresetControls();
@@ -4054,6 +4054,11 @@ function isRosetteDiscoveryCandidate() {
 function evaluateDiscoveryCandidates() {
   if (currentExperienceId !== 'stitching') return;
 
+  var activeShape = currentShape;
+  if (activeShape !== 'circle') {
+    // Keep discovery criteria consistent across stitching frames.
+    currentShape = 'circle';
+  }
   computePoints();
 
   var candidates = getDiscoveryCandidateThreads();
@@ -4078,6 +4083,11 @@ function evaluateDiscoveryCandidates() {
   }
   if (ROSETTE_DISCOVERY_ENABLED && isRosetteDiscoveryCandidate()) {
     unlockDiscovery('rosette');
+  }
+
+  if (activeShape !== currentShape) {
+    currentShape = activeShape;
+    computePoints();
   }
 }
 
@@ -4432,7 +4442,7 @@ function applyDefaultSkipAndSize() {
 function syncAdvancedTempoControls() {
   var allowedTempos = getActiveTempoOptions();
   if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
-    currentAnimationBpm = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
+    currentAnimationBpm = getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM;
   }
   advancedTempoInput.value = String(currentAnimationBpm);
   advancedTempoValue.textContent = String(currentAnimationBpm);
@@ -4459,7 +4469,7 @@ function applyTempoValue(bpm) {
   var parsed = Math.round(Number(bpm));
   var allowedTempos = getActiveTempoOptions();
   if (!isFinite(parsed) || allowedTempos.indexOf(parsed) === -1) {
-    parsed = allowedTempos[0] || DEFAULT_ANIMATION_BPM;
+    parsed = getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM;
   }
   currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
@@ -4492,8 +4502,7 @@ function syncAnimateButtonLabel() {
 }
 
 function applyDefaultTempo() {
-  var allowedTempos = getActiveTempoOptions();
-  applyTempoValue(allowedTempos[0] || DEFAULT_ANIMATION_BPM);
+  applyTempoValue(getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM);
 }
 
 function stopAnimationIfActive() {
@@ -7064,11 +7073,6 @@ function runSquarusAnimationFrame(event) {
   animationActive = false;
   animationPlaybackState = 'idle';
   view.onFrame = null;
-  var discoveryKey = String(squarusAnimationState.order) + '|' + String(squarusAnimationState.layout);
-  if (!squarusDiscoveredLayouts[discoveryKey]) {
-    squarusDiscoveredLayouts[discoveryKey] = true;
-    showDiscoveryToast('Squarus discovered! Order ' + String(squarusAnimationState.order) + ' in ' + String(squarusAnimationState.layout) + '.');
-  }
   squarusAnimationState = null;
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
@@ -8950,7 +8954,7 @@ syncAdvancedToggleButton();
 syncDiscoveryToggleButton();
 fitCanvasToStage();
 if (hasUrlStateParams()) {
-  applyStateFromCurrentUrl({ forceUrlSync: false });
+  applyStateFromCurrentUrl({ forceUrlSync: false, initialLoad: true });
 } else {
   redrawForPathChange();
 }
