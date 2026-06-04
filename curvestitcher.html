@@ -1783,8 +1783,33 @@ var triangulaBandColors = {
   band2: '#6a4c93',
   band4: '#8ac926'
 };
+var triangulaSourceColor = '#1982c4';
 
-var APP_STATE_URL_VERSION = '1';
+var APP_STATE_URL_VERSION = '2';
+var URL_STATE_PARAM_KEYS = Object.freeze({
+  version: 'version',
+  experienceId: 'experience',
+  shape: 'shape',
+  bpm: 'bpm',
+  musicMuted: 'musicMuted',
+  songId: 'song',
+  stitchingShowHoleNumbers: 'stitchingShowHoleNumbers',
+  stitchingBorderEnabled: 'stitchingBorderEnabled',
+  stitchingHoles: 'stitchingHoles',
+  stitchingSelectedThreadIndex: 'stitchingSelectedThreadIndex',
+  stitchingThreadState: 'stitchingThreadState',
+  stitchingThreadColors: 'stitchingThreadColors',
+  triangulaSourceColor: 'triangulaSourceColor',
+  triangulaColorMode: 'triangulaColorMode',
+  triangulaConstructionMode: 'triangulaConstructionMode',
+  triangulaStartCount: 'triangulaStartCount',
+  triangulaTargetCount: 'triangulaTargetCount',
+  triangulaFractalMode: 'triangulaFractalMode',
+  triangulaFitMode: 'triangulaFitMode',
+  triangulaBand1Color: 'triangulaBand1Color',
+  triangulaBand2Color: 'triangulaBand2Color',
+  triangulaBand4Color: 'triangulaBand4Color'
+});
 var URL_SYNC_DEBOUNCE_MS = 800;
 var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
 var urlSyncTimer = null;
@@ -1796,13 +1821,13 @@ var appState = {
     shape: 'circle',
     bpm: DEFAULT_ANIMATION_BPM,
     musicMuted: false,
-    songId: 'bach',
-    showHoleNumbers: true,
-    borderEnabled: true
+    songId: 'bach'
   },
   stitching: {
     holes: DEFAULT_HOLES,
     selectedThreadIndex: 0,
+    showHoleNumbers: true,
+    borderEnabled: true,
     threadColors: ['#1982c4'],
     threadState: ''
   },
@@ -1828,6 +1853,23 @@ function withUrlSyncSuspended(work) {
   } finally {
     urlSyncSuspended = wasSuspended;
   }
+}
+
+function setUrlStateParam(params, logicalKey, value) {
+  var key = URL_STATE_PARAM_KEYS[logicalKey];
+  if (!key) return;
+  params.set(key, value);
+}
+
+function getUrlStateParam(params, logicalKey) {
+  var key = URL_STATE_PARAM_KEYS[logicalKey];
+  if (key && params.has(key)) return params.get(key);
+  return null;
+}
+
+function hasUrlStateKey(params, logicalKey) {
+  var key = URL_STATE_PARAM_KEYS[logicalKey];
+  return !!(key && params.has(key));
 }
 
 function normalizeTriangulaDrawableCount(value, role, fallback) {
@@ -2040,11 +2082,11 @@ function syncAppStateFromRuntime() {
   appState.common.bpm = currentAnimationBpm;
   appState.common.musicMuted = !!isMusicMuted;
   appState.common.songId = currentSongId;
-  appState.common.showHoleNumbers = !!showHoleNumbers;
-  appState.common.borderEnabled = !!borderEnabled;
 
   appState.stitching.holes = parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES);
   appState.stitching.selectedThreadIndex = Math.max(0, Math.min(threads.length - 1, selectedThreadIndex));
+  appState.stitching.showHoleNumbers = !!showHoleNumbers;
+  appState.stitching.borderEnabled = !!borderEnabled;
   appState.stitching.threadColors = threads.map(function(thread) {
     return sanitizeThreadColor(thread.color, '#1982c4');
   });
@@ -2057,7 +2099,7 @@ function syncAppStateFromRuntime() {
   appState.triangula.fractalMode = triangulaFractalMode;
   appState.triangula.fitMode = triangulaFitMode;
   appState.triangula.sourceColor = sanitizeThreadColor(
-    threads[0] ? threads[0].color : null,
+    triangulaSourceColor,
     appState.triangula.sourceColor || '#1982c4'
   );
   appState.triangula.band1Color = triangulaBandColors.band1;
@@ -2068,33 +2110,33 @@ function syncAppStateFromRuntime() {
 function buildSearchParamsFromAppState() {
   syncAppStateFromRuntime();
   var params = new URLSearchParams();
-  params.set('v', APP_STATE_URL_VERSION);
-  params.set('e', appState.experienceId);
-  params.set('sh', appState.common.shape);
-  params.set('tb', String(appState.common.bpm));
-  params.set('mm', appState.common.musicMuted ? '1' : '0');
-  params.set('sg', appState.common.songId);
-  params.set('hn', appState.common.showHoleNumbers ? '1' : '0');
-  params.set('be', appState.common.borderEnabled ? '1' : '0');
-  params.set('sn', String(appState.stitching.holes));
-  params.set('ssi', String(appState.stitching.selectedThreadIndex));
-  params.set('st', appState.stitching.threadState);
+  setUrlStateParam(params, 'version', APP_STATE_URL_VERSION);
+  setUrlStateParam(params, 'experienceId', appState.experienceId);
+  setUrlStateParam(params, 'shape', appState.common.shape);
+  setUrlStateParam(params, 'bpm', String(appState.common.bpm));
+  setUrlStateParam(params, 'musicMuted', appState.common.musicMuted ? '1' : '0');
+  setUrlStateParam(params, 'songId', appState.common.songId);
+  setUrlStateParam(params, 'stitchingShowHoleNumbers', appState.stitching.showHoleNumbers ? '1' : '0');
+  setUrlStateParam(params, 'stitchingBorderEnabled', appState.stitching.borderEnabled ? '1' : '0');
+  setUrlStateParam(params, 'stitchingHoles', String(appState.stitching.holes));
+  setUrlStateParam(params, 'stitchingSelectedThreadIndex', String(appState.stitching.selectedThreadIndex));
+  setUrlStateParam(params, 'stitchingThreadState', appState.stitching.threadState);
 
   if (appState.stitching.threadColors && appState.stitching.threadColors.length) {
-    params.set('sc', appState.stitching.threadColors.join(','));
+    setUrlStateParam(params, 'stitchingThreadColors', appState.stitching.threadColors.join(','));
   }
 
   if (appState.experienceId === 'triangula') {
-    params.set('tc0', appState.triangula.sourceColor);
-    params.set('tcm', appState.triangula.colorMode);
-    params.set('tm', appState.triangula.constructionMode);
-    params.set('ts', String(appState.triangula.startCount));
-    params.set('tt', String(appState.triangula.targetCount));
-    params.set('tf', appState.triangula.fractalMode);
-    params.set('tfit', appState.triangula.fitMode);
-    params.set('tc1', appState.triangula.band1Color);
-    params.set('tc2', appState.triangula.band2Color);
-    params.set('tc4', appState.triangula.band4Color);
+    setUrlStateParam(params, 'triangulaSourceColor', appState.triangula.sourceColor);
+    setUrlStateParam(params, 'triangulaColorMode', appState.triangula.colorMode);
+    setUrlStateParam(params, 'triangulaConstructionMode', appState.triangula.constructionMode);
+    setUrlStateParam(params, 'triangulaStartCount', String(appState.triangula.startCount));
+    setUrlStateParam(params, 'triangulaTargetCount', String(appState.triangula.targetCount));
+    setUrlStateParam(params, 'triangulaFractalMode', appState.triangula.fractalMode);
+    setUrlStateParam(params, 'triangulaFitMode', appState.triangula.fitMode);
+    setUrlStateParam(params, 'triangulaBand1Color', appState.triangula.band1Color);
+    setUrlStateParam(params, 'triangulaBand2Color', appState.triangula.band2Color);
+    setUrlStateParam(params, 'triangulaBand4Color', appState.triangula.band4Color);
   }
 
   return params;
@@ -2129,7 +2171,7 @@ function scheduleUrlStateSync(immediate) {
 function applyStateFromCurrentUrl(options) {
   options = options || {};
   var params = new URLSearchParams(window.location.search || '');
-  var requestedExperience = resolveExperienceId(params.get('e'));
+  var requestedExperience = resolveExperienceId(getUrlStateParam(params, 'experienceId'));
 
   if (!requestedExperience) {
     requestedExperience = currentExperienceId;
@@ -2137,37 +2179,37 @@ function applyStateFromCurrentUrl(options) {
 
   try {
     withUrlSyncSuspended(function() {
-    if (resolveExperienceId(params.get('e'))) {
+    if (resolveExperienceId(getUrlStateParam(params, 'experienceId'))) {
       setCurrentExperience(requestedExperience, { suppressUrlSync: true });
     }
 
     var profile = getExperienceUiProfile(currentExperienceId);
-    var shapeFromUrl = sanitizeShape(params.get('sh'), currentShape);
+    var shapeFromUrl = sanitizeShape(getUrlStateParam(params, 'shape'), currentShape);
     if (profile && profile.fixedShape) {
       shapeFromUrl = profile.fixedShape;
     }
     setCurrentShape(shapeFromUrl, false);
 
-    var songIdFromUrl = sanitizeSongId(params.get('sg'), currentSongId);
+    var songIdFromUrl = sanitizeSongId(getUrlStateParam(params, 'songId'), currentSongId);
     if (canApplySongSelection(songIdFromUrl)) {
       setCurrentSong(songIdFromUrl);
     }
 
-    var bpmFromUrl = sanitizeBpmForCurrentSong(params.get('tb'), currentAnimationBpm);
+    var bpmFromUrl = sanitizeBpmForCurrentSong(getUrlStateParam(params, 'bpm'), currentAnimationBpm);
     applyTempoValue(bpmFromUrl);
 
-    isMusicMuted = sanitizeBooleanParam(params.get('mm'), isMusicMuted);
+    isMusicMuted = sanitizeBooleanParam(getUrlStateParam(params, 'musicMuted'), isMusicMuted);
     syncMusicToggleButton();
 
-    showHoleNumbers = sanitizeBooleanParam(params.get('hn'), showHoleNumbers);
-    borderEnabled = sanitizeBooleanParam(params.get('be'), borderEnabled);
+    showHoleNumbers = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingShowHoleNumbers'), showHoleNumbers);
+    borderEnabled = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingBorderEnabled'), borderEnabled);
     syncHoleNumberToggles();
     syncBorderControls();
 
     var fallbackThreads = threads.map(function(thread) {
       return sanitizeThreadDescriptor(thread, thread);
     });
-    var requestedThreadState = parseStitchingThreadState(params.get('st'), fallbackThreads);
+    var requestedThreadState = parseStitchingThreadState(getUrlStateParam(params, 'stitchingThreadState'), fallbackThreads);
 
     if (requestedThreadState.length) {
       threads = requestedThreadState.map(function(thread) {
@@ -2179,7 +2221,7 @@ function applyStateFromCurrentUrl(options) {
     var fallbackColors = threads.map(function(thread) {
       return sanitizeThreadColor(thread.color, '#1982c4');
     });
-    var requestedThreadColors = sanitizeThreadColorList(params.get('sc'), fallbackColors);
+    var requestedThreadColors = sanitizeThreadColorList(getUrlStateParam(params, 'stitchingThreadColors'), fallbackColors);
     for (var i = 0; i < threads.length && i < requestedThreadColors.length; i++) {
       threads[i].color = requestedThreadColors[i];
     }
@@ -2188,35 +2230,33 @@ function applyStateFromCurrentUrl(options) {
       threads = [sanitizeThreadDescriptor({}, null)];
     }
 
-    var holesFromUrl = parseBoundedInt(params.get('sn'), 3, MAX_HOLES, parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES));
+    var holesFromUrl = parseBoundedInt(getUrlStateParam(params, 'stitchingHoles'), 3, MAX_HOLES, parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES));
     holesSlider.value = String(holesFromUrl);
     if (advancedHolesNumberInput) {
       advancedHolesNumberInput.value = String(holesFromUrl);
     }
 
-    selectedThreadIndex = parseBoundedInt(params.get('ssi'), 0, threads.length - 1, selectedThreadIndex);
+    selectedThreadIndex = parseBoundedInt(getUrlStateParam(params, 'stitchingSelectedThreadIndex'), 0, threads.length - 1, selectedThreadIndex);
 
     renderThreadControls();
     syncKidControlsFromSelectedThread();
 
     if (requestedExperience === 'triangula') {
-      var sourceColor = sanitizeThreadColor(params.get('tc0'), threads[0] ? threads[0].color : '#1982c4');
-      if (threads[0]) {
-        threads[0].color = sourceColor;
-      }
-      triangulaColorMode = sanitizeTriangulaColorMode(params.get('tcm'), triangulaColorMode);
-      triangulaConstructionMode = sanitizeTriangulaConstructionMode(params.get('tm'), triangulaConstructionMode);
-      triangulaStartCount = sanitizeTriangulaCount(params.get('ts'), triangulaStartCount, 'start');
-      triangulaTargetCount = sanitizeTriangulaCount(params.get('tt'), triangulaTargetCount, 'target');
+      var sourceColor = sanitizeThreadColor(getUrlStateParam(params, 'triangulaSourceColor'), triangulaSourceColor || '#1982c4');
+      triangulaSourceColor = sourceColor;
+      triangulaColorMode = sanitizeTriangulaColorMode(getUrlStateParam(params, 'triangulaColorMode'), triangulaColorMode);
+      triangulaConstructionMode = sanitizeTriangulaConstructionMode(getUrlStateParam(params, 'triangulaConstructionMode'), triangulaConstructionMode);
+      triangulaStartCount = sanitizeTriangulaCount(getUrlStateParam(params, 'triangulaStartCount'), triangulaStartCount, 'start');
+      triangulaTargetCount = sanitizeTriangulaCount(getUrlStateParam(params, 'triangulaTargetCount'), triangulaTargetCount, 'target');
       if (triangulaTargetCount < triangulaStartCount) {
         triangulaTargetCount = triangulaStartCount;
       }
-      triangulaFractalMode = sanitizeTriangulaFractalMode(params.get('tf'), triangulaFractalMode);
-      triangulaFitMode = sanitizeTriangulaFitMode(params.get('tfit'), triangulaFitMode);
+      triangulaFractalMode = sanitizeTriangulaFractalMode(getUrlStateParam(params, 'triangulaFractalMode'), triangulaFractalMode);
+      triangulaFitMode = sanitizeTriangulaFitMode(getUrlStateParam(params, 'triangulaFitMode'), triangulaFitMode);
 
-      triangulaBandColors.band1 = sanitizeHexColor(params.get('tc1'), triangulaBandColors.band1);
-      triangulaBandColors.band2 = sanitizeHexColor(params.get('tc2'), triangulaBandColors.band2);
-      triangulaBandColors.band4 = sanitizeHexColor(params.get('tc4'), triangulaBandColors.band4);
+      triangulaBandColors.band1 = sanitizeHexColor(getUrlStateParam(params, 'triangulaBand1Color'), triangulaBandColors.band1);
+      triangulaBandColors.band2 = sanitizeHexColor(getUrlStateParam(params, 'triangulaBand2Color'), triangulaBandColors.band2);
+      triangulaBandColors.band4 = sanitizeHexColor(getUrlStateParam(params, 'triangulaBand4Color'), triangulaBandColors.band4);
 
       syncTriangulaControls();
     }
@@ -2241,7 +2281,7 @@ function applyStateFromCurrentUrl(options) {
 function hasUrlStateParams() {
   var params = new URLSearchParams(window.location.search || '');
   if (!params || !params.toString()) return false;
-  if (params.has('v') || params.has('e')) return true;
+  if (hasUrlStateKey(params, 'version') || hasUrlStateKey(params, 'experienceId')) return true;
   // Backward/partial URLs should still be treated as explicit state.
   return params.toString().length > 0;
 }
@@ -2902,7 +2942,7 @@ function getActiveTrailColor() {
     if (triangulaColorMode === 'band-1') return triangulaBandColors.band1 || fallbackColor;
     if (triangulaColorMode === 'band-2') return triangulaBandColors.band2 || fallbackColor;
     if (triangulaColorMode === 'band-4') return triangulaBandColors.band4 || fallbackColor;
-    return normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1 || fallbackColor);
+    return normalizeTriangulaFillColor(triangulaSourceColor, triangulaBandColors.band1 || fallbackColor);
   }
 
   var targetIndex = getKidTargetThreadIndex();
@@ -3963,7 +4003,7 @@ function applyExperiencePaletteColorChoice(colorValue) {
   if (paletteMode === 'triangula-banded') {
     var safeColor = normalizeTriangulaFillColor(color, triangulaBandColors.band1);
     // Keep the most recently picked palette color available across band mode switches.
-    threads[0].color = safeColor;
+    triangulaSourceColor = safeColor;
     if (triangulaConstructionMode === 'cut') {
       triangulaBandColors.band1 = safeColor;
       triangulaBandColors.band2 = safeColor;
@@ -3971,7 +4011,6 @@ function applyExperiencePaletteColorChoice(colorValue) {
       return;
     }
     if (triangulaColorMode === 'all') {
-      threads[0].color = safeColor;
       triangulaBandColors.band1 = safeColor;
       triangulaBandColors.band2 = safeColor;
       triangulaBandColors.band4 = safeColor;
@@ -4992,7 +5031,7 @@ function getTriangulaRainbowSequenceIndex(slot, sequenceIndex, mode) {
 function getTriangulaFillColorForSlot(slot, sequenceIndex) {
   var mode = getTriangulaEffectiveColorMode();
   var rainbowSequence = getTriangulaRainbowSequenceIndex(slot, sequenceIndex, mode);
-  var allColor = normalizeTriangulaFillColor(threads[0] ? threads[0].color : null, triangulaBandColors.band1);
+  var allColor = normalizeTriangulaFillColor(triangulaSourceColor, triangulaBandColors.band1);
   if (mode === 'all') return getTriangulaResolvedFillColor(allColor, rainbowSequence, triangulaBandColors.band1);
   if (mode === 'band-1') return slot === 1 ? getTriangulaResolvedFillColor(triangulaBandColors.band1, rainbowSequence, triangulaBandColors.band1) : '#ffffff';
   if (mode === 'band-2') return slot === 2 ? getTriangulaResolvedFillColor(triangulaBandColors.band2, rainbowSequence, triangulaBandColors.band2) : '#ffffff';
@@ -5975,7 +6014,7 @@ function buildTriangulaGuideText(fileBaseName, options) {
   lines.push('Band 1 color: ' + String(triangulaBandColors.band1));
   lines.push('Band 2 color: ' + String(triangulaBandColors.band2));
   lines.push('Band 4 color: ' + String(triangulaBandColors.band4));
-  lines.push('Rainbow source color: ' + String(threads[0] ? threads[0].color : triangulaBandColors.band1));
+  lines.push('Rainbow source color: ' + String(triangulaSourceColor || triangulaBandColors.band1));
   lines.push('');
   lines.push('Reconstruction');
   lines.push('1. Open Triangula in curve_stitcher.');
@@ -6862,7 +6901,7 @@ if (triangulaColorScopeSelect) {
     triangulaColorMode = triangulaColorScopeSelect.value || 'all';
     if (currentExperienceId === 'triangula' && triangulaConstructionMode === 'shrink-duplicate') {
       var activeColor = normalizeTriangulaFillColor(
-        threads[0] ? threads[0].color : null,
+        triangulaSourceColor,
         triangulaBandColors.band1
       );
       if (triangulaColorMode === 'band-1') {
@@ -7166,9 +7205,9 @@ syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
 if (hasUrlStateParams()) {
   var initialParams = new URLSearchParams(window.location.search || '');
-  var initialExperience = resolveExperienceId(initialParams.get('e')) || 'stitching';
+  var initialExperience = resolveExperienceId(getUrlStateParam(initialParams, 'experienceId')) || 'stitching';
   setCurrentExperience(initialExperience, { suppressUrlSync: true });
-  setCurrentShape(sanitizeShape(initialParams.get('sh'), currentShape), false);
+  setCurrentShape(sanitizeShape(getUrlStateParam(initialParams, 'shape'), currentShape), false);
 } else {
   setCurrentExperience('stitching');
   setCurrentShape('circle', false);
