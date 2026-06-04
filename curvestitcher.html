@@ -1322,14 +1322,14 @@
     <input id="triangula-target-count" type="range" min="1" max="729" value="3">
   </div>
   <div class="slider-block" id="squarus-order-block" style="display:none;">
-    <div class="slider-label">⬛ Polyomino Order</div>
+    <div class="slider-label">⬛ Squares</div>
     <select id="squarus-order-inline" class="curve-type-select">
-      <option value="1">Monominoes (1)</option>
-      <option value="2">Dominoes (2)</option>
-      <option value="3">Trominoes (3)</option>
-      <option value="4" selected>Tetrominoes (4)</option>
-      <option value="5">Pentominoes (5)</option>
-      <option value="6">Hexominoes (6)</option>
+      <option value="1">1 (Monomino)</option>
+      <option value="2">2 (Domino)</option>
+      <option value="3">3 (Tromino)</option>
+      <option value="4" selected>4 (Tetromino)</option>
+      <option value="5">5 (Pentomino)</option>
+      <option value="6">6 (Hexomino)</option>
     </select>
   </div>
   <div class="slider-block" id="squarus-layout-block" style="display:none;">
@@ -1350,6 +1350,11 @@
   <div class="slider-block" id="squarus-piece-count-block" style="display:none;">
     <div class="slider-label">🧩 Pieces Placed <span class="slider-value" id="squarus-piece-count-value">0</span></div>
     <input id="squarus-piece-count" type="range" min="0" max="0" value="0">
+  </div>
+  <div class="slider-block" id="squarus-sequence-block" style="display:none;">
+    <div class="slider-label">🎲 Piece Order <span class="slider-value" id="squarus-sequence-value">0</span></div>
+    <input id="squarus-sequence-seed" type="range" min="0" max="999" value="0">
+    <button id="squarus-sequence-randomize" type="button" class="advanced-reset-btn" style="margin-top:8px;">Randomize</button>
   </div>
 </div>
 
@@ -1406,13 +1411,13 @@
     </div>
     <div class="advanced-subsection" id="squarus-advanced-subsection" style="display:none;">
       <div class="advanced-global-title">Squarus Layout</div>
-      <div class="advanced-global-row">Order: <select id="squarus-order">
-        <option value="1">Monominoes (1)</option>
-        <option value="2">Dominoes (2)</option>
-        <option value="3">Trominoes (3)</option>
-        <option value="4" selected>Tetrominoes (4)</option>
-        <option value="5">Pentominoes (5)</option>
-        <option value="6">Hexominoes (6)</option>
+      <div class="advanced-global-row">Squares: <select id="squarus-order">
+        <option value="1">1 (Monomino)</option>
+        <option value="2">2 (Domino)</option>
+        <option value="3">3 (Tromino)</option>
+        <option value="4" selected>4 (Tetromino)</option>
+        <option value="5">5 (Pentomino)</option>
+        <option value="6">6 (Hexomino)</option>
       </select></div>
       <div class="advanced-global-row">Layout: <select id="squarus-layout">
         <option value="grid-packing">Grid Packing</option>
@@ -1434,6 +1439,7 @@
         <option value="connected-touch" selected>Connected touching</option>
         <option value="formula-only">Formula only</option>
       </select></div>
+      <div class="advanced-global-row">Piece Order: <input id="squarus-sequence-number" class="advanced-inline-number" type="number" min="0" max="999" value="0" aria-label="Squarus sequence seed"><button id="squarus-sequence-randomize-advanced" type="button" class="advanced-reset-btn">Randomize</button></div>
       <div class="advanced-global-help">Choose a polyomino order and deterministic arrangement formula.</div>
     </div>
   </div>
@@ -1531,8 +1537,12 @@ var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-su
 var squarusOrderBlock = document.getElementById('squarus-order-block');
 var squarusLayoutBlock = document.getElementById('squarus-layout-block');
 var squarusPieceCountBlock = document.getElementById('squarus-piece-count-block');
+var squarusSequenceBlock = document.getElementById('squarus-sequence-block');
 var squarusPieceCountSlider = document.getElementById('squarus-piece-count');
 var squarusPieceCountValue = document.getElementById('squarus-piece-count-value');
+var squarusSequenceSlider = document.getElementById('squarus-sequence-seed');
+var squarusSequenceValue = document.getElementById('squarus-sequence-value');
+var squarusSequenceRandomizeBtn = document.getElementById('squarus-sequence-randomize');
 var squarusOrderInlineSelect = document.getElementById('squarus-order-inline');
 var squarusLayoutInlineSelect = document.getElementById('squarus-layout-inline');
 var squarusAdvancedSubsection = document.getElementById('squarus-advanced-subsection');
@@ -1540,6 +1550,8 @@ var squarusOrderSelect = document.getElementById('squarus-order');
 var squarusLayoutSelect = document.getElementById('squarus-layout');
 var squarusAnimationModeSelect = document.getElementById('squarus-animation-mode');
 var squarusContactModeSelect = document.getElementById('squarus-contact-mode');
+var squarusSequenceNumberInput = document.getElementById('squarus-sequence-number');
+var squarusSequenceRandomizeAdvancedBtn = document.getElementById('squarus-sequence-randomize-advanced');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var addThreadBtn = document.getElementById('add-thread');
@@ -1799,7 +1811,7 @@ var EXPERIENCE_LIBRARY = {
       fixedShape: 'square',
       threadsEnabled: false,
       allowMultipleThreads: false,
-      paletteMode: 'global',
+      paletteMode: 'none',
       supportsHoleNumbers: false,
       supportsBorder: false,
       basicControls: {
@@ -1810,7 +1822,8 @@ var EXPERIENCE_LIBRARY = {
         width: false,
         squarusOrder: true,
         squarusLayout: true,
-        squarusPieceCount: true
+        squarusPieceCount: true,
+        squarusSequence: true
       },
       advancedControls: {
         shape: true,
@@ -1870,6 +1883,7 @@ var squarusLayout = 'grid-packing';
 var squarusAnimationMode = 'sequential';
 var squarusContactMode = 'connected-touch';
 var squarusPieceCount = null;
+var squarusSequenceSeed = 0;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0.06;
@@ -1911,7 +1925,8 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   squarusLayout: 'squarusLayout',
   squarusAnimationMode: 'squarusAnimationMode',
   squarusContactMode: 'squarusContactMode',
-  squarusPieceCount: 'squarusPieceCount'
+  squarusPieceCount: 'squarusPieceCount',
+  squarusSequenceSeed: 'squarusSequenceSeed'
 });
 var URL_SYNC_DEBOUNCE_MS = 800;
 var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
@@ -1951,7 +1966,8 @@ var appState = {
     layout: 'grid-packing',
     animationMode: 'sequential',
     contactMode: 'connected-touch',
-    pieceCount: null
+    pieceCount: null,
+    sequenceSeed: 0
   }
 };
 
@@ -2061,6 +2077,28 @@ function sanitizeSquarusAnimationMode(value, fallback) {
 function sanitizeSquarusContactMode(value, fallback) {
   if (value !== 'connected-touch' && value !== 'formula-only') return fallback;
   return value;
+}
+
+function getSquarusSequenceDomainSize(orderRef) {
+  var order = parseBoundedInt(orderRef, 1, 6, squarusOrder);
+  if (order <= 4) {
+    var pieceCount = getSquarusTotalPiecesForOrder(order);
+    var total = 1;
+    for (var i = 2; i <= pieceCount; i++) {
+      total *= i;
+    }
+    return Math.max(1, total);
+  }
+  return 1000;
+}
+
+function getSquarusSequenceMaxIndex(orderRef) {
+  return Math.max(0, getSquarusSequenceDomainSize(orderRef) - 1);
+}
+
+function normalizeSquarusSequenceSeed(value, fallback, orderRef) {
+  var maxIndex = getSquarusSequenceMaxIndex(orderRef);
+  return parseBoundedInt(value, 0, maxIndex, parseBoundedInt(fallback, 0, maxIndex, 0));
 }
 
 function getSquarusTotalPiecesForOrder(order) {
@@ -2259,6 +2297,7 @@ function syncAppStateFromRuntime() {
   appState.squarus.animationMode = sanitizeSquarusAnimationMode(squarusAnimationMode, 'sequential');
   appState.squarus.contactMode = sanitizeSquarusContactMode(squarusContactMode, 'connected-touch');
   appState.squarus.pieceCount = normalizeSquarusPieceCount(squarusPieceCount, getSquarusTotalPiecesForOrder(squarusOrder), squarusOrder);
+  appState.squarus.sequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceSeed, 0, squarusOrder);
 }
 
 function buildSearchParamsFromAppState() {
@@ -2297,6 +2336,7 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'squarusAnimationMode', appState.squarus.animationMode);
     setUrlStateParam(params, 'squarusContactMode', appState.squarus.contactMode);
     setUrlStateParam(params, 'squarusPieceCount', String(appState.squarus.pieceCount));
+    setUrlStateParam(params, 'squarusSequenceSeed', String(appState.squarus.sequenceSeed));
   }
 
   return params;
@@ -2332,6 +2372,7 @@ function applyStateFromCurrentUrl(options) {
   options = options || {};
   var params = new URLSearchParams(window.location.search || '');
   var requestedExperience = resolveExperienceId(getUrlStateParam(params, 'experienceId'));
+  var hasExplicitExperienceParam = !!resolveExperienceId(getUrlStateParam(params, 'experienceId'));
 
   if (!requestedExperience) {
     requestedExperience = currentExperienceId;
@@ -2339,8 +2380,12 @@ function applyStateFromCurrentUrl(options) {
 
   try {
     withUrlSyncSuspended(function() {
-    if (resolveExperienceId(getUrlStateParam(params, 'experienceId'))) {
+    if (hasExplicitExperienceParam) {
       setCurrentExperience(requestedExperience, { suppressUrlSync: true });
+    }
+
+    if (hasExplicitExperienceParam && requestedExperience === 'squarus') {
+      unlockDiscovery('square');
     }
 
     var profile = getExperienceUiProfile(currentExperienceId);
@@ -2426,6 +2471,7 @@ function applyStateFromCurrentUrl(options) {
       squarusAnimationMode = sanitizeSquarusAnimationMode(getUrlStateParam(params, 'squarusAnimationMode'), squarusAnimationMode);
       squarusContactMode = sanitizeSquarusContactMode(getUrlStateParam(params, 'squarusContactMode'), squarusContactMode);
       squarusPieceCount = normalizeSquarusPieceCount(getUrlStateParam(params, 'squarusPieceCount'), null, squarusOrder);
+      squarusSequenceSeed = normalizeSquarusSequenceSeed(getUrlStateParam(params, 'squarusSequenceSeed'), squarusSequenceSeed, squarusOrder);
       syncSquarusControls();
     }
 
@@ -2622,6 +2668,7 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(squarusOrderBlock, controls.squarusOrder === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusLayoutBlock, controls.squarusLayout === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusPieceCountBlock, controls.squarusPieceCount === true && currentExperienceId === 'squarus', '');
+  setElementDisplay(squarusSequenceBlock, controls.squarusSequence === true && currentExperienceId === 'squarus', '');
 }
 
 function applyAdvancedControlPolicy(profile) {
@@ -2672,7 +2719,9 @@ function applyExperienceUiPolicy() {
   applyAdvancedControlPolicy(profile);
   applyTopBarPolicy(profile);
   if (paletteContainer) {
-    paletteContainer.dataset.paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
+    var paletteMode = profile && profile.paletteMode ? profile.paletteMode : 'thread';
+    paletteContainer.dataset.paletteMode = paletteMode;
+    setElementDisplay(paletteContainer, paletteMode !== 'none', '');
   }
   triangulaColorMode = (profile && profile.triangulaColorModes && profile.triangulaColorModes.length) ? profile.triangulaColorModes[0] : 'all';
   if (triangulaColorScopeSelect) {
@@ -2713,6 +2762,19 @@ function syncSquarusControls() {
   }
   if (squarusPieceCountValue) {
     squarusPieceCountValue.textContent = String(squarusPieceCount);
+  }
+  var sequenceMaxIndex = getSquarusSequenceMaxIndex(squarusOrder);
+  squarusSequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceSeed, 0, squarusOrder);
+  if (squarusSequenceSlider) {
+    squarusSequenceSlider.max = String(sequenceMaxIndex);
+    squarusSequenceSlider.value = String(squarusSequenceSeed);
+  }
+  if (squarusSequenceValue) {
+    squarusSequenceValue.textContent = String(squarusSequenceSeed);
+  }
+  if (squarusSequenceNumberInput) {
+    squarusSequenceNumberInput.max = String(sequenceMaxIndex);
+    squarusSequenceNumberInput.value = String(squarusSequenceSeed);
   }
 }
 
@@ -2918,6 +2980,10 @@ function setCurrentExperience(experienceId, options) {
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
+  if (currentExperienceId === 'squarus') {
+    squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
+  }
+
   if (!options.preserveSongOnExperienceChange) {
     setCurrentSong(getDefaultSongIdForExperience(currentExperienceId));
   }
@@ -2927,6 +2993,10 @@ function setCurrentExperience(experienceId, options) {
   syncKidControlsFromSelectedThread();
   applyCurrentExperienceInfo();
   renderExperienceTitleStatic();
+
+  if (currentExperienceId === 'stitching') {
+    scheduleDiscoveryEvaluation();
+  }
 
   if (!options.suppressUrlSync) {
     scheduleUrlStateSync(false);
@@ -3974,6 +4044,8 @@ function isRosetteDiscoveryCandidate() {
 }
 
 function evaluateDiscoveryCandidates() {
+  if (currentExperienceId !== 'stitching') return;
+
   computePoints();
 
   var candidates = getDiscoveryCandidateThreads();
@@ -5944,6 +6016,59 @@ function getSquarusPolyominoes(order) {
   return squarusPolyominoCache[safeOrder] || [];
 }
 
+function createSquarusSeededRandom(seed) {
+  var state = (seed >>> 0) || 1;
+  return function() {
+    state = (state + 0x6D2B79F5) >>> 0;
+    var t = Math.imul(state ^ (state >>> 15), state | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function buildSquarusPermutationByIndex(baseList, index) {
+  var pool = baseList.slice();
+  var result = [];
+  var remaining = Math.max(0, Math.floor(index));
+
+  for (var n = pool.length; n > 0; n--) {
+    var blockSize = 1;
+    for (var i = 2; i < n; i++) {
+      blockSize *= i;
+    }
+    var pick = blockSize > 0 ? Math.floor(remaining / blockSize) : 0;
+    if (pick < 0) pick = 0;
+    if (pick >= pool.length) pick = pool.length - 1;
+    result.push(pool.splice(pick, 1)[0]);
+    remaining = blockSize > 0 ? (remaining % blockSize) : 0;
+  }
+
+  return result;
+}
+
+function getSquarusSequencedPieces(order, sequenceSeed) {
+  var safeOrder = parseBoundedInt(order, 1, 6, squarusOrder);
+  var base = getSquarusPolyominoes(safeOrder);
+  var list = base.slice();
+  var seed = normalizeSquarusSequenceSeed(sequenceSeed, 0, safeOrder);
+  if (list.length <= 1) return list;
+
+  if (safeOrder <= 4) {
+    return buildSquarusPermutationByIndex(list, seed);
+  }
+
+  if (seed <= 0 || list.length <= 1) return list;
+
+  var rng = createSquarusSeededRandom(seed);
+  for (var i = list.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var temp = list[i];
+    list[i] = list[j];
+    list[j] = temp;
+  }
+  return list;
+}
+
 function squarusHilbertD2XY(side, index) {
   var t = index;
   var x = 0;
@@ -5968,8 +6093,9 @@ function squarusHilbertD2XY(side, index) {
 }
 
 function getSquarusPieceColor(index, total) {
-  if (total <= 1) return '#5a4bb2';
-  return rainbowColor(index / Math.max(1, total - 1));
+  var fixedPalette = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
+  if (total <= 1) return fixedPalette[0];
+  return fixedPalette[Math.abs(Math.floor(index)) % fixedPalette.length];
 }
 
 function getSquarusPieceRenderRadius(piece, scale) {
@@ -6521,7 +6647,7 @@ function getSquarusVisiblePieceCount(totalCount) {
 }
 
 function buildSquarusAnimationState() {
-  var allPieces = getSquarusPolyominoes(squarusOrder);
+  var allPieces = getSquarusSequencedPieces(squarusOrder, squarusSequenceSeed);
   var allTargets = buildSquarusTargets(allPieces, squarusLayout);
   var placedCount = getSquarusVisiblePieceCount(allPieces.length);
   var minDim = Math.min(view.size.width, view.size.height);
@@ -8250,7 +8376,7 @@ if (triangulaFractalModeSelect) {
 if (squarusOrderSelect) {
   squarusOrderSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderSelect.value, 1, 6, squarusOrder);
-    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, null, squarusOrder);
+    squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -8259,7 +8385,7 @@ if (squarusOrderSelect) {
 if (squarusOrderInlineSelect) {
   squarusOrderInlineSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderInlineSelect.value, 1, 6, squarusOrder);
-    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, null, squarusOrder);
+    squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -8307,6 +8433,52 @@ if (squarusPieceCountSlider) {
     squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCountSlider.value, squarusPieceCount, squarusOrder);
     syncSquarusControls();
     settleSliderMotion(squarusPieceCountSlider);
+  });
+}
+
+function randomizeSquarusSequenceSeed() {
+  var maxIndex = getSquarusSequenceMaxIndex(squarusOrder);
+  if (maxIndex <= 0) {
+    squarusSequenceSeed = 0;
+  } else if (parseBoundedInt(squarusOrder, 1, 6, squarusOrder) <= 4) {
+    squarusSequenceSeed = Math.floor(Math.random() * (maxIndex + 1));
+  } else {
+    squarusSequenceSeed = Math.floor(Math.random() * maxIndex) + 1;
+  }
+  syncSquarusControls();
+  redrawForPathChange();
+}
+
+if (squarusSequenceSlider) {
+  squarusSequenceSlider.addEventListener('input', () => {
+    squarusSequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceSlider.value, squarusSequenceSeed, squarusOrder);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+  squarusSequenceSlider.addEventListener('change', () => {
+    squarusSequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceSlider.value, squarusSequenceSeed, squarusOrder);
+    syncSquarusControls();
+    settleSliderMotion(squarusSequenceSlider);
+  });
+}
+
+if (squarusSequenceNumberInput) {
+  squarusSequenceNumberInput.addEventListener('input', () => {
+    squarusSequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceNumberInput.value, squarusSequenceSeed, squarusOrder);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusSequenceRandomizeBtn) {
+  squarusSequenceRandomizeBtn.addEventListener('click', () => {
+    randomizeSquarusSequenceSeed();
+  });
+}
+
+if (squarusSequenceRandomizeAdvancedBtn) {
+  squarusSequenceRandomizeAdvancedBtn.addEventListener('click', () => {
+    randomizeSquarusSequenceSeed();
   });
 }
 
