@@ -6424,29 +6424,73 @@ function drawSquarusGuide(layoutKey, targets, opacity) {
 function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity) {
   var cosR = Math.cos(rotation);
   var sinR = Math.sin(rotation);
+  var edgeMap = Object.create(null);
+  var strokeWidth = Math.max(0.9, scale * 0.06);
+
+  function edgeKey(x1, y1, x2, y2) {
+    if (x1 > x2 || (x1 === x2 && y1 > y2)) {
+      var tx = x1;
+      var ty = y1;
+      x1 = x2;
+      y1 = y2;
+      x2 = tx;
+      y2 = ty;
+    }
+    return String(x1) + ',' + String(y1) + '|' + String(x2) + ',' + String(y2);
+  }
+
+  function addEdge(x1, y1, x2, y2) {
+    var key = edgeKey(x1, y1, x2, y2);
+    if (!edgeMap[key]) {
+      edgeMap[key] = { x1: x1, y1: y1, x2: x2, y2: y2, count: 0 };
+    }
+    edgeMap[key].count += 1;
+  }
+
+  function toWorldPoint(gridX, gridY) {
+    var localX = (gridX - piece.centroidX) * scale;
+    var localY = (gridY - piece.centroidY) * scale;
+    return new Point(
+      x + (localX * cosR - localY * sinR),
+      y + (localX * sinR + localY * cosR)
+    );
+  }
+
   for (var i = 0; i < piece.cells.length; i++) {
-    var centerLocalX = (piece.cells[i][0] + 0.5 - piece.centroidX) * scale;
-    var centerLocalY = (piece.cells[i][1] + 0.5 - piece.centroidY) * scale;
-    var half = scale / 2;
+    var cellX = piece.cells[i][0];
+    var cellY = piece.cells[i][1];
     var corners = [
-      { x: centerLocalX - half, y: centerLocalY - half },
-      { x: centerLocalX + half, y: centerLocalY - half },
-      { x: centerLocalX + half, y: centerLocalY + half },
-      { x: centerLocalX - half, y: centerLocalY + half }
+      { x: cellX, y: cellY },
+      { x: cellX + 1, y: cellY },
+      { x: cellX + 1, y: cellY + 1 },
+      { x: cellX, y: cellY + 1 }
     ];
 
     var rect = new Path();
     rect.closed = true;
     for (var c = 0; c < corners.length; c++) {
-      var rx = x + (corners[c].x * cosR - corners[c].y * sinR);
-      var ry = y + (corners[c].x * sinR + corners[c].y * cosR);
-      rect.add(new Point(rx, ry));
+      rect.add(toWorldPoint(corners[c].x, corners[c].y));
     }
 
     rect.fillColor = color;
-    rect.strokeColor = '#000000';
-    rect.strokeWidth = Math.max(0.9, scale * 0.06);
     rect.opacity = opacity;
+
+    addEdge(cellX, cellY, cellX + 1, cellY);
+    addEdge(cellX + 1, cellY, cellX + 1, cellY + 1);
+    addEdge(cellX + 1, cellY + 1, cellX, cellY + 1);
+    addEdge(cellX, cellY + 1, cellX, cellY);
+  }
+
+  var edgeKeys = Object.keys(edgeMap);
+  for (var e = 0; e < edgeKeys.length; e++) {
+    var edge = edgeMap[edgeKeys[e]];
+    var line = new Path();
+    line.add(toWorldPoint(edge.x1, edge.y1));
+    line.add(toWorldPoint(edge.x2, edge.y2));
+    line.strokeColor = '#000000';
+    line.strokeWidth = strokeWidth;
+    line.strokeCap = 'butt';
+    line.opacity = opacity;
   }
 }
 
