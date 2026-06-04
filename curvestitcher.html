@@ -1430,6 +1430,10 @@
         <option value="sequential" selected>Sequential</option>
         <option value="parallel">Parallel</option>
       </select></div>
+      <div class="advanced-global-row">Contact mode: <select id="squarus-contact-mode">
+        <option value="connected-touch" selected>Connected touching</option>
+        <option value="formula-only">Formula only</option>
+      </select></div>
       <div class="advanced-global-help">Choose a polyomino order and deterministic arrangement formula.</div>
     </div>
   </div>
@@ -1535,6 +1539,7 @@ var squarusAdvancedSubsection = document.getElementById('squarus-advanced-subsec
 var squarusOrderSelect = document.getElementById('squarus-order');
 var squarusLayoutSelect = document.getElementById('squarus-layout');
 var squarusAnimationModeSelect = document.getElementById('squarus-animation-mode');
+var squarusContactModeSelect = document.getElementById('squarus-contact-mode');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var addThreadBtn = document.getElementById('add-thread');
@@ -1863,6 +1868,7 @@ var triangulaAnimationState = null;
 var squarusOrder = 4;
 var squarusLayout = 'grid-packing';
 var squarusAnimationMode = 'sequential';
+var squarusContactMode = 'connected-touch';
 var squarusPieceCount = null;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
@@ -1904,6 +1910,7 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   squarusOrder: 'squarusOrder',
   squarusLayout: 'squarusLayout',
   squarusAnimationMode: 'squarusAnimationMode',
+  squarusContactMode: 'squarusContactMode',
   squarusPieceCount: 'squarusPieceCount'
 });
 var URL_SYNC_DEBOUNCE_MS = 800;
@@ -1943,6 +1950,7 @@ var appState = {
     order: 4,
     layout: 'grid-packing',
     animationMode: 'sequential',
+    contactMode: 'connected-touch',
     pieceCount: null
   }
 };
@@ -2047,6 +2055,11 @@ function sanitizeSquarusLayout(value, fallback) {
 
 function sanitizeSquarusAnimationMode(value, fallback) {
   if (value !== 'parallel' && value !== 'sequential') return fallback;
+  return value;
+}
+
+function sanitizeSquarusContactMode(value, fallback) {
+  if (value !== 'connected-touch' && value !== 'formula-only') return fallback;
   return value;
 }
 
@@ -2244,6 +2257,7 @@ function syncAppStateFromRuntime() {
   appState.squarus.order = parseBoundedInt(squarusOrder, 1, 6, 4);
   appState.squarus.layout = sanitizeSquarusLayout(squarusLayout, 'grid-packing');
   appState.squarus.animationMode = sanitizeSquarusAnimationMode(squarusAnimationMode, 'sequential');
+  appState.squarus.contactMode = sanitizeSquarusContactMode(squarusContactMode, 'connected-touch');
   appState.squarus.pieceCount = normalizeSquarusPieceCount(squarusPieceCount, getSquarusTotalPiecesForOrder(squarusOrder), squarusOrder);
 }
 
@@ -2281,6 +2295,7 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'squarusOrder', String(appState.squarus.order));
     setUrlStateParam(params, 'squarusLayout', appState.squarus.layout);
     setUrlStateParam(params, 'squarusAnimationMode', appState.squarus.animationMode);
+    setUrlStateParam(params, 'squarusContactMode', appState.squarus.contactMode);
     setUrlStateParam(params, 'squarusPieceCount', String(appState.squarus.pieceCount));
   }
 
@@ -2409,6 +2424,7 @@ function applyStateFromCurrentUrl(options) {
       squarusOrder = orderFromUrl;
       squarusLayout = sanitizeSquarusLayout(getUrlStateParam(params, 'squarusLayout'), squarusLayout);
       squarusAnimationMode = sanitizeSquarusAnimationMode(getUrlStateParam(params, 'squarusAnimationMode'), squarusAnimationMode);
+      squarusContactMode = sanitizeSquarusContactMode(getUrlStateParam(params, 'squarusContactMode'), squarusContactMode);
       squarusPieceCount = normalizeSquarusPieceCount(getUrlStateParam(params, 'squarusPieceCount'), null, squarusOrder);
       syncSquarusControls();
     }
@@ -2687,6 +2703,9 @@ function syncSquarusControls() {
   }
   if (squarusAnimationModeSelect) {
     squarusAnimationModeSelect.value = squarusAnimationMode;
+  }
+  if (squarusContactModeSelect) {
+    squarusContactModeSelect.value = squarusContactMode;
   }
   if (squarusPieceCountSlider) {
     squarusPieceCountSlider.max = String(totalPieces);
@@ -5965,6 +5984,177 @@ function getSquarusPieceRenderRadius(piece, scale) {
   return farthest * scale + halfDiag;
 }
 
+function getSquarusQuarterTurnRotation(turns) {
+  var normalized = ((turns % 4) + 4) % 4;
+  return normalized * (Math.PI / 2);
+}
+
+function getSquarusCellsCentroid(cells) {
+  var cx = 0;
+  var cy = 0;
+  for (var i = 0; i < cells.length; i++) {
+    cx += cells[i][0] + 0.5;
+    cy += cells[i][1] + 0.5;
+  }
+  return {
+    x: cx / Math.max(1, cells.length),
+    y: cy / Math.max(1, cells.length)
+  };
+}
+
+function buildSquarusPlacedCells(cells, offsetX, offsetY) {
+  var placed = [];
+  for (var i = 0; i < cells.length; i++) {
+    placed.push({ x: cells[i][0] + offsetX, y: cells[i][1] + offsetY });
+  }
+  return placed;
+}
+
+function areSquarusCellsTouching(cellsA, cellsBLookup) {
+  var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (var i = 0; i < cellsA.length; i++) {
+    for (var d = 0; d < dirs.length; d++) {
+      var neighborKey = squarusCellKey(cellsA[i].x + dirs[d][0], cellsA[i].y + dirs[d][1]);
+      if (cellsBLookup[neighborKey]) return true;
+    }
+  }
+  return false;
+}
+
+function anySquarusOverlap(cells, occupiedLookup) {
+  for (var i = 0; i < cells.length; i++) {
+    if (occupiedLookup[squarusCellKey(cells[i].x, cells[i].y)]) return true;
+  }
+  return false;
+}
+
+function applySquarusConnectedTouchConstraint(pieces, targets) {
+  if (!pieces || !targets || pieces.length !== targets.length || !pieces.length) return;
+
+  var count = pieces.length;
+  var stagedTargets = targets.map(function(target) {
+    return {
+      x: target.x,
+      y: target.y,
+      rotation: target.rotation
+    };
+  });
+  var center = view.center;
+  var unit = Math.max(1, Number(targets[0] && targets[0].scale) || 1);
+  var occupied = Object.create(null);
+  var placedPieces = new Array(count);
+
+  function desiredGridForIndex(index) {
+    return {
+      x: (targets[index].x - center.x) / unit,
+      y: (targets[index].y - center.y) / unit
+    };
+  }
+
+  function rotationPenalty(targetRotation, candidateRotation) {
+    var diff = targetRotation - candidateRotation;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    return Math.abs(diff) * 0.08;
+  }
+
+  for (var index = 0; index < count; index++) {
+    var desired = desiredGridForIndex(index);
+    var best = null;
+
+    for (var turns = 0; turns < 4; turns++) {
+      var rotated = squarusTransformCells(pieces[index].cells, turns);
+      var centroid = getSquarusCellsCentroid(rotated);
+      var rotation = getSquarusQuarterTurnRotation(turns);
+
+      if (index === 0) {
+        var baseOffsetX = Math.round(desired.x - centroid.x);
+        var baseOffsetY = Math.round(desired.y - centroid.y);
+        var baseCells = buildSquarusPlacedCells(rotated, baseOffsetX, baseOffsetY);
+        if (anySquarusOverlap(baseCells, occupied)) continue;
+        var baseCx = centroid.x + baseOffsetX;
+        var baseCy = centroid.y + baseOffsetY;
+        var baseScore = Math.pow(baseCx - desired.x, 2) + Math.pow(baseCy - desired.y, 2) + rotationPenalty(stagedTargets[index].rotation, rotation);
+        if (!best || baseScore < best.score) {
+          best = {
+            score: baseScore,
+            cells: baseCells,
+            centroidX: baseCx,
+            centroidY: baseCy,
+            rotation: rotation
+          };
+        }
+        continue;
+      }
+
+      var prevLookup = placedPieces[index - 1].lookup;
+      var prevCells = placedPieces[index - 1].cells;
+      var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      var seenOffsets = Object.create(null);
+
+      for (var p = 0; p < prevCells.length; p++) {
+        for (var d = 0; d < dirs.length; d++) {
+          var touchX = prevCells[p].x + dirs[d][0];
+          var touchY = prevCells[p].y + dirs[d][1];
+          for (var c = 0; c < rotated.length; c++) {
+            var offX = touchX - rotated[c][0];
+            var offY = touchY - rotated[c][1];
+            var offsetKey = String(offX) + ',' + String(offY);
+            if (seenOffsets[offsetKey]) continue;
+            seenOffsets[offsetKey] = true;
+
+            var candidateCells = buildSquarusPlacedCells(rotated, offX, offY);
+            if (anySquarusOverlap(candidateCells, occupied)) continue;
+            if (!areSquarusCellsTouching(candidateCells, prevLookup)) continue;
+
+            var candidateCx = centroid.x + offX;
+            var candidateCy = centroid.y + offY;
+            var score = Math.pow(candidateCx - desired.x, 2) + Math.pow(candidateCy - desired.y, 2) + rotationPenalty(stagedTargets[index].rotation, rotation);
+            if (!best || score < best.score) {
+              best = {
+                score: score,
+                cells: candidateCells,
+                centroidX: candidateCx,
+                centroidY: candidateCy,
+                rotation: rotation
+              };
+            }
+          }
+        }
+      }
+    }
+
+    if (!best) {
+      return;
+    }
+
+    var lookup = Object.create(null);
+    for (var add = 0; add < best.cells.length; add++) {
+      var key = squarusCellKey(best.cells[add].x, best.cells[add].y);
+      occupied[key] = true;
+      lookup[key] = true;
+    }
+
+    placedPieces[index] = {
+      cells: best.cells,
+      lookup: lookup,
+      rotation: best.rotation,
+      centroidX: best.centroidX,
+      centroidY: best.centroidY
+    };
+
+    stagedTargets[index].x = center.x + best.centroidX * unit;
+    stagedTargets[index].y = center.y + best.centroidY * unit;
+    stagedTargets[index].rotation = best.rotation;
+  }
+
+  for (var applyIndex = 0; applyIndex < count; applyIndex++) {
+    targets[applyIndex].x = stagedTargets[applyIndex].x;
+    targets[applyIndex].y = stagedTargets[applyIndex].y;
+    targets[applyIndex].rotation = stagedTargets[applyIndex].rotation;
+  }
+}
+
 function getMaxRadiusAlongAngleFromCenter(angle) {
   var center = view.center;
   var width = view.size.width;
@@ -6197,6 +6387,10 @@ function buildSquarusTargets(pieces, layoutKey) {
       scale: Math.max(6, baseScale * SQUARUS_PIECE_SCALE_FACTOR),
       color: getSquarusPieceColor(t, count)
     });
+  }
+
+  if (squarusContactMode === 'connected-touch') {
+    applySquarusConnectedTouchConstraint(pieces, targets);
   }
 
   return targets;
@@ -8046,6 +8240,14 @@ if (squarusLayoutInlineSelect) {
 if (squarusAnimationModeSelect) {
   squarusAnimationModeSelect.addEventListener('change', () => {
     squarusAnimationMode = sanitizeSquarusAnimationMode(squarusAnimationModeSelect.value, squarusAnimationMode);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusContactModeSelect) {
+  squarusContactModeSelect.addEventListener('change', () => {
+    squarusContactMode = sanitizeSquarusContactMode(squarusContactModeSelect.value, squarusContactMode);
     syncSquarusControls();
     redrawForPathChange();
   });
