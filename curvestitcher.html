@@ -27,7 +27,7 @@
 
   @font-face {
     font-family: 'Pixelbasel';
-    src: url('assets/fonts/Pixelbasel/Pixelbasel.ttf') format('truetype');
+    src: url('assets/fonts/pixelbasel/Pixelbasel.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -1347,6 +1347,10 @@
       <option value="force-directed">Force-Directed</option>
     </select>
   </div>
+  <div class="slider-block" id="squarus-piece-count-block" style="display:none;">
+    <div class="slider-label">🧩 Pieces Placed <span class="slider-value" id="squarus-piece-count-value">0</span></div>
+    <input id="squarus-piece-count" type="range" min="0" max="0" value="0">
+  </div>
 </div>
 
 <!-- ADVANCED PANEL -->
@@ -1421,6 +1425,10 @@
         <option value="circle-packing">Circle Packing</option>
         <option value="radial-tree">Radial Tree</option>
         <option value="force-directed">Force-Directed</option>
+      </select></div>
+      <div class="advanced-global-row">Animation mode: <select id="squarus-animation-mode">
+        <option value="sequential" selected>Sequential</option>
+        <option value="parallel">Parallel</option>
       </select></div>
       <div class="advanced-global-help">Choose a polyomino order and deterministic arrangement formula.</div>
     </div>
@@ -1518,11 +1526,15 @@ var triangulaFitModeSelect = document.getElementById('triangula-fit-mode');
 var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-subsection');
 var squarusOrderBlock = document.getElementById('squarus-order-block');
 var squarusLayoutBlock = document.getElementById('squarus-layout-block');
+var squarusPieceCountBlock = document.getElementById('squarus-piece-count-block');
+var squarusPieceCountSlider = document.getElementById('squarus-piece-count');
+var squarusPieceCountValue = document.getElementById('squarus-piece-count-value');
 var squarusOrderInlineSelect = document.getElementById('squarus-order-inline');
 var squarusLayoutInlineSelect = document.getElementById('squarus-layout-inline');
 var squarusAdvancedSubsection = document.getElementById('squarus-advanced-subsection');
 var squarusOrderSelect = document.getElementById('squarus-order');
 var squarusLayoutSelect = document.getElementById('squarus-layout');
+var squarusAnimationModeSelect = document.getElementById('squarus-animation-mode');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var addThreadBtn = document.getElementById('add-thread');
@@ -1792,7 +1804,8 @@ var EXPERIENCE_LIBRARY = {
         multiply: false,
         width: false,
         squarusOrder: true,
-        squarusLayout: true
+        squarusLayout: true,
+        squarusPieceCount: true
       },
       advancedControls: {
         shape: true,
@@ -1849,6 +1862,10 @@ var triangulaFitMode = 'locked';
 var triangulaAnimationState = null;
 var squarusOrder = 4;
 var squarusLayout = 'grid-packing';
+var squarusAnimationMode = 'sequential';
+var squarusPieceCount = null;
+var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
+var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var squarusPolyominoCache = Object.create(null);
 var squarusDiscoveredLayouts = Object.create(null);
 var triangulaBandColors = {
@@ -1881,7 +1898,11 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   triangulaFitMode: 'triangulaFitMode',
   triangulaBand1Color: 'triangulaBand1Color',
   triangulaBand2Color: 'triangulaBand2Color',
-  triangulaBand4Color: 'triangulaBand4Color'
+  triangulaBand4Color: 'triangulaBand4Color',
+  squarusOrder: 'squarusOrder',
+  squarusLayout: 'squarusLayout',
+  squarusAnimationMode: 'squarusAnimationMode',
+  squarusPieceCount: 'squarusPieceCount'
 });
 var URL_SYNC_DEBOUNCE_MS = 800;
 var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
@@ -1915,6 +1936,12 @@ var appState = {
     band1Color: '#1982c4',
     band2Color: '#6a4c93',
     band4Color: '#8ac926'
+  },
+  squarus: {
+    order: 4,
+    layout: 'grid-packing',
+    animationMode: 'sequential',
+    pieceCount: null
   }
 };
 
@@ -1997,6 +2024,39 @@ function sanitizeTriangulaFractalMode(value, fallback) {
 function sanitizeTriangulaFitMode(value, fallback) {
   if (value !== 'dynamic' && value !== 'locked') return fallback;
   return value;
+}
+
+function sanitizeSquarusLayout(value, fallback) {
+  var allowed = [
+    'grid-packing',
+    'row-major-striping',
+    'hilbert-curve',
+    'area-mosaic',
+    'symmetry-d4',
+    'spiral-packing',
+    'golden-phyllotaxis',
+    'circle-packing',
+    'radial-tree',
+    'force-directed'
+  ];
+  if (allowed.indexOf(value) === -1) return fallback;
+  return value;
+}
+
+function sanitizeSquarusAnimationMode(value, fallback) {
+  if (value !== 'parallel' && value !== 'sequential') return fallback;
+  return value;
+}
+
+function getSquarusTotalPiecesForOrder(order) {
+  return getSquarusPolyominoes(parseBoundedInt(order, 1, 6, squarusOrder)).length;
+}
+
+function normalizeSquarusPieceCount(value, fallback, orderRef) {
+  var order = parseBoundedInt(orderRef, 1, 6, squarusOrder);
+  var total = getSquarusTotalPiecesForOrder(order);
+  var defaultValue = isFinite(fallback) ? fallback : total;
+  return parseBoundedInt(value, 0, total, defaultValue);
 }
 
 function sanitizeShape(value, fallback) {
@@ -2178,6 +2238,11 @@ function syncAppStateFromRuntime() {
   appState.triangula.band1Color = triangulaBandColors.band1;
   appState.triangula.band2Color = triangulaBandColors.band2;
   appState.triangula.band4Color = triangulaBandColors.band4;
+
+  appState.squarus.order = parseBoundedInt(squarusOrder, 1, 6, 4);
+  appState.squarus.layout = sanitizeSquarusLayout(squarusLayout, 'grid-packing');
+  appState.squarus.animationMode = sanitizeSquarusAnimationMode(squarusAnimationMode, 'sequential');
+  appState.squarus.pieceCount = normalizeSquarusPieceCount(squarusPieceCount, getSquarusTotalPiecesForOrder(squarusOrder), squarusOrder);
 }
 
 function buildSearchParamsFromAppState() {
@@ -2210,6 +2275,11 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'triangulaBand1Color', appState.triangula.band1Color);
     setUrlStateParam(params, 'triangulaBand2Color', appState.triangula.band2Color);
     setUrlStateParam(params, 'triangulaBand4Color', appState.triangula.band4Color);
+  } else if (appState.experienceId === 'squarus') {
+    setUrlStateParam(params, 'squarusOrder', String(appState.squarus.order));
+    setUrlStateParam(params, 'squarusLayout', appState.squarus.layout);
+    setUrlStateParam(params, 'squarusAnimationMode', appState.squarus.animationMode);
+    setUrlStateParam(params, 'squarusPieceCount', String(appState.squarus.pieceCount));
   }
 
   return params;
@@ -2332,6 +2402,13 @@ function applyStateFromCurrentUrl(options) {
       triangulaBandColors.band4 = sanitizeHexColor(getUrlStateParam(params, 'triangulaBand4Color'), triangulaBandColors.band4);
 
       syncTriangulaControls();
+    } else if (requestedExperience === 'squarus') {
+      var orderFromUrl = parseBoundedInt(getUrlStateParam(params, 'squarusOrder'), 1, 6, squarusOrder);
+      squarusOrder = orderFromUrl;
+      squarusLayout = sanitizeSquarusLayout(getUrlStateParam(params, 'squarusLayout'), squarusLayout);
+      squarusAnimationMode = sanitizeSquarusAnimationMode(getUrlStateParam(params, 'squarusAnimationMode'), squarusAnimationMode);
+      squarusPieceCount = normalizeSquarusPieceCount(getUrlStateParam(params, 'squarusPieceCount'), null, squarusOrder);
+      syncSquarusControls();
     }
 
     redrawForPathChange();
@@ -2526,6 +2603,7 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(triangulaTargetBlock, controls.triangulaTargetCount === true, '');
   setElementDisplay(squarusOrderBlock, controls.squarusOrder === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusLayoutBlock, controls.squarusLayout === true && currentExperienceId === 'squarus', '');
+  setElementDisplay(squarusPieceCountBlock, controls.squarusPieceCount === true && currentExperienceId === 'squarus', '');
 }
 
 function applyAdvancedControlPolicy(profile) {
@@ -2590,6 +2668,9 @@ function applyExperienceUiPolicy() {
 }
 
 function syncSquarusControls() {
+  var totalPieces = getSquarusTotalPiecesForOrder(squarusOrder);
+  squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, totalPieces, squarusOrder);
+
   if (squarusOrderInlineSelect) {
     squarusOrderInlineSelect.value = String(squarusOrder);
   }
@@ -2601,6 +2682,16 @@ function syncSquarusControls() {
   }
   if (squarusLayoutSelect) {
     squarusLayoutSelect.value = squarusLayout;
+  }
+  if (squarusAnimationModeSelect) {
+    squarusAnimationModeSelect.value = squarusAnimationMode;
+  }
+  if (squarusPieceCountSlider) {
+    squarusPieceCountSlider.max = String(totalPieces);
+    squarusPieceCountSlider.value = String(squarusPieceCount);
+  }
+  if (squarusPieceCountValue) {
+    squarusPieceCountValue.textContent = String(squarusPieceCount);
   }
 }
 
@@ -5860,6 +5951,42 @@ function getSquarusPieceColor(index, total) {
   return rainbowColor(index / Math.max(1, total - 1));
 }
 
+function getSquarusPieceRenderRadius(piece, scale) {
+  var farthest = 0;
+  var halfDiag = (scale * Math.SQRT2) * 0.5;
+  for (var i = 0; i < piece.cells.length; i++) {
+    var dx = (piece.cells[i][0] + 0.5) - piece.centroidX;
+    var dy = (piece.cells[i][1] + 0.5) - piece.centroidY;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > farthest) farthest = dist;
+  }
+  return farthest * scale + halfDiag;
+}
+
+function getMaxRadiusAlongAngleFromCenter(angle) {
+  var center = view.center;
+  var width = view.size.width;
+  var height = view.size.height;
+  var dx = Math.cos(angle);
+  var dy = Math.sin(angle);
+  var maxRadius = Infinity;
+
+  if (Math.abs(dx) > 1e-6) {
+    var limitX = dx > 0 ? (width - center.x) / dx : (0 - center.x) / dx;
+    if (limitX >= 0) maxRadius = Math.min(maxRadius, limitX);
+  }
+
+  if (Math.abs(dy) > 1e-6) {
+    var limitY = dy > 0 ? (height - center.y) / dy : (0 - center.y) / dy;
+    if (limitY >= 0) maxRadius = Math.min(maxRadius, limitY);
+  }
+
+  if (!isFinite(maxRadius)) {
+    maxRadius = Math.min(width, height) * 0.5;
+  }
+  return Math.max(0, maxRadius);
+}
+
 function buildSquarusTargets(pieces, layoutKey) {
   var count = pieces.length;
   var center = view.center;
@@ -6060,11 +6187,12 @@ function buildSquarusTargets(pieces, layoutKey) {
 
   var targets = [];
   for (var t = 0; t < count; t++) {
+    var baseScale = Math.max(7, scales[t] || (defaultScale * 0.58));
     targets.push({
       x: points[t].x,
       y: points[t].y,
       rotation: isFinite(rotations[t]) ? rotations[t] : pieces[t].longAxis,
-      scale: Math.max(7, scales[t] || (defaultScale * 0.58)),
+      scale: Math.max(6, baseScale * SQUARUS_PIECE_SCALE_FACTOR),
       color: getSquarusPieceColor(t, count)
     });
   }
@@ -6120,25 +6248,57 @@ function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity) {
     }
 
     rect.fillColor = color;
-    rect.strokeColor = '#2f4368';
+    rect.strokeColor = '#000000';
     rect.strokeWidth = Math.max(0.9, scale * 0.06);
     rect.opacity = opacity;
   }
 }
 
+function getSquarusAnimationDurations() {
+  var base = {
+    scatter: 0.7,
+    reveal: 0.8,
+    travel: 2.0,
+    snap: 0.5,
+    fade: 0.5
+  };
+
+  var defaultSeconds = (60 / DEFAULT_ANIMATION_BPM) * BEATS_PER_STITCH_SEGMENT;
+  var currentSeconds = getAnimationSecondsPerSegment();
+  var scale = currentSeconds / Math.max(0.001, defaultSeconds);
+
+  return {
+    scatter: base.scatter * scale,
+    reveal: base.reveal * scale,
+    travel: base.travel * scale,
+    snap: base.snap * scale,
+    fade: base.fade * scale
+  };
+}
+
+function getSquarusVisiblePieceCount(totalCount) {
+  return normalizeSquarusPieceCount(squarusPieceCount, totalCount, squarusOrder);
+}
+
 function buildSquarusAnimationState() {
-  var pieces = getSquarusPolyominoes(squarusOrder);
-  var targets = buildSquarusTargets(pieces, squarusLayout);
+  var allPieces = getSquarusPolyominoes(squarusOrder);
+  var allTargets = buildSquarusTargets(allPieces, squarusLayout);
+  var placedCount = getSquarusVisiblePieceCount(allPieces.length);
   var minDim = Math.min(view.size.width, view.size.height);
   var center = view.center;
   var items = [];
 
-  for (var i = 0; i < pieces.length; i++) {
+  for (var i = 0; i < allPieces.length; i++) {
     var seedAngle = i * (Math.PI * (3 - Math.sqrt(5)));
-    var scatterRadius = minDim * (0.52 + ((i % 5) * 0.035));
+    var desiredScatterRadius = minDim * (0.52 + ((i % 5) * 0.035));
+    var pieceRadius = getSquarusPieceRenderRadius(allPieces[i], allTargets[i].scale);
+    var orbitAllowance = (0.35 * allTargets[i].scale) + 2;
+    var edgeAllowance = pieceRadius + orbitAllowance + SQUARUS_SCATTER_EDGE_PADDING;
+    var maxRadius = getMaxRadiusAlongAngleFromCenter(seedAngle) - edgeAllowance;
+    var scatterRadius = Math.max(0, Math.min(desiredScatterRadius, maxRadius));
     items.push({
-      piece: pieces[i],
-      target: targets[i],
+      piece: allPieces[i],
+      target: allTargets[i],
       scatterX: center.x + Math.cos(seedAngle) * scatterRadius,
       scatterY: center.y + Math.sin(seedAngle) * scatterRadius,
       scatterRotation: seedAngle + (Math.PI * 0.5)
@@ -6148,60 +6308,76 @@ function buildSquarusAnimationState() {
   return {
     order: squarusOrder,
     layout: squarusLayout,
+    mode: squarusAnimationMode,
+    placedCount: placedCount,
     elapsed: 0,
-    durations: {
-      scatter: 0.7,
-      reveal: 0.8,
-      travel: 2.0,
-      snap: 0.5,
-      fade: 0.5
-    },
+    durations: getSquarusAnimationDurations(),
     items: items,
-    targets: targets
+    targets: allTargets
   };
 }
 
 function renderSquarusAnimationStateFrame(state) {
   if (!state) return;
-  var d = state.durations;
+  var d = getSquarusAnimationDurations();
+  state.durations = d;
   var t = state.elapsed;
-  var tScatterEnd = d.scatter;
-  var tRevealEnd = tScatterEnd + d.reveal;
-  var tTravelEnd = tRevealEnd + d.travel;
-  var tSnapEnd = tTravelEnd + d.snap;
-  var tEnd = tSnapEnd + d.fade;
+  var pieceMotionDuration = d.scatter + d.reveal + d.travel + d.snap;
+  var isSequential = state.mode === 'sequential';
+  var timelineCoreEnd = state.placedCount > 0
+    ? (isSequential ? (pieceMotionDuration * state.placedCount) : pieceMotionDuration)
+    : 0;
+  var tEnd = timelineCoreEnd + d.fade;
 
   project.activeLayer.removeChildren();
 
   var guideOpacity = 0;
-  if (t >= tScatterEnd && t < tRevealEnd) {
-    guideOpacity = (t - tScatterEnd) / d.reveal;
-  } else if (t >= tRevealEnd && t < tSnapEnd) {
+  if (t >= d.scatter && t < (d.scatter + d.reveal)) {
+    guideOpacity = (t - d.scatter) / d.reveal;
+  } else if (t >= (d.scatter + d.reveal) && t < timelineCoreEnd) {
     guideOpacity = 1;
-  } else if (t >= tSnapEnd) {
-    guideOpacity = 1 - clamp01((t - tSnapEnd) / d.fade);
+  } else if (t >= timelineCoreEnd) {
+    guideOpacity = 1 - clamp01((t - timelineCoreEnd) / d.fade);
   }
-  drawSquarusGuide(state.layout, state.targets, guideOpacity);
+  drawSquarusGuide(state.layout, state.targets.slice(0, state.placedCount), guideOpacity);
 
   for (var i = 0; i < state.items.length; i++) {
     var item = state.items[i];
+    var isPlacedPiece = i < state.placedCount;
+    var localT = isSequential ? (t - (i * pieceMotionDuration)) : t;
     var x = item.scatterX;
     var y = item.scatterY;
     var rotation = item.scatterRotation;
     var scale = item.target.scale;
     var opacity = 0.94;
 
-    if (t < tScatterEnd) {
-      var scatterP = clamp01(t / d.scatter);
+    if (!isPlacedPiece) {
+      if (t < d.scatter) {
+        var unplacedScatterP = clamp01(t / d.scatter);
+        var unplacedOrbit = 0.35 * (1 - unplacedScatterP);
+        x = item.scatterX + Math.cos(item.scatterRotation + t * 2.1) * unplacedOrbit * scale;
+        y = item.scatterY + Math.sin(item.scatterRotation + t * 2.1) * unplacedOrbit * scale;
+      }
+      drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
+      continue;
+    }
+
+    if (localT <= 0) {
+      drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
+      continue;
+    }
+
+    if (localT < d.scatter) {
+      var scatterP = clamp01(localT / d.scatter);
       var orbit = 0.35 * (1 - scatterP);
-      x = item.scatterX + Math.cos(item.scatterRotation + t * 2.1) * orbit * scale;
-      y = item.scatterY + Math.sin(item.scatterRotation + t * 2.1) * orbit * scale;
-    } else if (t < tTravelEnd) {
-      var travelP = easeInOutCubic(clamp01((t - tRevealEnd) / d.travel));
+      x = item.scatterX + Math.cos(item.scatterRotation + localT * 2.1) * orbit * scale;
+      y = item.scatterY + Math.sin(item.scatterRotation + localT * 2.1) * orbit * scale;
+    } else if (localT < (d.scatter + d.reveal + d.travel)) {
+      var travelP = easeInOutCubic(clamp01((localT - d.scatter - d.reveal) / d.travel));
       x = item.scatterX + (item.target.x - item.scatterX) * travelP;
       y = item.scatterY + (item.target.y - item.scatterY) * travelP;
       rotation = item.scatterRotation + (item.target.rotation - item.scatterRotation) * travelP;
-    } else if (t < tSnapEnd) {
+    } else if (localT < pieceMotionDuration) {
       x = item.target.x;
       y = item.target.y;
       rotation = item.target.rotation;
@@ -6215,37 +6391,24 @@ function renderSquarusAnimationStateFrame(state) {
   }
 
   if (t >= tEnd) {
-    drawSquarusGuide(state.layout, state.targets, 0);
+    drawSquarusGuide(state.layout, state.targets.slice(0, state.placedCount), 0);
   }
 }
 
 function drawSquarusStatic() {
-  var state = {
-    elapsed: 100,
-    durations: {
-      scatter: 0,
-      reveal: 0,
-      travel: 0,
-      snap: 0,
-      fade: 0
-    },
-    order: squarusOrder,
-    layout: squarusLayout,
-    items: [],
-    targets: []
-  };
-  var pieces = getSquarusPolyominoes(squarusOrder);
-  var targets = buildSquarusTargets(pieces, squarusLayout);
-  for (var i = 0; i < pieces.length; i++) {
-    state.items.push({
-      piece: pieces[i],
-      target: targets[i],
-      scatterX: targets[i].x,
-      scatterY: targets[i].y,
-      scatterRotation: targets[i].rotation
-    });
+  var state = buildSquarusAnimationState();
+  if (!state) {
+    clearHighlightedHoleNumbers();
+    return;
   }
-  state.targets = targets;
+  var d = getSquarusAnimationDurations();
+  state.durations = d;
+  var pieceMotionDuration = d.scatter + d.reveal + d.travel + d.snap;
+  if (state.placedCount > 0) {
+    state.elapsed = (state.mode === 'sequential' ? (pieceMotionDuration * state.placedCount) : pieceMotionDuration) + d.fade + 0.01;
+  } else {
+    state.elapsed = d.scatter + 0.01;
+  }
   renderSquarusAnimationStateFrame(state);
   clearHighlightedHoleNumbers();
 }
@@ -6255,8 +6418,14 @@ function runSquarusAnimationFrame(event) {
   squarusAnimationState.elapsed += Math.min(event.delta || 0, 0.1);
   renderSquarusAnimationStateFrame(squarusAnimationState);
 
-  var d = squarusAnimationState.durations;
-  var total = d.scatter + d.reveal + d.travel + d.snap + d.fade;
+  var d = getSquarusAnimationDurations();
+  squarusAnimationState.durations = d;
+  var pieceMotionDuration = d.scatter + d.reveal + d.travel + d.snap;
+  var total = squarusAnimationState.placedCount > 0
+    ? ((squarusAnimationState.mode === 'sequential')
+      ? (pieceMotionDuration * squarusAnimationState.placedCount + d.fade)
+      : (pieceMotionDuration + d.fade))
+    : d.scatter;
   if (squarusAnimationState.elapsed < total) return;
 
   animationActive = false;
@@ -6280,7 +6449,7 @@ function animateSquarus() {
   animationState = null;
   triangulaAnimationState = null;
   squarusAnimationState = buildSquarusAnimationState();
-  if (!squarusAnimationState || !squarusAnimationState.items.length) {
+  if (!squarusAnimationState || !squarusAnimationState.items.length || squarusAnimationState.placedCount <= 0) {
     animationPlaybackState = 'idle';
     syncAnimateButtonLabel();
     scheduleUrlStateSync(false);
@@ -7841,6 +8010,7 @@ if (triangulaFractalModeSelect) {
 if (squarusOrderSelect) {
   squarusOrderSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderSelect.value, 1, 6, squarusOrder);
+    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, null, squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -7849,6 +8019,7 @@ if (squarusOrderSelect) {
 if (squarusOrderInlineSelect) {
   squarusOrderInlineSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderInlineSelect.value, 1, 6, squarusOrder);
+    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, null, squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -7867,6 +8038,27 @@ if (squarusLayoutInlineSelect) {
     squarusLayout = squarusLayoutInlineSelect.value || 'grid-packing';
     syncSquarusControls();
     redrawForPathChange();
+  });
+}
+
+if (squarusAnimationModeSelect) {
+  squarusAnimationModeSelect.addEventListener('change', () => {
+    squarusAnimationMode = sanitizeSquarusAnimationMode(squarusAnimationModeSelect.value, squarusAnimationMode);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusPieceCountSlider) {
+  squarusPieceCountSlider.addEventListener('input', () => {
+    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCountSlider.value, squarusPieceCount, squarusOrder);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+  squarusPieceCountSlider.addEventListener('change', () => {
+    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCountSlider.value, squarusPieceCount, squarusOrder);
+    syncSquarusControls();
+    settleSliderMotion(squarusPieceCountSlider);
   });
 }
 
