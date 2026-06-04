@@ -25,6 +25,14 @@
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'Pixelbasel';
+    src: url('assets/fonts/Pixelbasel/Pixelbasel.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  
   body {
     margin: 0;
     font-family: "Nunito", sans-serif;
@@ -1313,6 +1321,32 @@
     <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">3</span></div>
     <input id="triangula-target-count" type="range" min="1" max="729" value="3">
   </div>
+  <div class="slider-block" id="squarus-order-block" style="display:none;">
+    <div class="slider-label">⬛ Polyomino Order</div>
+    <select id="squarus-order-inline" class="curve-type-select">
+      <option value="1">Monominoes (1)</option>
+      <option value="2">Dominoes (2)</option>
+      <option value="3">Trominoes (3)</option>
+      <option value="4" selected>Tetrominoes (4)</option>
+      <option value="5">Pentominoes (5)</option>
+      <option value="6">Hexominoes (6)</option>
+    </select>
+  </div>
+  <div class="slider-block" id="squarus-layout-block" style="display:none;">
+    <div class="slider-label">🧭 Layout Formula</div>
+    <select id="squarus-layout-inline" class="curve-type-select">
+      <option value="grid-packing">Grid Packing</option>
+      <option value="row-major-striping">Row-Major Striping</option>
+      <option value="hilbert-curve">Hilbert Curve</option>
+      <option value="area-mosaic">Area-Proportional Mosaic</option>
+      <option value="symmetry-d4">Symmetry (D4)</option>
+      <option value="spiral-packing">Spiral Packing</option>
+      <option value="golden-phyllotaxis">Golden-Angle Phyllotaxis</option>
+      <option value="circle-packing">Circle Packing</option>
+      <option value="radial-tree">Radial Tree</option>
+      <option value="force-directed">Force-Directed</option>
+    </select>
+  </div>
 </div>
 
 <!-- ADVANCED PANEL -->
@@ -1365,6 +1399,30 @@
         <option value="locked">Locked frame</option>
       </select></div>
       <div class="advanced-global-help">Dynamic fit keeps future recursive steps visible while animating.</div>
+    </div>
+    <div class="advanced-subsection" id="squarus-advanced-subsection" style="display:none;">
+      <div class="advanced-global-title">Squarus Layout</div>
+      <div class="advanced-global-row">Order: <select id="squarus-order">
+        <option value="1">Monominoes (1)</option>
+        <option value="2">Dominoes (2)</option>
+        <option value="3">Trominoes (3)</option>
+        <option value="4" selected>Tetrominoes (4)</option>
+        <option value="5">Pentominoes (5)</option>
+        <option value="6">Hexominoes (6)</option>
+      </select></div>
+      <div class="advanced-global-row">Layout: <select id="squarus-layout">
+        <option value="grid-packing">Grid Packing</option>
+        <option value="row-major-striping">Row-Major Striping</option>
+        <option value="hilbert-curve">Hilbert Curve</option>
+        <option value="area-mosaic">Area-Proportional Mosaic</option>
+        <option value="symmetry-d4">Symmetry (D4)</option>
+        <option value="spiral-packing">Spiral Packing</option>
+        <option value="golden-phyllotaxis">Golden-Angle Phyllotaxis</option>
+        <option value="circle-packing">Circle Packing</option>
+        <option value="radial-tree">Radial Tree</option>
+        <option value="force-directed">Force-Directed</option>
+      </select></div>
+      <div class="advanced-global-help">Choose a polyomino order and deterministic arrangement formula.</div>
     </div>
   </div>
   <div class="advanced-section-title">Threads</div>
@@ -1458,6 +1516,13 @@ var triangulaTargetInc10Btn = document.getElementById('triangula-target-inc10');
 var triangulaFractalModeSelect = document.getElementById('triangula-fractal-mode');
 var triangulaFitModeSelect = document.getElementById('triangula-fit-mode');
 var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-subsection');
+var squarusOrderBlock = document.getElementById('squarus-order-block');
+var squarusLayoutBlock = document.getElementById('squarus-layout-block');
+var squarusOrderInlineSelect = document.getElementById('squarus-order-inline');
+var squarusLayoutInlineSelect = document.getElementById('squarus-layout-inline');
+var squarusAdvancedSubsection = document.getElementById('squarus-advanced-subsection');
+var squarusOrderSelect = document.getElementById('squarus-order');
+var squarusLayoutSelect = document.getElementById('squarus-layout');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
 var removeLastThreadBtn = document.getElementById('remove-last-thread');
 var addThreadBtn = document.getElementById('add-thread');
@@ -1525,6 +1590,7 @@ var selectedThreadIndex = 0;
 var points = [];
 var animationActive = false;
 var animationState = null;
+var squarusAnimationState = null;
 var animationPlaybackState = 'idle';
 var canvasResizeObserver = null;
 var showHoleNumbers = true;
@@ -1705,7 +1771,7 @@ var EXPERIENCE_LIBRARY = {
   squarus: {
     id: 'squarus',
     title: 'Squarus',
-    titleFontFamily: 'Nunito',
+    titleFontFamily: 'Pixelbasel',
     titleSvgPath: '',
     strokeColor: '#5a4bb2',
     infoTitle: 'About Squarus',
@@ -1724,14 +1790,17 @@ var EXPERIENCE_LIBRARY = {
         stitchBy: false,
         add: false,
         multiply: false,
-        width: false
+        width: false,
+        squarusOrder: true,
+        squarusLayout: true
       },
       advancedControls: {
         shape: true,
         border: false,
         holeNumbers: false,
         holesNumber: false,
-        threads: false
+        threads: false,
+        squarusControls: true
       }
     }
   },
@@ -1778,6 +1847,10 @@ var triangulaTargetCount = 3;
 var triangulaFractalMode = 'series';
 var triangulaFitMode = 'locked';
 var triangulaAnimationState = null;
+var squarusOrder = 4;
+var squarusLayout = 'grid-packing';
+var squarusPolyominoCache = Object.create(null);
+var squarusDiscoveredLayouts = Object.create(null);
 var triangulaBandColors = {
   band1: '#1982c4',
   band2: '#6a4c93',
@@ -2451,6 +2524,8 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(triangulaModeBlock, controls.triangulaConstructionMode === true, '');
   setElementDisplay(triangulaStartBlock, controls.triangulaStartCount === true, '');
   setElementDisplay(triangulaTargetBlock, controls.triangulaTargetCount === true, '');
+  setElementDisplay(squarusOrderBlock, controls.squarusOrder === true && currentExperienceId === 'squarus', '');
+  setElementDisplay(squarusLayoutBlock, controls.squarusLayout === true && currentExperienceId === 'squarus', '');
 }
 
 function applyAdvancedControlPolicy(profile) {
@@ -2474,6 +2549,7 @@ function applyAdvancedControlPolicy(profile) {
     setElementDisplay(threadControlsContainer, false, '');
   }
   setElementDisplay(triangulaAdvancedSubsection, controls.triangulaAnimationFitMode === true, '');
+  setElementDisplay(squarusAdvancedSubsection, controls.squarusControls === true, '');
 }
 
 function syncDiscoveryReturnRowVisibility() {
@@ -2509,7 +2585,23 @@ function applyExperienceUiPolicy() {
   if (triangulaConstructionModeSelect) {
     triangulaConstructionModeSelect.value = triangulaConstructionMode;
   }
+  syncSquarusControls();
   syncTriangulaControls();
+}
+
+function syncSquarusControls() {
+  if (squarusOrderInlineSelect) {
+    squarusOrderInlineSelect.value = String(squarusOrder);
+  }
+  if (squarusLayoutInlineSelect) {
+    squarusLayoutInlineSelect.value = squarusLayout;
+  }
+  if (squarusOrderSelect) {
+    squarusOrderSelect.value = String(squarusOrder);
+  }
+  if (squarusLayoutSelect) {
+    squarusLayoutSelect.value = squarusLayout;
+  }
 }
 
 function syncTriangulaControls() {
@@ -4213,11 +4305,12 @@ function applyDefaultTempo() {
 }
 
 function stopAnimationIfActive() {
-  if (!animationActive && !animationState && !triangulaAnimationState) return;
+  if (!animationActive && !animationState && !triangulaAnimationState && !squarusAnimationState) return;
   animationActive = false;
   view.onFrame = null;
   animationState = null;
   triangulaAnimationState = null;
+  squarusAnimationState = null;
   animationPlaybackState = 'idle';
   syncAnimateButtonLabel();
   clearHighlightedHoleNumbers();
@@ -4226,7 +4319,7 @@ function stopAnimationIfActive() {
 }
 
 function pauseAnimationIfActive() {
-  if (!animationActive || (!animationState && !triangulaAnimationState)) return;
+  if (!animationActive || (!animationState && !triangulaAnimationState && !squarusAnimationState)) return;
   animationActive = false;
   view.onFrame = null;
   animationPlaybackState = 'paused';
@@ -4398,6 +4491,13 @@ function renderAnimationFrame() {
 
 function redrawAnimationInPlace() {
   // Style-only updates should preserve current animation progress.
+  if (squarusAnimationState) {
+    renderSquarusAnimationStateFrame(squarusAnimationState);
+    scheduleDiscoveryEvaluation();
+    scheduleUrlStateSync(false);
+    return;
+  }
+
   if (triangulaAnimationState) {
     renderTriangulaAnimationStateFrame(triangulaAnimationState);
     scheduleDiscoveryEvaluation();
@@ -5502,6 +5602,701 @@ function drawTriangulaStatic() {
   clearHighlightedHoleNumbers();
 }
 
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function easeInOutCubic(value) {
+  var t = clamp01(value);
+  if (t < 0.5) return 4 * t * t * t;
+  var f = -2 * t + 2;
+  return 1 - (f * f * f) / 2;
+}
+
+function easeOutBack(value) {
+  var t = clamp01(value);
+  var c1 = 1.70158;
+  var c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function squarusCellKey(x, y) {
+  return String(x) + ',' + String(y);
+}
+
+function squarusNormalizeCells(cells) {
+  var minX = Infinity;
+  var minY = Infinity;
+  for (var i = 0; i < cells.length; i++) {
+    minX = Math.min(minX, cells[i][0]);
+    minY = Math.min(minY, cells[i][1]);
+  }
+  var normalized = [];
+  for (var j = 0; j < cells.length; j++) {
+    normalized.push([cells[j][0] - minX, cells[j][1] - minY]);
+  }
+  normalized.sort(function(a, b) {
+    if (a[1] === b[1]) return a[0] - b[0];
+    return a[1] - b[1];
+  });
+  return normalized;
+}
+
+function squarusCellsSignature(cells) {
+  var parts = [];
+  for (var i = 0; i < cells.length; i++) {
+    parts.push(String(cells[i][0]) + ',' + String(cells[i][1]));
+  }
+  return parts.join(';');
+}
+
+function squarusTransformCells(cells, transformIndex) {
+  var transformed = [];
+  for (var i = 0; i < cells.length; i++) {
+    var x = cells[i][0];
+    var y = cells[i][1];
+    var tx = x;
+    var ty = y;
+    if (transformIndex === 0) { tx = x; ty = y; }
+    if (transformIndex === 1) { tx = -y; ty = x; }
+    if (transformIndex === 2) { tx = -x; ty = -y; }
+    if (transformIndex === 3) { tx = y; ty = -x; }
+    if (transformIndex === 4) { tx = -x; ty = y; }
+    if (transformIndex === 5) { tx = y; ty = x; }
+    if (transformIndex === 6) { tx = x; ty = -y; }
+    if (transformIndex === 7) { tx = -y; ty = -x; }
+    transformed.push([tx, ty]);
+  }
+  return squarusNormalizeCells(transformed);
+}
+
+function squarusCanonicalizeCells(cells) {
+  var bestSig = null;
+  var bestCells = null;
+  for (var i = 0; i < 8; i++) {
+    var transformed = squarusTransformCells(cells, i);
+    var sig = squarusCellsSignature(transformed);
+    if (bestSig === null || sig < bestSig) {
+      bestSig = sig;
+      bestCells = transformed;
+    }
+  }
+  return { signature: bestSig, cells: bestCells };
+}
+
+function squarusHasHole(cells) {
+  var occupied = Object.create(null);
+  var minX = Infinity;
+  var minY = Infinity;
+  var maxX = -Infinity;
+  var maxY = -Infinity;
+
+  for (var i = 0; i < cells.length; i++) {
+    var x = cells[i][0];
+    var y = cells[i][1];
+    occupied[squarusCellKey(x, y)] = true;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  }
+
+  var startX = minX - 1;
+  var startY = minY - 1;
+  var endX = maxX + 1;
+  var endY = maxY + 1;
+  var queue = [[startX, startY]];
+  var seen = Object.create(null);
+  seen[squarusCellKey(startX, startY)] = true;
+  var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+  while (queue.length) {
+    var point = queue.shift();
+    for (var d = 0; d < dirs.length; d++) {
+      var nx = point[0] + dirs[d][0];
+      var ny = point[1] + dirs[d][1];
+      if (nx < startX || nx > endX || ny < startY || ny > endY) continue;
+      var key = squarusCellKey(nx, ny);
+      if (seen[key] || occupied[key]) continue;
+      seen[key] = true;
+      queue.push([nx, ny]);
+    }
+  }
+
+  for (var y = minY; y <= maxY; y++) {
+    for (var x = minX; x <= maxX; x++) {
+      var k = squarusCellKey(x, y);
+      if (!occupied[k] && !seen[k]) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function squarusComputePieceMeta(cells, signature) {
+  var minX = Infinity;
+  var minY = Infinity;
+  var maxX = -Infinity;
+  var maxY = -Infinity;
+  var cx = 0;
+  var cy = 0;
+  var occupied = Object.create(null);
+
+  for (var i = 0; i < cells.length; i++) {
+    var x = cells[i][0];
+    var y = cells[i][1];
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+    cx += x + 0.5;
+    cy += y + 0.5;
+    occupied[squarusCellKey(x, y)] = true;
+  }
+
+  var perimeter = 0;
+  var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (var j = 0; j < cells.length; j++) {
+    for (var d = 0; d < dirs.length; d++) {
+      var nx = cells[j][0] + dirs[d][0];
+      var ny = cells[j][1] + dirs[d][1];
+      if (!occupied[squarusCellKey(nx, ny)]) {
+        perimeter += 1;
+      }
+    }
+  }
+
+  return {
+    signature: signature,
+    cells: cells,
+    area: cells.length,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+    bboxArea: (maxX - minX + 1) * (maxY - minY + 1),
+    perimeter: perimeter,
+    centroidX: cx / cells.length,
+    centroidY: cy / cells.length,
+    longAxis: (maxX - minX + 1) >= (maxY - minY + 1) ? 0 : (Math.PI / 2)
+  };
+}
+
+function getSquarusPolyominoes(order) {
+  var safeOrder = parseBoundedInt(order, 1, 6, 4);
+  if (squarusPolyominoCache[safeOrder]) {
+    return squarusPolyominoCache[safeOrder];
+  }
+
+  squarusPolyominoCache[1] = [squarusComputePieceMeta([[0, 0]], '0,0')];
+
+  for (var n = 2; n <= safeOrder; n++) {
+    if (squarusPolyominoCache[n]) continue;
+    var map = Object.create(null);
+    var prev = squarusPolyominoCache[n - 1] || [];
+    for (var i = 0; i < prev.length; i++) {
+      var piece = prev[i];
+      var occupied = Object.create(null);
+      for (var c = 0; c < piece.cells.length; c++) {
+        occupied[squarusCellKey(piece.cells[c][0], piece.cells[c][1])] = true;
+      }
+
+      for (var j = 0; j < piece.cells.length; j++) {
+        var x = piece.cells[j][0];
+        var y = piece.cells[j][1];
+        var neighbors = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+        for (var k = 0; k < neighbors.length; k++) {
+          var nx = neighbors[k][0];
+          var ny = neighbors[k][1];
+          if (occupied[squarusCellKey(nx, ny)]) continue;
+          var candidate = piece.cells.slice();
+          candidate.push([nx, ny]);
+          if (squarusHasHole(candidate)) continue;
+          var canonical = squarusCanonicalizeCells(candidate);
+          if (!map[canonical.signature]) {
+            map[canonical.signature] = squarusComputePieceMeta(canonical.cells, canonical.signature);
+          }
+        }
+      }
+    }
+
+    var list = Object.keys(map).map(function(sig) { return map[sig]; });
+    list.sort(function(a, b) {
+      if (a.perimeter === b.perimeter) {
+        return a.signature < b.signature ? -1 : 1;
+      }
+      return a.perimeter - b.perimeter;
+    });
+    squarusPolyominoCache[n] = list;
+  }
+
+  return squarusPolyominoCache[safeOrder] || [];
+}
+
+function squarusHilbertD2XY(side, index) {
+  var t = index;
+  var x = 0;
+  var y = 0;
+  for (var s = 1; s < side; s *= 2) {
+    var rx = 1 & Math.floor(t / 2);
+    var ry = 1 & (t ^ rx);
+    if (ry === 0) {
+      if (rx === 1) {
+        x = s - 1 - x;
+        y = s - 1 - y;
+      }
+      var temp = x;
+      x = y;
+      y = temp;
+    }
+    x += s * rx;
+    y += s * ry;
+    t = Math.floor(t / 4);
+  }
+  return { x: x, y: y };
+}
+
+function getSquarusPieceColor(index, total) {
+  if (total <= 1) return '#5a4bb2';
+  return rainbowColor(index / Math.max(1, total - 1));
+}
+
+function buildSquarusTargets(pieces, layoutKey) {
+  var count = pieces.length;
+  var center = view.center;
+  var minDim = Math.min(view.size.width, view.size.height);
+  var points = [];
+  var rotations = [];
+  var scales = [];
+  var defaultScale = minDim / (Math.ceil(Math.sqrt(Math.max(1, count))) + 2.4);
+
+  function finalizeWithSpacing(spacing) {
+    var unit = Math.max(7, spacing * 0.62);
+    for (var i = 0; i < count; i++) {
+      scales[i] = unit;
+    }
+  }
+
+  if (layoutKey === 'grid-packing' || layoutKey === 'area-mosaic') {
+    var k = Math.ceil(Math.sqrt(Math.max(1, count)));
+    var spacing = minDim / (k + 2.5);
+    for (var gi = 0; gi < count; gi++) {
+      var row = Math.floor(gi / k);
+      var col = gi % k;
+      points.push({
+        x: center.x + (col - ((k - 1) / 2)) * spacing,
+        y: center.y + (row - ((k - 1) / 2)) * spacing
+      });
+    }
+    finalizeWithSpacing(spacing);
+  } else if (layoutKey === 'row-major-striping') {
+    var cols = Math.max(1, Math.round(Math.sqrt(count * 1.3)));
+    var spacingStrip = minDim / (cols + 2.6);
+    for (var si = 0; si < count; si++) {
+      var stripRow = Math.floor(si / cols);
+      var stripCol = si % cols;
+      points.push({
+        x: center.x + (stripCol - ((cols - 1) / 2)) * spacingStrip,
+        y: center.y + (stripRow - ((Math.ceil(count / cols) - 1) / 2)) * spacingStrip
+      });
+    }
+    finalizeWithSpacing(spacingStrip);
+  } else if (layoutKey === 'hilbert-curve') {
+    var side = 1;
+    while (side * side < count) side *= 2;
+    var spacingHilbert = minDim / (side + 2.5);
+    for (var hi = 0; hi < count; hi++) {
+      var hp = squarusHilbertD2XY(side, hi);
+      points.push({
+        x: center.x + (hp.x - ((side - 1) / 2)) * spacingHilbert,
+        y: center.y + (hp.y - ((side - 1) / 2)) * spacingHilbert
+      });
+    }
+    for (var hr = 0; hr < count; hr++) {
+      var prev = points[Math.max(0, hr - 1)];
+      var next = points[Math.min(count - 1, hr + 1)];
+      rotations[hr] = Math.atan2(next.y - prev.y, next.x - prev.x);
+    }
+    finalizeWithSpacing(spacingHilbert);
+  } else if (layoutKey === 'symmetry-d4') {
+    var ringSpacing = minDim * 0.12;
+    for (var di = 0; di < count; di++) {
+      var ring = Math.floor(di / 8);
+      var slot = di % 8;
+      var radius = ringSpacing * (ring + 1);
+      var angle = (Math.PI / 4) * slot;
+      points.push({
+        x: center.x + Math.cos(angle) * radius,
+        y: center.y + Math.sin(angle) * radius
+      });
+      rotations[di] = (slot % 4) * (Math.PI / 2);
+    }
+    finalizeWithSpacing(ringSpacing * 0.9);
+  } else if (layoutKey === 'spiral-packing') {
+    var spiralStep = minDim * 0.05;
+    for (var sp = 0; sp < count; sp++) {
+      var theta = sp * 0.68;
+      var radiusSpiral = spiralStep * Math.sqrt(sp + 1);
+      points.push({
+        x: center.x + Math.cos(theta) * radiusSpiral,
+        y: center.y + Math.sin(theta) * radiusSpiral
+      });
+      rotations[sp] = theta + (Math.PI / 2);
+    }
+    finalizeWithSpacing(spiralStep * 2.1);
+  } else if (layoutKey === 'golden-phyllotaxis') {
+    var golden = Math.PI * (3 - Math.sqrt(5));
+    var radialStep = minDim * 0.058;
+    for (var gp = 0; gp < count; gp++) {
+      var angle = gp * golden;
+      var radius = radialStep * Math.sqrt(gp + 1);
+      points.push({
+        x: center.x + Math.cos(angle) * radius,
+        y: center.y + Math.sin(angle) * radius
+      });
+      rotations[gp] = angle + (Math.PI / 2);
+    }
+    finalizeWithSpacing(radialStep * 2.1);
+  } else if (layoutKey === 'circle-packing') {
+    var packed = [];
+    for (var cp = 0; cp < count; cp++) {
+      var rad = 0.7 + (Math.sqrt(pieces[cp].width * pieces[cp].width + pieces[cp].height * pieces[cp].height) * 0.28);
+      var best = null;
+      for (var ringTry = 0; ringTry < 28 && !best; ringTry++) {
+        var ringRadius = ringTry * 0.95;
+        for (var a = 0; a < 36; a++) {
+          var ang = (Math.PI * 2 * a) / 36;
+          var px = Math.cos(ang) * ringRadius;
+          var py = Math.sin(ang) * ringRadius;
+          var ok = true;
+          for (var o = 0; o < packed.length; o++) {
+            var dx = px - packed[o].x;
+            var dy = py - packed[o].y;
+            var minDist = rad + packed[o].r + 0.25;
+            if ((dx * dx + dy * dy) < (minDist * minDist)) {
+              ok = false;
+              break;
+            }
+          }
+          if (ok) {
+            best = { x: px, y: py, r: rad, angle: ang };
+            break;
+          }
+        }
+      }
+      if (!best) best = { x: cp * 0.8, y: 0, r: rad, angle: 0 };
+      packed.push(best);
+      points.push({ x: center.x + best.x * defaultScale * 0.9, y: center.y + best.y * defaultScale * 0.9 });
+    }
+    for (var cr = 0; cr < count; cr++) {
+      rotations[cr] = 0;
+      scales[cr] = Math.max(7, defaultScale * 0.58);
+    }
+  } else if (layoutKey === 'radial-tree') {
+    var clusters = Object.create(null);
+    for (var rt = 0; rt < count; rt++) {
+      var clusterKey = String(pieces[rt].width) + 'x' + String(pieces[rt].height);
+      if (!clusters[clusterKey]) clusters[clusterKey] = [];
+      clusters[clusterKey].push(rt);
+    }
+    var keys = Object.keys(clusters).sort();
+    var clusterRadius = minDim * 0.16;
+    for (var ck = 0; ck < keys.length; ck++) {
+      var indices = clusters[keys[ck]];
+      var baseAngle = (Math.PI * 2 * ck) / keys.length;
+      var cx = center.x + Math.cos(baseAngle) * clusterRadius;
+      var cy = center.y + Math.sin(baseAngle) * clusterRadius;
+      for (var ci = 0; ci < indices.length; ci++) {
+        var leafAngle = baseAngle + ((ci - ((indices.length - 1) / 2)) * 0.38);
+        var leafRadius = minDim * 0.06 * (1 + Math.floor(ci / 4));
+        points[indices[ci]] = {
+          x: cx + Math.cos(leafAngle) * leafRadius,
+          y: cy + Math.sin(leafAngle) * leafRadius
+        };
+        rotations[indices[ci]] = leafAngle;
+      }
+    }
+    finalizeWithSpacing(minDim * 0.09);
+  } else {
+    var forcePoints = [];
+    for (var f = 0; f < count; f++) {
+      var ang0 = (Math.PI * 2 * f) / Math.max(1, count);
+      forcePoints.push({ x: Math.cos(ang0), y: Math.sin(ang0), vx: 0, vy: 0 });
+    }
+    for (var iter = 0; iter < 110; iter++) {
+      for (var a1 = 0; a1 < count; a1++) {
+        var fx = -forcePoints[a1].x * 0.02;
+        var fy = -forcePoints[a1].y * 0.02;
+        for (var b1 = 0; b1 < count; b1++) {
+          if (a1 === b1) continue;
+          var dx1 = forcePoints[a1].x - forcePoints[b1].x;
+          var dy1 = forcePoints[a1].y - forcePoints[b1].y;
+          var dist2 = Math.max(0.0025, dx1 * dx1 + dy1 * dy1);
+          var rep = 0.004 / dist2;
+          fx += (dx1 / Math.sqrt(dist2)) * rep;
+          fy += (dy1 / Math.sqrt(dist2)) * rep;
+        }
+        forcePoints[a1].vx = (forcePoints[a1].vx + fx) * 0.92;
+        forcePoints[a1].vy = (forcePoints[a1].vy + fy) * 0.92;
+      }
+      for (var u = 0; u < count; u++) {
+        forcePoints[u].x += forcePoints[u].vx;
+        forcePoints[u].y += forcePoints[u].vy;
+      }
+    }
+    var maxAbs = 0.001;
+    for (var fm = 0; fm < count; fm++) {
+      maxAbs = Math.max(maxAbs, Math.abs(forcePoints[fm].x), Math.abs(forcePoints[fm].y));
+    }
+    var forceScale = (minDim * 0.36) / maxAbs;
+    for (var fi = 0; fi < count; fi++) {
+      points.push({
+        x: center.x + forcePoints[fi].x * forceScale,
+        y: center.y + forcePoints[fi].y * forceScale
+      });
+      rotations[fi] = 0;
+      scales[fi] = Math.max(7, defaultScale * 0.58);
+    }
+  }
+
+  var targets = [];
+  for (var t = 0; t < count; t++) {
+    targets.push({
+      x: points[t].x,
+      y: points[t].y,
+      rotation: isFinite(rotations[t]) ? rotations[t] : pieces[t].longAxis,
+      scale: Math.max(7, scales[t] || (defaultScale * 0.58)),
+      color: getSquarusPieceColor(t, count)
+    });
+  }
+
+  return targets;
+}
+
+function drawSquarusGuide(layoutKey, targets, opacity) {
+  var o = clamp01(opacity);
+  if (o <= 0 || !targets || !targets.length) return;
+
+  if (layoutKey === 'grid-packing' || layoutKey === 'row-major-striping' || layoutKey === 'hilbert-curve' || layoutKey === 'area-mosaic') {
+    for (var i = 1; i < targets.length; i++) {
+      var path = new Path();
+      path.strokeColor = toRgbaColor('#8ea4b0', 0.12 * o);
+      path.strokeWidth = 1;
+      path.add(new Point(targets[i - 1].x, targets[i - 1].y));
+      path.add(new Point(targets[i].x, targets[i].y));
+    }
+    return;
+  }
+
+  var center = view.center;
+  for (var j = 0; j < targets.length; j++) {
+    var spoke = new Path();
+    spoke.strokeColor = toRgbaColor('#8ea4b0', 0.12 * o);
+    spoke.strokeWidth = 1;
+    spoke.add(center);
+    spoke.add(new Point(targets[j].x, targets[j].y));
+  }
+}
+
+function drawSquarusPiece(piece, x, y, scale, rotation, color, opacity) {
+  var cosR = Math.cos(rotation);
+  var sinR = Math.sin(rotation);
+  for (var i = 0; i < piece.cells.length; i++) {
+    var centerLocalX = (piece.cells[i][0] + 0.5 - piece.centroidX) * scale;
+    var centerLocalY = (piece.cells[i][1] + 0.5 - piece.centroidY) * scale;
+    var half = scale / 2;
+    var corners = [
+      { x: centerLocalX - half, y: centerLocalY - half },
+      { x: centerLocalX + half, y: centerLocalY - half },
+      { x: centerLocalX + half, y: centerLocalY + half },
+      { x: centerLocalX - half, y: centerLocalY + half }
+    ];
+
+    var rect = new Path();
+    rect.closed = true;
+    for (var c = 0; c < corners.length; c++) {
+      var rx = x + (corners[c].x * cosR - corners[c].y * sinR);
+      var ry = y + (corners[c].x * sinR + corners[c].y * cosR);
+      rect.add(new Point(rx, ry));
+    }
+
+    rect.fillColor = color;
+    rect.strokeColor = '#2f4368';
+    rect.strokeWidth = Math.max(0.9, scale * 0.06);
+    rect.opacity = opacity;
+  }
+}
+
+function buildSquarusAnimationState() {
+  var pieces = getSquarusPolyominoes(squarusOrder);
+  var targets = buildSquarusTargets(pieces, squarusLayout);
+  var minDim = Math.min(view.size.width, view.size.height);
+  var center = view.center;
+  var items = [];
+
+  for (var i = 0; i < pieces.length; i++) {
+    var seedAngle = i * (Math.PI * (3 - Math.sqrt(5)));
+    var scatterRadius = minDim * (0.52 + ((i % 5) * 0.035));
+    items.push({
+      piece: pieces[i],
+      target: targets[i],
+      scatterX: center.x + Math.cos(seedAngle) * scatterRadius,
+      scatterY: center.y + Math.sin(seedAngle) * scatterRadius,
+      scatterRotation: seedAngle + (Math.PI * 0.5)
+    });
+  }
+
+  return {
+    order: squarusOrder,
+    layout: squarusLayout,
+    elapsed: 0,
+    durations: {
+      scatter: 0.7,
+      reveal: 0.8,
+      travel: 2.0,
+      snap: 0.5,
+      fade: 0.5
+    },
+    items: items,
+    targets: targets
+  };
+}
+
+function renderSquarusAnimationStateFrame(state) {
+  if (!state) return;
+  var d = state.durations;
+  var t = state.elapsed;
+  var tScatterEnd = d.scatter;
+  var tRevealEnd = tScatterEnd + d.reveal;
+  var tTravelEnd = tRevealEnd + d.travel;
+  var tSnapEnd = tTravelEnd + d.snap;
+  var tEnd = tSnapEnd + d.fade;
+
+  project.activeLayer.removeChildren();
+
+  var guideOpacity = 0;
+  if (t >= tScatterEnd && t < tRevealEnd) {
+    guideOpacity = (t - tScatterEnd) / d.reveal;
+  } else if (t >= tRevealEnd && t < tSnapEnd) {
+    guideOpacity = 1;
+  } else if (t >= tSnapEnd) {
+    guideOpacity = 1 - clamp01((t - tSnapEnd) / d.fade);
+  }
+  drawSquarusGuide(state.layout, state.targets, guideOpacity);
+
+  for (var i = 0; i < state.items.length; i++) {
+    var item = state.items[i];
+    var x = item.scatterX;
+    var y = item.scatterY;
+    var rotation = item.scatterRotation;
+    var scale = item.target.scale;
+    var opacity = 0.94;
+
+    if (t < tScatterEnd) {
+      var scatterP = clamp01(t / d.scatter);
+      var orbit = 0.35 * (1 - scatterP);
+      x = item.scatterX + Math.cos(item.scatterRotation + t * 2.1) * orbit * scale;
+      y = item.scatterY + Math.sin(item.scatterRotation + t * 2.1) * orbit * scale;
+    } else if (t < tTravelEnd) {
+      var travelP = easeInOutCubic(clamp01((t - tRevealEnd) / d.travel));
+      x = item.scatterX + (item.target.x - item.scatterX) * travelP;
+      y = item.scatterY + (item.target.y - item.scatterY) * travelP;
+      rotation = item.scatterRotation + (item.target.rotation - item.scatterRotation) * travelP;
+    } else if (t < tSnapEnd) {
+      x = item.target.x;
+      y = item.target.y;
+      rotation = item.target.rotation;
+    } else {
+      x = item.target.x;
+      y = item.target.y;
+      rotation = item.target.rotation;
+    }
+
+    drawSquarusPiece(item.piece, x, y, scale, rotation, item.target.color, opacity);
+  }
+
+  if (t >= tEnd) {
+    drawSquarusGuide(state.layout, state.targets, 0);
+  }
+}
+
+function drawSquarusStatic() {
+  var state = {
+    elapsed: 100,
+    durations: {
+      scatter: 0,
+      reveal: 0,
+      travel: 0,
+      snap: 0,
+      fade: 0
+    },
+    order: squarusOrder,
+    layout: squarusLayout,
+    items: [],
+    targets: []
+  };
+  var pieces = getSquarusPolyominoes(squarusOrder);
+  var targets = buildSquarusTargets(pieces, squarusLayout);
+  for (var i = 0; i < pieces.length; i++) {
+    state.items.push({
+      piece: pieces[i],
+      target: targets[i],
+      scatterX: targets[i].x,
+      scatterY: targets[i].y,
+      scatterRotation: targets[i].rotation
+    });
+  }
+  state.targets = targets;
+  renderSquarusAnimationStateFrame(state);
+  clearHighlightedHoleNumbers();
+}
+
+function runSquarusAnimationFrame(event) {
+  if (!animationActive || !squarusAnimationState) return;
+  squarusAnimationState.elapsed += Math.min(event.delta || 0, 0.1);
+  renderSquarusAnimationStateFrame(squarusAnimationState);
+
+  var d = squarusAnimationState.durations;
+  var total = d.scatter + d.reveal + d.travel + d.snap + d.fade;
+  if (squarusAnimationState.elapsed < total) return;
+
+  animationActive = false;
+  animationPlaybackState = 'idle';
+  view.onFrame = null;
+  var discoveryKey = String(squarusAnimationState.order) + '|' + String(squarusAnimationState.layout);
+  if (!squarusDiscoveredLayouts[discoveryKey]) {
+    squarusDiscoveredLayouts[discoveryKey] = true;
+    showDiscoveryToast('Squarus discovered! Order ' + String(squarusAnimationState.order) + ' in ' + String(squarusAnimationState.layout) + '.');
+  }
+  squarusAnimationState = null;
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
+  drawSquarusStatic();
+}
+
+function animateSquarus() {
+  animationActive = false;
+  view.onFrame = null;
+  animationState = null;
+  triangulaAnimationState = null;
+  squarusAnimationState = buildSquarusAnimationState();
+  if (!squarusAnimationState || !squarusAnimationState.items.length) {
+    animationPlaybackState = 'idle';
+    syncAnimateButtonLabel();
+    scheduleUrlStateSync(false);
+    drawSquarusStatic();
+    return;
+  }
+
+  animationActive = true;
+  animationPlaybackState = 'playing';
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
+  renderSquarusAnimationStateFrame(squarusAnimationState);
+  view.onFrame = runSquarusAnimationFrame;
+}
+
 function runTriangulaAnimationFrame(event) {
   if (!animationActive || !triangulaAnimationState) return;
   var delta = Math.min(event.delta || 0, 0.1);
@@ -6226,6 +7021,11 @@ function drawStatic() {
     return;
   }
 
+  if (currentExperienceId === 'squarus') {
+    drawSquarusStatic();
+    return;
+  }
+
   project.activeLayer.removeChildren();
   computePoints();
 
@@ -6334,12 +7134,17 @@ function animateStitch() {
     animateTriangula();
     return;
   }
+  if (currentExperienceId === 'squarus') {
+    animateSquarus();
+    return;
+  }
 
   // Always treat this as a fresh run, even if a prior animation is active.
   animationActive = false;
   view.onFrame = null;
   animationState = null;
   triangulaAnimationState = null;
+  squarusAnimationState = null;
   clearHighlightedHoleNumbers();
 
   project.activeLayer.removeChildren();
@@ -6366,7 +7171,7 @@ function animateStitch() {
 
 function resumeAnimationIfPaused() {
   if (animationActive) return;
-  if (!animationState && !triangulaAnimationState) return;
+  if (!animationState && !triangulaAnimationState && !squarusAnimationState) return;
   animationActive = true;
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
@@ -6374,6 +7179,10 @@ function resumeAnimationIfPaused() {
   scheduleUrlStateSync(false);
   if (triangulaAnimationState) {
     view.onFrame = runTriangulaAnimationFrame;
+    return;
+  }
+  if (squarusAnimationState) {
+    view.onFrame = runSquarusAnimationFrame;
     return;
   }
   startAnimationLoop();
@@ -7025,6 +7834,38 @@ if (triangulaFractalModeSelect) {
   triangulaFractalModeSelect.addEventListener('change', () => {
     triangulaFractalMode = triangulaFractalModeSelect.value === 'parallel' ? 'parallel' : 'series';
     syncTriangulaControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusOrderSelect) {
+  squarusOrderSelect.addEventListener('change', () => {
+    squarusOrder = parseBoundedInt(squarusOrderSelect.value, 1, 6, squarusOrder);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusOrderInlineSelect) {
+  squarusOrderInlineSelect.addEventListener('change', () => {
+    squarusOrder = parseBoundedInt(squarusOrderInlineSelect.value, 1, 6, squarusOrder);
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusLayoutSelect) {
+  squarusLayoutSelect.addEventListener('change', () => {
+    squarusLayout = squarusLayoutSelect.value || 'grid-packing';
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusLayoutInlineSelect) {
+  squarusLayoutInlineSelect.addEventListener('change', () => {
+    squarusLayout = squarusLayoutInlineSelect.value || 'grid-packing';
+    syncSquarusControls();
     redrawForPathChange();
   });
 }
