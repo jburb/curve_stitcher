@@ -1640,7 +1640,7 @@ var DEFAULT_TEMPO_OPTIONS = [84, 168, 252, 336, 420];
 var SONG_TEMPO_OPTIONS = {
   bach: DEFAULT_TEMPO_OPTIONS.slice(),
   triangle: [110, 220, 330, 440, 550],
-  square: [150, 300, 450, 600, 750],
+  square: [300, 450, 600, 750, 900],
   // Placeholder values until measured BPM-based sets are finalized.
   rosette: DEFAULT_TEMPO_OPTIONS.slice()
 };
@@ -6866,7 +6866,7 @@ function drawSquarusSharedEdges(sharedEdgeMap) {
 function getSquarusAnimationDurations() {
   var base = {
     scatter: 0.7,
-    reveal: 0.8,
+    reveal: 0.0,
     travel: 2.0,
     snap: 0.5,
     fade: 0.5
