@@ -1719,6 +1719,46 @@ var BORDER_INCLUDE_IN_SVG = true;
 var EXPERIENCE_OVERLAY_POSITION_CLASS = 'pos-top-center';
 
 var borderEnabled = true;
+var STITCHING_STATE_CACHE_KEY = 'stitchlab.stitchingState.v1';
+var TRIANGULA_STATE_CACHE_KEY = 'stitchlab.triangulaState.v1';
+var SQUARUS_STATE_CACHE_KEY = 'stitchlab.squarusState.v1';
+var stitchingStateCache = null;
+var stitchingStateCacheLoadedFromStorage = false;
+var stitchingStateSnapshotAvailable = false;
+var triangulaStateCache = null;
+var squarusStateCache = null;
+
+function getAppStateStorage() {
+  var memoryStore = Object.create(null);
+  return {
+    getItem: function(key) {
+      if (!key) return null;
+      try {
+        if (window.localStorage) {
+          return window.localStorage.getItem(key);
+        }
+      } catch (error) {
+        // Ignore storage access errors and fall back to in-memory cache.
+      }
+      return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
+    },
+    setItem: function(key, value) {
+      if (!key) return;
+      var normalized = String(value);
+      try {
+        if (window.localStorage) {
+          window.localStorage.setItem(key, normalized);
+          return;
+        }
+      } catch (error) {
+        // Ignore storage access errors and fall back to in-memory cache.
+      }
+      memoryStore[key] = normalized;
+    }
+  };
+}
+
+var appStateStorage = getAppStateStorage();
 
 var EXPERIENCE_LIBRARY = {
   stitching: {
@@ -1895,6 +1935,7 @@ var squarusEntryFadeStartMs = 0;
 var squarusEntryFadeActive = false;
 var squarusEntryFadeRafPending = false;
 var squarusPolyominoCache = Object.create(null);
+var stitchingFrameShape = 'circle';
 var triangulaBandColors = {
   band1: '#8ac926',
   band2: '#6a4c93',
@@ -1906,7 +1947,7 @@ var APP_STATE_URL_VERSION = '2';
 var URL_STATE_PARAM_KEYS = Object.freeze({
   version: 'version',
   experienceId: 'experience',
-  shape: 'shape',
+  stitchingShape: 'stitchingShape',
   bpm: 'bpm',
   musicMuted: 'musicMuted',
   songId: 'song',
@@ -2255,6 +2296,268 @@ function parseStitchingThreadState(value, fallbackList) {
   }
 }
 
+function buildStitchingStateSnapshotFromRuntime() {
+  var defaultThread = sanitizeThreadDescriptor({}, null);
+  var sourceThreads = (threads && threads.length) ? threads : [defaultThread];
+  var sanitizedThreads = sourceThreads.map(function(thread) {
+    return sanitizeThreadDescriptor(thread, defaultThread);
+  });
+  var maxIndex = Math.max(0, sanitizedThreads.length - 1);
+  var snapshotShape = sanitizeShape(stitchingFrameShape, 'circle');
+  return {
+    shape: snapshotShape,
+    holes: parseBoundedInt(holesSlider && holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES),
+    selectedThreadIndex: parseBoundedInt(selectedThreadIndex, 0, maxIndex, 0),
+    showHoleNumbers: !!showHoleNumbers,
+    borderEnabled: !!borderEnabled,
+    threadState: serializeStitchingThreadState(sanitizedThreads)
+  };
+}
+
+function normalizeStitchingStateSnapshot(raw, fallback) {
+  var base = fallback || buildStitchingStateSnapshotFromRuntime();
+  raw = raw || {};
+  var normalizedShape = sanitizeShape(raw.shape, base.shape);
+  var normalizedHoles = parseBoundedInt(raw.holes, 3, MAX_HOLES, base.holes);
+  var normalizedShowHoleNumbers = !!sanitizeBooleanParam(raw.showHoleNumbers, base.showHoleNumbers);
+  var normalizedBorderEnabled = !!sanitizeBooleanParam(raw.borderEnabled, base.borderEnabled);
+  var parsedThreads = parseStitchingThreadState(raw.threadState, parseStitchingThreadState(base.threadState, [sanitizeThreadDescriptor({}, null)]));
+  if (!parsedThreads.length) {
+    parsedThreads = [sanitizeThreadDescriptor({}, null)];
+  }
+  var normalizedSelectedThreadIndex = parseBoundedInt(raw.selectedThreadIndex, 0, parsedThreads.length - 1, base.selectedThreadIndex);
+  return {
+    shape: normalizedShape,
+    holes: normalizedHoles,
+    selectedThreadIndex: normalizedSelectedThreadIndex,
+    showHoleNumbers: normalizedShowHoleNumbers,
+    borderEnabled: normalizedBorderEnabled,
+    threadState: serializeStitchingThreadState(parsedThreads)
+  };
+}
+
+function persistStitchingStateCache(snapshot) {
+  var normalized = normalizeStitchingStateSnapshot(snapshot, buildStitchingStateSnapshotFromRuntime());
+  stitchingStateCache = normalized;
+  stitchingFrameShape = sanitizeShape(normalized.shape, stitchingFrameShape || 'circle');
+  stitchingStateSnapshotAvailable = true;
+  try {
+    appStateStorage.setItem(STITCHING_STATE_CACHE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    // Ignore persistence failures; in-memory state still works during session.
+  }
+}
+
+function hydrateStitchingStateCacheFromStorage() {
+  if (stitchingStateCache) return stitchingStateCache;
+  var fallback = buildStitchingStateSnapshotFromRuntime();
+  var raw = appStateStorage.getItem(STITCHING_STATE_CACHE_KEY);
+  if (!raw) {
+    stitchingStateCacheLoadedFromStorage = false;
+    stitchingStateSnapshotAvailable = false;
+    stitchingStateCache = fallback;
+    return stitchingStateCache;
+  }
+  try {
+    var parsed = JSON.parse(raw);
+    stitchingStateCache = normalizeStitchingStateSnapshot(parsed, fallback);
+    stitchingStateCacheLoadedFromStorage = true;
+    stitchingStateSnapshotAvailable = true;
+  } catch (error) {
+    stitchingStateCacheLoadedFromStorage = false;
+    stitchingStateSnapshotAvailable = false;
+    stitchingStateCache = fallback;
+  }
+  return stitchingStateCache;
+}
+
+function getPreferredStitchingShapeFromHydration(params, fallbackShape) {
+  var cacheShape = sanitizeShape(hydrateStitchingStateCacheFromStorage() && hydrateStitchingStateCacheFromStorage().shape, fallbackShape || 'circle');
+  if (stitchingStateSnapshotAvailable) {
+    return cacheShape;
+  }
+  return sanitizeShape(getUrlStateParam(params, 'stitchingShape'), cacheShape);
+}
+
+function syncStitchingStateCacheFromRuntime() {
+  if (currentExperienceId !== 'stitching') return;
+  persistStitchingStateCache(buildStitchingStateSnapshotFromRuntime());
+}
+
+function restoreStitchingStateFromCache() {
+  var snapshot = hydrateStitchingStateCacheFromStorage();
+  if (!snapshot) return false;
+  var normalized = normalizeStitchingStateSnapshot(snapshot, buildStitchingStateSnapshotFromRuntime());
+  var restoredThreads = parseStitchingThreadState(normalized.threadState, [sanitizeThreadDescriptor({}, null)]);
+  if (!restoredThreads.length) {
+    restoredThreads = [sanitizeThreadDescriptor({}, null)];
+  }
+
+  threads = restoredThreads.map(function(thread) {
+    return sanitizeThreadDescriptor(thread, thread);
+  });
+  selectedThreadIndex = parseBoundedInt(normalized.selectedThreadIndex, 0, threads.length - 1, 0);
+  showHoleNumbers = !!normalized.showHoleNumbers;
+  borderEnabled = !!normalized.borderEnabled;
+  holesSlider.value = String(parseBoundedInt(normalized.holes, 3, MAX_HOLES, DEFAULT_HOLES));
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = holesSlider.value;
+  }
+
+  stitchingFrameShape = sanitizeShape(normalized.shape, stitchingFrameShape || 'circle');
+  setCurrentShape(stitchingFrameShape, false);
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  updateKidControlValues();
+  syncHoleNumberToggles();
+  syncBorderControls();
+
+  persistStitchingStateCache(normalized);
+  return true;
+}
+
+function buildTriangulaStateSnapshotFromRuntime() {
+  return {
+    colorMode: sanitizeTriangulaColorMode(triangulaColorMode, 'band-1'),
+    constructionMode: sanitizeTriangulaConstructionMode(triangulaConstructionMode, 'shrink-duplicate'),
+    startCount: sanitizeTriangulaCount(triangulaStartCount, 1, 'start'),
+    targetCount: sanitizeTriangulaCount(triangulaTargetCount, 27, 'target'),
+    fractalMode: sanitizeTriangulaFractalMode(triangulaFractalMode, 'series'),
+    fitMode: sanitizeTriangulaFitMode(triangulaFitMode, 'locked'),
+    sourceColor: sanitizeThreadColor(triangulaSourceColor, '#8ac926'),
+    band1Color: sanitizeHexColor(triangulaBandColors.band1, '#8ac926'),
+    band2Color: sanitizeHexColor(triangulaBandColors.band2, '#6a4c93'),
+    band4Color: sanitizeHexColor(triangulaBandColors.band4, '#8ac926')
+  };
+}
+
+function persistTriangulaStateCache(snapshot) {
+  var normalized = snapshot || buildTriangulaStateSnapshotFromRuntime();
+  triangulaStateCache = normalized;
+  try {
+    appStateStorage.setItem(TRIANGULA_STATE_CACHE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    // Ignore persistence failures; runtime cache still works.
+  }
+}
+
+function hydrateTriangulaStateCacheFromStorage() {
+  if (triangulaStateCache) return triangulaStateCache;
+  var fallback = buildTriangulaStateSnapshotFromRuntime();
+  var raw = appStateStorage.getItem(TRIANGULA_STATE_CACHE_KEY);
+  if (!raw) {
+    triangulaStateCache = fallback;
+    return triangulaStateCache;
+  }
+  try {
+    var parsed = JSON.parse(raw);
+    triangulaStateCache = {
+      colorMode: sanitizeTriangulaColorMode(parsed.colorMode, fallback.colorMode),
+      constructionMode: sanitizeTriangulaConstructionMode(parsed.constructionMode, fallback.constructionMode),
+      startCount: sanitizeTriangulaCount(parsed.startCount, fallback.startCount, 'start'),
+      targetCount: sanitizeTriangulaCount(parsed.targetCount, fallback.targetCount, 'target'),
+      fractalMode: sanitizeTriangulaFractalMode(parsed.fractalMode, fallback.fractalMode),
+      fitMode: sanitizeTriangulaFitMode(parsed.fitMode, fallback.fitMode),
+      sourceColor: sanitizeThreadColor(parsed.sourceColor, fallback.sourceColor),
+      band1Color: sanitizeHexColor(parsed.band1Color, fallback.band1Color),
+      band2Color: sanitizeHexColor(parsed.band2Color, fallback.band2Color),
+      band4Color: sanitizeHexColor(parsed.band4Color, fallback.band4Color)
+    };
+  } catch (error) {
+    triangulaStateCache = fallback;
+  }
+  if (triangulaStateCache.targetCount < triangulaStateCache.startCount) {
+    triangulaStateCache.targetCount = triangulaStateCache.startCount;
+  }
+  return triangulaStateCache;
+}
+
+function restoreTriangulaStateFromCache() {
+  var cached = hydrateTriangulaStateCacheFromStorage();
+  if (!cached) return;
+  triangulaColorMode = cached.colorMode;
+  triangulaConstructionMode = cached.constructionMode;
+  triangulaStartCount = cached.startCount;
+  triangulaTargetCount = Math.max(cached.startCount, cached.targetCount);
+  triangulaFractalMode = cached.fractalMode;
+  triangulaFitMode = cached.fitMode;
+  triangulaSourceColor = cached.sourceColor;
+  triangulaBandColors.band1 = cached.band1Color;
+  triangulaBandColors.band2 = cached.band2Color;
+  triangulaBandColors.band4 = cached.band4Color;
+}
+
+function buildSquarusStateSnapshotFromRuntime() {
+  return {
+    order: parseBoundedInt(squarusOrder, 1, 6, 5),
+    layout: sanitizeSquarusLayout(squarusLayout, 'force-directed'),
+    animationMode: sanitizeSquarusAnimationMode(squarusAnimationMode, 'sequential'),
+    contactMode: sanitizeSquarusContactMode(squarusContactMode, 'formula-only'),
+    pieceCount: normalizeSquarusPieceCount(squarusPieceCount, getSquarusTotalPiecesForOrder(squarusOrder), squarusOrder),
+    sequenceSeed: normalizeSquarusSequenceSeed(squarusSequenceSeed, 1, squarusOrder)
+  };
+}
+
+function persistSquarusStateCache(snapshot) {
+  var normalized = snapshot || buildSquarusStateSnapshotFromRuntime();
+  squarusStateCache = normalized;
+  try {
+    appStateStorage.setItem(SQUARUS_STATE_CACHE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    // Ignore persistence failures; runtime cache still works.
+  }
+}
+
+function hydrateSquarusStateCacheFromStorage() {
+  if (squarusStateCache) return squarusStateCache;
+  var fallback = buildSquarusStateSnapshotFromRuntime();
+  var raw = appStateStorage.getItem(SQUARUS_STATE_CACHE_KEY);
+  if (!raw) {
+    squarusStateCache = fallback;
+    return squarusStateCache;
+  }
+  try {
+    var parsed = JSON.parse(raw);
+    var order = parseBoundedInt(parsed.order, 1, 6, fallback.order);
+    squarusStateCache = {
+      order: order,
+      layout: sanitizeSquarusLayout(parsed.layout, fallback.layout),
+      animationMode: sanitizeSquarusAnimationMode(parsed.animationMode, fallback.animationMode),
+      contactMode: sanitizeSquarusContactMode(parsed.contactMode, fallback.contactMode),
+      pieceCount: normalizeSquarusPieceCount(parsed.pieceCount, fallback.pieceCount, order),
+      sequenceSeed: normalizeSquarusSequenceSeed(parsed.sequenceSeed, fallback.sequenceSeed, order)
+    };
+  } catch (error) {
+    squarusStateCache = fallback;
+  }
+  return squarusStateCache;
+}
+
+function restoreSquarusStateFromCache() {
+  var cached = hydrateSquarusStateCacheFromStorage();
+  if (!cached) return;
+  squarusOrder = cached.order;
+  squarusLayout = cached.layout;
+  squarusAnimationMode = cached.animationMode;
+  squarusContactMode = cached.contactMode;
+  squarusPieceCount = cached.pieceCount;
+  squarusSequenceSeed = cached.sequenceSeed;
+}
+
+function syncCurrentExperienceStateCacheFromRuntime() {
+  if (currentExperienceId === 'stitching') {
+    syncStitchingStateCacheFromRuntime();
+    return;
+  }
+  if (currentExperienceId === 'triangula') {
+    persistTriangulaStateCache();
+    return;
+  }
+  if (currentExperienceId === 'squarus') {
+    persistSquarusStateCache();
+  }
+}
+
 function sanitizeHexColor(value, fallback) {
   if (typeof value !== 'string') return fallback;
   var trimmed = value.trim();
@@ -2266,7 +2569,10 @@ function sanitizeHexColor(value, fallback) {
 function syncAppStateFromRuntime() {
   appState.version = APP_STATE_URL_VERSION;
   appState.experienceId = currentExperienceId;
-  appState.common.shape = currentShape;
+  var cachedStitchingState = hydrateStitchingStateCacheFromStorage();
+  appState.common.shape = (currentExperienceId === 'stitching')
+    ? currentShape
+    : sanitizeShape(cachedStitchingState && cachedStitchingState.shape, appState.common.shape || 'circle');
   appState.common.bpm = currentAnimationBpm;
   appState.common.musicMuted = !!isMusicMuted;
   appState.common.songId = currentSongId;
@@ -2307,19 +2613,19 @@ function buildSearchParamsFromAppState() {
   var params = new URLSearchParams();
   setUrlStateParam(params, 'version', APP_STATE_URL_VERSION);
   setUrlStateParam(params, 'experienceId', appState.experienceId);
-  setUrlStateParam(params, 'shape', appState.common.shape);
+  if (appState.experienceId === 'stitching') {
+    setUrlStateParam(params, 'stitchingShowHoleNumbers', appState.stitching.showHoleNumbers ? '1' : '0');
+    setUrlStateParam(params, 'stitchingBorderEnabled', appState.stitching.borderEnabled ? '1' : '0');
+    setUrlStateParam(params, 'stitchingHoles', String(appState.stitching.holes));
+    setUrlStateParam(params, 'stitchingSelectedThreadIndex', String(appState.stitching.selectedThreadIndex));
+    setUrlStateParam(params, 'stitchingThreadState', appState.stitching.threadState);
+    if (appState.stitching.threadColors && appState.stitching.threadColors.length) {
+      setUrlStateParam(params, 'stitchingThreadColors', appState.stitching.threadColors.join(','));
+    }
+  }
   setUrlStateParam(params, 'bpm', String(appState.common.bpm));
   setUrlStateParam(params, 'musicMuted', appState.common.musicMuted ? '1' : '0');
   setUrlStateParam(params, 'songId', appState.common.songId);
-  setUrlStateParam(params, 'stitchingShowHoleNumbers', appState.stitching.showHoleNumbers ? '1' : '0');
-  setUrlStateParam(params, 'stitchingBorderEnabled', appState.stitching.borderEnabled ? '1' : '0');
-  setUrlStateParam(params, 'stitchingHoles', String(appState.stitching.holes));
-  setUrlStateParam(params, 'stitchingSelectedThreadIndex', String(appState.stitching.selectedThreadIndex));
-  setUrlStateParam(params, 'stitchingThreadState', appState.stitching.threadState);
-
-  if (appState.stitching.threadColors && appState.stitching.threadColors.length) {
-    setUrlStateParam(params, 'stitchingThreadColors', appState.stitching.threadColors.join(','));
-  }
 
   if (appState.experienceId === 'triangula') {
     setUrlStateParam(params, 'triangulaSourceColor', appState.triangula.sourceColor);
@@ -2355,6 +2661,7 @@ function flushUrlStateSync() {
 }
 
 function scheduleUrlStateSync(immediate) {
+  syncCurrentExperienceStateCacheFromRuntime();
   if (urlSyncSuspended) return;
   if (urlSyncTimer) {
     clearTimeout(urlSyncTimer);
@@ -2392,11 +2699,11 @@ function applyStateFromCurrentUrl(options) {
     }
 
     var profile = getExperienceUiProfile(currentExperienceId);
-    var shapeFromUrl = sanitizeShape(getUrlStateParam(params, 'shape'), currentShape);
-    if (profile && profile.fixedShape) {
-      shapeFromUrl = profile.fixedShape;
+    if (requestedExperience === 'stitching') {
+      setCurrentShape(sanitizeShape(stitchingFrameShape, currentShape), false);
+    } else if (profile && profile.fixedShape) {
+      setCurrentShape(profile.fixedShape, false);
     }
-    setCurrentShape(shapeFromUrl, false);
 
     var songIdFromUrl = sanitizeSongId(getUrlStateParam(params, 'songId'), currentSongId);
     if (canApplySongSelection(songIdFromUrl)) {
@@ -2409,45 +2716,45 @@ function applyStateFromCurrentUrl(options) {
     isMusicMuted = sanitizeBooleanParam(getUrlStateParam(params, 'musicMuted'), isMusicMuted);
     syncMusicToggleButton();
 
-    showHoleNumbers = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingShowHoleNumbers'), showHoleNumbers);
-    borderEnabled = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingBorderEnabled'), borderEnabled);
-    syncHoleNumberToggles();
-    syncBorderControls();
+    if (requestedExperience === 'stitching') {
+      showHoleNumbers = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingShowHoleNumbers'), showHoleNumbers);
+      borderEnabled = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingBorderEnabled'), borderEnabled);
+      syncHoleNumberToggles();
+      syncBorderControls();
 
-    var fallbackThreads = threads.map(function(thread) {
-      return sanitizeThreadDescriptor(thread, thread);
-    });
-    var requestedThreadState = parseStitchingThreadState(getUrlStateParam(params, 'stitchingThreadState'), fallbackThreads);
-
-    if (requestedThreadState.length) {
-      threads = requestedThreadState.map(function(thread) {
+      var fallbackThreads = threads.map(function(thread) {
         return sanitizeThreadDescriptor(thread, thread);
       });
+      var requestedThreadState = parseStitchingThreadState(getUrlStateParam(params, 'stitchingThreadState'), fallbackThreads);
+
+      if (requestedThreadState.length) {
+        threads = requestedThreadState.map(function(thread) {
+          return sanitizeThreadDescriptor(thread, thread);
+        });
+      }
+
+      var fallbackColors = threads.map(function(thread) {
+        return sanitizeThreadColor(thread.color, '#1982c4');
+      });
+      var requestedThreadColors = sanitizeThreadColorList(getUrlStateParam(params, 'stitchingThreadColors'), fallbackColors);
+      for (var i = 0; i < threads.length && i < requestedThreadColors.length; i++) {
+        threads[i].color = requestedThreadColors[i];
+      }
+
+      if (!threads.length) {
+        threads = [sanitizeThreadDescriptor({}, null)];
+      }
+
+      var holesFromUrl = parseBoundedInt(getUrlStateParam(params, 'stitchingHoles'), 3, MAX_HOLES, parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES));
+      holesSlider.value = String(holesFromUrl);
+      if (advancedHolesNumberInput) {
+        advancedHolesNumberInput.value = String(holesFromUrl);
+      }
+
+      selectedThreadIndex = parseBoundedInt(getUrlStateParam(params, 'stitchingSelectedThreadIndex'), 0, threads.length - 1, selectedThreadIndex);
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
     }
-
-    // Backward compatibility for older URLs that only carried color list.
-    var fallbackColors = threads.map(function(thread) {
-      return sanitizeThreadColor(thread.color, '#1982c4');
-    });
-    var requestedThreadColors = sanitizeThreadColorList(getUrlStateParam(params, 'stitchingThreadColors'), fallbackColors);
-    for (var i = 0; i < threads.length && i < requestedThreadColors.length; i++) {
-      threads[i].color = requestedThreadColors[i];
-    }
-
-    if (!threads.length) {
-      threads = [sanitizeThreadDescriptor({}, null)];
-    }
-
-    var holesFromUrl = parseBoundedInt(getUrlStateParam(params, 'stitchingHoles'), 3, MAX_HOLES, parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES));
-    holesSlider.value = String(holesFromUrl);
-    if (advancedHolesNumberInput) {
-      advancedHolesNumberInput.value = String(holesFromUrl);
-    }
-
-    selectedThreadIndex = parseBoundedInt(getUrlStateParam(params, 'stitchingSelectedThreadIndex'), 0, threads.length - 1, selectedThreadIndex);
-
-    renderThreadControls();
-    syncKidControlsFromSelectedThread();
 
     if (requestedExperience === 'triangula') {
       var sourceColor = sanitizeThreadColor(getUrlStateParam(params, 'triangulaSourceColor'), triangulaSourceColor || '#1982c4');
@@ -2473,7 +2780,7 @@ function applyStateFromCurrentUrl(options) {
       squarusLayout = sanitizeSquarusLayout(getUrlStateParam(params, 'squarusLayout'), squarusLayout);
       squarusAnimationMode = sanitizeSquarusAnimationMode(getUrlStateParam(params, 'squarusAnimationMode'), squarusAnimationMode);
       squarusContactMode = sanitizeSquarusContactMode(getUrlStateParam(params, 'squarusContactMode'), squarusContactMode);
-      squarusPieceCount = normalizeSquarusPieceCount(getUrlStateParam(params, 'squarusPieceCount'), null, squarusOrder);
+      squarusPieceCount = normalizeSquarusPieceCount(getUrlStateParam(params, 'squarusPieceCount'), squarusPieceCount, squarusOrder);
       squarusSequenceSeed = normalizeSquarusSequenceSeed(getUrlStateParam(params, 'squarusSequenceSeed'), squarusSequenceSeed, squarusOrder);
       syncSquarusControls();
     }
@@ -2633,13 +2940,21 @@ function applyThreadPolicy(profile) {
   var threadsEnabled = !profile || profile.threadsEnabled !== false;
   var allowMultipleThreads = !profile || profile.allowMultipleThreads !== false;
 
-  if (!threadsEnabled || !allowMultipleThreads) {
-    if (threads.length > 1) {
-      threads.splice(1);
-    }
-    if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
-      selectedThreadIndex = threads.length ? 0 : -1;
-    }
+  if (!threadsEnabled) {
+    setElementDisplay(addMagicThreadBtn, false, '');
+    setElementDisplay(removeLastThreadBtn, false, '');
+    setElementDisplay(kidThreadPicker, false, '');
+    setElementDisplay(addThreadBtn, false, '');
+    setElementDisplay(advancedThreadsTitle, false, '');
+    setElementDisplay(threadControlsContainer, false, '');
+    return;
+  }
+
+  if (!threads.length) {
+    threads = [sanitizeThreadDescriptor({}, null)];
+  }
+  if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
+    selectedThreadIndex = 0;
   }
 
   setElementDisplay(addMagicThreadBtn, threadsEnabled && allowMultipleThreads, '');
@@ -2730,7 +3045,14 @@ function applyExperienceUiPolicy() {
     paletteContainer.dataset.paletteMode = paletteMode;
     setElementDisplay(paletteContainer, paletteMode !== 'none', '');
   }
-  triangulaColorMode = (profile && profile.triangulaColorModes && profile.triangulaColorModes.length) ? profile.triangulaColorModes[0] : 'all';
+  if (currentExperienceId === 'triangula') {
+    var allowedTriangulaModes = (profile && profile.triangulaColorModes && profile.triangulaColorModes.length)
+      ? profile.triangulaColorModes
+      : ['band-1'];
+    if (allowedTriangulaModes.indexOf(triangulaColorMode) === -1) {
+      triangulaColorMode = allowedTriangulaModes[0];
+    }
+  }
   if (triangulaColorScopeSelect) {
     triangulaColorScopeSelect.value = triangulaColorMode;
   }
@@ -2785,6 +3107,10 @@ function syncSquarusControls() {
   if (squarusSequenceNumberInput) {
     squarusSequenceNumberInput.max = String(sequenceMaxIndex);
     squarusSequenceNumberInput.value = String(squarusSequenceSeed);
+  }
+
+  if (currentExperienceId === 'squarus') {
+    persistSquarusStateCache();
   }
 }
 
@@ -2965,11 +3291,19 @@ function setCurrentExperience(experienceId, options) {
   options = options || {};
   var experience = getExperienceById(experienceId);
   var previousExperienceId = currentExperienceId;
+
+  if (previousExperienceId === 'stitching') {
+    syncStitchingStateCacheFromRuntime();
+  } else if (previousExperienceId === 'triangula') {
+    persistTriangulaStateCache();
+  } else if (previousExperienceId === 'squarus') {
+    persistSquarusStateCache();
+  }
+
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
 
   if (currentExperienceId === 'squarus') {
-    squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
     if (previousExperienceId !== 'squarus') {
       squarusEntryFadeStartMs = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       squarusEntryFadeActive = true;
@@ -2982,7 +3316,18 @@ function setCurrentExperience(experienceId, options) {
     setCurrentSong(getDefaultSongIdForExperience(currentExperienceId));
   }
 
+  if (currentExperienceId === 'stitching') {
+    restoreStitchingStateFromCache();
+  } else if (currentExperienceId === 'triangula') {
+    restoreTriangulaStateFromCache();
+  } else if (currentExperienceId === 'squarus') {
+    restoreSquarusStateFromCache();
+  }
+
   applyExperienceUiPolicy();
+  if (currentExperienceId === 'stitching') {
+    setCurrentShape(sanitizeShape(stitchingFrameShape, 'circle'), false);
+  }
   // Re-apply mode-specific slider visibility after base UI policy toggles.
   syncKidControlsFromSelectedThread();
   applyCurrentExperienceInfo();
@@ -4289,26 +4634,32 @@ function applyExperiencePaletteColorChoice(colorValue) {
       triangulaBandColors.band1 = safeColor;
       triangulaBandColors.band2 = safeColor;
       triangulaBandColors.band4 = safeColor;
+      persistTriangulaStateCache();
       return;
     }
     if (triangulaColorMode === 'all') {
       triangulaBandColors.band1 = safeColor;
       triangulaBandColors.band2 = safeColor;
       triangulaBandColors.band4 = safeColor;
+      persistTriangulaStateCache();
       return;
     }
     if (triangulaColorMode === 'band-1') {
       triangulaBandColors.band1 = safeColor;
+      persistTriangulaStateCache();
       return;
     }
     if (triangulaColorMode === 'band-2') {
       triangulaBandColors.band2 = safeColor;
+      persistTriangulaStateCache();
       return;
     }
     if (triangulaColorMode === 'band-4') {
       triangulaBandColors.band4 = safeColor;
+      persistTriangulaStateCache();
       return;
     }
+    persistTriangulaStateCache();
     return;
   }
 
@@ -4329,6 +4680,9 @@ function syncHoleNumberToggles() {
 function setCurrentShape(shape, shouldDraw) {
   var nextShape = shape || 'circle';
   currentShape = nextShape;
+  if (currentExperienceId === 'stitching') {
+    stitchingFrameShape = sanitizeShape(nextShape, stitchingFrameShape || 'circle');
+  }
   document.querySelectorAll('.shape-btn').forEach((b) => b.classList.remove('active'));
   var activeShapeBtn = document.querySelector('.shape-btn[data-shape="' + nextShape + '"]');
   if (activeShapeBtn) {
@@ -4395,6 +4749,17 @@ function getKidTargetThreadIndex() {
 }
 
 function syncKidControlsFromSelectedThread() {
+  if (currentExperienceId !== 'stitching') {
+    setElementDisplay(addMagicThreadBtn, false, '');
+    setElementDisplay(removeLastThreadBtn, false, '');
+    setElementDisplay(kidThreadPicker, false, '');
+    setElementDisplay(addThreadBtn, false, '');
+    setElementDisplay(advancedThreadsTitle, false, '');
+    setElementDisplay(threadControlsContainer, false, '');
+    syncBasicMathSliderVisibility();
+    return;
+  }
+
   var index = getKidTargetThreadIndex();
   refreshKidThreadPicker();
   if (index < 0) return;
@@ -8763,6 +9128,7 @@ if (triangulaColorScopeSelect) {
         triangulaBandColors.band4 = activeColor;
       }
     }
+    persistTriangulaStateCache();
     syncTriangulaControls();
     redrawAnimationInPlace();
   });
@@ -8771,6 +9137,7 @@ if (triangulaColorScopeSelect) {
 if (triangulaConstructionModeSelect) {
   triangulaConstructionModeSelect.addEventListener('change', () => {
     triangulaConstructionMode = triangulaConstructionModeSelect.value || 'shrink-duplicate';
+    persistTriangulaStateCache();
     syncTriangulaControls();
     redrawForPathChange();
   });
@@ -8815,7 +9182,7 @@ if (triangulaFractalModeSelect) {
 if (squarusOrderSelect) {
   squarusOrderSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderSelect.value, 1, 6, squarusOrder);
-    squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
+    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, squarusPieceCount, squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -8824,7 +9191,7 @@ if (squarusOrderSelect) {
 if (squarusOrderInlineSelect) {
   squarusOrderInlineSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderInlineSelect.value, 1, 6, squarusOrder);
-    squarusPieceCount = getSquarusTotalPiecesForOrder(squarusOrder);
+    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, squarusPieceCount, squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -9046,9 +9413,14 @@ if (window.visualViewport) {
 
 window.addEventListener('pageshow', () => {
   if (!hasUrlStateParams()) {
-    applyDefaultHoles();
-    applyDefaultSkipAndSize();
-    applyDefaultTempo();
+    hydrateStitchingStateCacheFromStorage();
+    if (stitchingStateCacheLoadedFromStorage) {
+      restoreStitchingStateFromCache();
+    } else {
+      applyDefaultHoles();
+      applyDefaultSkipAndSize();
+      applyDefaultTempo();
+    }
     animationPlaybackState = 'idle';
     syncAnimateButtonLabel();
     renderThreadControls();
@@ -9103,22 +9475,31 @@ musicToggleBtn.addEventListener('click', () => {
 renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
+hydrateStitchingStateCacheFromStorage();
+var restoredStitchingStateOnInit = false;
 if (hasUrlStateParams()) {
   var initialParams = new URLSearchParams(window.location.search || '');
   var initialExperience = resolveExperienceId(getUrlStateParam(initialParams, 'experienceId')) || 'stitching';
   setCurrentExperience(initialExperience, { suppressUrlSync: true });
-  setCurrentShape(sanitizeShape(getUrlStateParam(initialParams, 'shape'), currentShape), false);
+  if (initialExperience === 'stitching') {
+    setCurrentShape(sanitizeShape(stitchingFrameShape, currentShape), false);
+  }
 } else {
   setCurrentExperience('stitching');
-  setCurrentShape('circle', false);
+  restoredStitchingStateOnInit = stitchingStateCacheLoadedFromStorage;
+  if (!restoredStitchingStateOnInit) {
+    setCurrentShape('circle', false);
+  }
 }
 advancedPanel.classList.remove('open');
 discoveryPanel.classList.remove('open');
 renderAdvancedTempoOptions();
 if (!hasUrlStateParams()) {
-  applyDefaultHoles();
-  applyDefaultSkipAndSize();
-  applyDefaultTempo();
+  if (!restoredStitchingStateOnInit) {
+    applyDefaultHoles();
+    applyDefaultSkipAndSize();
+    applyDefaultTempo();
+  }
 }
 syncAnimateButtonLabel();
 syncHoleNumberToggles();
