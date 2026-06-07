@@ -1340,16 +1340,20 @@
       <option value="6">6 (Hexomino)</option>
     </select>
   </div>
+  <div class="slider-block" id="squarus-contact-block" style="display:none;">
+    <div class="slider-label">🧩 Layout like..</div>
+    <select id="squarus-contact-mode-inline" class="curve-type-select">
+      <option value="connected-touch">Puzzle pieces</option>
+      <option value="formula-only" selected>Art pieces</option>
+    </select>
+  </div>
   <div class="slider-block" id="squarus-layout-block" style="display:none;">
     <div class="slider-label">🧭 Layout Formula</div>
     <select id="squarus-layout-inline" class="curve-type-select">
       <option value="grid-packing">Grid Packing</option>
-      <option value="row-major-striping">Row-Major Striping</option>
       <option value="hilbert-curve">Hilbert Curve</option>
-      <option value="area-mosaic">Area-Proportional Mosaic</option>
       <option value="symmetry-d4">Symmetry (D4)</option>
       <option value="spiral-packing">Spiral Packing</option>
-      <option value="golden-phyllotaxis">Golden-Angle Phyllotaxis</option>
       <option value="circle-packing">Circle Packing</option>
       <option value="radial-tree">Radial Tree</option>
       <option value="force-directed" selected>Force-Directed</option>
@@ -1427,12 +1431,9 @@
       </select></div>
       <div class="advanced-global-row">Layout: <select id="squarus-layout">
         <option value="grid-packing">Grid Packing</option>
-        <option value="row-major-striping">Row-Major Striping</option>
         <option value="hilbert-curve">Hilbert Curve</option>
-        <option value="area-mosaic">Area-Proportional Mosaic</option>
         <option value="symmetry-d4">Symmetry (D4)</option>
         <option value="spiral-packing">Spiral Packing</option>
-        <option value="golden-phyllotaxis">Golden-Angle Phyllotaxis</option>
         <option value="circle-packing">Circle Packing</option>
         <option value="radial-tree">Radial Tree</option>
         <option value="force-directed" selected>Force-Directed</option>
@@ -1441,9 +1442,9 @@
         <option value="sequential" selected>Sequential</option>
         <option value="parallel">Parallel</option>
       </select></div>
-      <div class="advanced-global-row">Contact mode: <select id="squarus-contact-mode">
-        <option value="connected-touch" selected>Connected touching</option>
-        <option value="formula-only">Formula only</option>
+      <div class="advanced-global-row">Layout like.. <select id="squarus-contact-mode">
+        <option value="connected-touch">Puzzle pieces</option>
+        <option value="formula-only" selected>Art pieces</option>
       </select></div>
       <div class="advanced-global-row">Piece Order: <input id="squarus-sequence-number" class="advanced-inline-number" type="number" min="0" max="999" value="1" aria-label="Squarus sequence seed"><button id="squarus-sequence-randomize-advanced" type="button" class="advanced-reset-btn">Randomize</button></div>
       <div class="advanced-global-help">Choose a polyomino order and deterministic arrangement formula.</div>
@@ -1535,6 +1536,7 @@ var triangulaFitModeSelect = document.getElementById('triangula-fit-mode');
 var triangulaAdvancedSubsection = document.getElementById('triangula-advanced-subsection');
 var squarusOrderBlock = document.getElementById('squarus-order-block');
 var squarusLayoutBlock = document.getElementById('squarus-layout-block');
+var squarusContactBlock = document.getElementById('squarus-contact-block');
 var squarusPieceCountBlock = document.getElementById('squarus-piece-count-block');
 var squarusSequenceBlock = document.getElementById('squarus-sequence-block');
 var squarusPieceCountSlider = document.getElementById('squarus-piece-count');
@@ -1544,6 +1546,7 @@ var squarusSequenceValue = document.getElementById('squarus-sequence-value');
 var squarusSequenceRandomizeBtn = document.getElementById('squarus-sequence-randomize');
 var squarusOrderInlineSelect = document.getElementById('squarus-order-inline');
 var squarusLayoutInlineSelect = document.getElementById('squarus-layout-inline');
+var squarusContactModeInlineSelect = document.getElementById('squarus-contact-mode-inline');
 var squarusAdvancedSubsection = document.getElementById('squarus-advanced-subsection');
 var squarusOrderSelect = document.getElementById('squarus-order');
 var squarusLayoutSelect = document.getElementById('squarus-layout');
@@ -1880,7 +1883,7 @@ var triangulaAnimationState = null;
 var squarusOrder = 5;
 var squarusLayout = 'force-directed';
 var squarusAnimationMode = 'sequential';
-var squarusContactMode = 'connected-touch';
+var squarusContactMode = 'formula-only';
 var squarusPieceCount = null;
 var squarusSequenceSeed = 1;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
@@ -1967,7 +1970,7 @@ var appState = {
     order: 4,
     layout: 'grid-packing',
     animationMode: 'sequential',
-    contactMode: 'connected-touch',
+    contactMode: 'formula-only',
     pieceCount: null,
     sequenceSeed: 0
   }
@@ -2057,12 +2060,9 @@ function sanitizeTriangulaFitMode(value, fallback) {
 function sanitizeSquarusLayout(value, fallback) {
   var allowed = [
     'grid-packing',
-    'row-major-striping',
     'hilbert-curve',
-    'area-mosaic',
     'symmetry-d4',
     'spiral-packing',
-    'golden-phyllotaxis',
     'circle-packing',
     'radial-tree',
     'force-directed'
@@ -2297,7 +2297,7 @@ function syncAppStateFromRuntime() {
   appState.squarus.order = parseBoundedInt(squarusOrder, 1, 6, 4);
   appState.squarus.layout = sanitizeSquarusLayout(squarusLayout, 'grid-packing');
   appState.squarus.animationMode = sanitizeSquarusAnimationMode(squarusAnimationMode, 'sequential');
-  appState.squarus.contactMode = sanitizeSquarusContactMode(squarusContactMode, 'connected-touch');
+  appState.squarus.contactMode = sanitizeSquarusContactMode(squarusContactMode, 'formula-only');
   appState.squarus.pieceCount = normalizeSquarusPieceCount(squarusPieceCount, getSquarusTotalPiecesForOrder(squarusOrder), squarusOrder);
   appState.squarus.sequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceSeed, 0, squarusOrder);
 }
@@ -2670,6 +2670,7 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(triangulaTargetBlock, controls.triangulaTargetCount === true, '');
   setElementDisplay(squarusOrderBlock, controls.squarusOrder === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusLayoutBlock, controls.squarusLayout === true && currentExperienceId === 'squarus', '');
+  setElementDisplay(squarusContactBlock, controls.squarusLayout === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusPieceCountBlock, controls.squarusPieceCount === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusSequenceBlock, controls.squarusSequence === true && currentExperienceId === 'squarus', '');
 }
@@ -2749,6 +2750,9 @@ function syncSquarusControls() {
   }
   if (squarusLayoutInlineSelect) {
     squarusLayoutInlineSelect.value = squarusLayout;
+  }
+  if (squarusContactModeInlineSelect) {
+    squarusContactModeInlineSelect.value = squarusContactMode;
   }
   if (squarusOrderSelect) {
     squarusOrderSelect.value = String(squarusOrder);
@@ -6516,7 +6520,7 @@ function buildSquarusTargets(pieces, layoutKey) {
     }
   }
 
-  if (layoutKey === 'grid-packing' || layoutKey === 'area-mosaic') {
+  if (layoutKey === 'grid-packing') {
     var k = Math.ceil(Math.sqrt(Math.max(1, count)));
     var spacing = minDim / (k + 2.5);
     for (var gi = 0; gi < count; gi++) {
@@ -6528,18 +6532,6 @@ function buildSquarusTargets(pieces, layoutKey) {
       });
     }
     finalizeWithSpacing(spacing);
-  } else if (layoutKey === 'row-major-striping') {
-    var cols = Math.max(1, Math.round(Math.sqrt(count * 1.3)));
-    var spacingStrip = minDim / (cols + 2.6);
-    for (var si = 0; si < count; si++) {
-      var stripRow = Math.floor(si / cols);
-      var stripCol = si % cols;
-      points.push({
-        x: center.x + (stripCol - ((cols - 1) / 2)) * spacingStrip,
-        y: center.y + (stripRow - ((Math.ceil(count / cols) - 1) / 2)) * spacingStrip
-      });
-    }
-    finalizeWithSpacing(spacingStrip);
   } else if (layoutKey === 'hilbert-curve') {
     var side = 1;
     while (side * side < count) side *= 2;
@@ -6583,19 +6575,6 @@ function buildSquarusTargets(pieces, layoutKey) {
       rotations[sp] = theta + (Math.PI / 2);
     }
     finalizeWithSpacing(spiralStep * 2.1);
-  } else if (layoutKey === 'golden-phyllotaxis') {
-    var golden = Math.PI * (3 - Math.sqrt(5));
-    var radialStep = minDim * 0.058;
-    for (var gp = 0; gp < count; gp++) {
-      var angle = gp * golden;
-      var radius = radialStep * Math.sqrt(gp + 1);
-      points.push({
-        x: center.x + Math.cos(angle) * radius,
-        y: center.y + Math.sin(angle) * radius
-      });
-      rotations[gp] = angle + (Math.PI / 2);
-    }
-    finalizeWithSpacing(radialStep * 2.1);
   } else if (layoutKey === 'circle-packing') {
     var packed = [];
     for (var cp = 0; cp < count; cp++) {
@@ -6724,7 +6703,7 @@ function drawSquarusGuide(layoutKey, targets, opacity) {
   var o = clamp01(opacity);
   if (o <= 0 || !targets || !targets.length) return;
 
-  if (layoutKey === 'grid-packing' || layoutKey === 'row-major-striping' || layoutKey === 'hilbert-curve' || layoutKey === 'area-mosaic') {
+  if (layoutKey === 'grid-packing' || layoutKey === 'hilbert-curve') {
     for (var i = 1; i < targets.length; i++) {
       var path = new Path();
       path.strokeColor = toRgbaColor('#8ea4b0', 0.12 * o);
@@ -8862,6 +8841,14 @@ if (squarusLayoutSelect) {
 if (squarusLayoutInlineSelect) {
   squarusLayoutInlineSelect.addEventListener('change', () => {
     squarusLayout = squarusLayoutInlineSelect.value || 'grid-packing';
+    syncSquarusControls();
+    redrawForPathChange();
+  });
+}
+
+if (squarusContactModeInlineSelect) {
+  squarusContactModeInlineSelect.addEventListener('change', () => {
+    squarusContactMode = sanitizeSquarusContactMode(squarusContactModeInlineSelect.value, squarusContactMode);
     syncSquarusControls();
     redrawForPathChange();
   });
