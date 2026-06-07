@@ -1722,11 +1722,13 @@ var borderEnabled = true;
 var STITCHING_STATE_CACHE_KEY = 'stitchlab.stitchingState.v1';
 var TRIANGULA_STATE_CACHE_KEY = 'stitchlab.triangulaState.v1';
 var SQUARUS_STATE_CACHE_KEY = 'stitchlab.squarusState.v1';
+var EXPERIENCE_PLAYBACK_STATE_KEY = 'stitchlab.experiencePlaybackState.v1';
 var stitchingStateCache = null;
 var stitchingStateCacheLoadedFromStorage = false;
 var stitchingStateSnapshotAvailable = false;
 var triangulaStateCache = null;
 var squarusStateCache = null;
+var experiencePlaybackStateCache = null;
 
 function getAppStateStorage() {
   var memoryStore = Object.create(null);
@@ -1754,11 +1756,44 @@ function getAppStateStorage() {
         // Ignore storage access errors and fall back to in-memory cache.
       }
       memoryStore[key] = normalized;
+    },
+    removeItem: function(key) {
+      if (!key) return;
+      try {
+        if (window.localStorage) {
+          window.localStorage.removeItem(key);
+          return;
+        }
+      } catch (error) {
+        // Ignore storage access errors and fall back to in-memory cache.
+      }
+      if (Object.prototype.hasOwnProperty.call(memoryStore, key)) {
+        delete memoryStore[key];
+      }
     }
   };
 }
 
 var appStateStorage = getAppStateStorage();
+
+function clearSessionScopedCachesOnLoad() {
+  var cacheKeys = [
+    STITCHING_STATE_CACHE_KEY,
+    TRIANGULA_STATE_CACHE_KEY,
+    SQUARUS_STATE_CACHE_KEY,
+    EXPERIENCE_PLAYBACK_STATE_KEY
+  ];
+  for (var i = 0; i < cacheKeys.length; i++) {
+    appStateStorage.removeItem(cacheKeys[i]);
+  }
+
+  stitchingStateCache = null;
+  stitchingStateCacheLoadedFromStorage = false;
+  stitchingStateSnapshotAvailable = false;
+  triangulaStateCache = null;
+  squarusStateCache = null;
+  experiencePlaybackStateCache = null;
+}
 
 var EXPERIENCE_LIBRARY = {
   stitching: {
@@ -2372,11 +2407,106 @@ function hydrateStitchingStateCacheFromStorage() {
 }
 
 function getPreferredStitchingShapeFromHydration(params, fallbackShape) {
-  var cacheShape = sanitizeShape(hydrateStitchingStateCacheFromStorage() && hydrateStitchingStateCacheFromStorage().shape, fallbackShape || 'circle');
+  var cachedState = hydrateStitchingStateCacheFromStorage();
+  var cacheShape = sanitizeShape(cachedState && cachedState.shape, fallbackShape || 'circle');
   if (stitchingStateSnapshotAvailable) {
     return cacheShape;
   }
   return sanitizeShape(getUrlStateParam(params, 'stitchingShape'), cacheShape);
+}
+
+function buildExperiencePlaybackStateFallback() {
+  var stitchingSong = 'bach';
+  var triangulaSong = 'triangle';
+  var squarusSong = 'square';
+  var mashrabiyaSong = 'rosette';
+  return {
+    stitching: {
+      songId: stitchingSong,
+      bpm: getKidTempoPresetsForSong(stitchingSong).normal || DEFAULT_ANIMATION_BPM
+    },
+    triangula: {
+      songId: triangulaSong,
+      bpm: getKidTempoPresetsForSong(triangulaSong).normal || DEFAULT_ANIMATION_BPM
+    },
+    squarus: {
+      songId: squarusSong,
+      bpm: getKidTempoPresetsForSong(squarusSong).normal || DEFAULT_ANIMATION_BPM
+    },
+    mashrabiya: {
+      songId: mashrabiyaSong,
+      bpm: getKidTempoPresetsForSong(mashrabiyaSong).normal || DEFAULT_ANIMATION_BPM
+    }
+  };
+}
+
+function normalizePlaybackEntry(rawEntry, fallbackSongId) {
+  var songId = sanitizeSongId(rawEntry && rawEntry.songId, fallbackSongId);
+  var allowedTempos = getTempoOptionsForSong(songId);
+  var fallbackBpm = getKidTempoPresetsForSong(songId).normal || DEFAULT_ANIMATION_BPM;
+  var bpm = parseBoundedInt(rawEntry && rawEntry.bpm, 1, 2000, fallbackBpm);
+  if (allowedTempos.indexOf(bpm) === -1) {
+    bpm = fallbackBpm;
+  }
+  return {
+    songId: songId,
+    bpm: bpm
+  };
+}
+
+function persistExperiencePlaybackStateCache(snapshot) {
+  var normalized = snapshot || hydrateExperiencePlaybackStateCacheFromStorage();
+  experiencePlaybackStateCache = normalized;
+  try {
+    appStateStorage.setItem(EXPERIENCE_PLAYBACK_STATE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    // Ignore persistence failures; runtime cache still works.
+  }
+}
+
+function hydrateExperiencePlaybackStateCacheFromStorage() {
+  if (experiencePlaybackStateCache) return experiencePlaybackStateCache;
+  var fallback = buildExperiencePlaybackStateFallback();
+  var raw = appStateStorage.getItem(EXPERIENCE_PLAYBACK_STATE_KEY);
+  if (!raw) {
+    experiencePlaybackStateCache = fallback;
+    return experiencePlaybackStateCache;
+  }
+  try {
+    var parsed = JSON.parse(raw);
+    experiencePlaybackStateCache = {
+      stitching: normalizePlaybackEntry(parsed.stitching, fallback.stitching.songId),
+      triangula: normalizePlaybackEntry(parsed.triangula, fallback.triangula.songId),
+      squarus: normalizePlaybackEntry(parsed.squarus, fallback.squarus.songId),
+      mashrabiya: normalizePlaybackEntry(parsed.mashrabiya, fallback.mashrabiya.songId)
+    };
+  } catch (error) {
+    experiencePlaybackStateCache = fallback;
+  }
+  return experiencePlaybackStateCache;
+}
+
+function recordCurrentExperiencePlaybackPreference() {
+  var experienceId = resolveExperienceId(currentExperienceId);
+  if (!experienceId) return;
+  var playbackState = hydrateExperiencePlaybackStateCacheFromStorage();
+  var fallbackSong = sanitizeSongId(getDefaultSongIdForExperience(experienceId), 'bach');
+  playbackState[experienceId] = normalizePlaybackEntry(
+    {
+      songId: currentSongId,
+      bpm: currentAnimationBpm
+    },
+    fallbackSong
+  );
+  persistExperiencePlaybackStateCache(playbackState);
+}
+
+function getPreferredPlaybackForExperience(experienceId) {
+  var resolvedExperienceId = resolveExperienceId(experienceId) || 'stitching';
+  var fallbackSong = sanitizeSongId(getDefaultSongIdForExperience(resolvedExperienceId), 'bach');
+  var playbackState = hydrateExperiencePlaybackStateCacheFromStorage();
+  var preferred = normalizePlaybackEntry(playbackState[resolvedExperienceId], fallbackSong);
+  return preferred;
 }
 
 function syncStitchingStateCacheFromRuntime() {
@@ -2661,8 +2791,8 @@ function flushUrlStateSync() {
 }
 
 function scheduleUrlStateSync(immediate) {
-  syncCurrentExperienceStateCacheFromRuntime();
   if (urlSyncSuspended) return;
+  syncCurrentExperienceStateCacheFromRuntime();
   if (urlSyncTimer) {
     clearTimeout(urlSyncTimer);
     urlSyncTimer = null;
@@ -2706,12 +2836,12 @@ function applyStateFromCurrentUrl(options) {
     }
 
     var songIdFromUrl = sanitizeSongId(getUrlStateParam(params, 'songId'), currentSongId);
-    if (canApplySongSelection(songIdFromUrl)) {
-      setCurrentSong(songIdFromUrl);
+    if (songIdFromUrl && songIdFromUrl !== currentSongId) {
+      setCurrentSong(songIdFromUrl, { suppressUrlSync: true });
     }
 
     var bpmFromUrl = sanitizeBpmForCurrentSong(getUrlStateParam(params, 'bpm'), currentAnimationBpm);
-    applyTempoValue(bpmFromUrl);
+    applyTempoValue(bpmFromUrl, { suppressUrlSync: true });
 
     isMusicMuted = sanitizeBooleanParam(getUrlStateParam(params, 'musicMuted'), isMusicMuted);
     syncMusicToggleButton();
@@ -2886,10 +3016,9 @@ function getDefaultSongIdForExperience(experienceId) {
   return 'bach';
 }
 
-function canApplySongSelection(songId) {
+function isSongUnlockedForCurrentSession(songId) {
   if (!songId || !MUSIC_LIBRARY[songId]) return false;
   if (songId === 'bach') return true;
-  if (songId === getDefaultSongIdForExperience(currentExperienceId)) return true;
   return unlockedSongIds.indexOf(songId) !== -1;
 }
 
@@ -3312,16 +3441,18 @@ function setCurrentExperience(experienceId, options) {
     squarusEntryFadeActive = false;
   }
 
-  if (!options.preserveSongOnExperienceChange) {
-    setCurrentSong(getDefaultSongIdForExperience(currentExperienceId));
-  }
-
   if (currentExperienceId === 'stitching') {
     restoreStitchingStateFromCache();
   } else if (currentExperienceId === 'triangula') {
     restoreTriangulaStateFromCache();
   } else if (currentExperienceId === 'squarus') {
     restoreSquarusStateFromCache();
+  }
+
+  if (!options.preserveSongOnExperienceChange) {
+    var preferredPlayback = getPreferredPlaybackForExperience(currentExperienceId);
+    setCurrentSong(preferredPlayback.songId, { suppressUrlSync: true });
+    applyTempoValue(preferredPlayback.bpm, { suppressUrlSync: true, suppressRedraw: true });
   }
 
   applyExperienceUiPolicy();
@@ -3678,8 +3809,10 @@ function renderAdvancedTempoOptions() {
   }
 }
 
-function setCurrentSong(songId) {
+function setCurrentSong(songId, options) {
+  options = options || {};
   if (!MUSIC_LIBRARY[songId]) return;
+  if (!options.allowLockedSong && !isSongUnlockedForCurrentSession(songId)) return;
   if (currentSongId === songId) return;
 
   var shouldResume = shouldMusicBePlaying() && !isMusicMuted;
@@ -3700,7 +3833,10 @@ function setCurrentSong(songId) {
     playMusicFromCurrentState();
   }
   renderSongPicker();
-  scheduleUrlStateSync(false);
+  recordCurrentExperiencePlaybackPreference();
+  if (!options.suppressUrlSync) {
+    scheduleUrlStateSync(false);
+  }
 }
 
 function getSongPickerOptions() {
@@ -4096,9 +4232,6 @@ function renderDiscoveryLibrary() {
 
         setCurrentExperience(experienceId);
         redrawForPathChange();
-        if (songId) {
-          setCurrentSong(songId);
-        }
         discoveryPanel.classList.remove('open');
         syncDiscoveryToggleButton();
       };
@@ -4817,7 +4950,8 @@ function syncKidTempoPresetControls() {
   kidTempoFastBtn.setAttribute('aria-pressed', activePreset === 'fast' ? 'true' : 'false');
 }
 
-function applyTempoValue(bpm) {
+function applyTempoValue(bpm, options) {
+  options = options || {};
   var parsed = Math.round(Number(bpm));
   var allowedTempos = getActiveTempoOptions();
   if (!isFinite(parsed) || allowedTempos.indexOf(parsed) === -1) {
@@ -4826,9 +4960,14 @@ function applyTempoValue(bpm) {
   currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
   syncKidTempoPresetControls();
-  // Tempo change updates playback speed without resetting progress.
-  redrawAnimationInPlace();
-  scheduleUrlStateSync(false);
+  recordCurrentExperiencePlaybackPreference();
+  if (!options.suppressRedraw) {
+    // Tempo change updates playback speed without resetting progress.
+    redrawAnimationInPlace();
+  }
+  if (!options.suppressUrlSync) {
+    scheduleUrlStateSync(false);
+  }
 }
 
 function syncAnimateButtonLabel() {
@@ -9475,6 +9614,7 @@ musicToggleBtn.addEventListener('click', () => {
 renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
+clearSessionScopedCachesOnLoad();
 hydrateStitchingStateCacheFromStorage();
 var restoredStitchingStateOnInit = false;
 if (hasUrlStateParams()) {
