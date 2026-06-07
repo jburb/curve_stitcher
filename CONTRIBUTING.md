@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to curve_stitcher.
+Thanks for contributing to StitchLab.
 
 ## License and Contribution Terms
 

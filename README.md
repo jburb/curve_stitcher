@@ -1,4 +1,4 @@
-# curve_stitcher
+# StitchLab
 An interactive, kid-friendly and advanced-friendly curve stitching playground inspired by Mary Everest Boole, focused on geometric pattern discovery, animated thread construction, and export-ready design workflows.
 
 ## License

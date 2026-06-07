@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Kid-Friendly Curve Stitching</title>
+<title>StitchLab</title>
 
 <!-- Paper.js -->
 <script src="js/paper-full.min.js"></script>
@@ -1460,7 +1460,7 @@
     <h4 id="export-options-title">SVG Export Options</h4>
     <div class="modal-row">
       <label for="export-name-input">Custom name</label>
-      <input id="export-name-input" type="text" placeholder="curve_stitcher-20260527-143000">
+      <input id="export-name-input" type="text" placeholder="stitchlab-20260527-143000">
       <div class="modal-help">Used as the file name base for exported files.</div>
     </div>
     <div class="modal-row">
@@ -7300,7 +7300,7 @@ function getTimestampLabel() {
 }
 
 function normalizeExportBaseName(rawName) {
-  var fallback = 'curve_stitcher-' + getTimestampLabel();
+  var fallback = 'stitchlab-' + getTimestampLabel();
   var source = String(rawName || '').trim();
   if (!source) return fallback;
   var cleaned = source
@@ -7384,7 +7384,7 @@ function buildTriangulaDesignSvgString() {
 
 function getExportExperiencePrefix() {
   var id = String(currentExperienceId || 'stitching').toLowerCase();
-  return 'curve_stitcher-' + id;
+  return 'stitchlab-' + id;
 }
 
 function ensureExportBaseNameHasExperiencePrefix(baseName) {
@@ -7663,7 +7663,7 @@ function buildStitchingGuideText(fileBaseName, options) {
 
   var lines = [];
   var now = new Date();
-  lines.push('curve_stitcher manual stitching guide');
+  lines.push('StitchLab manual stitching guide');
   lines.push('Generated: ' + now.toISOString());
   lines.push('Export name: ' + fileBaseName);
   lines.push('');
@@ -7755,7 +7755,7 @@ function buildTriangulaGuideText(fileBaseName, options) {
   var targetDepth = triangulaCountToDepth(triangulaTargetCount);
   var lines = [];
 
-  lines.push('curve_stitcher Triangula instructions');
+  lines.push('StitchLab Triangula instructions');
   lines.push('Generated: ' + now.toISOString());
   lines.push('Export name: ' + fileBaseName);
   lines.push('');
@@ -7773,7 +7773,7 @@ function buildTriangulaGuideText(fileBaseName, options) {
   lines.push('Rainbow source color: ' + String(triangulaSourceColor || triangulaBandColors.band1));
   lines.push('');
   lines.push('Reconstruction');
-  lines.push('1. Open Triangula in curve_stitcher.');
+  lines.push('1. Open Triangula in StitchLab.');
   lines.push('2. Set mode, color mode, and start/target values to match parameters above.');
   lines.push('3. Apply band/rainbow colors as listed above.');
   lines.push('4. Exported SVG captures the fully completed target-state triangle composition with colors.');
@@ -7814,7 +7814,7 @@ function buildSquarusGuideText(fileBaseName, options) {
     linesForConnections.push('  Step ' + String(step) + ': P' + String(visiblePieceNumbers[step - 1]) + ' -> P' + String(visiblePieceNumbers[step]));
   }
 
-  lines.push('curve_stitcher Squarus instructions');
+  lines.push('StitchLab Squarus instructions');
   lines.push('Generated: ' + now.toISOString());
   lines.push('Export name: ' + fileBaseName);
   lines.push('');
