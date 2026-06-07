@@ -2,11 +2,7 @@ The art of curve stitching was invented by Mary Everest Boole, a brilliant amate
 
 In her own time, Mary taught children to stitch curves in paper cards, using straight lines of thread.
 
-Mary invented this beautiful art as a way of teaching math to children in a playful, intuitive manner. 
-
-Also, Mary was the wife of George Boole, with whom she explored many fascinating ideas, and whose mathematical discoveries enabled apps, including this one, to eventually be created.
-
-The beauty and function of curve stitching are best described by Mary herself. She calls it:
+Mary invented this beautiful art as a way of teaching math to children in a playful, intuitive manner. The beauty and function of curve stitcing are best described by Mary herself. She calls this art:
 
 "a means of introducing little children to the conception of a connexion between organic thought-sequence and the evolution of harmonious form.
 
