@@ -1,0 +1,102 @@
+/* styles.css */
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  margin: 40px 0;
+}
+
+.layout {
+  width: 80%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Shared portrait styles */
+.portrait {
+  width: 260px;          /* tweak as needed */
+  height: auto;
+  object-fit: cover;
+}
+
+/* Left portrait: soft geometric upper-body contour */
+.portrait-left {
+  float: left;
+  margin: 0 24px 20px 0;
+  shape-outside: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+  clip-path: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+}
+
+/* Right portrait: mirrored soft geometric contour */
+.portrait-right {
+  float: right;
+  margin: 0 0 20px 24px;
+  shape-outside: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+  clip-path: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+}
+
+/* Simple mobile fallback */
+@media (max-width: 700px) {
+  /*.portrait-left,
+  .portrait-right {
+    float: none;
+    display: block;
+    margin: 0 auto 16px auto;
+    shape-outside: none;
+    clip-path: none;
+  }*/
+
+  .portrait-left {
+  float: left;
+  width: 260px;
+  margin: 0 24px 20px 0;
+  shape-outside: polygon(
+    12% 0%, 88% 0%, 100% 18%, 100% 65%,
+    85% 100%, 20% 100%, 0% 70%, 0% 25%
+  );
+  clip-path: polygon(
+    12% 0%, 88% 0%, 100% 18%, 100% 65%,
+    85% 100%, 20% 100%, 0% 70%, 0% 25%
+  );
+}
+
+.portrait-right {
+  float: right;
+  width: 260px;
+  margin: 0 0 20px 24px;
+  shape-outside: polygon(
+    10% 0%, 90% 0%, 100% 25%, 100% 75%,
+    80% 100%, 25% 100%, 0% 75%, 0% 25%
+  );
+  clip-path: polygon(
+    10% 0%, 90% 0%, 100% 25%, 100% 75%,
+    80% 100%, 25% 100%, 0% 75%, 0% 25%
+  );
+}
+
+
+
+  .layout p {
+    clear: both;
+  }
+}
