@@ -144,7 +144,9 @@
     top: 62px;
     left: 50%;
     transform: none;
-    width: min(440px, calc(100vw - 24px));
+    width: min(780px, calc(100vw - 24px));
+    max-height: min(78vh, 740px);
+    overflow: auto;
     background: #fff;
     border: 1px solid #d8e3f7;
     border-radius: 12px;
@@ -181,6 +183,17 @@
     color: #415c8b;
     font-size: 13px;
     line-height: 1.45;
+  }
+  #experience-info-html {
+    width: 100%;
+    height: min(60vh, 520px);
+    border: 1px solid #d8e3f7;
+    border-radius: 10px;
+    background: #fff;
+    box-sizing: border-box;
+  }
+  #experience-info-html[hidden] {
+    display: none;
   }
   .experience-info-actions {
     margin-top: 8px;
@@ -1192,6 +1205,7 @@
     <button id="experience-info-close" type="button">Close</button>
   </div>
   <p id="experience-info-text"></p>
+  <iframe id="experience-info-html" title="Experience details" hidden loading="lazy"></iframe>
   <div class="experience-info-actions">
     <button id="experience-narrate-toggle" type="button" aria-pressed="false">Hear this</button>
     <span id="experience-narration-status" role="status" aria-live="polite"></span>
@@ -1599,6 +1613,7 @@ var experienceInfoToggle = document.getElementById('experience-info-toggle');
 var experienceInfoPanel = document.getElementById('experience-info-panel');
 var experienceInfoTitle = document.getElementById('experience-info-title');
 var experienceInfoText = document.getElementById('experience-info-text');
+var experienceInfoHtmlFrame = document.getElementById('experience-info-html');
 var experienceInfoClose = document.getElementById('experience-info-close');
 var experienceNarrateToggle = document.getElementById('experience-narrate-toggle');
 var experienceNarrationStatus = document.getElementById('experience-narration-status');
@@ -1805,6 +1820,8 @@ var EXPERIENCE_LIBRARY = {
     infoTitle: 'About Stitching',
     infoText: 'Stitching turns math into thread motion. Pick a shape, set holes, then stitch by adding or multiplying to explore geometric patterns and unlock new worlds.',
     narrationText: 'Welcome to Stitching. Here, arithmetic becomes thread paths. Adjust holes, choose add or multiply, and watch geometry emerge one stitch at a time.',
+    aboutHtmlPath: 'docs/about/stitching.html',
+    narrationTextPath: 'docs/about/stitching.txt',
     uiProfile: {
       allowedShapes: ['circle', 'triangle', 'square', 'star', 'heart'],
       fixedShape: null,
@@ -1948,6 +1965,8 @@ var EXPERIENCE_LIBRARY = {
 };
 var currentExperienceId = 'stitching';
 var experienceNarrationUtterance = null;
+var experienceNarrationTextCache = Object.create(null);
+var experienceNarrationFetchById = Object.create(null);
 var triangulaColorMode = 'band-1';
 var triangulaConstructionMode = 'shrink-duplicate';
 var triangulaStartCount = 1;
@@ -3374,23 +3393,77 @@ function toggleExperienceNarration() {
     return;
   }
 
-  var script = experience.narrationText || experience.infoText || experience.title;
-  var utterance = new SpeechSynthesisUtterance(script);
-  utterance.rate = 0.97;
-  utterance.pitch = 1;
-  utterance.onend = function() {
-    experienceNarrationUtterance = null;
-    syncExperienceNarrationState(false, 'Narration complete.');
-  };
-  utterance.onerror = function() {
-    experienceNarrationUtterance = null;
-    syncExperienceNarrationState(false, 'Narration could not play.');
-  };
+  var experienceId = currentExperienceId;
+  syncExperienceNarrationState(false, 'Loading narration...');
+  getExperienceNarrationScript(experienceId).then(function(script) {
+    if (currentExperienceId !== experienceId) {
+      syncExperienceNarrationState(false, '');
+      return;
+    }
+    var utterance = new SpeechSynthesisUtterance(script);
+    utterance.rate = 0.97;
+    utterance.pitch = 1;
+    utterance.onend = function() {
+      experienceNarrationUtterance = null;
+      syncExperienceNarrationState(false, 'Narration complete.');
+    };
+    utterance.onerror = function() {
+      experienceNarrationUtterance = null;
+      syncExperienceNarrationState(false, 'Narration could not play.');
+    };
 
-  experienceNarrationUtterance = utterance;
-  syncExperienceNarrationState(true, 'Narrating...');
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
+    experienceNarrationUtterance = utterance;
+    syncExperienceNarrationState(true, 'Narrating...');
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }).catch(function() {
+    syncExperienceNarrationState(false, 'Narration could not load.');
+  });
+}
+
+function getExperienceNarrationFallbackText(experience) {
+  return experience.narrationText || experience.infoText || experience.title || '';
+}
+
+function getExperienceNarrationScript(experienceId) {
+  var resolvedExperienceId = resolveExperienceId(experienceId) || currentExperienceId;
+  if (Object.prototype.hasOwnProperty.call(experienceNarrationTextCache, resolvedExperienceId)) {
+    return Promise.resolve(experienceNarrationTextCache[resolvedExperienceId]);
+  }
+
+  var experience = getExperienceById(resolvedExperienceId);
+  var fallback = getExperienceNarrationFallbackText(experience);
+  if (!experience.narrationTextPath || typeof fetch !== 'function') {
+    experienceNarrationTextCache[resolvedExperienceId] = fallback;
+    return Promise.resolve(fallback);
+  }
+
+  if (experienceNarrationFetchById[resolvedExperienceId]) {
+    return experienceNarrationFetchById[resolvedExperienceId];
+  }
+
+  experienceNarrationFetchById[resolvedExperienceId] = fetch(experience.narrationTextPath)
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('Narration text fetch failed');
+      }
+      return response.text();
+    })
+    .then(function(text) {
+      var normalized = String(text || '').trim();
+      var narration = normalized || fallback;
+      experienceNarrationTextCache[resolvedExperienceId] = narration;
+      return narration;
+    })
+    .catch(function() {
+      experienceNarrationTextCache[resolvedExperienceId] = fallback;
+      return fallback;
+    })
+    .finally(function() {
+      delete experienceNarrationFetchById[resolvedExperienceId];
+    });
+
+  return experienceNarrationFetchById[resolvedExperienceId];
 }
 
 function renderExperienceTitleStatic() {
@@ -3412,7 +3485,21 @@ function renderExperienceTitleStatic() {
 function applyCurrentExperienceInfo() {
   var experience = getExperienceById(currentExperienceId);
   experienceInfoTitle.textContent = experience.infoTitle || ('About ' + (experience.title || 'Experience'));
+  var aboutHtmlPath = experience.aboutHtmlPath || '';
+  var hasHtmlAbout = !!aboutHtmlPath;
+  experienceInfoText.hidden = hasHtmlAbout;
   experienceInfoText.textContent = experience.infoText || '';
+  if (experienceInfoHtmlFrame) {
+    experienceInfoHtmlFrame.hidden = !hasHtmlAbout;
+    if (hasHtmlAbout) {
+      if (experienceInfoHtmlFrame.getAttribute('src') !== aboutHtmlPath) {
+        experienceInfoHtmlFrame.setAttribute('src', aboutHtmlPath);
+      }
+    } else {
+      experienceInfoHtmlFrame.removeAttribute('src');
+    }
+  }
+  getExperienceNarrationScript(currentExperienceId);
   syncExperienceNarrationState(false, '');
 }
 
