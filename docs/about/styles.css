@@ -54,6 +54,22 @@ body {
     0% 70%, 0% 20%
   );
 }
+.bookplate-right {
+  float: right;
+  margin: 0 0 20px 24px;
+  /*shape-outside: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+  clip-path: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );*/
+}
 
 /* Simple mobile fallback */
 @media (max-width: 700px) {
