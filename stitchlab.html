@@ -1705,16 +1705,27 @@ var DISCOVERY_LIBRARY = {
   },
   rosette: {
     title: 'Mystic Rose / Rosette',
-    icon: '✺',
+    icon: '🌹',
     description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
     songId: 'rosette',
-    passphrase: 'Rosette passphrase placeholder.',
-    passphraseInputEnabled: false
+    passphrase: 'In a 12 point circle, create two hexagons: one from 2 begun, and one from 1. With thread the 3rd and steps of 5, twelve petals you may then derive.',
+    passphraseInputEnabled: true
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
-var ROSETTE_DISCOVERY_ENABLED = false;
+var ROSETTE_DISCOVERY_RECIPES = [
+  {
+    key: 'rosette-12-fold-offset-hexagons',
+    holeCount: 12,
+    allowRotation: true,
+    threads: [
+      { jumpMode: 'fixed', jump: 2, startHole: 1 },
+      { jumpMode: 'fixed', jump: 2, startHole: 2 },
+      { jumpMode: 'fixed', jump: 5, startHole: 1 }
+    ]
+  }
+];
 var DISCOVERY_FLOAT_DURATION_MS = 4400;
 var discoveryTimer = null;
 var discoveredShapeKeys = Object.create(null);
@@ -4325,7 +4336,7 @@ function renderDiscoveryLibrary() {
     if (config.passphrase) {
       var passphrase = document.createElement('p');
       passphrase.className = 'discovery-passphrase';
-      passphrase.textContent = 'Passphrase: "' + config.passphrase + '"';
+      passphrase.textContent = 'Passphrase: ' + config.passphrase;
       card.appendChild(passphrase);
     }
 
@@ -4432,7 +4443,6 @@ function unlockSong(songId) {
 
 function unlockDiscovery(shapeKey) {
   if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
-  if (shapeKey === 'rosette' && !ROSETTE_DISCOVERY_ENABLED) return;
   if (discoveredShapeKeys[shapeKey]) return;
 
   discoveredShapeKeys[shapeKey] = true;
@@ -4612,18 +4622,139 @@ function threadHasSquareDiscovery(thread) {
   return false;
 }
 
-function isRosetteDiscoveryCandidate() {
-  var holeCount = parseInt(holesSlider.value, 10);
-  if (!isFinite(holeCount) || holeCount < 24) return false;
+function normalizeRosetteThreadSignature(thread, holeCount) {
+  if (!thread || !isFinite(holeCount) || holeCount < 3) return null;
+  if (thread.jumpMode && thread.jumpMode !== 'fixed') return null;
 
-  var candidates = getDiscoveryCandidateThreads();
-  for (var i = 0; i < candidates.length; i++) {
-    var thread = candidates[i];
-    ensureThreadConnectConfig(thread);
-    if (thread.jumpMode === 'connect' && Number(thread.connectMultiplier) >= 3) {
+  var rawJump = parseInt(thread.jump, 10);
+  if (!isFinite(rawJump)) return null;
+  var jump = ((rawJump % holeCount) + holeCount) % holeCount;
+  if (jump === 0) return null;
+
+  var rawStartHole = parseInt(thread.startHole, 10);
+  if (!isFinite(rawStartHole)) {
+    rawStartHole = 1;
+  }
+  var startHole = ((rawStartHole - 1) % holeCount + holeCount) % holeCount + 1;
+
+  return {
+    jump: jump,
+    startHole: startHole
+  };
+}
+
+function buildRosetteSignatureKey(signature) {
+  return String(signature.jump) + '|' + String(signature.startHole);
+}
+
+function areRosetteSignatureMultisetsEqual(left, right) {
+  if (!left || !right || left.length !== right.length) return false;
+
+  var leftKeys = [];
+  var rightKeys = [];
+  for (var i = 0; i < left.length; i++) {
+    leftKeys.push(buildRosetteSignatureKey(left[i]));
+    rightKeys.push(buildRosetteSignatureKey(right[i]));
+  }
+  leftKeys.sort();
+  rightKeys.sort();
+
+  for (var k = 0; k < leftKeys.length; k++) {
+    if (leftKeys[k] !== rightKeys[k]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function rotateRosetteSignature(signature, delta, holeCount) {
+  return {
+    jump: signature.jump,
+    startHole: ((signature.startHole - 1 + delta) % holeCount + holeCount) % holeCount + 1
+  };
+}
+
+function doesRosetteSubsetMatchRecipe(candidateSubset, recipeSignatures, holeCount, allowRotation) {
+  if (!allowRotation) {
+    return areRosetteSignatureMultisetsEqual(candidateSubset, recipeSignatures);
+  }
+
+  for (var delta = 0; delta < holeCount; delta++) {
+    var rotatedRecipe = [];
+    for (var i = 0; i < recipeSignatures.length; i++) {
+      rotatedRecipe.push(rotateRosetteSignature(recipeSignatures[i], delta, holeCount));
+    }
+    if (areRosetteSignatureMultisetsEqual(candidateSubset, rotatedRecipe)) {
       return true;
     }
   }
+
+  return false;
+}
+
+function findRosetteSubsetMatch(candidateSignatures, recipeSignatures, holeCount, allowRotation) {
+  if (!candidateSignatures || !recipeSignatures) return false;
+  var targetSize = recipeSignatures.length;
+  if (targetSize < 1 || candidateSignatures.length < targetSize) return false;
+
+  var subset = [];
+
+  function search(startIndex) {
+    if (subset.length === targetSize) {
+      return doesRosetteSubsetMatchRecipe(subset, recipeSignatures, holeCount, allowRotation);
+    }
+
+    var needed = targetSize - subset.length;
+    for (var i = startIndex; i <= candidateSignatures.length - needed; i++) {
+      subset.push(candidateSignatures[i]);
+      if (search(i + 1)) {
+        return true;
+      }
+      subset.pop();
+    }
+
+    return false;
+  }
+
+  return search(0);
+}
+
+function isRosetteDiscoveryCandidate() {
+  var holeCount = parseInt(holesSlider.value, 10);
+  if (!isFinite(holeCount) || holeCount < 3) return false;
+
+  var candidateSignatures = [];
+  for (var i = 0; i < threads.length; i++) {
+    var signature = normalizeRosetteThreadSignature(threads[i], holeCount);
+    if (signature) {
+      candidateSignatures.push(signature);
+    }
+  }
+
+  for (var r = 0; r < ROSETTE_DISCOVERY_RECIPES.length; r++) {
+    var recipe = ROSETTE_DISCOVERY_RECIPES[r];
+    if (!recipe) continue;
+    if (parseInt(recipe.holeCount, 10) !== holeCount) continue;
+    if (!recipe.threads || !recipe.threads.length) continue;
+
+    var recipeSignatures = [];
+    var recipeIsValid = true;
+    for (var t = 0; t < recipe.threads.length; t++) {
+      var recipeSignature = normalizeRosetteThreadSignature(recipe.threads[t], holeCount);
+      if (!recipeSignature) {
+        recipeIsValid = false;
+        break;
+      }
+      recipeSignatures.push(recipeSignature);
+    }
+    if (!recipeIsValid) continue;
+
+    if (findRosetteSubsetMatch(candidateSignatures, recipeSignatures, holeCount, recipe.allowRotation !== false)) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -4657,7 +4788,7 @@ function evaluateDiscoveryCandidates() {
   if (foundSquare) {
     unlockDiscovery('square');
   }
-  if (ROSETTE_DISCOVERY_ENABLED && isRosetteDiscoveryCandidate()) {
+  if (isRosetteDiscoveryCandidate()) {
     unlockDiscovery('rosette');
   }
 
