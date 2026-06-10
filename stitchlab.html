@@ -40,6 +40,14 @@
     font-style: normal;
     font-display: swap;
   }
+
+  @font-face {
+    font-family: 'Shaumy';
+    src: url('assets/fonts/shaumy/Shaumy.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
   
   body {
     margin: 0;
@@ -1386,6 +1394,26 @@
     <input id="squarus-sequence-seed" type="range" min="0" max="999" value="1">
     <button id="squarus-sequence-randomize" type="button" class="advanced-reset-btn" style="margin-top:8px;">Randomize</button>
   </div>
+  <div class="slider-block" id="mashrabiya-fold-block" style="display:none;">
+    <div class="slider-label">🌸 Petals</div>
+    <select id="mashrabiya-fold" class="curve-type-select">
+      <option value="6">6-fold</option>
+      <option value="8">8-fold</option>
+      <option value="12" selected>12-fold</option>
+    </select>
+  </div>
+  <div class="slider-block" id="mashrabiya-star-color-block" style="display:none;">
+    <div class="slider-label">⭐ Inner Star</div>
+    <input id="mashrabiya-star-color" type="color" value="#f4d35e" aria-label="Mashrabiya inner star color">
+  </div>
+  <div class="slider-block" id="mashrabiya-petal-color-block" style="display:none;">
+    <div class="slider-label">🌺 Petals</div>
+    <input id="mashrabiya-petal-color" type="color" value="#ee964b" aria-label="Mashrabiya petal color">
+  </div>
+  <div class="slider-block" id="mashrabiya-point-color-block" style="display:none;">
+    <div class="slider-label">🔶 Star Points</div>
+    <input id="mashrabiya-point-color" type="color" value="#f95738" aria-label="Mashrabiya star point color">
+  </div>
 </div>
 
 <!-- ADVANCED PANEL -->
@@ -1559,11 +1587,19 @@ var squarusLayoutBlock = document.getElementById('squarus-layout-block');
 var squarusContactBlock = document.getElementById('squarus-contact-block');
 var squarusPieceCountBlock = document.getElementById('squarus-piece-count-block');
 var squarusSequenceBlock = document.getElementById('squarus-sequence-block');
+var mashrabiyaFoldBlock = document.getElementById('mashrabiya-fold-block');
+var mashrabiyaStarColorBlock = document.getElementById('mashrabiya-star-color-block');
+var mashrabiyaPetalColorBlock = document.getElementById('mashrabiya-petal-color-block');
+var mashrabiyaPointColorBlock = document.getElementById('mashrabiya-point-color-block');
 var squarusPieceCountSlider = document.getElementById('squarus-piece-count');
 var squarusPieceCountValue = document.getElementById('squarus-piece-count-value');
 var squarusSequenceSlider = document.getElementById('squarus-sequence-seed');
 var squarusSequenceValue = document.getElementById('squarus-sequence-value');
 var squarusSequenceRandomizeBtn = document.getElementById('squarus-sequence-randomize');
+var mashrabiyaFoldSelect = document.getElementById('mashrabiya-fold');
+var mashrabiyaStarColorInput = document.getElementById('mashrabiya-star-color');
+var mashrabiyaPetalColorInput = document.getElementById('mashrabiya-petal-color');
+var mashrabiyaPointColorInput = document.getElementById('mashrabiya-point-color');
 var squarusOrderInlineSelect = document.getElementById('squarus-order-inline');
 var squarusLayoutInlineSelect = document.getElementById('squarus-layout-inline');
 var squarusContactModeInlineSelect = document.getElementById('squarus-contact-mode-inline');
@@ -1644,6 +1680,7 @@ var points = [];
 var animationActive = false;
 var animationState = null;
 var squarusAnimationState = null;
+var mashrabiyaAnimationState = null;
 var animationPlaybackState = 'idle';
 var canvasResizeObserver = null;
 var showHoleNumbers = true;
@@ -1663,8 +1700,7 @@ var SONG_TEMPO_OPTIONS = {
   bach: DEFAULT_TEMPO_OPTIONS.slice(),
   triangle: [110, 220, 330, 440, 550],
   square: [300, 450, 600, 750, 900],
-  // Placeholder values until measured BPM-based sets are finalized.
-  rosette: DEFAULT_TEMPO_OPTIONS.slice()
+  rosette: [90, 180, 270, 360, 450]
 };
 var MUSIC_LIBRARY = {
   bach: {
@@ -1709,7 +1745,7 @@ var DISCOVERY_LIBRARY = {
     description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
     songId: 'rosette',
-    passphrase: 'In a 12 point circle, create two hexagons: one from 2 begun, and one from 1. With thread the 3rd and steps of 5, twelve petals you may then derive.',
+    passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then jump 44 from start 3; from third-thread pairs around each hexagon vertex, the twelve-petal rose appears.',
     passphraseInputEnabled: true
   }
 };
@@ -1723,6 +1759,36 @@ var ROSETTE_DISCOVERY_RECIPES = [
       { jumpMode: 'fixed', jump: 2, startHole: 1 },
       { jumpMode: 'fixed', jump: 2, startHole: 2 },
       { jumpMode: 'fixed', jump: 5, startHole: 1 }
+    ]
+  },
+  {
+    key: 'rosette-12-fold-dense-96',
+    holeCount: 96,
+    allowRotation: true,
+    threads: [
+      { jumpMode: 'fixed', jump: 16, startHole: 1 },
+      { jumpMode: 'fixed', jump: 16, startHole: 9 },
+      { jumpMode: 'fixed', jump: 44, startHole: 3 }
+    ]
+  },
+  {
+    key: 'rosette-8-fold-dense-64',
+    holeCount: 64,
+    allowRotation: true,
+    threads: [
+      { jumpMode: 'fixed', jump: 16, startHole: 1 },
+      { jumpMode: 'fixed', jump: 16, startHole: 9 },
+      { jumpMode: 'fixed', jump: 28, startHole: 3 }
+    ]
+  },
+  {
+    key: 'rosette-6-fold-dense-48',
+    holeCount: 48,
+    allowRotation: true,
+    threads: [
+      { jumpMode: 'fixed', jump: 16, startHole: 1 },
+      { jumpMode: 'fixed', jump: 16, startHole: 9 },
+      { jumpMode: 'fixed', jump: 20, startHole: 3 }
     ]
   }
 ];
@@ -1755,12 +1821,14 @@ var borderEnabled = true;
 var STITCHING_STATE_CACHE_KEY = 'stitchlab.stitchingState.v1';
 var TRIANGULA_STATE_CACHE_KEY = 'stitchlab.triangulaState.v1';
 var SQUARUS_STATE_CACHE_KEY = 'stitchlab.squarusState.v1';
+var MASHRABIYA_STATE_CACHE_KEY = 'stitchlab.mashrabiyaState.v1';
 var EXPERIENCE_PLAYBACK_STATE_KEY = 'stitchlab.experiencePlaybackState.v1';
 var stitchingStateCache = null;
 var stitchingStateCacheLoadedFromStorage = false;
 var stitchingStateSnapshotAvailable = false;
 var triangulaStateCache = null;
 var squarusStateCache = null;
+var mashrabiyaStateCache = null;
 var experiencePlaybackStateCache = null;
 
 function getAppStateStorage() {
@@ -1814,6 +1882,7 @@ function clearSessionScopedCachesOnLoad() {
     STITCHING_STATE_CACHE_KEY,
     TRIANGULA_STATE_CACHE_KEY,
     SQUARUS_STATE_CACHE_KEY,
+    MASHRABIYA_STATE_CACHE_KEY,
     EXPERIENCE_PLAYBACK_STATE_KEY
   ];
   for (var i = 0; i < cacheKeys.length; i++) {
@@ -1825,6 +1894,7 @@ function clearSessionScopedCachesOnLoad() {
   stitchingStateSnapshotAvailable = false;
   triangulaStateCache = null;
   squarusStateCache = null;
+  mashrabiyaStateCache = null;
   experiencePlaybackStateCache = null;
 }
 
@@ -1954,7 +2024,7 @@ var EXPERIENCE_LIBRARY = {
   mashrabiya: {
     id: 'mashrabiya',
     title: 'Mashrabiya',
-    titleFontFamily: 'Nunito',
+    titleFontFamily: 'Shaumy',
     titleSvgPath: '',
     strokeColor: '#82511f',
     infoTitle: 'About Mashrabiya',
@@ -1965,7 +2035,7 @@ var EXPERIENCE_LIBRARY = {
       fixedShape: 'star',
       threadsEnabled: false,
       allowMultipleThreads: false,
-      paletteMode: 'global',
+      paletteMode: 'none',
       supportsHoleNumbers: false,
       supportsBorder: false,
       basicControls: {
@@ -1973,7 +2043,11 @@ var EXPERIENCE_LIBRARY = {
         stitchBy: false,
         add: false,
         multiply: false,
-        width: false
+        width: false,
+        mashrabiyaFold: true,
+        mashrabiyaStarColor: true,
+        mashrabiyaPetalColor: true,
+        mashrabiyaPointColor: true
       },
       advancedControls: {
         shape: true,
@@ -2002,6 +2076,11 @@ var squarusAnimationMode = 'sequential';
 var squarusContactMode = 'formula-only';
 var squarusPieceCount = null;
 var squarusSequenceSeed = 1;
+var mashrabiyaFold = 12;
+var mashrabiyaGeometryMode = 'stitch-vertex';
+var mashrabiyaStarColor = '#f4d35e';
+var mashrabiyaPetalColor = '#ee964b';
+var mashrabiyaPointColor = '#f95738';
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0;
@@ -2048,7 +2127,12 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   squarusAnimationMode: 'squarusAnimationMode',
   squarusContactMode: 'squarusContactMode',
   squarusPieceCount: 'squarusPieceCount',
-  squarusSequenceSeed: 'squarusSequenceSeed'
+  squarusSequenceSeed: 'squarusSequenceSeed',
+  mashrabiyaFold: 'mashrabiyaFold',
+  mashrabiyaGeometryMode: 'mashrabiyaGeometryMode',
+  mashrabiyaStarColor: 'mashrabiyaStarColor',
+  mashrabiyaPetalColor: 'mashrabiyaPetalColor',
+  mashrabiyaPointColor: 'mashrabiyaPointColor'
 });
 var URL_SYNC_DEBOUNCE_MS = 800;
 var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
@@ -2090,6 +2174,13 @@ var appState = {
     contactMode: 'formula-only',
     pieceCount: null,
     sequenceSeed: 0
+  },
+  mashrabiya: {
+    fold: 12,
+    geometryMode: 'stitch-vertex',
+    starColor: '#f4d35e',
+    petalColor: '#ee964b',
+    pointColor: '#f95738'
   }
 };
 
@@ -2196,6 +2287,19 @@ function sanitizeSquarusAnimationMode(value, fallback) {
 function sanitizeSquarusContactMode(value, fallback) {
   if (value !== 'connected-touch' && value !== 'formula-only') return fallback;
   return value;
+}
+
+function sanitizeMashrabiyaFold(value, fallback) {
+  var parsed = parseBoundedInt(value, 6, 12, fallback);
+  var allowed = [6, 8, 12];
+  if (allowed.indexOf(parsed) === -1) {
+    return allowed.indexOf(fallback) !== -1 ? fallback : 12;
+  }
+  return parsed;
+}
+
+function sanitizeMashrabiyaGeometryMode(value, fallback) {
+  return 'stitch-vertex';
 }
 
 function getSquarusSequenceDomainSize(orderRef) {
@@ -2719,6 +2823,59 @@ function restoreSquarusStateFromCache() {
   squarusSequenceSeed = cached.sequenceSeed;
 }
 
+function buildMashrabiyaStateSnapshotFromRuntime() {
+  return {
+    fold: sanitizeMashrabiyaFold(mashrabiyaFold, 12),
+    geometryMode: sanitizeMashrabiyaGeometryMode(mashrabiyaGeometryMode, 'stitch-vertex'),
+    starColor: sanitizeHexColor(mashrabiyaStarColor, '#f4d35e'),
+    petalColor: sanitizeHexColor(mashrabiyaPetalColor, '#ee964b'),
+    pointColor: sanitizeHexColor(mashrabiyaPointColor, '#f95738')
+  };
+}
+
+function persistMashrabiyaStateCache(snapshot) {
+  var normalized = snapshot || buildMashrabiyaStateSnapshotFromRuntime();
+  mashrabiyaStateCache = normalized;
+  try {
+    appStateStorage.setItem(MASHRABIYA_STATE_CACHE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    // Ignore persistence failures; runtime cache still works.
+  }
+}
+
+function hydrateMashrabiyaStateCacheFromStorage() {
+  if (mashrabiyaStateCache) return mashrabiyaStateCache;
+  var fallback = buildMashrabiyaStateSnapshotFromRuntime();
+  var raw = appStateStorage.getItem(MASHRABIYA_STATE_CACHE_KEY);
+  if (!raw) {
+    mashrabiyaStateCache = fallback;
+    return mashrabiyaStateCache;
+  }
+  try {
+    var parsed = JSON.parse(raw);
+    mashrabiyaStateCache = {
+      fold: sanitizeMashrabiyaFold(parsed.fold, fallback.fold),
+      geometryMode: sanitizeMashrabiyaGeometryMode(parsed.geometryMode, fallback.geometryMode),
+      starColor: sanitizeHexColor(parsed.starColor, fallback.starColor),
+      petalColor: sanitizeHexColor(parsed.petalColor, fallback.petalColor),
+      pointColor: sanitizeHexColor(parsed.pointColor, fallback.pointColor)
+    };
+  } catch (error) {
+    mashrabiyaStateCache = fallback;
+  }
+  return mashrabiyaStateCache;
+}
+
+function restoreMashrabiyaStateFromCache() {
+  var cached = hydrateMashrabiyaStateCacheFromStorage();
+  if (!cached) return;
+  mashrabiyaFold = cached.fold;
+  mashrabiyaGeometryMode = sanitizeMashrabiyaGeometryMode(cached.geometryMode, 'stitch-vertex');
+  mashrabiyaStarColor = cached.starColor;
+  mashrabiyaPetalColor = cached.petalColor;
+  mashrabiyaPointColor = cached.pointColor;
+}
+
 function syncCurrentExperienceStateCacheFromRuntime() {
   if (currentExperienceId === 'stitching') {
     syncStitchingStateCacheFromRuntime();
@@ -2730,6 +2887,10 @@ function syncCurrentExperienceStateCacheFromRuntime() {
   }
   if (currentExperienceId === 'squarus') {
     persistSquarusStateCache();
+    return;
+  }
+  if (currentExperienceId === 'mashrabiya') {
+    persistMashrabiyaStateCache();
   }
 }
 
@@ -2781,6 +2942,12 @@ function syncAppStateFromRuntime() {
   appState.squarus.contactMode = sanitizeSquarusContactMode(squarusContactMode, 'formula-only');
   appState.squarus.pieceCount = normalizeSquarusPieceCount(squarusPieceCount, getSquarusTotalPiecesForOrder(squarusOrder), squarusOrder);
   appState.squarus.sequenceSeed = normalizeSquarusSequenceSeed(squarusSequenceSeed, 0, squarusOrder);
+
+  appState.mashrabiya.fold = sanitizeMashrabiyaFold(mashrabiyaFold, 12);
+  appState.mashrabiya.geometryMode = sanitizeMashrabiyaGeometryMode(mashrabiyaGeometryMode, 'stitch-vertex');
+  appState.mashrabiya.starColor = sanitizeHexColor(mashrabiyaStarColor, '#f4d35e');
+  appState.mashrabiya.petalColor = sanitizeHexColor(mashrabiyaPetalColor, '#ee964b');
+  appState.mashrabiya.pointColor = sanitizeHexColor(mashrabiyaPointColor, '#f95738');
 }
 
 function buildSearchParamsFromAppState() {
@@ -2820,6 +2987,12 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'squarusContactMode', appState.squarus.contactMode);
     setUrlStateParam(params, 'squarusPieceCount', String(appState.squarus.pieceCount));
     setUrlStateParam(params, 'squarusSequenceSeed', String(appState.squarus.sequenceSeed));
+  } else if (appState.experienceId === 'mashrabiya') {
+    setUrlStateParam(params, 'mashrabiyaFold', String(appState.mashrabiya.fold));
+    setUrlStateParam(params, 'mashrabiyaGeometryMode', appState.mashrabiya.geometryMode);
+    setUrlStateParam(params, 'mashrabiyaStarColor', appState.mashrabiya.starColor);
+    setUrlStateParam(params, 'mashrabiyaPetalColor', appState.mashrabiya.petalColor);
+    setUrlStateParam(params, 'mashrabiyaPointColor', appState.mashrabiya.pointColor);
   }
 
   return params;
@@ -2958,6 +3131,13 @@ function applyStateFromCurrentUrl(options) {
       squarusPieceCount = normalizeSquarusPieceCount(getUrlStateParam(params, 'squarusPieceCount'), squarusPieceCount, squarusOrder);
       squarusSequenceSeed = normalizeSquarusSequenceSeed(getUrlStateParam(params, 'squarusSequenceSeed'), squarusSequenceSeed, squarusOrder);
       syncSquarusControls();
+    } else if (requestedExperience === 'mashrabiya') {
+      mashrabiyaFold = sanitizeMashrabiyaFold(getUrlStateParam(params, 'mashrabiyaFold'), mashrabiyaFold);
+      mashrabiyaGeometryMode = sanitizeMashrabiyaGeometryMode(getUrlStateParam(params, 'mashrabiyaGeometryMode'), mashrabiyaGeometryMode);
+      mashrabiyaStarColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaStarColor'), mashrabiyaStarColor);
+      mashrabiyaPetalColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaPetalColor'), mashrabiyaPetalColor);
+      mashrabiyaPointColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaPointColor'), mashrabiyaPointColor);
+      syncMashrabiyaControls();
     }
 
     redrawForPathChange();
@@ -3163,6 +3343,10 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(squarusContactBlock, controls.squarusLayout === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusPieceCountBlock, controls.squarusPieceCount === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusSequenceBlock, controls.squarusSequence === true && currentExperienceId === 'squarus', '');
+  setElementDisplay(mashrabiyaFoldBlock, controls.mashrabiyaFold === true && currentExperienceId === 'mashrabiya', '');
+  setElementDisplay(mashrabiyaStarColorBlock, controls.mashrabiyaStarColor === true && currentExperienceId === 'mashrabiya', '');
+  setElementDisplay(mashrabiyaPetalColorBlock, controls.mashrabiyaPetalColor === true && currentExperienceId === 'mashrabiya', '');
+  setElementDisplay(mashrabiyaPointColorBlock, controls.mashrabiyaPointColor === true && currentExperienceId === 'mashrabiya', '');
 }
 
 function applyAdvancedControlPolicy(profile) {
@@ -3236,6 +3420,32 @@ function applyExperienceUiPolicy() {
   }
   syncSquarusControls();
   syncTriangulaControls();
+  syncMashrabiyaControls();
+}
+
+function syncMashrabiyaControls() {
+  mashrabiyaFold = sanitizeMashrabiyaFold(mashrabiyaFold, 12);
+  mashrabiyaGeometryMode = sanitizeMashrabiyaGeometryMode(mashrabiyaGeometryMode, 'stitch-vertex');
+  mashrabiyaStarColor = sanitizeHexColor(mashrabiyaStarColor, '#f4d35e');
+  mashrabiyaPetalColor = sanitizeHexColor(mashrabiyaPetalColor, '#ee964b');
+  mashrabiyaPointColor = sanitizeHexColor(mashrabiyaPointColor, '#f95738');
+
+  if (mashrabiyaFoldSelect) {
+    mashrabiyaFoldSelect.value = String(mashrabiyaFold);
+  }
+  if (mashrabiyaStarColorInput) {
+    mashrabiyaStarColorInput.value = mashrabiyaStarColor;
+  }
+  if (mashrabiyaPetalColorInput) {
+    mashrabiyaPetalColorInput.value = mashrabiyaPetalColor;
+  }
+  if (mashrabiyaPointColorInput) {
+    mashrabiyaPointColorInput.value = mashrabiyaPointColor;
+  }
+
+  if (currentExperienceId === 'mashrabiya') {
+    persistMashrabiyaStateCache();
+  }
 }
 
 function syncSquarusControls() {
@@ -3549,6 +3759,8 @@ function setCurrentExperience(experienceId, options) {
     persistTriangulaStateCache();
   } else if (previousExperienceId === 'squarus') {
     persistSquarusStateCache();
+  } else if (previousExperienceId === 'mashrabiya') {
+    persistMashrabiyaStateCache();
   }
 
   // keep options arg for API compatibility
@@ -3569,10 +3781,15 @@ function setCurrentExperience(experienceId, options) {
     restoreTriangulaStateFromCache();
   } else if (currentExperienceId === 'squarus') {
     restoreSquarusStateFromCache();
+  } else if (currentExperienceId === 'mashrabiya') {
+    restoreMashrabiyaStateFromCache();
   }
 
   if (!options.preserveSongOnExperienceChange) {
     var preferredPlayback = getPreferredPlaybackForExperience(currentExperienceId);
+    if (currentExperienceId === 'mashrabiya' && isSongUnlockedForCurrentSession('rosette')) {
+      preferredPlayback.songId = 'rosette';
+    }
     setCurrentSong(preferredPlayback.songId, { suppressUrlSync: true });
     applyTempoValue(preferredPlayback.bpm, { suppressUrlSync: true, suppressRedraw: true });
   }
@@ -4445,11 +4662,30 @@ function unlockDiscovery(shapeKey) {
   if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
   if (discoveredShapeKeys[shapeKey]) return;
 
+  var config = DISCOVERY_LIBRARY[shapeKey];
   discoveredShapeKeys[shapeKey] = true;
-  unlockSong(DISCOVERY_LIBRARY[shapeKey].songId);
+  unlockSong(config.songId);
+
+  var unlockedExperienceId = resolveExperienceId(config.experienceName);
+  if (unlockedExperienceId === 'mashrabiya' && config.songId === 'rosette') {
+    var playbackState = hydrateExperiencePlaybackStateCacheFromStorage();
+    playbackState.mashrabiya = normalizePlaybackEntry(
+      {
+        songId: 'rosette',
+        bpm: getKidTempoPresetsForSong('rosette').normal || DEFAULT_ANIMATION_BPM
+      },
+      'rosette'
+    );
+    persistExperiencePlaybackStateCache(playbackState);
+  }
+
+  if (unlockedExperienceId && unlockedExperienceId === currentExperienceId && config.songId && currentSongId !== config.songId) {
+    setCurrentSong(config.songId, { suppressUrlSync: true });
+  }
+
   hasUnseenDiscoveries = true;
   renderDiscoveryLibrary();
-  showDiscoveryToast('New discovery unlocked: ' + DISCOVERY_LIBRARY[shapeKey].title);
+  showDiscoveryToast('New discovery unlocked: ' + config.title);
   animateDiscoveryUnlock(shapeKey);
 }
 
@@ -5288,12 +5524,13 @@ function applyDefaultTempo() {
 }
 
 function stopAnimationIfActive() {
-  if (!animationActive && !animationState && !triangulaAnimationState && !squarusAnimationState) return;
+  if (!animationActive && !animationState && !triangulaAnimationState && !squarusAnimationState && !mashrabiyaAnimationState) return;
   animationActive = false;
   view.onFrame = null;
   animationState = null;
   triangulaAnimationState = null;
   squarusAnimationState = null;
+  mashrabiyaAnimationState = null;
   animationPlaybackState = 'idle';
   syncAnimateButtonLabel();
   clearHighlightedHoleNumbers();
@@ -5302,7 +5539,7 @@ function stopAnimationIfActive() {
 }
 
 function pauseAnimationIfActive() {
-  if (!animationActive || (!animationState && !triangulaAnimationState && !squarusAnimationState)) return;
+  if (!animationActive || (!animationState && !triangulaAnimationState && !squarusAnimationState && !mashrabiyaAnimationState)) return;
   animationActive = false;
   view.onFrame = null;
   animationPlaybackState = 'paused';
@@ -5488,6 +5725,13 @@ function redrawAnimationInPlace() {
     return;
   }
 
+  if (mashrabiyaAnimationState) {
+    renderMashrabiyaAnimationStateFrame(mashrabiyaAnimationState);
+    scheduleDiscoveryEvaluation();
+    scheduleUrlStateSync(false);
+    return;
+  }
+
   if (!animationState) {
     drawStatic();
     scheduleDiscoveryEvaluation();
@@ -5556,6 +5800,7 @@ function fitCanvasToStage() {
     view.onFrame = null;
     animationState = null;
     triangulaAnimationState = null;
+    mashrabiyaAnimationState = null;
     updateMusicPlaybackState();
   }
 
@@ -7879,6 +8124,7 @@ function animateSquarus() {
   view.onFrame = null;
   animationState = null;
   triangulaAnimationState = null;
+  mashrabiyaAnimationState = null;
   squarusAnimationState = buildSquarusAnimationState();
   if (!squarusAnimationState || !squarusAnimationState.items.length || squarusAnimationState.placedCount <= 0) {
     animationPlaybackState = 'idle';
@@ -7930,7 +8176,9 @@ function animateTriangula() {
   animationActive = false;
   view.onFrame = null;
   animationState = null;
+  squarusAnimationState = null;
   triangulaAnimationState = null;
+  mashrabiyaAnimationState = null;
 
   var startDepth = triangulaCountToDepth(triangulaStartCount);
   var endDepth = triangulaCountToDepth(triangulaTargetCount);
@@ -7965,6 +8213,854 @@ function animateTriangula() {
   scheduleUrlStateSync(false);
   renderTriangulaAnimationStateFrame(triangulaAnimationState);
   view.onFrame = runTriangulaAnimationFrame;
+}
+
+function getMashrabiyaStarJump(fold) {
+  var safeFold = sanitizeMashrabiyaFold(fold, 12);
+  if (safeFold === 8) return 3;
+  if (safeFold === 6) return 5;
+  return 5;
+}
+
+function buildMashrabiyaStepSequence(pointCount, startIndex, jumpValue) {
+  var n = parseBoundedInt(pointCount, 3, MAX_HOLES, 12);
+  var start = ((parseInt(startIndex, 10) % n) + n) % n;
+  var jump = ((parseInt(jumpValue, 10) % n) + n) % n;
+  if (!jump) jump = 1;
+
+  var sequence = [];
+  var visited = new Array(n).fill(false);
+  var current = start;
+  var safety = n * 4;
+
+  for (var i = 0; i < safety; i++) {
+    if (visited[current]) break;
+    visited[current] = true;
+    sequence.push(current);
+    current = (current + jump) % n;
+  }
+
+  return sequence;
+}
+
+function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
+  var safeFold = sanitizeMashrabiyaFold(fold, 12);
+  var safeGeometryMode = sanitizeMashrabiyaGeometryMode(geometryMode, mashrabiyaGeometryMode);
+  var center = view.center;
+  var radius = Math.max(120, Math.min(view.size.width, view.size.height) * 0.42);
+  var angleStep = (Math.PI * 2) / safeFold;
+  var petalRadius = radius * 0.93;
+  var bridgeRadius = radius * 0.67;
+
+  function pointAt(theta, r) {
+    return new Point(
+      center.x + r * Math.cos(theta),
+      center.y + r * Math.sin(theta)
+    );
+  }
+
+  var petalTips = [];
+  var scaffoldPoints = [];
+  var bridgePoints = [];
+  var guideCircleVertices = [];
+
+  var circleSampleCount = 180;
+  for (var sample = 0; sample < circleSampleCount; sample++) {
+    var circleAngle = -Math.PI / 2 + ((Math.PI * 2 * sample) / circleSampleCount);
+    guideCircleVertices.push(pointAt(circleAngle, petalRadius));
+  }
+
+  for (var i = 0; i < safeFold; i++) {
+    var baseAngle = -Math.PI / 2 + i * angleStep;
+    var halfAngle = baseAngle + (angleStep / 2);
+    petalTips.push(pointAt(baseAngle, petalRadius));
+    bridgePoints.push(pointAt(halfAngle, bridgeRadius));
+  }
+
+  // Dense lifted stitch-vertex construction for 12/8/6 folds.
+  var scaffoldCount = safeFold * 8;
+  var scaffoldAngleStep = (Math.PI * 2) / scaffoldCount;
+  var scaffoldRadius = petalRadius;
+  var scaffoldPhase = -Math.PI / 2;
+
+  for (var si = 0; si < scaffoldCount; si++) {
+    scaffoldPoints.push(pointAt(scaffoldPhase + si * scaffoldAngleStep, scaffoldRadius));
+  }
+
+  // Keep the rendered circle guide on the same vertex set as stitched sequences,
+  // so thread endpoints visually sit on the circle instead of appearing outside.
+  guideCircleVertices = scaffoldPoints.slice();
+
+  var circleSequence = buildMashrabiyaStepSequence(scaffoldCount, 0, 1);
+  var firstPolygonSequence = buildMashrabiyaStepSequence(scaffoldCount, 0, 16);
+  var offsetPolygonSequence = buildMashrabiyaStepSequence(scaffoldCount, 8, 16);
+  var starJump = Math.max(1, Math.round(scaffoldCount / 2) - 4);
+  var starSequence = buildMashrabiyaStepSequence(scaffoldCount, 2, starJump);
+
+  function buildLegacyFillGeometry(starVertices) {
+    var legacyPetals = [];
+    var legacyPointRegions = [];
+    for (var k = 0; k < safeFold; k++) {
+      var kPrev = (k - 1 + safeFold) % safeFold;
+      legacyPetals.push([petalTips[k], bridgePoints[k], bridgePoints[kPrev]]);
+      var starVertex = starVertices[k % starVertices.length];
+      legacyPointRegions.push([bridgePoints[kPrev], bridgePoints[k], starVertex]);
+    }
+    return {
+      petals: legacyPetals,
+      pointRegions: legacyPointRegions
+    };
+  }
+
+  function buildSegmentsFromSequence(pointsList, sequence) {
+    var segments = [];
+    for (var idx = 0; idx < sequence.length; idx++) {
+      var aIndex = sequence[idx];
+      var bIndex = sequence[(idx + 1) % sequence.length];
+      var aPoint = pointsList[aIndex];
+      var bPoint = pointsList[bIndex];
+      if (!aPoint || !bPoint || aPoint.getDistance(bPoint) <= 1e-6) continue;
+      segments.push({
+        from: aPoint,
+        to: bPoint,
+        edgeIndex: idx
+      });
+    }
+    return segments;
+  }
+
+  function buildSegmentsFromClosedVertices(vertices, tag) {
+    var segments = [];
+    for (var idx = 0; idx < vertices.length; idx++) {
+      var aPoint = vertices[idx];
+      var bPoint = vertices[(idx + 1) % vertices.length];
+      if (!aPoint || !bPoint || aPoint.getDistance(bPoint) <= 1e-6) continue;
+      segments.push({
+        from: aPoint,
+        to: bPoint,
+        tag: tag || 'line',
+        edgeIndex: idx
+      });
+    }
+    return segments;
+  }
+
+  function buildTaggedSegmentsFromSequence(pointsList, sequence, tag) {
+    var raw = buildSegmentsFromSequence(pointsList, sequence);
+    for (var idx = 0; idx < raw.length; idx++) {
+      raw[idx].tag = tag || 'line';
+    }
+    return raw;
+  }
+
+  function segmentIntersection(segA, segB) {
+    var p = segA.from;
+    var p2 = segA.to;
+    var q = segB.from;
+    var q2 = segB.to;
+    var r = p2.subtract(p);
+    var s = q2.subtract(q);
+    var denom = r.cross(s);
+    if (Math.abs(denom) <= 1e-6) return null;
+
+    var qp = q.subtract(p);
+    var t = qp.cross(s) / denom;
+    var u = qp.cross(r) / denom;
+    var epsilon = 1e-6;
+    if (t < -epsilon || t > (1 + epsilon) || u < -epsilon || u > (1 + epsilon)) {
+      return null;
+    }
+
+    return {
+      point: p.add(r.multiply(t)),
+      t: t,
+      u: u
+    };
+  }
+
+  function dedupePointsByDistance(pointsList, threshold) {
+    var deduped = [];
+    var minDistance = Math.max(0.25, threshold || 0.75);
+    for (var di = 0; di < pointsList.length; di++) {
+      var candidate = pointsList[di];
+      var exists = false;
+      for (var dj = 0; dj < deduped.length; dj++) {
+        if (candidate.getDistance(deduped[dj]) <= minDistance) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        deduped.push(candidate);
+      }
+    }
+    return deduped;
+  }
+
+  function buildStarInnerVertices(pointsList, starSequence) {
+    var segments = buildSegmentsFromSequence(pointsList, starSequence);
+    var intersections = [];
+
+    for (var a = 0; a < segments.length; a++) {
+      for (var b = a + 1; b < segments.length; b++) {
+        if (Math.abs(segments[a].edgeIndex - segments[b].edgeIndex) <= 1) continue;
+        if ((segments[a].edgeIndex === 0 && segments[b].edgeIndex === segments.length - 1) ||
+            (segments[b].edgeIndex === 0 && segments[a].edgeIndex === segments.length - 1)) {
+          continue;
+        }
+        var hit = segmentIntersection(segments[a], segments[b]);
+        if (hit && hit.point) {
+          intersections.push(hit.point);
+        }
+      }
+    }
+
+    intersections = dedupePointsByDistance(intersections, radius * 0.008);
+    if (!intersections.length) return [];
+
+    intersections.sort(function(left, right) {
+      return left.getDistance(center) - right.getDistance(center);
+    });
+
+    var innerVertices = intersections.slice(0, safeFold);
+    innerVertices.sort(function(left, right) {
+      var leftAngle = Math.atan2(left.y - center.y, left.x - center.x);
+      var rightAngle = Math.atan2(right.y - center.y, right.x - center.x);
+      return leftAngle - rightAngle;
+    });
+
+    return innerVertices;
+  }
+
+  function normalizeParam(value) {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  function addSplitValue(values, candidate, epsilon) {
+    var eps = isFinite(epsilon) ? epsilon : 1e-5;
+    var normalized = normalizeParam(candidate);
+    for (var i = 0; i < values.length; i++) {
+      if (Math.abs(values[i] - normalized) <= eps) return;
+    }
+    values.push(normalized);
+  }
+
+  function sortNumeric(values) {
+    values.sort(function(a, b) {
+      return a - b;
+    });
+    return values;
+  }
+
+  function getPointOnSegment(segment, t) {
+    var ratio = normalizeParam(t);
+    return segment.from.add(segment.to.subtract(segment.from).multiply(ratio));
+  }
+
+  function polygonSignedArea(vertices) {
+    if (!vertices || vertices.length < 3) return 0;
+    var sum = 0;
+    for (var i = 0; i < vertices.length; i++) {
+      var a = vertices[i];
+      var b = vertices[(i + 1) % vertices.length];
+      sum += (a.x * b.y) - (b.x * a.y);
+    }
+    return sum * 0.5;
+  }
+
+  function polygonCentroid(vertices) {
+    if (!vertices || !vertices.length) return center;
+    var areaFactor = 0;
+    var cx = 0;
+    var cy = 0;
+
+    for (var i = 0; i < vertices.length; i++) {
+      var a = vertices[i];
+      var b = vertices[(i + 1) % vertices.length];
+      var cross = (a.x * b.y) - (b.x * a.y);
+      areaFactor += cross;
+      cx += (a.x + b.x) * cross;
+      cy += (a.y + b.y) * cross;
+    }
+
+    if (Math.abs(areaFactor) <= 1e-8) {
+      var avgX = 0;
+      var avgY = 0;
+      for (var j = 0; j < vertices.length; j++) {
+        avgX += vertices[j].x;
+        avgY += vertices[j].y;
+      }
+      return new Point(avgX / vertices.length, avgY / vertices.length);
+    }
+
+    var scale = 1 / (3 * areaFactor);
+    return new Point(cx * scale, cy * scale);
+  }
+
+  function vertexKey(point) {
+    return String(Math.round(point.x * 1000)) + '|' + String(Math.round(point.y * 1000));
+  }
+
+  function extractFacesFromSegments(baseSegments) {
+    if (!baseSegments || !baseSegments.length) return [];
+
+    var splitParams = [];
+    for (var i = 0; i < baseSegments.length; i++) {
+      splitParams.push([0, 1]);
+    }
+
+    for (var a = 0; a < baseSegments.length; a++) {
+      for (var b = a + 1; b < baseSegments.length; b++) {
+        var hit = segmentIntersection(baseSegments[a], baseSegments[b]);
+        if (!hit) continue;
+        addSplitValue(splitParams[a], hit.t, 1e-5);
+        addSplitValue(splitParams[b], hit.u, 1e-5);
+      }
+    }
+
+    var undirectedEdges = [];
+    for (var s = 0; s < baseSegments.length; s++) {
+      var params = sortNumeric(splitParams[s]);
+      for (var p = 0; p < params.length - 1; p++) {
+        var t0 = params[p];
+        var t1 = params[p + 1];
+        if ((t1 - t0) <= 1e-5) continue;
+        var from = getPointOnSegment(baseSegments[s], t0);
+        var to = getPointOnSegment(baseSegments[s], t1);
+        if (from.getDistance(to) <= 1e-4) continue;
+        undirectedEdges.push({
+          from: from,
+          to: to,
+          tag: baseSegments[s].tag || 'line'
+        });
+      }
+    }
+
+    var vertices = [];
+    var vertexLookup = Object.create(null);
+    function ensureVertex(point) {
+      var key = vertexKey(point);
+      var existing = vertexLookup[key];
+      if (isFinite(existing)) return existing;
+      var index = vertices.length;
+      vertices.push(point);
+      vertexLookup[key] = index;
+      return index;
+    }
+
+    var directedEdges = [];
+    var outgoingByVertex = [];
+    for (var v = 0; v < undirectedEdges.length; v++) {
+      var fromIndex = ensureVertex(undirectedEdges[v].from);
+      var toIndex = ensureVertex(undirectedEdges[v].to);
+      if (fromIndex === toIndex) continue;
+
+      var forwardIndex = directedEdges.length;
+      var backwardIndex = forwardIndex + 1;
+
+      directedEdges.push({
+        from: fromIndex,
+        to: toIndex,
+        twin: backwardIndex,
+        next: -1,
+        used: false,
+        tag: undirectedEdges[v].tag,
+        angle: Math.atan2(vertices[toIndex].y - vertices[fromIndex].y, vertices[toIndex].x - vertices[fromIndex].x)
+      });
+      directedEdges.push({
+        from: toIndex,
+        to: fromIndex,
+        twin: forwardIndex,
+        next: -1,
+        used: false,
+        tag: undirectedEdges[v].tag,
+        angle: Math.atan2(vertices[fromIndex].y - vertices[toIndex].y, vertices[fromIndex].x - vertices[toIndex].x)
+      });
+
+      if (!outgoingByVertex[fromIndex]) outgoingByVertex[fromIndex] = [];
+      if (!outgoingByVertex[toIndex]) outgoingByVertex[toIndex] = [];
+      outgoingByVertex[fromIndex].push(forwardIndex);
+      outgoingByVertex[toIndex].push(backwardIndex);
+    }
+
+    for (var ov = 0; ov < outgoingByVertex.length; ov++) {
+      var edgeIds = outgoingByVertex[ov];
+      if (!edgeIds || edgeIds.length < 1) continue;
+      edgeIds.sort(function(leftId, rightId) {
+        return directedEdges[leftId].angle - directedEdges[rightId].angle;
+      });
+    }
+
+    for (var e = 0; e < directedEdges.length; e++) {
+      var edge = directedEdges[e];
+      var outgoing = outgoingByVertex[edge.to];
+      if (!outgoing || !outgoing.length) continue;
+      var twinIndex = edge.twin;
+      var twinPosition = outgoing.indexOf(twinIndex);
+      if (twinPosition === -1) continue;
+      var nextPosition = (twinPosition - 1 + outgoing.length) % outgoing.length;
+      edge.next = outgoing[nextPosition];
+    }
+
+    var faces = [];
+    var minFaceArea = radius * radius * 0.00003;
+    for (var startEdge = 0; startEdge < directedEdges.length; startEdge++) {
+      if (directedEdges[startEdge].used) continue;
+      var loopVertices = [];
+      var tagSet = Object.create(null);
+      var tagCounts = Object.create(null);
+      var cursor = startEdge;
+      var guard = 0;
+
+      while (cursor >= 0 && !directedEdges[cursor].used && guard < 12000) {
+        var current = directedEdges[cursor];
+        current.used = true;
+        loopVertices.push(vertices[current.from]);
+        tagSet[current.tag] = true;
+        tagCounts[current.tag] = (tagCounts[current.tag] || 0) + 1;
+        cursor = current.next;
+        guard += 1;
+        if (cursor === startEdge) break;
+      }
+
+      if (cursor !== startEdge || loopVertices.length < 3) {
+        continue;
+      }
+
+      var area = polygonSignedArea(loopVertices);
+      if (Math.abs(area) < minFaceArea) continue;
+
+      faces.push({
+        id: faces.length,
+        vertices: loopVertices,
+        area: area,
+        areaAbs: Math.abs(area),
+        centroid: polygonCentroid(loopVertices),
+        hasCircleEdge: !!tagSet.circle,
+        starEdgeCount: tagCounts.star || 0
+      });
+    }
+
+    if (faces.length > 1) {
+      var outerIndex = 0;
+      for (var f = 1; f < faces.length; f++) {
+        if (faces[f].areaAbs > faces[outerIndex].areaAbs) {
+          outerIndex = f;
+        }
+      }
+      faces.splice(outerIndex, 1);
+    }
+
+    return faces;
+  }
+
+  var stitchedSegments = [];
+  stitchedSegments = stitchedSegments.concat(buildSegmentsFromClosedVertices(guideCircleVertices, 'circle'));
+  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, firstPolygonSequence, 'outer'));
+  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, offsetPolygonSequence, 'offset'));
+  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'star'));
+
+  var starPathVertices = buildStarInnerVertices(scaffoldPoints, starSequence);
+  var extractedFaces = extractFacesFromSegments(stitchedSegments);
+  var petals = [];
+  var pointRegions = [];
+
+  function getNormalizedAngle(theta) {
+    var twoPi = Math.PI * 2;
+    var normalized = theta % twoPi;
+    if (normalized < 0) normalized += twoPi;
+    return normalized;
+  }
+
+  function getFaceBin(face) {
+    var faceAngle = Math.atan2(face.centroid.y - center.y, face.centroid.x - center.x);
+    var normalized = getNormalizedAngle(faceAngle + (angleStep / 2));
+    return Math.floor(normalized / angleStep) % safeFold;
+  }
+
+  function pickFacesByWedge(faceList, targetCount, preferOuter, usedIdLookup) {
+    var selectedByBin = new Array(targetCount);
+    var metricByBin = new Array(targetCount);
+
+    for (var index = 0; index < faceList.length; index++) {
+      var face = faceList[index];
+      if (usedIdLookup && usedIdLookup[face.id]) continue;
+      var bin = getFaceBin(face);
+      var metric = face.centroid.getDistance(center);
+
+      if (!selectedByBin[bin]) {
+        selectedByBin[bin] = face;
+        metricByBin[bin] = metric;
+        continue;
+      }
+
+      var shouldReplace = preferOuter ? (metric > metricByBin[bin]) : (metric < metricByBin[bin]);
+      if (shouldReplace) {
+        selectedByBin[bin] = face;
+        metricByBin[bin] = metric;
+      }
+    }
+
+    var selected = [];
+    for (var bi = 0; bi < selectedByBin.length; bi++) {
+      if (selectedByBin[bi]) {
+        selected.push(selectedByBin[bi]);
+      }
+    }
+
+    selected.sort(function(left, right) {
+      return getFaceBin(left) - getFaceBin(right);
+    });
+    return selected;
+  }
+
+  if (extractedFaces.length) {
+    var starRadius = 0;
+    if (starPathVertices && starPathVertices.length) {
+      for (var sr = 0; sr < starPathVertices.length; sr++) {
+        starRadius += starPathVertices[sr].getDistance(center);
+      }
+      starRadius = starRadius / Math.max(1, starPathVertices.length);
+    }
+
+    if (!isFinite(starRadius) || starRadius <= 0) {
+      starRadius = petalRadius * 0.36;
+    }
+
+    var nonCenterFaces = extractedFaces.slice();
+
+    // Keep faces framed by third-thread pairs around scaffold vertices.
+    var preferredFaces = nonCenterFaces.filter(function(face) {
+      return face.starEdgeCount >= 2;
+    });
+    if (preferredFaces.length < (safeFold * 2)) {
+      preferredFaces = nonCenterFaces;
+    }
+
+    var pointCandidates = preferredFaces.filter(function(face) {
+      if (face.hasCircleEdge) return false;
+      var radialDistance = face.centroid.getDistance(center);
+      return radialDistance > (starRadius * 0.9) && radialDistance < (petalRadius * 0.975);
+    });
+    if (pointCandidates.length < safeFold) {
+      pointCandidates = preferredFaces.filter(function(face) {
+        return !face.hasCircleEdge;
+      });
+    }
+
+    var petalCandidates = preferredFaces.filter(function(face) {
+      return !!face.hasCircleEdge;
+    });
+    if (petalCandidates.length < safeFold) {
+      petalCandidates = nonCenterFaces.filter(function(face) {
+        return !!face.hasCircleEdge;
+      });
+    }
+
+    var usedIds = Object.create(null);
+    var selectedPoints = pickFacesByWedge(pointCandidates, safeFold, false, usedIds);
+    for (var sp = 0; sp < selectedPoints.length; sp++) {
+      usedIds[selectedPoints[sp].id] = true;
+    }
+    var selectedPetals = pickFacesByWedge(petalCandidates, safeFold, true, usedIds);
+
+    if (selectedPetals.length < safeFold || selectedPoints.length < safeFold) {
+      selectedPetals = [];
+      selectedPoints = [];
+      for (var fl = 0; fl < nonCenterFaces.length; fl++) {
+        if (nonCenterFaces[fl].hasCircleEdge) {
+          selectedPetals.push(nonCenterFaces[fl]);
+        } else {
+          selectedPoints.push(nonCenterFaces[fl]);
+        }
+      }
+    }
+
+    for (var pf = 0; pf < selectedPetals.length; pf++) {
+      petals.push(selectedPetals[pf].vertices.slice());
+    }
+    for (var pr = 0; pr < selectedPoints.length; pr++) {
+      pointRegions.push(selectedPoints[pr].vertices.slice());
+    }
+
+    petals.sort(function(left, right) {
+      var leftAngle = Math.atan2(left[0].y - center.y, left[0].x - center.x);
+      var rightAngle = Math.atan2(right[0].y - center.y, right[0].x - center.x);
+      return leftAngle - rightAngle;
+    });
+  }
+
+  if (!starPathVertices || starPathVertices.length < safeFold) {
+    // Fallback star geometry if extraction is underconstrained.
+    starPathVertices = [];
+    for (var fallbackIndex = 0; fallbackIndex < safeFold; fallbackIndex++) {
+      var fallbackAngle = -Math.PI / 2 + fallbackIndex * angleStep;
+      starPathVertices.push(pointAt(fallbackAngle, radius * 0.33));
+    }
+  }
+
+  if (!petals.length || !pointRegions.length) {
+    var legacy = buildLegacyFillGeometry(starPathVertices);
+    if (!petals.length) petals = legacy.petals;
+    if (!pointRegions.length) pointRegions = legacy.pointRegions;
+  }
+
+  return {
+    fold: safeFold,
+    center: center,
+    outerRadius: petalRadius,
+    guideCircleVertices: guideCircleVertices,
+    holePoints: petalTips,
+    geometryMode: safeGeometryMode,
+    scaffoldPoints: scaffoldPoints,
+    scaffoldCount: scaffoldCount,
+    circleSequence: circleSequence,
+    firstPolygonSequence: firstPolygonSequence,
+    offsetPolygonSequence: offsetPolygonSequence,
+    starSequence: starSequence,
+    starJump: starJump,
+    petals: petals,
+    pointRegions: pointRegions,
+    starPathVertices: starPathVertices
+  };
+}
+
+function drawMashrabiyaRegionPolygon(vertices, fillColor, fillOpacity) {
+  if (!vertices || vertices.length < 3) return;
+  var shape = new Path();
+  for (var i = 0; i < vertices.length; i++) {
+    shape.add(vertices[i]);
+  }
+  shape.closed = true;
+  shape.fillColor = fillColor;
+  shape.opacity = Math.max(0, Math.min(1, fillOpacity));
+}
+
+function drawMashrabiyaFilledGeometry(geometry, starOpacity, petalOpacity, pointOpacity) {
+  var starFillOpacity = Math.max(0, Math.min(1, starOpacity));
+  var petalFillOpacity = Math.max(0, Math.min(1, petalOpacity));
+  var pointFillOpacity = Math.max(0, Math.min(1, pointOpacity));
+  for (var i = 0; i < geometry.petals.length; i++) {
+    drawMashrabiyaRegionPolygon(geometry.petals[i], mashrabiyaPetalColor, petalFillOpacity);
+  }
+  for (var j = 0; j < geometry.pointRegions.length; j++) {
+    drawMashrabiyaRegionPolygon(geometry.pointRegions[j], mashrabiyaPointColor, pointFillOpacity);
+  }
+  drawMashrabiyaRegionPolygon(geometry.starPathVertices, mashrabiyaStarColor, starFillOpacity);
+}
+
+function drawMashrabiyaSequenceProgress(pointsList, sequence, color, strokeWidth, opacity, progress) {
+  if (!pointsList || pointsList.length < 2 || !sequence || sequence.length < 2) return;
+  var p = clamp01(progress);
+  var strokeOpacity = Math.max(0, Math.min(1, opacity));
+  if (p <= 0 || strokeOpacity <= 0) return;
+
+  var lengths = [];
+  var totalLength = 0;
+  for (var i = 0; i < sequence.length; i++) {
+    var startIndex = sequence[i];
+    var endIndex = sequence[(i + 1) % sequence.length];
+    var start = pointsList[startIndex];
+    var end = pointsList[endIndex];
+    if (!start || !end) continue;
+    var edgeLength = start.getDistance(end);
+    lengths.push(edgeLength);
+    totalLength += edgeLength;
+  }
+  if (!isFinite(totalLength) || totalLength <= 1e-6) return;
+
+  var targetLength = totalLength * p;
+  var traversed = 0;
+  var path = new Path();
+  path.strokeColor = color;
+  path.strokeWidth = strokeWidth;
+  path.opacity = strokeOpacity;
+  path.add(pointsList[sequence[0]]);
+
+  for (var edgeIndex = 0; edgeIndex < sequence.length; edgeIndex++) {
+    var edgeStart = pointsList[sequence[edgeIndex]];
+    var edgeEnd = pointsList[sequence[(edgeIndex + 1) % sequence.length]];
+    if (!edgeStart || !edgeEnd) continue;
+    var edgeLen = edgeStart.getDistance(edgeEnd);
+    var remaining = targetLength - traversed;
+
+    if (remaining <= 0) {
+      break;
+    }
+
+    if (remaining >= edgeLen) {
+      path.add(edgeEnd);
+      traversed += edgeLen;
+    } else {
+      var ratio = edgeLen > 0 ? (remaining / edgeLen) : 0;
+      path.add(edgeStart.add(edgeEnd.subtract(edgeStart).multiply(ratio)));
+      break;
+    }
+  }
+}
+
+function drawMashrabiyaClosedStrokeProgress(vertices, color, strokeWidth, opacity, progress) {
+  if (!vertices || vertices.length < 3) return;
+  var p = clamp01(progress);
+  var strokeOpacity = Math.max(0, Math.min(1, opacity));
+  if (p <= 0 || strokeOpacity <= 0) return;
+
+  var lengths = [];
+  var totalLength = 0;
+  for (var i = 0; i < vertices.length; i++) {
+    var start = vertices[i];
+    var end = vertices[(i + 1) % vertices.length];
+    var edgeLength = start.getDistance(end);
+    lengths.push(edgeLength);
+    totalLength += edgeLength;
+  }
+  if (!isFinite(totalLength) || totalLength <= 1e-6) return;
+
+  var targetLength = totalLength * p;
+  var traversed = 0;
+  var path = new Path();
+  path.strokeColor = color;
+  path.strokeWidth = strokeWidth;
+  path.opacity = strokeOpacity;
+  path.add(vertices[0]);
+
+  for (var edgeIndex = 0; edgeIndex < vertices.length; edgeIndex++) {
+    var edgeStart = vertices[edgeIndex];
+    var edgeEnd = vertices[(edgeIndex + 1) % vertices.length];
+    var edgeLen = lengths[edgeIndex];
+    var remaining = targetLength - traversed;
+
+    if (remaining <= 0) {
+      break;
+    }
+
+    if (remaining >= edgeLen) {
+      path.add(edgeEnd);
+      traversed += edgeLen;
+    } else {
+      var ratio = edgeLen > 0 ? (remaining / edgeLen) : 0;
+      path.add(edgeStart.add(edgeEnd.subtract(edgeStart).multiply(ratio)));
+      break;
+    }
+  }
+}
+
+function mashrabiyaPhaseProgress(elapsed, phaseStart, phaseDuration) {
+  return clamp01((elapsed - phaseStart) / phaseDuration);
+}
+
+function renderMashrabiyaAnimationStateFrame(state) {
+  if (!state) {
+    drawMashrabiyaStatic();
+    return;
+  }
+
+  project.activeLayer.removeChildren();
+
+  var timeline = state.timeline || {
+    dCircle: state.geometry.fold,
+    dOuter: state.geometry.firstPolygonSequence.length,
+    dOffset: state.geometry.offsetPolygonSequence.length,
+    dStar: state.geometry.starSequence.length,
+    dFillStar: Math.max(2, Math.round(state.geometry.fold * 0.5)),
+    dFillPetal: Math.max(2, Math.round(state.geometry.fold * 0.5)),
+    dFillPoint: Math.max(2, Math.round(state.geometry.fold * 0.5))
+  };
+
+  var dCircle = timeline.dCircle;
+  var dOuter = timeline.dOuter;
+  var dOffset = timeline.dOffset;
+  var dStar = timeline.dStar;
+  var dFillStar = timeline.dFillStar;
+  var dFillPetal = timeline.dFillPetal;
+  var dFillPoint = timeline.dFillPoint;
+
+  var t = state.elapsedBeats;
+  var sCircle = 0;
+  var sOuter = sCircle + dCircle;
+  var sOffset = sOuter + dOuter;
+  var sStar = sOffset + dOffset;
+  var sFillStar = sStar + dStar;
+  var sFillPetal = sFillStar + dFillStar;
+  var sFillPoint = sFillPetal + dFillPetal;
+  var sEnd = sFillPoint + dFillPoint;
+
+  var lineFade = 1 - mashrabiyaPhaseProgress(t, sFillStar, dFillStar + dFillPetal + dFillPoint);
+  var lineOpacity = 0.9 * Math.max(0.15, lineFade);
+
+  drawMashrabiyaClosedStrokeProgress(state.geometry.guideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sCircle, dCircle));
+  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOuter, dOuter));
+  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOffset, dOffset));
+  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.starSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
+
+  drawMashrabiyaFilledGeometry(
+    state.geometry,
+    mashrabiyaPhaseProgress(t, sFillStar, dFillStar),
+    mashrabiyaPhaseProgress(t, sFillPetal, dFillPetal),
+    mashrabiyaPhaseProgress(t, sFillPoint, dFillPoint)
+  );
+
+  state.durationBeats = sEnd;
+  clearHighlightedHoleNumbers();
+}
+
+function drawMashrabiyaStatic() {
+  project.activeLayer.removeChildren();
+  var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
+  drawMashrabiyaFilledGeometry(geometry, 1, 1, 1);
+  clearHighlightedHoleNumbers();
+}
+
+function runMashrabiyaAnimationFrame(event) {
+  if (!animationActive || !mashrabiyaAnimationState) return;
+  var delta = Math.min(event.delta || 0, 0.1);
+  mashrabiyaAnimationState.elapsedBeats += delta / Math.max(1e-4, getAnimationSecondsPerSegment());
+  renderMashrabiyaAnimationStateFrame(mashrabiyaAnimationState);
+
+  if (mashrabiyaAnimationState.elapsedBeats < mashrabiyaAnimationState.durationBeats) return;
+
+  animationActive = false;
+  animationPlaybackState = 'idle';
+  view.onFrame = null;
+  mashrabiyaAnimationState = null;
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
+  drawMashrabiyaStatic();
+}
+
+function animateMashrabiya() {
+  animationActive = false;
+  view.onFrame = null;
+  animationState = null;
+  triangulaAnimationState = null;
+  squarusAnimationState = null;
+  var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
+  var timeline = {
+    dCircle: geometry.fold,
+    dOuter: geometry.firstPolygonSequence.length,
+    dOffset: geometry.offsetPolygonSequence.length,
+    dStar: geometry.starSequence.length,
+    dFillStar: Math.max(2, Math.round(geometry.fold * 0.5)),
+    dFillPetal: Math.max(2, Math.round(geometry.fold * 0.5)),
+    dFillPoint: Math.max(2, Math.round(geometry.fold * 0.5))
+  };
+  var durationBeats = timeline.dCircle + timeline.dOuter + timeline.dOffset + timeline.dStar + timeline.dFillStar + timeline.dFillPetal + timeline.dFillPoint;
+
+  mashrabiyaAnimationState = {
+    elapsedBeats: 0,
+    durationBeats: durationBeats,
+    timeline: timeline,
+    geometry: geometry
+  };
+
+  animationActive = true;
+  animationPlaybackState = 'playing';
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
+  renderMashrabiyaAnimationStateFrame(mashrabiyaAnimationState);
+  view.onFrame = runMashrabiyaAnimationFrame;
 }
 
 function shouldShowHoleNumbersNow() {
@@ -8206,6 +9302,8 @@ function syncExportUiCopy() {
       advancedExportHelp.textContent = 'Exports Triangula target composition as SVG with instructions (preview PNG is omitted for this experience).';
     } else if (exportExperience === 'squarus') {
       advancedExportHelp.textContent = 'Exports Squarus cut-sheet SVG, parameterized PNG preview, and Squarus assembly instructions.';
+    } else if (exportExperience === 'mashrabiya') {
+      advancedExportHelp.textContent = 'Exports Mashrabiya rosette composition as SVG with instructions and optional preview.';
     } else {
       advancedExportHelp.textContent = 'Exports current Stitching view (borders, threads, holes, and visible hole numbers).';
     }
@@ -8216,6 +9314,8 @@ function syncExportUiCopy() {
       exportOptionsTitle.textContent = 'Triangula Export Options';
     } else if (exportExperience === 'squarus') {
       exportOptionsTitle.textContent = 'Squarus Export Options';
+    } else if (exportExperience === 'mashrabiya') {
+      exportOptionsTitle.textContent = 'Mashrabiya Export Options';
     } else {
       exportOptionsTitle.textContent = 'Stitching Export Options';
     }
@@ -8336,6 +9436,37 @@ function buildSquarusCutSheetSvgString() {
   return lines.join('\n');
 }
 
+function buildMashrabiyaDesignSvgString() {
+  var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
+  var width = Math.max(120, Math.round(view.viewSize.width || 900));
+  var height = Math.max(120, Math.round(view.viewSize.height || 900));
+  var lines = [];
+
+  function toSvgPoints(vertices) {
+    var chunks = [];
+    for (var i = 0; i < vertices.length; i++) {
+      chunks.push(formatSvgNumber(vertices[i].x) + ',' + formatSvgNumber(vertices[i].y));
+    }
+    return chunks.join(' ');
+  }
+
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
+  lines.push('<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="#ffffff"/>');
+
+  for (var p = 0; p < geometry.petals.length; p++) {
+    lines.push('<polygon points="' + toSvgPoints(geometry.petals[p]) + '" fill="' + mashrabiyaPetalColor + '"/>');
+  }
+
+  for (var q = 0; q < geometry.pointRegions.length; q++) {
+    lines.push('<polygon points="' + toSvgPoints(geometry.pointRegions[q]) + '" fill="' + mashrabiyaPointColor + '"/>');
+  }
+
+  lines.push('<polygon points="' + toSvgPoints(geometry.starPathVertices) + '" fill="' + mashrabiyaStarColor + '"/>');
+  lines.push('</svg>');
+  return lines.join('\n');
+}
+
 function buildCurrentDesignSvgString(options) {
   options = options || {};
   if (currentExperienceId === 'triangula') {
@@ -8343,6 +9474,9 @@ function buildCurrentDesignSvgString(options) {
   }
   if (currentExperienceId === 'squarus') {
     return buildSquarusCutSheetSvgString();
+  }
+  if (currentExperienceId === 'mashrabiya') {
+    return buildMashrabiyaDesignSvgString();
   }
 
   var includeThreads = options.includeThreads !== false;
@@ -8868,6 +10002,11 @@ function drawStatic() {
     return;
   }
 
+  if (currentExperienceId === 'mashrabiya') {
+    drawMashrabiyaStatic();
+    return;
+  }
+
   project.activeLayer.removeChildren();
   computePoints();
 
@@ -8980,6 +10119,10 @@ function animateStitch() {
     animateSquarus();
     return;
   }
+  if (currentExperienceId === 'mashrabiya') {
+    animateMashrabiya();
+    return;
+  }
 
   // Always treat this as a fresh run, even if a prior animation is active.
   animationActive = false;
@@ -8987,6 +10130,7 @@ function animateStitch() {
   animationState = null;
   triangulaAnimationState = null;
   squarusAnimationState = null;
+  mashrabiyaAnimationState = null;
   clearHighlightedHoleNumbers();
 
   project.activeLayer.removeChildren();
@@ -9013,7 +10157,7 @@ function animateStitch() {
 
 function resumeAnimationIfPaused() {
   if (animationActive) return;
-  if (!animationState && !triangulaAnimationState && !squarusAnimationState) return;
+  if (!animationState && !triangulaAnimationState && !squarusAnimationState && !mashrabiyaAnimationState) return;
   animationActive = true;
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
@@ -9025,6 +10169,10 @@ function resumeAnimationIfPaused() {
   }
   if (squarusAnimationState) {
     view.onFrame = runSquarusAnimationFrame;
+    return;
+  }
+  if (mashrabiyaAnimationState) {
+    view.onFrame = runMashrabiyaAnimationFrame;
     return;
   }
   startAnimationLoop();
@@ -9780,6 +10928,38 @@ if (squarusSequenceRandomizeBtn) {
 if (squarusSequenceRandomizeAdvancedBtn) {
   squarusSequenceRandomizeAdvancedBtn.addEventListener('click', () => {
     randomizeSquarusSequenceSeed();
+  });
+}
+
+if (mashrabiyaFoldSelect) {
+  mashrabiyaFoldSelect.addEventListener('change', () => {
+    mashrabiyaFold = sanitizeMashrabiyaFold(mashrabiyaFoldSelect.value, mashrabiyaFold);
+    syncMashrabiyaControls();
+    redrawForPathChange();
+  });
+}
+
+if (mashrabiyaStarColorInput) {
+  mashrabiyaStarColorInput.addEventListener('input', () => {
+    mashrabiyaStarColor = sanitizeHexColor(mashrabiyaStarColorInput.value, mashrabiyaStarColor);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
+  });
+}
+
+if (mashrabiyaPetalColorInput) {
+  mashrabiyaPetalColorInput.addEventListener('input', () => {
+    mashrabiyaPetalColor = sanitizeHexColor(mashrabiyaPetalColorInput.value, mashrabiyaPetalColor);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
+  });
+}
+
+if (mashrabiyaPointColorInput) {
+  mashrabiyaPointColorInput.addEventListener('input', () => {
+    mashrabiyaPointColor = sanitizeHexColor(mashrabiyaPointColorInput.value, mashrabiyaPointColor);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
   });
 }
 
