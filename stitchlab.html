@@ -8654,140 +8654,65 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     return faces;
   }
 
-  var stitchedSegments = [];
-  stitchedSegments = stitchedSegments.concat(buildSegmentsFromClosedVertices(guideCircleVertices, 'circle'));
-  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, firstPolygonSequence, 'outer'));
-  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, offsetPolygonSequence, 'offset'));
-  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'star'));
-
-  var starPathVertices = buildStarInnerVertices(scaffoldPoints, starSequence);
-  var extractedFaces = extractFacesFromSegments(stitchedSegments);
+  var starPathVertices = [];
   var petals = [];
   var pointRegions = [];
+  var sectors = safeFold;
+  var dTheta = (Math.PI * 2) / sectors;
+  var sectorPhase = -Math.PI / 2;
+  var polygonSides = Math.max(3, Math.round(sectors / 2));
+  var sectorsPerSide = Math.max(1, Math.round(sectors / polygonSides));
 
-  function getNormalizedAngle(theta) {
-    var twoPi = Math.PI * 2;
-    var normalized = theta % twoPi;
-    if (normalized < 0) normalized += twoPi;
-    return normalized;
+  var rOuter = petalRadius;
+  var rPetal = radius * 0.7;
+  var rTri = radius * 0.54;
+  var rStar = radius * 0.36;
+
+  var outerVertices = [];
+  var petalShouldersL = [];
+  var petalShouldersR = [];
+  var triTipsL = [];
+  var triTipsR = [];
+
+  for (var i = 0; i < sectors; i++) {
+    var thetaCenter = sectorPhase + i * dTheta;
+    var thetaLeft = thetaCenter - (dTheta / 2);
+    var thetaRight = thetaCenter + (dTheta / 2);
+
+    var anchorSector = Math.floor(i / sectorsPerSide) * sectorsPerSide;
+    var anchorTheta = sectorPhase + anchorSector * dTheta;
+    var outer = pointAt(anchorTheta, rOuter);
+
+    outerVertices.push(outer);
+    petalShouldersL.push(pointAt(thetaLeft, rPetal));
+    petalShouldersR.push(pointAt(thetaRight, rPetal));
+    starPathVertices.push(pointAt(thetaCenter, rStar));
+    triTipsL.push(pointAt(thetaLeft, rTri));
+    triTipsR.push(pointAt(thetaRight, rTri));
   }
 
-  function getFaceBin(face) {
-    var faceAngle = Math.atan2(face.centroid.y - center.y, face.centroid.x - center.x);
-    var normalized = getNormalizedAngle(faceAngle + (angleStep / 2));
-    return Math.floor(normalized / angleStep) % safeFold;
-  }
+  for (var p = 0; p < sectors; p++) {
+    var outerP = outerVertices[p];
+    var shoulderL = petalShouldersL[p];
+    var shoulderR = petalShouldersR[p];
+    var starP = starPathVertices[p];
 
-  function pickFacesByWedge(faceList, targetCount, preferOuter, usedIdLookup) {
-    var selectedByBin = new Array(targetCount);
-    var metricByBin = new Array(targetCount);
+    var innerL = starP.add(shoulderL).multiply(0.5);
+    var innerR = starP.add(shoulderR).multiply(0.5);
 
-    for (var index = 0; index < faceList.length; index++) {
-      var face = faceList[index];
-      if (usedIdLookup && usedIdLookup[face.id]) continue;
-      var bin = getFaceBin(face);
-      var metric = face.centroid.getDistance(center);
+    petals.push([
+      outerP,
+      shoulderR,
+      innerR,
+      starP,
+      innerL,
+      shoulderL
+    ]);
 
-      if (!selectedByBin[bin]) {
-        selectedByBin[bin] = face;
-        metricByBin[bin] = metric;
-        continue;
-      }
-
-      var shouldReplace = preferOuter ? (metric > metricByBin[bin]) : (metric < metricByBin[bin]);
-      if (shouldReplace) {
-        selectedByBin[bin] = face;
-        metricByBin[bin] = metric;
-      }
-    }
-
-    var selected = [];
-    for (var bi = 0; bi < selectedByBin.length; bi++) {
-      if (selectedByBin[bi]) {
-        selected.push(selectedByBin[bi]);
-      }
-    }
-
-    selected.sort(function(left, right) {
-      return getFaceBin(left) - getFaceBin(right);
-    });
-    return selected;
-  }
-
-  if (extractedFaces.length) {
-    var starRadius = 0;
-    if (starPathVertices && starPathVertices.length) {
-      for (var sr = 0; sr < starPathVertices.length; sr++) {
-        starRadius += starPathVertices[sr].getDistance(center);
-      }
-      starRadius = starRadius / Math.max(1, starPathVertices.length);
-    }
-
-    if (!isFinite(starRadius) || starRadius <= 0) {
-      starRadius = petalRadius * 0.36;
-    }
-
-    var nonCenterFaces = extractedFaces.slice();
-
-    // Keep faces framed by third-thread pairs around scaffold vertices.
-    var preferredFaces = nonCenterFaces.filter(function(face) {
-      return face.starEdgeCount >= 2;
-    });
-    if (preferredFaces.length < (safeFold * 2)) {
-      preferredFaces = nonCenterFaces;
-    }
-
-    var pointCandidates = preferredFaces.filter(function(face) {
-      if (face.hasCircleEdge) return false;
-      var radialDistance = face.centroid.getDistance(center);
-      return radialDistance > (starRadius * 0.9) && radialDistance < (petalRadius * 0.975);
-    });
-    if (pointCandidates.length < safeFold) {
-      pointCandidates = preferredFaces.filter(function(face) {
-        return !face.hasCircleEdge;
-      });
-    }
-
-    var petalCandidates = preferredFaces.filter(function(face) {
-      return !!face.hasCircleEdge;
-    });
-    if (petalCandidates.length < safeFold) {
-      petalCandidates = nonCenterFaces.filter(function(face) {
-        return !!face.hasCircleEdge;
-      });
-    }
-
-    var usedIds = Object.create(null);
-    var selectedPoints = pickFacesByWedge(pointCandidates, safeFold, false, usedIds);
-    for (var sp = 0; sp < selectedPoints.length; sp++) {
-      usedIds[selectedPoints[sp].id] = true;
-    }
-    var selectedPetals = pickFacesByWedge(petalCandidates, safeFold, true, usedIds);
-
-    if (selectedPetals.length < safeFold || selectedPoints.length < safeFold) {
-      selectedPetals = [];
-      selectedPoints = [];
-      for (var fl = 0; fl < nonCenterFaces.length; fl++) {
-        if (nonCenterFaces[fl].hasCircleEdge) {
-          selectedPetals.push(nonCenterFaces[fl]);
-        } else {
-          selectedPoints.push(nonCenterFaces[fl]);
-        }
-      }
-    }
-
-    for (var pf = 0; pf < selectedPetals.length; pf++) {
-      petals.push(selectedPetals[pf].vertices.slice());
-    }
-    for (var pr = 0; pr < selectedPoints.length; pr++) {
-      pointRegions.push(selectedPoints[pr].vertices.slice());
-    }
-
-    petals.sort(function(left, right) {
-      var leftAngle = Math.atan2(left[0].y - center.y, left[0].x - center.x);
-      var rightAngle = Math.atan2(right[0].y - center.y, right[0].x - center.x);
-      return leftAngle - rightAngle;
-    });
+    var baseL = starP.add(shoulderL).multiply(0.5);
+    var baseR = starP.add(shoulderR).multiply(0.5);
+    pointRegions.push([starP, triTipsL[p], baseL]);
+    pointRegions.push([starP, triTipsR[p], baseR]);
   }
 
   if (!starPathVertices || starPathVertices.length < safeFold) {
