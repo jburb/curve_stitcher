@@ -1307,7 +1307,7 @@
 <div id="sliders">
   <div class="slider-block">
     <div class="slider-label">⚫ Holes <span class="slider-value" id="holes-value">35</span></div>
-    <input id="holes" type="range" min="3" max="140" value="35">
+    <input id="holes" type="range" min="3" max="144" value="35">
   </div>
   <div class="slider-block">
     <div class="slider-label">🧵 Stitch by...</div>
@@ -1407,7 +1407,7 @@
       </select></div>
       <div class="advanced-global-row">Border: <input id="advanced-border-enabled" type="checkbox"></div>
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
-      <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="140" value="35" aria-label="Holes value"></div>
+      <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="144" value="35" aria-label="Holes value"></div>
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Stitch Tempo</div>
@@ -1653,7 +1653,7 @@ var highlightedHoleNumbers = [];
 var DEFAULT_HOLES = 35;
 var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
-var MAX_HOLES = 140;
+var MAX_HOLES = 144;
 var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
 var DEFAULT_ANIMATION_BPM = 168;
 var BEATS_PER_STITCH_SEGMENT = 1;
@@ -8983,7 +8983,7 @@ function renderThreadControls() {
       Start hole: <input class="advanced-inline-number" type="number" min="1" max="${holeCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      Offset (add-on): <input class="advanced-inline-number" type="number" min="0" max="140" value="${thread.connectOffset}" id="connect-offset-number-${index}" aria-label="Thread ${index + 1} offset value"><br>
+      Offset (add-on): <input class="advanced-inline-number" type="number" min="0" max="${MAX_HOLES}" value="${thread.connectOffset}" id="connect-offset-number-${index}" aria-label="Thread ${index + 1} offset value"><br>
       <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
       <div class="jump-preset-row">
         <select id="connect-preset-${index}">
@@ -9217,21 +9217,34 @@ function handleHolesSliderChange() {
   redrawForPathChange();
 }
 
-function handleAdvancedHolesNumberChange() {
+function handleAdvancedHolesNumberInput() {
   if (!advancedHolesNumberInput) return;
   if (advancedHolesNumberInput.value === '') return;
-  var holeCount = parseBoundedInt(advancedHolesNumberInput.value, 3, MAX_HOLES, DEFAULT_HOLES);
+  var holeCount = parseInt(advancedHolesNumberInput.value, 10);
+  if (!isFinite(holeCount)) return;
+  if (holeCount < 3 || holeCount > MAX_HOLES) return;
+  holesSlider.value = String(holeCount);
+  handleHolesSliderChange();
+}
+
+function handleAdvancedHolesNumberCommit() {
+  if (!advancedHolesNumberInput) return;
+  if (advancedHolesNumberInput.value === '') {
+    advancedHolesNumberInput.value = String(getCurrentStitchHoleCount());
+    return;
+  }
+  var holeCount = parseBoundedInt(advancedHolesNumberInput.value, 3, MAX_HOLES, getCurrentStitchHoleCount());
   advancedHolesNumberInput.value = String(holeCount);
   holesSlider.value = String(holeCount);
-  updateKidControlValues();
-  redrawForPathChange();
+  handleHolesSliderChange();
 }
 
 holesSlider.addEventListener('input', handleHolesSliderChange);
 holesSlider.addEventListener('change', handleHolesSliderChange);
 if (advancedHolesNumberInput) {
-  advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberChange);
-  advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberChange);
+  advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberInput);
+  advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberCommit);
+  advancedHolesNumberInput.addEventListener('blur', handleAdvancedHolesNumberCommit);
 }
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
