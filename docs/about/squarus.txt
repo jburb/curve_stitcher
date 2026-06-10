@@ -1,0 +1,7 @@
+Squarus explores polyomino families by square count, then studies how those pieces can be arranged using different layout strategies.
+
+Polyominoes have long been a rich source of mathematical puzzles. They became a worldwide cultural phenomenon when Alexey Pajitnov created Tetris, built around the seven tetrominoes.
+
+Tetris is often discussed as a real-time puzzle game, but many of its placement questions can also be modeled as exact cover style problems: can a set of pieces satisfy a set of occupancy constraints exactly once, without overlap or gaps?
+
+In Squarus, changing order, contact style, sequence, and layout lets you move between puzzle intuition and combinatorial structure. The result is both playful and mathematical: a study of how local piece rules create global form.

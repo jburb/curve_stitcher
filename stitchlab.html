@@ -1855,6 +1855,8 @@ var EXPERIENCE_LIBRARY = {
     infoTitle: 'About Triangula',
     infoText: 'Triangula explores recursive triangle patterns inspired by Sierpinski structures. Zoom and iterate to discover repeating self-similarity.',
     narrationText: 'Welcome to Triangula. This world explores self-similar triangle growth and recursive geometry.',
+    aboutHtmlPath: 'docs/about/triangula.html',
+    narrationTextPath: 'docs/about/triangula.txt',
     uiProfile: {
       allowedShapes: ['triangle'],
       fixedShape: 'triangle',
@@ -1900,6 +1902,8 @@ var EXPERIENCE_LIBRARY = {
     infoTitle: 'About Squarus',
     infoText: 'Squarus will focus on polyonimo generation through square counts, with parametric exploration of filling shapes using polyonimoes at different square-count levels.',
     narrationText: 'Welcome to Squarus. This upcoming world centers on polyonimo generation by square counts, with parametric exploration of filling shapes using different square-count polyonimoes.',
+    aboutHtmlPath: 'docs/about/squarus.html',
+    narrationTextPath: 'docs/about/squarus.txt',
     uiProfile: {
       allowedShapes: ['square'],
       fixedShape: 'square',
@@ -3332,11 +3336,19 @@ function positionExperienceInfoPanel() {
   if (viewportWidth <= 0 || viewportHeight <= 0) return;
 
   var anchorRect = experienceInfoToggle.getBoundingClientRect();
+  var canvasRect = (canvasStage && typeof canvasStage.getBoundingClientRect === 'function')
+    ? canvasStage.getBoundingClientRect()
+    : null;
   var panelRect = experienceInfoPanel.getBoundingClientRect();
   var margin = 10;
   var gap = 8;
 
-  var left = anchorRect.left + (anchorRect.width / 2) - (panelRect.width / 2);
+  var preferredCenterX = anchorRect.left + (anchorRect.width / 2);
+  if (canvasRect && isFinite(canvasRect.left) && isFinite(canvasRect.width) && canvasRect.width > 0) {
+    preferredCenterX = canvasRect.left + (canvasRect.width / 2);
+  }
+
+  var left = preferredCenterX - (panelRect.width / 2);
   left = Math.max(margin, Math.min(left, viewportWidth - panelRect.width - margin));
 
   var belowTop = anchorRect.bottom + gap;
