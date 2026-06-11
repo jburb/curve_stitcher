@@ -2081,6 +2081,7 @@ var mashrabiyaGeometryMode = 'stitch-vertex';
 var mashrabiyaStarColor = '#f4d35e';
 var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
+var mashrabiyaDebugLabelsEnabled = true;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0;
@@ -8654,65 +8655,538 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     return faces;
   }
 
-  var starPathVertices = [];
+  var stitchedSegments = [];
+  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, firstPolygonSequence, 'thread1'));
+  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, offsetPolygonSequence, 'thread2'));
+  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'thread3'));
+
+  var extractedFaces = extractFacesFromSegments(stitchedSegments);
+  var starPathVertices = buildStarInnerVertices(scaffoldPoints, starSequence);
   var petals = [];
   var pointRegions = [];
-  var sectors = safeFold;
-  var dTheta = (Math.PI * 2) / sectors;
-  var sectorPhase = -Math.PI / 2;
-  var polygonSides = Math.max(3, Math.round(sectors / 2));
-  var sectorsPerSide = Math.max(1, Math.round(sectors / polygonSides));
 
-  var rOuter = petalRadius;
-  var rPetal = radius * 0.7;
-  var rTri = radius * 0.54;
-  var rStar = radius * 0.36;
-
-  var outerVertices = [];
-  var petalShouldersL = [];
-  var petalShouldersR = [];
-  var triTipsL = [];
-  var triTipsR = [];
-
-  for (var i = 0; i < sectors; i++) {
-    var thetaCenter = sectorPhase + i * dTheta;
-    var thetaLeft = thetaCenter - (dTheta / 2);
-    var thetaRight = thetaCenter + (dTheta / 2);
-
-    var anchorSector = Math.floor(i / sectorsPerSide) * sectorsPerSide;
-    var anchorTheta = sectorPhase + anchorSector * dTheta;
-    var outer = pointAt(anchorTheta, rOuter);
-
-    outerVertices.push(outer);
-    petalShouldersL.push(pointAt(thetaLeft, rPetal));
-    petalShouldersR.push(pointAt(thetaRight, rPetal));
-    starPathVertices.push(pointAt(thetaCenter, rStar));
-    triTipsL.push(pointAt(thetaLeft, rTri));
-    triTipsR.push(pointAt(thetaRight, rTri));
+  function normalizeAnglePositive(theta) {
+    var twoPi = Math.PI * 2;
+    var value = theta % twoPi;
+    if (value < 0) value += twoPi;
+    return value;
   }
 
-  for (var p = 0; p < sectors; p++) {
-    var outerP = outerVertices[p];
-    var shoulderL = petalShouldersL[p];
-    var shoulderR = petalShouldersR[p];
-    var starP = starPathVertices[p];
+  function angleDistance(a, b) {
+    var diff = Math.abs(normalizeAnglePositive(a) - normalizeAnglePositive(b));
+    return Math.min(diff, Math.PI * 2 - diff);
+  }
 
-    var innerL = starP.add(shoulderL).multiply(0.5);
-    var innerR = starP.add(shoulderR).multiply(0.5);
+  function pointToSegmentDistance(point, segA, segB) {
+    var segment = segB.subtract(segA);
+    var denom = segment.dot(segment);
+    if (denom <= 1e-10) return point.getDistance(segA);
+    var t = point.subtract(segA).dot(segment) / denom;
+    var clamped = Math.max(0, Math.min(1, t));
+    var projection = segA.add(segment.multiply(clamped));
+    return point.getDistance(projection);
+  }
 
-    petals.push([
-      outerP,
-      shoulderR,
-      innerR,
-      starP,
-      innerL,
-      shoulderL
-    ]);
+  function pointOnPolygonBoundary(point, polygon) {
+    if (!polygon || polygon.length < 2) return false;
+    var tolerance = Math.max(0.55, radius * 0.0024);
+    for (var i = 0; i < polygon.length; i++) {
+      var a = polygon[i];
+      var b = polygon[(i + 1) % polygon.length];
+      if (pointToSegmentDistance(point, a, b) <= tolerance) return true;
+    }
+    return false;
+  }
 
-    var baseL = starP.add(shoulderL).multiply(0.5);
-    var baseR = starP.add(shoulderR).multiply(0.5);
-    pointRegions.push([starP, triTipsL[p], baseL]);
-    pointRegions.push([starP, triTipsR[p], baseR]);
+  function getFaceBinByAngle(faceAngle) {
+    var normalized = normalizeAnglePositive(faceAngle + (angleStep / 2));
+    return Math.floor(normalized / angleStep) % safeFold;
+  }
+
+  function getFaceBin(face) {
+    var c = face.centroid;
+    var a = Math.atan2(c.y - center.y, c.x - center.x);
+    return getFaceBinByAngle(a);
+  }
+
+  function selectOnePerBin(faceList, preferOuter) {
+    var selectedByBin = new Array(safeFold);
+    var metricByBin = new Array(safeFold);
+    for (var i = 0; i < faceList.length; i++) {
+      var face = faceList[i];
+      var bin = getFaceBin(face);
+      var metric = face.centroid.getDistance(center);
+      if (!selectedByBin[bin]) {
+        selectedByBin[bin] = face;
+        metricByBin[bin] = metric;
+        continue;
+      }
+      var better = preferOuter ? (metric > metricByBin[bin]) : (metric < metricByBin[bin]);
+      if (better) {
+        selectedByBin[bin] = face;
+        metricByBin[bin] = metric;
+      }
+    }
+    var selected = [];
+    for (var b = 0; b < selectedByBin.length; b++) {
+      if (selectedByBin[b]) selected.push(selectedByBin[b]);
+    }
+    selected.sort(function(left, right) {
+      return getFaceBin(left) - getFaceBin(right);
+    });
+    return selected;
+  }
+
+  var thread1Cycle = buildMashrabiyaStepSequence(scaffoldCount, 0, 16);
+  var thread2Cycle = buildMashrabiyaStepSequence(scaffoldCount, 8, 16);
+  var scaffoldVertexIndices = [];
+  var seenScaffoldIndex = Object.create(null);
+  function pushUniqueScaffoldIndex(index) {
+    var key = String(index);
+    if (seenScaffoldIndex[key]) return;
+    seenScaffoldIndex[key] = true;
+    scaffoldVertexIndices.push(index);
+  }
+  for (var t1 = 0; t1 < thread1Cycle.length; t1++) pushUniqueScaffoldIndex(thread1Cycle[t1]);
+  for (var t2 = 0; t2 < thread2Cycle.length; t2++) pushUniqueScaffoldIndex(thread2Cycle[t2]);
+
+  function faceContainsScaffoldVertex(face) {
+    for (var i = 0; i < scaffoldVertexIndices.length; i++) {
+      var vertexPoint = scaffoldPoints[scaffoldVertexIndices[i]];
+      if (pointOnPolygonBoundary(vertexPoint, face.vertices)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function edgeKeyForPoints(a, b) {
+    var aKey = vertexKey(a);
+    var bKey = vertexKey(b);
+    return aKey < bKey ? (aKey + '::' + bKey) : (bKey + '::' + aKey);
+  }
+
+  function buildFaceAdjacencyBySharedEdge(faces) {
+    var edgeOwners = Object.create(null);
+    var adjacency = Object.create(null);
+    for (var i = 0; i < faces.length; i++) {
+      adjacency[String(faces[i].id)] = Object.create(null);
+      for (var e = 0; e < faces[i].vertices.length; e++) {
+        var a = faces[i].vertices[e];
+        var b = faces[i].vertices[(e + 1) % faces[i].vertices.length];
+        var key = edgeKeyForPoints(a, b);
+        if (!edgeOwners[key]) edgeOwners[key] = [];
+        edgeOwners[key].push(faces[i].id);
+      }
+    }
+
+    var keys = Object.keys(edgeOwners);
+    for (var k = 0; k < keys.length; k++) {
+      var owners = edgeOwners[keys[k]];
+      for (var aIdx = 0; aIdx < owners.length; aIdx++) {
+        for (var bIdx = aIdx + 1; bIdx < owners.length; bIdx++) {
+          adjacency[String(owners[aIdx])][String(owners[bIdx])] = true;
+          adjacency[String(owners[bIdx])][String(owners[aIdx])] = true;
+        }
+      }
+    }
+    return adjacency;
+  }
+
+  function buildPathFromVertices(vertices) {
+    if (!vertices || vertices.length < 3) return null;
+    var path = new Path();
+    for (var i = 0; i < vertices.length; i++) {
+      path.add(vertices[i]);
+    }
+    path.closed = true;
+    return path;
+  }
+
+  function mergeFacesToPolygon(faceList) {
+    if (!faceList || !faceList.length) return [];
+    if (faceList.length === 1) return faceList[0].vertices.slice();
+
+    var merged = null;
+    for (var i = 0; i < faceList.length; i++) {
+      var facePath = buildPathFromVertices(faceList[i].vertices);
+      if (!facePath) continue;
+
+      if (!merged) {
+        merged = facePath;
+        continue;
+      }
+
+      var united = merged.unite(facePath);
+      merged.remove();
+      facePath.remove();
+      merged = united;
+    }
+
+    if (!merged) return faceList[0].vertices.slice();
+
+    var points = [];
+    var bestSegments = null;
+    if (merged.children && merged.children.length) {
+      var bestArea = -1;
+      for (var c = 0; c < merged.children.length; c++) {
+        var child = merged.children[c];
+        var childArea = Math.abs(child.area || 0);
+        if (childArea > bestArea) {
+          bestArea = childArea;
+          bestSegments = child.segments;
+        }
+      }
+    } else {
+      bestSegments = merged.segments;
+    }
+
+    if (bestSegments && bestSegments.length >= 3) {
+      for (var s = 0; s < bestSegments.length; s++) {
+        points.push(bestSegments[s].point.clone());
+      }
+    }
+
+    merged.remove();
+    return points.length >= 3 ? points : faceList[0].vertices.slice();
+  }
+
+  function buildConnectedComponentsByBin(candidates, adjacency) {
+    var byBin = new Array(safeFold);
+    for (var i = 0; i < candidates.length; i++) {
+      var info = candidates[i];
+      var bin = getFaceBinByAngle(info.angle);
+      if (!byBin[bin]) byBin[bin] = [];
+      byBin[bin].push(info);
+    }
+
+    var componentsByBin = new Array(safeFold);
+    for (var b = 0; b < safeFold; b++) {
+      var bucket = byBin[b] || [];
+      if (!bucket.length) {
+        componentsByBin[b] = [];
+        continue;
+      }
+
+      var bucketById = Object.create(null);
+      for (var bi = 0; bi < bucket.length; bi++) {
+        bucketById[String(bucket[bi].face.id)] = bucket[bi];
+      }
+
+      var visited = Object.create(null);
+      var components = [];
+      for (var k = 0; k < bucket.length; k++) {
+        var seedId = String(bucket[k].face.id);
+        if (visited[seedId]) continue;
+
+        var queue = [seedId];
+        visited[seedId] = true;
+        var infos = [];
+
+        while (queue.length) {
+          var currentId = queue.shift();
+          var currentInfo = bucketById[currentId];
+          if (!currentInfo) continue;
+          infos.push(currentInfo);
+
+          var neighbors = adjacency[currentId] || {};
+          var neighborIds = Object.keys(neighbors);
+          for (var ni = 0; ni < neighborIds.length; ni++) {
+            var nextId = neighborIds[ni];
+            if (visited[nextId]) continue;
+            if (!bucketById[nextId]) continue;
+            visited[nextId] = true;
+            queue.push(nextId);
+          }
+        }
+
+        if (!infos.length) continue;
+
+        var radiusSum = 0;
+        var angleSumX = 0;
+        var angleSumY = 0;
+        var faces = [];
+        for (var ci = 0; ci < infos.length; ci++) {
+          radiusSum += infos[ci].radius;
+          angleSumX += Math.cos(infos[ci].angle);
+          angleSumY += Math.sin(infos[ci].angle);
+          faces.push(infos[ci].face);
+        }
+
+        components.push({
+          bin: b,
+          infos: infos,
+          faces: faces,
+          faceIds: infos.map(function(info) { return info.face.id; }),
+          radius: radiusSum / infos.length,
+          angle: Math.atan2(angleSumY, angleSumX)
+        });
+      }
+
+      componentsByBin[b] = components;
+    }
+
+    return componentsByBin;
+  }
+
+  function computeComponentStats(component) {
+    var infos = component && component.infos ? component.infos : [];
+    if (!infos.length) {
+      component.radius = 0;
+      component.angle = 0;
+      component.faceIds = [];
+      return;
+    }
+    var radiusSum = 0;
+    var angleX = 0;
+    var angleY = 0;
+    var ids = [];
+    for (var i = 0; i < infos.length; i++) {
+      radiusSum += infos[i].radius;
+      angleX += Math.cos(infos[i].angle);
+      angleY += Math.sin(infos[i].angle);
+      ids.push(infos[i].face.id);
+    }
+    component.radius = radiusSum / infos.length;
+    component.angle = Math.atan2(angleY, angleX);
+    component.faceIds = ids;
+    component.faces = infos.map(function(info) { return info.face; });
+  }
+
+  function expandComponent(component, adjacency, infoById, options) {
+    if (!component || !component.infos || !component.infos.length) return;
+    options = options || {};
+    var steps = Math.max(0, options.steps || 0);
+    if (!steps) return;
+    var maxAngleDrift = isFinite(options.maxAngleDrift) ? options.maxAngleDrift : (angleStep * 0.85);
+    var baseAngle = component.angle;
+    var seen = Object.create(null);
+    for (var i = 0; i < component.infos.length; i++) {
+      seen[String(component.infos[i].face.id)] = true;
+    }
+
+    for (var step = 0; step < steps; step++) {
+      computeComponentStats(component);
+      var currentRadius = component.radius;
+      var toAdd = [];
+      for (var ci = 0; ci < component.infos.length; ci++) {
+        var faceId = String(component.infos[ci].face.id);
+        var neighbors = adjacency[faceId] || {};
+        var neighborIds = Object.keys(neighbors);
+        for (var ni = 0; ni < neighborIds.length; ni++) {
+          var neighborId = neighborIds[ni];
+          if (seen[neighborId]) continue;
+          var info = infoById[neighborId];
+          if (!info) continue;
+          if (angleDistance(info.angle, baseAngle) > maxAngleDrift) continue;
+          if (options.filter && !options.filter(info, currentRadius, component)) continue;
+          seen[neighborId] = true;
+          toAdd.push(info);
+        }
+      }
+      if (!toAdd.length) break;
+      Array.prototype.push.apply(component.infos, toAdd);
+    }
+    computeComponentStats(component);
+  }
+
+  var starRegions = [];
+  var debugRegions = [];
+
+  if (extractedFaces && extractedFaces.length) {
+    var starRadiusMean = 0;
+    for (var sv = 0; sv < starPathVertices.length; sv++) {
+      starRadiusMean += starPathVertices[sv].getDistance(center);
+    }
+    starRadiusMean = starPathVertices.length ? (starRadiusMean / starPathVertices.length) : (petalRadius * 0.33);
+
+    var faceInfo = [];
+    for (var fi = 0; fi < extractedFaces.length; fi++) {
+      var face = extractedFaces[fi];
+      var centroid = face.centroid;
+      var radiusFromCenter = centroid.getDistance(center);
+      var angle = Math.atan2(centroid.y - center.y, centroid.x - center.x);
+      var hasScaffold = faceContainsScaffoldVertex(face);
+      faceInfo.push({
+        face: face,
+        radius: radiusFromCenter,
+        angle: angle,
+        hasScaffold: hasScaffold
+      });
+    }
+
+    faceInfo.sort(function(left, right) {
+      return left.radius - right.radius;
+    });
+
+    var adjacency = buildFaceAdjacencyBySharedEdge(extractedFaces);
+    var infoById = Object.create(null);
+    for (var ii = 0; ii < faceInfo.length; ii++) {
+      infoById[String(faceInfo[ii].face.id)] = faceInfo[ii];
+    }
+
+    // 1) pickStarFaces: connected inner components (can merge multiple atomic faces).
+    var starCandidates = faceInfo.filter(function(info) {
+      return !info.hasScaffold && info.radius <= (starRadiusMean * 1.35);
+    });
+    if (!starCandidates.length) {
+      starCandidates = faceInfo.filter(function(info) {
+        return !info.hasScaffold;
+      });
+    }
+
+    var starComponentsByBin = buildConnectedComponentsByBin(starCandidates, adjacency);
+    var selectedStarComponents = [];
+    var usedStarFaceIds = Object.create(null);
+
+    for (var sb = 0; sb < safeFold; sb++) {
+      var starBucket = starComponentsByBin[sb] || [];
+      if (!starBucket.length) continue;
+      starBucket.sort(function(left, right) {
+        return left.radius - right.radius;
+      });
+      var chosenStar = starBucket[0];
+      expandComponent(chosenStar, adjacency, infoById, {
+        steps: 2,
+        maxAngleDrift: angleStep * 0.72,
+        filter: function(info, currentRadius) {
+          return !info.hasScaffold && info.radius >= (currentRadius * 0.9);
+        }
+      });
+      selectedStarComponents.push(chosenStar);
+      for (var sfi = 0; sfi < chosenStar.faces.length; sfi++) {
+        usedStarFaceIds[String(chosenStar.faces[sfi].id)] = true;
+      }
+      var mergedStar = mergeFacesToPolygon(chosenStar.faces);
+      if (mergedStar.length >= 3) {
+        starRegions.push(mergedStar);
+        debugRegions.push({
+          label: 'S ' + sb + ' (' + chosenStar.faces.length + ')',
+          centroid: polygonCentroid(mergedStar),
+          color: '#9c6f1d'
+        });
+      }
+    }
+
+    if (selectedStarComponents.length) {
+      var starCenters = [];
+      for (var sc = 0; sc < selectedStarComponents.length; sc++) {
+        var regionCentroid = polygonCentroid(mergeFacesToPolygon(selectedStarComponents[sc].faces));
+        starCenters.push(regionCentroid);
+      }
+      starCenters.sort(function(left, right) {
+        var leftAngle = Math.atan2(left.y - center.y, left.x - center.x);
+        var rightAngle = Math.atan2(right.y - center.y, right.x - center.x);
+        return leftAngle - rightAngle;
+      });
+      starPathVertices = starCenters.slice(0, safeFold);
+      starRadiusMean = 0;
+      for (var ss = 0; ss < starPathVertices.length; ss++) {
+        starRadiusMean += starPathVertices[ss].getDistance(center);
+      }
+      starRadiusMean = starRadiusMean / Math.max(1, starPathVertices.length);
+    }
+
+    // 2) pickPetalFaces: connected outer scaffold components, one per sector.
+    var petalInfoCandidates = faceInfo.filter(function(info) {
+      return info.hasScaffold && info.radius > (starRadiusMean * 1.3);
+    });
+    if (!petalInfoCandidates.length) {
+      petalInfoCandidates = faceInfo.filter(function(info) {
+        return info.hasScaffold;
+      });
+    }
+
+    var petalComponentsByBin = buildConnectedComponentsByBin(petalInfoCandidates, adjacency);
+    var selectedPetalFaceIds = Object.create(null);
+
+    for (var pb = 0; pb < safeFold; pb++) {
+      var petalBucket = petalComponentsByBin[pb] || [];
+      if (!petalBucket.length) continue;
+      petalBucket.sort(function(left, right) {
+        return right.radius - left.radius;
+      });
+      var chosenPetal = petalBucket[0];
+      expandComponent(chosenPetal, adjacency, infoById, {
+        steps: 2,
+        maxAngleDrift: angleStep * 0.78,
+        filter: function(info, currentRadius) {
+          return info.radius <= currentRadius && info.radius >= (starRadiusMean * 1.08);
+        }
+      });
+      for (var pfi = 0; pfi < chosenPetal.faces.length; pfi++) {
+        selectedPetalFaceIds[String(chosenPetal.faces[pfi].id)] = true;
+      }
+      var mergedPetal = mergeFacesToPolygon(chosenPetal.faces);
+      if (mergedPetal.length >= 3) {
+        petals.push(mergedPetal);
+        debugRegions.push({
+          label: 'P ' + pb + ' (' + chosenPetal.faces.length + ')',
+          centroid: polygonCentroid(mergedPetal),
+          color: '#a9491e'
+        });
+      }
+    }
+
+    // 3) pickTriangleFaces: connected components adjacent to star components, up to two per sector.
+    var starFaceIdLookup = Object.create(null);
+    var starFaceIdList = Object.keys(usedStarFaceIds);
+    for (var sId = 0; sId < starFaceIdList.length; sId++) {
+      starFaceIdLookup[starFaceIdList[sId]] = true;
+    }
+
+    var triangleCandidates = [];
+    for (var ti = 0; ti < faceInfo.length; ti++) {
+      var info = faceInfo[ti];
+      var infoId = String(info.face.id);
+      if (selectedPetalFaceIds[infoId]) continue;
+      if (starFaceIdLookup[infoId]) continue;
+      if (info.hasScaffold) continue;
+      if (info.radius <= (starRadiusMean * 0.95)) continue;
+
+      var neighbors = adjacency[infoId] || {};
+      var neighborIds = Object.keys(neighbors);
+      var touchesStar = false;
+      for (var ni = 0; ni < neighborIds.length; ni++) {
+        if (starFaceIdLookup[neighborIds[ni]]) {
+          touchesStar = true;
+          break;
+        }
+      }
+      if (!touchesStar) continue;
+      triangleCandidates.push(info);
+    }
+
+    var triangleComponentsByBin = buildConnectedComponentsByBin(triangleCandidates, adjacency);
+    for (var tb = 0; tb < safeFold; tb++) {
+      var triBucket = triangleComponentsByBin[tb] || [];
+      if (!triBucket.length) continue;
+      var centerAngle = -Math.PI / 2 + tb * angleStep;
+      triBucket.sort(function(left, right) {
+        var leftKey = angleDistance(left.angle, centerAngle) * 10 + left.radius;
+        var rightKey = angleDistance(right.angle, centerAngle) * 10 + right.radius;
+        return leftKey - rightKey;
+      });
+
+      for (var tk = 0; tk < triBucket.length && tk < 2; tk++) {
+        expandComponent(triBucket[tk], adjacency, infoById, {
+          steps: 1,
+          maxAngleDrift: angleStep * 0.65,
+          filter: function(info) {
+            return !info.hasScaffold;
+          }
+        });
+        var mergedTriangle = mergeFacesToPolygon(triBucket[tk].faces);
+        if (mergedTriangle.length >= 3) {
+          pointRegions.push(mergedTriangle);
+          debugRegions.push({
+            label: 'T ' + tb + ' (' + triBucket[tk].faces.length + ')',
+            centroid: polygonCentroid(mergedTriangle),
+            color: '#a73631'
+          });
+        }
+      }
+    }
   }
 
   if (!starPathVertices || starPathVertices.length < safeFold) {
@@ -8746,7 +9220,9 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     starJump: starJump,
     petals: petals,
     pointRegions: pointRegions,
-    starPathVertices: starPathVertices
+    starPathVertices: starPathVertices,
+    starRegions: starRegions,
+    debugRegions: debugRegions
   };
 }
 
@@ -8771,7 +9247,68 @@ function drawMashrabiyaFilledGeometry(geometry, starOpacity, petalOpacity, point
   for (var j = 0; j < geometry.pointRegions.length; j++) {
     drawMashrabiyaRegionPolygon(geometry.pointRegions[j], mashrabiyaPointColor, pointFillOpacity);
   }
-  drawMashrabiyaRegionPolygon(geometry.starPathVertices, mashrabiyaStarColor, starFillOpacity);
+  if (geometry.starRegions && geometry.starRegions.length) {
+    for (var s = 0; s < geometry.starRegions.length; s++) {
+      drawMashrabiyaRegionPolygon(geometry.starRegions[s], mashrabiyaStarColor, starFillOpacity);
+    }
+  } else {
+    drawMashrabiyaRegionPolygon(geometry.starPathVertices, mashrabiyaStarColor, starFillOpacity);
+  }
+}
+
+function drawMashrabiyaSelectionOutlines(polygons, strokeColor, progress) {
+  if (!polygons || !polygons.length) return;
+  var p = clamp01(progress);
+  if (p <= 0) return;
+
+  var visibleCount = Math.max(0, Math.min(polygons.length, Math.ceil(polygons.length * p)));
+  var strokeWidth = 1.6 + (2.8 * p);
+  var strokeOpacity = 0.22 + (0.6 * p);
+
+  for (var i = 0; i < visibleCount; i++) {
+    var vertices = polygons[i];
+    if (!vertices || vertices.length < 3) continue;
+    var outline = new Path();
+    for (var v = 0; v < vertices.length; v++) {
+      outline.add(vertices[v]);
+    }
+    outline.closed = true;
+    outline.strokeColor = strokeColor;
+    outline.strokeWidth = strokeWidth;
+    outline.opacity = strokeOpacity;
+  }
+}
+
+function drawMashrabiyaDebugLabels(debugRegions, opacity) {
+  if (!mashrabiyaDebugLabelsEnabled || !debugRegions || !debugRegions.length) return;
+  var alpha = Math.max(0, Math.min(1, isFinite(opacity) ? opacity : 1));
+  if (alpha <= 0) return;
+
+  for (var i = 0; i < debugRegions.length; i++) {
+    var entry = debugRegions[i];
+    if (!entry || !entry.centroid || !entry.label) continue;
+
+    var badge = new Path.Rectangle({
+      point: new Point(entry.centroid.x - 22, entry.centroid.y - 9),
+      size: new Size(44, 18),
+      radius: 4
+    });
+    badge.fillColor = '#fffaf0';
+    badge.strokeColor = entry.color || '#6f4a1a';
+    badge.strokeWidth = 0.8;
+    badge.opacity = 0.75 * alpha;
+
+    var text = new PointText({
+      point: new Point(entry.centroid.x, entry.centroid.y + 3),
+      content: entry.label,
+      justification: 'center',
+      fillColor: entry.color || '#6f4a1a',
+      fontFamily: 'Arial',
+      fontSize: 9,
+      fontWeight: 'bold'
+    });
+    text.opacity = 0.9 * alpha;
+  }
 }
 
 function drawMashrabiyaSequenceProgress(pointsList, sequence, color, strokeWidth, opacity, progress) {
@@ -8918,12 +9455,26 @@ function renderMashrabiyaAnimationStateFrame(state) {
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOffset, dOffset));
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.starSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
 
+  var selectStar = mashrabiyaPhaseProgress(t, sFillStar, dFillStar);
+  var selectPetal = mashrabiyaPhaseProgress(t, sFillPetal, dFillPetal);
+  var selectPoint = mashrabiyaPhaseProgress(t, sFillPoint, dFillPoint);
+
+  drawMashrabiyaSelectionOutlines(state.geometry.starRegions && state.geometry.starRegions.length ? state.geometry.starRegions : [state.geometry.starPathVertices], '#c4902f', selectStar);
+  drawMashrabiyaSelectionOutlines(state.geometry.petals, '#cf6f2a', selectPetal);
+  drawMashrabiyaSelectionOutlines(state.geometry.pointRegions, '#d74f43', selectPoint);
+
+  var starFillProgress = clamp01((selectStar - 0.78) / 0.22);
+  var petalFillProgress = clamp01((selectPetal - 0.78) / 0.22);
+  var pointFillProgress = clamp01((selectPoint - 0.78) / 0.22);
+
   drawMashrabiyaFilledGeometry(
     state.geometry,
-    mashrabiyaPhaseProgress(t, sFillStar, dFillStar),
-    mashrabiyaPhaseProgress(t, sFillPetal, dFillPetal),
-    mashrabiyaPhaseProgress(t, sFillPoint, dFillPoint)
+    starFillProgress,
+    petalFillProgress,
+    pointFillProgress
   );
+
+  drawMashrabiyaDebugLabels(state.geometry.debugRegions, 0.95);
 
   state.durationBeats = sEnd;
   clearHighlightedHoleNumbers();
@@ -8933,6 +9484,7 @@ function drawMashrabiyaStatic() {
   project.activeLayer.removeChildren();
   var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
   drawMashrabiyaFilledGeometry(geometry, 1, 1, 1);
+  drawMashrabiyaDebugLabels(geometry.debugRegions, 1);
   clearHighlightedHoleNumbers();
 }
 
@@ -9387,7 +9939,13 @@ function buildMashrabiyaDesignSvgString() {
     lines.push('<polygon points="' + toSvgPoints(geometry.pointRegions[q]) + '" fill="' + mashrabiyaPointColor + '"/>');
   }
 
-  lines.push('<polygon points="' + toSvgPoints(geometry.starPathVertices) + '" fill="' + mashrabiyaStarColor + '"/>');
+  if (geometry.starRegions && geometry.starRegions.length) {
+    for (var s = 0; s < geometry.starRegions.length; s++) {
+      lines.push('<polygon points="' + toSvgPoints(geometry.starRegions[s]) + '" fill="' + mashrabiyaStarColor + '"/>');
+    }
+  } else {
+    lines.push('<polygon points="' + toSvgPoints(geometry.starPathVertices) + '" fill="' + mashrabiyaStarColor + '"/>');
+  }
   lines.push('</svg>');
   return lines.join('\n');
 }
