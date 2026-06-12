@@ -1442,7 +1442,6 @@
       <div class="advanced-global-row">Enabled: <input id="nested-frame-enabled" type="checkbox"></div>
       <div class="advanced-global-row">Ratio:
         <select id="nested-frame-ratio">
-          <option value="0.25">1/4</option>
           <option value="0.5" selected>1/2</option>
           <option value="0.75">3/4</option>
         </select>
@@ -1681,6 +1680,7 @@ var threads = [
     jump: 22,
     width: 2,
     color: '#1982c4',
+    solidColor: '#1982c4',
     startHole: 1,
     sequence: null,
     jumpMode: 'fixed',
@@ -1709,7 +1709,7 @@ var highlightedHoleNumbers = [];
 var DEFAULT_HOLES = 35;
 var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
-var NESTED_FRAME_RATIO_OPTIONS = [0.25, 0.5, 0.75];
+var NESTED_FRAME_RATIO_OPTIONS = [0.5, 0.75];
 var DEFAULT_NESTED_FRAME_RATIO = 0.5;
 var nestedFrameEnabled = false;
 var nestedFrameRatio = DEFAULT_NESTED_FRAME_RATIO;
@@ -2397,6 +2397,18 @@ function sanitizeThreadColor(value, fallback) {
   return sanitizeHexColor(value, fallback);
 }
 
+function sanitizeThreadSolidColor(value, fallback) {
+  var fallbackColor = sanitizeHexColor(fallback, '#1982c4');
+  if (fallbackColor === 'rainbow') {
+    fallbackColor = '#1982c4';
+  }
+  var normalized = sanitizeHexColor(value, fallbackColor);
+  if (normalized === 'rainbow') {
+    return fallbackColor;
+  }
+  return normalized;
+}
+
 function sanitizeThreadColorList(value, fallbackList) {
   if (typeof value !== 'string' || !value.trim()) return fallbackList.slice();
   var raw = value.split(',');
@@ -2436,6 +2448,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     jump: DEFAULT_SKIP,
     width: DEFAULT_THREAD_SIZE,
     color: '#1982c4',
+    solidColor: '#1982c4',
     startHole: 1,
     jumpMode: 'fixed',
     jumpFormula: 'skip',
@@ -2458,8 +2471,13 @@ function sanitizeThreadDescriptor(raw, fallback) {
     jumpSequence: String(raw.s != null ? raw.s : (raw.jumpSequence != null ? raw.jumpSequence : (fallback.jumpSequence || ''))),
     connectMultiplier: parseBoundedInt(raw.cm != null ? raw.cm : raw.connectMultiplier, 1, 12, fallback.connectMultiplier || 2),
     connectOffset: parseBoundedInt(raw.co != null ? raw.co : raw.connectOffset, 0, MAX_HOLES, fallback.connectOffset || 0),
-    frameMode: sanitizeThreadFrameMode(raw.fm != null ? raw.fm : raw.frameMode, fallback.frameMode || 'outer')
+    frameMode: sanitizeThreadFrameMode(raw.fm != null ? raw.fm : raw.frameMode, fallback.frameMode || 'outer'),
+    solidColor: sanitizeThreadSolidColor(raw.sc != null ? raw.sc : raw.solidColor, fallback.solidColor || fallback.color || '#1982c4')
   };
+
+  if (thread.color !== 'rainbow') {
+    thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+  }
 
   if (thread.jumpMode !== 'formula') {
     thread.jumpFormula = fallback.jumpFormula || 'skip';
@@ -2483,7 +2501,8 @@ function serializeStitchingThreadState(threadList) {
       s: String(thread.jumpSequence || ''),
       cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),
       co: parseBoundedInt(thread.connectOffset, 0, MAX_HOLES, 0),
-      fm: sanitizeThreadFrameMode(thread.frameMode, 'outer')
+      fm: sanitizeThreadFrameMode(thread.frameMode, 'outer'),
+      sc: sanitizeThreadSolidColor(thread.solidColor, thread.color === 'rainbow' ? '#1982c4' : thread.color)
     };
   });
 
@@ -2498,7 +2517,8 @@ function serializeStitchingThreadState(threadList) {
       s: '',
       cm: 2,
       co: 0,
-      fm: 'outer'
+      fm: 'outer',
+      sc: '#1982c4'
     });
   }
 
@@ -5224,8 +5244,6 @@ function updateKidControlValues() {
   if (nestedFrameRatioValue) {
     if (!nestedFrameEnabled) {
       nestedFrameRatioValue.textContent = 'off';
-    } else if (nestedFrameRatio === 0.25) {
-      nestedFrameRatioValue.textContent = '1/4';
     } else if (nestedFrameRatio === 0.75) {
       nestedFrameRatioValue.textContent = '3/4';
     } else {
@@ -5292,10 +5310,17 @@ function syncBorderControls() {
 }
 
 function createThread(config) {
+  var initialSolidColor = sanitizeThreadSolidColor(config.solidColor, config.color || '#1982c4');
+  var initialColor = sanitizeThreadColor(config.color, initialSolidColor);
+  if (initialColor !== 'rainbow') {
+    initialSolidColor = sanitizeThreadSolidColor(initialColor, initialSolidColor);
+  }
+
   return {
     jump: config.jump,
     width: config.width,
-    color: config.color,
+    color: initialColor,
+    solidColor: initialSolidColor,
     startHole: parseBoundedInt(config.startHole, 1, MAX_HOLES, 1),
     sequence: null,
     jumpMode: 'fixed',
@@ -5397,6 +5422,9 @@ function applyExperiencePaletteColorChoice(colorValue) {
   if (paletteMode === 'global') {
     threads.forEach(function(thread) {
       thread.color = color;
+      if (color !== 'rainbow') {
+        thread.solidColor = sanitizeThreadSolidColor(color, thread.solidColor || '#1982c4');
+      }
     });
     return;
   }
@@ -5443,6 +5471,9 @@ function applyExperiencePaletteColorChoice(colorValue) {
     targetIndex = 0;
   }
   threads[targetIndex].color = color;
+  if (color !== 'rainbow') {
+    threads[targetIndex].solidColor = sanitizeThreadSolidColor(color, threads[targetIndex].solidColor || '#1982c4');
+  }
 }
 
 function syncHoleNumberToggles() {
@@ -10283,22 +10314,23 @@ function buildCurrentDesignSvgString(options) {
     if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
     var fontSize = getHoleNumberFontSize(holeCount);
 
-    function exportRingLabels(ringPoints, invertOutward) {
+    function exportRingLabels(ringPoints, invertOutward, isInnerRing) {
       if (!ringPoints || !ringPoints.length) return;
       var ccw = signedAreaOfClosedPolyline(ringPoints) > 0;
+      var ringFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
 
       for (var j = 0; j < ringPoints.length; j++) {
         var text = String(j + 1);
         var outward = getOutwardDirectionAtHoleFromRing(ringPoints, j, ccw, invertOutward);
-        var extent = estimateTextExtentAlongDirection(text, fontSize);
+        var extent = estimateTextExtentAlongDirection(text, ringFontSize);
         var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
 
         if (metrics.maxOffset < metrics.minOffset) {
           var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
-          var reducedFont = Math.max(6, Math.min(fontSize, availableBand * 1.6));
-          if (reducedFont < fontSize) {
-            fontSize = reducedFont;
-            extent = estimateTextExtentAlongDirection(text, fontSize);
+          var reducedFont = Math.max(6, Math.min(ringFontSize, availableBand * 1.6));
+          if (reducedFont < ringFontSize) {
+            ringFontSize = reducedFont;
+            extent = estimateTextExtentAlongDirection(text, ringFontSize);
             metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
           }
         }
@@ -10306,7 +10338,7 @@ function buildCurrentDesignSvgString(options) {
         var labelPos = ringPoints[j].add(outward.multiply(metrics.offset));
         lines.push(
           '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
-          '" fill="#555" font-size="' + formatSvgNumber(fontSize) +
+          '" fill="#555" font-size="' + formatSvgNumber(ringFontSize) +
           '" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="middle">' +
           text +
           '</text>'
@@ -10314,9 +10346,9 @@ function buildCurrentDesignSvgString(options) {
       }
     }
 
-    exportRingLabels(outerFramePoints.length ? outerFramePoints : points, false);
+    exportRingLabels(outerFramePoints.length ? outerFramePoints : points, false, false);
     if (nestedFrameEnabled && innerFramePoints.length) {
-      exportRingLabels(innerFramePoints, false);
+      exportRingLabels(innerFramePoints, false, true);
     }
   }
 
@@ -10732,9 +10764,10 @@ function drawHoles() {
   holeNumberLabelsByIndex = Object.create(null);
   highlightedHoleNumbers = [];
 
-  function drawRingHoles(ringPoints, indexOffset, invertOutward) {
+  function drawRingHoles(ringPoints, indexOffset, invertOutward, isInnerRing) {
     if (!ringPoints || !ringPoints.length) return;
     var ccw = signedAreaOfClosedPolyline(ringPoints) > 0;
+    var ringBaseFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
 
     for (var i = 0; i < ringPoints.length; i++) {
       new Path.Circle(ringPoints[i], 3).fillColor = '#333';
@@ -10745,7 +10778,7 @@ function drawHoles() {
       var label = new PointText(ringPoints[i]);
       label.justification = 'center';
       label.fillColor = '#555';
-      label.fontSize = fontSize;
+      label.fontSize = ringBaseFontSize;
       label.fontWeight = 'normal';
       label.content = String(i + 1);
 
@@ -10776,9 +10809,9 @@ function drawHoles() {
     }
   }
 
-  drawRingHoles(outerFramePoints.length ? outerFramePoints : points, 0, false);
+  drawRingHoles(outerFramePoints.length ? outerFramePoints : points, 0, false, false);
   if (nestedFrameEnabled && innerFramePoints.length) {
-    drawRingHoles(innerFramePoints, getCurrentStitchHoleCount(), false);
+    drawRingHoles(innerFramePoints, getCurrentStitchHoleCount(), false, true);
   }
 }
 
@@ -11025,7 +11058,16 @@ function renderThreadControls() {
   threads.forEach((thread, index) => {
     ensureThreadConnectConfig(thread);
     thread.frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+    if (thread.color === 'rainbow') {
+      thread.solidColor = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
+    } else {
+      thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+    }
     normalizeThreadHoleDependentValues(thread, holeCount);
+
+    var threadColorInputValue = thread.color === 'rainbow'
+      ? sanitizeThreadSolidColor(thread.solidColor, '#1982c4')
+      : sanitizeThreadSolidColor(thread.color, '#1982c4');
 
     var div = document.createElement('div');
     div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
@@ -11037,7 +11079,7 @@ function renderThreadControls() {
 
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
-      Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
+      Color: <input type="color" value="${threadColorInputValue}" id="color-${index}"><br>
       Stitch by:
       <select id="jump-mode-${index}">
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
@@ -11108,6 +11150,7 @@ function renderThreadControls() {
 
     document.getElementById(`color-${index}`).addEventListener('input', e => {
       thread.color = e.target.value;
+      thread.solidColor = sanitizeThreadSolidColor(e.target.value, thread.solidColor || '#1982c4');
       syncKidControlsFromSelectedThread();
       redrawAnimationInPlace();
     });
@@ -11259,7 +11302,14 @@ function renderThreadControls() {
     }
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
-      thread.color = e.target.checked ? 'rainbow' : '#000000';
+      if (e.target.checked) {
+        if (thread.color !== 'rainbow') {
+          thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+        }
+        thread.color = 'rainbow';
+      } else {
+        thread.color = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
+      }
       syncKidControlsFromSelectedThread();
       redrawAnimationInPlace();
     });
