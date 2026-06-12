@@ -1746,7 +1746,7 @@ var DISCOVERY_LIBRARY = {
     experienceName: 'Mashrabiya',
     songId: 'rosette',
     passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then jump 44 from start 3; from third-thread pairs around each hexagon vertex, the twelve-petal rose appears.',
-    passphraseInputEnabled: true
+    passphraseInputEnabled: false
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
@@ -2082,6 +2082,7 @@ var mashrabiyaGeometryMode = 'stitch-vertex';
 var mashrabiyaStarColor = '#f4d35e';
 var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
+var mashrabiyaDevPreviewEnabled = false; // set true to bypass discovery gate during development
 var mashrabiyaDebugLabelsEnabled = false; // set to false for final release
 var mashrabiyaDebugKeepStitchLinesVisible = true; // debug: set false to restore fade-out behavior
 var mashrabiyaDebugFillOpacityScale = 0.45; // debug: set to 1 for final release opacity
@@ -3034,7 +3035,7 @@ function applyStateFromCurrentUrl(options) {
   var params = new URLSearchParams(window.location.search || '');
   var requestedExperience = resolveExperienceId(getUrlStateParam(params, 'experienceId'));
   var hasExplicitExperienceParam = !!resolveExperienceId(getUrlStateParam(params, 'experienceId'));
-  var allowSquarusUrlDiscoveryUnlock = options.initialLoad === true;
+  var allowExperienceUrlDiscoveryUnlock = options.initialLoad === true;
 
   if (!requestedExperience) {
     requestedExperience = currentExperienceId;
@@ -3044,15 +3045,14 @@ function applyStateFromCurrentUrl(options) {
     withUrlSyncSuspended(function() {
     if (hasExplicitExperienceParam) {
       setCurrentExperience(requestedExperience, { suppressUrlSync: true });
+      requestedExperience = currentExperienceId;
     }
 
-    if (allowSquarusUrlDiscoveryUnlock && hasExplicitExperienceParam) {
+    if (allowExperienceUrlDiscoveryUnlock && hasExplicitExperienceParam) {
       if (requestedExperience === 'triangula') {
         unlockDiscovery('triangle');
       } else if (requestedExperience === 'squarus') {
         unlockDiscovery('square');
-      } else if (requestedExperience === 'mashrabiya') {
-        unlockDiscovery('rosette');
       }
     }
 
@@ -3237,6 +3237,24 @@ function resolveExperienceId(experienceRef) {
     if (entry.title && String(entry.title).trim().toLowerCase() === normalized) return id;
   }
   return null;
+}
+
+function isMashrabiyaExperienceUnlocked() {
+  return !!discoveredShapeKeys.rosette;
+}
+
+function isExperienceAccessible(experienceId) {
+  var resolvedId = resolveExperienceId(experienceId) || 'stitching';
+  if (resolvedId === 'mashrabiya') {
+    return mashrabiyaDevPreviewEnabled || isMashrabiyaExperienceUnlocked();
+  }
+  return true;
+}
+
+function resolveAccessibleExperienceId(experienceRef, fallback) {
+  var fallbackId = resolveExperienceId(fallback) || 'stitching';
+  var requestedId = resolveExperienceId(experienceRef) || fallbackId;
+  return isExperienceAccessible(requestedId) ? requestedId : fallbackId;
 }
 
 function getExperienceUiProfile(experienceId) {
@@ -3760,7 +3778,8 @@ function applyCurrentExperienceInfo() {
 
 function setCurrentExperience(experienceId, options) {
   options = options || {};
-  var experience = getExperienceById(experienceId);
+  var accessibleExperienceId = resolveAccessibleExperienceId(experienceId, 'stitching');
+  var experience = getExperienceById(accessibleExperienceId);
   var previousExperienceId = currentExperienceId;
 
   if (previousExperienceId === 'stitching') {
@@ -4576,6 +4595,11 @@ function renderDiscoveryLibrary() {
         var experienceId = resolveExperienceId(experienceName);
         if (!experienceId) {
           alert(experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
+          return;
+        }
+
+        if (!isExperienceAccessible(experienceId)) {
+          alert(experienceName + ' is currently gated while nested-frame rosette support is under development.');
           return;
         }
 
