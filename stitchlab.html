@@ -1437,6 +1437,17 @@
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
       <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="144" value="35" aria-label="Holes value"></div>
     </div>
+    <div class="advanced-subsection" id="nested-frame-block">
+      <div class="advanced-global-title">Inner Frame</div>
+      <div class="advanced-global-row">Enabled: <input id="nested-frame-enabled" type="checkbox"></div>
+      <div class="advanced-global-row">Ratio:
+        <select id="nested-frame-ratio">
+          <option value="0.5" selected>1/2</option>
+          <option value="0.75">3/4</option>
+        </select>
+        <span class="advanced-inline-value" id="nested-frame-ratio-value">off</span>
+      </div>
+    </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Stitch Tempo</div>
       <div class="advanced-global-row">BPM: <select id="advanced-tempo">
@@ -1540,6 +1551,9 @@ var multiplySlider = document.getElementById('multiply');
 var widthSlider = document.getElementById('width');
 var kidStitchBySelect = document.getElementById('kid-stitch-by');
 var startHoleInput = document.getElementById('start-hole');
+var nestedFrameEnabledInput = document.getElementById('nested-frame-enabled');
+var nestedFrameRatioSelect = document.getElementById('nested-frame-ratio');
+var nestedFrameRatioValue = document.getElementById('nested-frame-ratio-value');
 var addSliderBlock = document.getElementById('add-slider-block');
 var multiplySliderBlock = document.getElementById('multiply-slider-block');
 var advancedShapeSelect = document.getElementById('advanced-shape');
@@ -1564,6 +1578,7 @@ var canvasContainer = document.getElementById('canvas-container');
 var canvasStage = document.getElementById('canvas-stage');
 var shapeButtons = Array.prototype.slice.call(document.querySelectorAll('.shape-btn'));
 var holesSliderBlock = holesSlider ? holesSlider.closest('.slider-block') : null;
+var nestedFrameBlock = document.getElementById('nested-frame-block');
 var stitchBySliderBlock = kidStitchBySelect ? kidStitchBySelect.closest('.slider-block') : null;
 var startHoleBlock = document.getElementById('start-hole-block');
 var jumpSliderBlock = document.getElementById('add-slider-block');
@@ -1665,18 +1680,22 @@ var threads = [
     jump: 22,
     width: 2,
     color: '#1982c4',
+    solidColor: '#1982c4',
     startHole: 1,
     sequence: null,
     jumpMode: 'fixed',
     jumpFormula: 'skip',
     jumpSequence: '',
     connectMultiplier: 2,
-    connectOffset: 0
+    connectOffset: 0,
+    frameMode: 'outer'
   }
 ];
 var selectedThreadIndex = 0;
 
 var points = [];
+var outerFramePoints = [];
+var innerFramePoints = [];
 var animationActive = false;
 var animationState = null;
 var squarusAnimationState = null;
@@ -1690,6 +1709,10 @@ var highlightedHoleNumbers = [];
 var DEFAULT_HOLES = 35;
 var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
+var NESTED_FRAME_RATIO_OPTIONS = [0.5, 0.75];
+var DEFAULT_NESTED_FRAME_RATIO = 0.5;
+var nestedFrameEnabled = false;
+var nestedFrameRatio = DEFAULT_NESTED_FRAME_RATIO;
 var MAX_HOLES = 144;
 var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
 var DEFAULT_ANIMATION_BPM = 168;
@@ -2114,6 +2137,8 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   stitchingShowHoleNumbers: 'stitchingShowHoleNumbers',
   stitchingBorderEnabled: 'stitchingBorderEnabled',
   stitchingHoles: 'stitchingHoles',
+  stitchingNestedFrameEnabled: 'stitchingNestedFrameEnabled',
+  stitchingNestedFrameRatio: 'stitchingNestedFrameRatio',
   stitchingSelectedThreadIndex: 'stitchingSelectedThreadIndex',
   stitchingThreadState: 'stitchingThreadState',
   stitchingThreadColors: 'stitchingThreadColors',
@@ -2154,6 +2179,8 @@ var appState = {
   },
   stitching: {
     holes: DEFAULT_HOLES,
+    nestedFrameEnabled: false,
+    nestedFrameRatio: DEFAULT_NESTED_FRAME_RATIO,
     selectedThreadIndex: 0,
     showHoleNumbers: true,
     borderEnabled: true,
@@ -2370,6 +2397,18 @@ function sanitizeThreadColor(value, fallback) {
   return sanitizeHexColor(value, fallback);
 }
 
+function sanitizeThreadSolidColor(value, fallback) {
+  var fallbackColor = sanitizeHexColor(fallback, '#1982c4');
+  if (fallbackColor === 'rainbow') {
+    fallbackColor = '#1982c4';
+  }
+  var normalized = sanitizeHexColor(value, fallbackColor);
+  if (normalized === 'rainbow') {
+    return fallbackColor;
+  }
+  return normalized;
+}
+
 function sanitizeThreadColorList(value, fallbackList) {
   if (typeof value !== 'string' || !value.trim()) return fallbackList.slice();
   var raw = value.split(',');
@@ -2388,17 +2427,35 @@ function sanitizeThreadJumpMode(value, fallback) {
   return value;
 }
 
+function sanitizeNestedFrameRatio(value, fallback) {
+  var parsed = Number(value);
+  if (!isFinite(parsed) || NESTED_FRAME_RATIO_OPTIONS.indexOf(parsed) === -1) {
+    return NESTED_FRAME_RATIO_OPTIONS.indexOf(fallback) !== -1 ? fallback : DEFAULT_NESTED_FRAME_RATIO;
+  }
+  return parsed;
+}
+
+function sanitizeThreadFrameMode(value, fallback) {
+  var allowed = ['outer', 'inner', 'bridge', 'bridge-reverse'];
+  if (allowed.indexOf(value) === -1) {
+    return allowed.indexOf(fallback) !== -1 ? fallback : 'outer';
+  }
+  return value;
+}
+
 function sanitizeThreadDescriptor(raw, fallback) {
   fallback = fallback || {
     jump: DEFAULT_SKIP,
     width: DEFAULT_THREAD_SIZE,
     color: '#1982c4',
+    solidColor: '#1982c4',
     startHole: 1,
     jumpMode: 'fixed',
     jumpFormula: 'skip',
     jumpSequence: '',
     connectMultiplier: 2,
-    connectOffset: 0
+    connectOffset: 0,
+    frameMode: 'outer'
   };
 
   raw = raw || {};
@@ -2413,8 +2470,14 @@ function sanitizeThreadDescriptor(raw, fallback) {
     jumpFormula: String(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'skip'))),
     jumpSequence: String(raw.s != null ? raw.s : (raw.jumpSequence != null ? raw.jumpSequence : (fallback.jumpSequence || ''))),
     connectMultiplier: parseBoundedInt(raw.cm != null ? raw.cm : raw.connectMultiplier, 1, 12, fallback.connectMultiplier || 2),
-    connectOffset: parseBoundedInt(raw.co != null ? raw.co : raw.connectOffset, 0, MAX_HOLES, fallback.connectOffset || 0)
+    connectOffset: parseBoundedInt(raw.co != null ? raw.co : raw.connectOffset, 0, MAX_HOLES, fallback.connectOffset || 0),
+    frameMode: sanitizeThreadFrameMode(raw.fm != null ? raw.fm : raw.frameMode, fallback.frameMode || 'outer'),
+    solidColor: sanitizeThreadSolidColor(raw.sc != null ? raw.sc : raw.solidColor, fallback.solidColor || fallback.color || '#1982c4')
   };
+
+  if (thread.color !== 'rainbow') {
+    thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+  }
 
   if (thread.jumpMode !== 'formula') {
     thread.jumpFormula = fallback.jumpFormula || 'skip';
@@ -2437,7 +2500,9 @@ function serializeStitchingThreadState(threadList) {
       f: String(thread.jumpFormula || 'skip'),
       s: String(thread.jumpSequence || ''),
       cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),
-      co: parseBoundedInt(thread.connectOffset, 0, MAX_HOLES, 0)
+      co: parseBoundedInt(thread.connectOffset, 0, MAX_HOLES, 0),
+      fm: sanitizeThreadFrameMode(thread.frameMode, 'outer'),
+      sc: sanitizeThreadSolidColor(thread.solidColor, thread.color === 'rainbow' ? '#1982c4' : thread.color)
     };
   });
 
@@ -2451,7 +2516,9 @@ function serializeStitchingThreadState(threadList) {
       f: 'skip',
       s: '',
       cm: 2,
-      co: 0
+      co: 0,
+      fm: 'outer',
+      sc: '#1982c4'
     });
   }
 
@@ -2496,6 +2563,8 @@ function buildStitchingStateSnapshotFromRuntime() {
   return {
     shape: snapshotShape,
     holes: parseBoundedInt(holesSlider && holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES),
+    nestedFrameEnabled: !!nestedFrameEnabled,
+    nestedFrameRatio: sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO),
     selectedThreadIndex: parseBoundedInt(selectedThreadIndex, 0, maxIndex, 0),
     showHoleNumbers: !!showHoleNumbers,
     borderEnabled: !!borderEnabled,
@@ -2508,6 +2577,8 @@ function normalizeStitchingStateSnapshot(raw, fallback) {
   raw = raw || {};
   var normalizedShape = sanitizeShape(raw.shape, base.shape);
   var normalizedHoles = parseBoundedInt(raw.holes, 3, MAX_HOLES, base.holes);
+  var normalizedNestedFrameEnabled = !!sanitizeBooleanParam(raw.nestedFrameEnabled, base.nestedFrameEnabled);
+  var normalizedNestedFrameRatio = sanitizeNestedFrameRatio(raw.nestedFrameRatio, base.nestedFrameRatio);
   var normalizedShowHoleNumbers = !!sanitizeBooleanParam(raw.showHoleNumbers, base.showHoleNumbers);
   var normalizedBorderEnabled = !!sanitizeBooleanParam(raw.borderEnabled, base.borderEnabled);
   var parsedThreads = parseStitchingThreadState(raw.threadState, parseStitchingThreadState(base.threadState, [sanitizeThreadDescriptor({}, null)]));
@@ -2518,6 +2589,8 @@ function normalizeStitchingStateSnapshot(raw, fallback) {
   return {
     shape: normalizedShape,
     holes: normalizedHoles,
+    nestedFrameEnabled: normalizedNestedFrameEnabled,
+    nestedFrameRatio: normalizedNestedFrameRatio,
     selectedThreadIndex: normalizedSelectedThreadIndex,
     showHoleNumbers: normalizedShowHoleNumbers,
     borderEnabled: normalizedBorderEnabled,
@@ -2683,6 +2756,8 @@ function restoreStitchingStateFromCache() {
   selectedThreadIndex = parseBoundedInt(normalized.selectedThreadIndex, 0, threads.length - 1, 0);
   showHoleNumbers = !!normalized.showHoleNumbers;
   borderEnabled = !!normalized.borderEnabled;
+  nestedFrameEnabled = !!normalized.nestedFrameEnabled;
+  nestedFrameRatio = sanitizeNestedFrameRatio(normalized.nestedFrameRatio, nestedFrameRatio);
   holesSlider.value = String(parseBoundedInt(normalized.holes, 3, MAX_HOLES, DEFAULT_HOLES));
   if (advancedHolesNumberInput) {
     advancedHolesNumberInput.value = holesSlider.value;
@@ -2693,6 +2768,7 @@ function restoreStitchingStateFromCache() {
   renderThreadControls();
   syncKidControlsFromSelectedThread();
   updateKidControlValues();
+  syncNestedFrameControls();
   syncHoleNumberToggles();
   syncBorderControls();
 
@@ -2919,6 +2995,8 @@ function syncAppStateFromRuntime() {
   appState.common.songId = currentSongId;
 
   appState.stitching.holes = parseBoundedInt(holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES);
+  appState.stitching.nestedFrameEnabled = !!nestedFrameEnabled;
+  appState.stitching.nestedFrameRatio = sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
   appState.stitching.selectedThreadIndex = Math.max(0, Math.min(threads.length - 1, selectedThreadIndex));
   appState.stitching.showHoleNumbers = !!showHoleNumbers;
   appState.stitching.borderEnabled = !!borderEnabled;
@@ -2964,6 +3042,8 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'stitchingShowHoleNumbers', appState.stitching.showHoleNumbers ? '1' : '0');
     setUrlStateParam(params, 'stitchingBorderEnabled', appState.stitching.borderEnabled ? '1' : '0');
     setUrlStateParam(params, 'stitchingHoles', String(appState.stitching.holes));
+    setUrlStateParam(params, 'stitchingNestedFrameEnabled', appState.stitching.nestedFrameEnabled ? '1' : '0');
+    setUrlStateParam(params, 'stitchingNestedFrameRatio', String(appState.stitching.nestedFrameRatio));
     setUrlStateParam(params, 'stitchingSelectedThreadIndex', String(appState.stitching.selectedThreadIndex));
     setUrlStateParam(params, 'stitchingThreadState', appState.stitching.threadState);
     if (appState.stitching.threadColors && appState.stitching.threadColors.length) {
@@ -3077,6 +3157,9 @@ function applyStateFromCurrentUrl(options) {
     if (requestedExperience === 'stitching') {
       showHoleNumbers = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingShowHoleNumbers'), showHoleNumbers);
       borderEnabled = sanitizeBooleanParam(getUrlStateParam(params, 'stitchingBorderEnabled'), borderEnabled);
+      nestedFrameEnabled = !!sanitizeBooleanParam(getUrlStateParam(params, 'stitchingNestedFrameEnabled'), nestedFrameEnabled);
+      nestedFrameRatio = sanitizeNestedFrameRatio(getUrlStateParam(params, 'stitchingNestedFrameRatio'), nestedFrameRatio);
+      syncNestedFrameControls();
       syncHoleNumberToggles();
       syncBorderControls();
 
@@ -3383,6 +3466,7 @@ function applyAdvancedControlPolicy(profile) {
   if (advancedStitchingFrameSubsection) {
     setElementDisplay(advancedStitchingFrameSubsection, currentExperienceId === 'stitching', '');
   }
+  setElementDisplay(nestedFrameBlock, currentExperienceId === 'stitching', '');
   if (advancedShapeSelect) {
     setElementDisplay(advancedShapeSelect.parentElement, controls.shape !== false, '');
   }
@@ -5157,9 +5241,29 @@ function updateKidControlValues() {
   jumpValue.textContent = jumpSlider.value;
   multiplyValue.textContent = multiplySlider.value;
   widthValue.textContent = widthSlider.value;
+  if (nestedFrameRatioValue) {
+    if (!nestedFrameEnabled) {
+      nestedFrameRatioValue.textContent = 'off';
+    } else if (nestedFrameRatio === 0.75) {
+      nestedFrameRatioValue.textContent = '3/4';
+    } else {
+      nestedFrameRatioValue.textContent = '1/2';
+    }
+  }
   if (advancedHolesNumberInput) {
     advancedHolesNumberInput.value = holesSlider.value;
   }
+}
+
+function syncNestedFrameControls() {
+  if (nestedFrameEnabledInput) {
+    nestedFrameEnabledInput.checked = !!nestedFrameEnabled;
+  }
+  if (nestedFrameRatioSelect) {
+    nestedFrameRatioSelect.value = String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO));
+    nestedFrameRatioSelect.disabled = !nestedFrameEnabled;
+  }
+  updateKidControlValues();
 }
 
 function getCurrentStitchHoleCount() {
@@ -5206,17 +5310,25 @@ function syncBorderControls() {
 }
 
 function createThread(config) {
+  var initialSolidColor = sanitizeThreadSolidColor(config.solidColor, config.color || '#1982c4');
+  var initialColor = sanitizeThreadColor(config.color, initialSolidColor);
+  if (initialColor !== 'rainbow') {
+    initialSolidColor = sanitizeThreadSolidColor(initialColor, initialSolidColor);
+  }
+
   return {
     jump: config.jump,
     width: config.width,
-    color: config.color,
+    color: initialColor,
+    solidColor: initialSolidColor,
     startHole: parseBoundedInt(config.startHole, 1, MAX_HOLES, 1),
     sequence: null,
     jumpMode: 'fixed',
     jumpFormula: 'skip',
     jumpSequence: '',
     connectMultiplier: 2,
-    connectOffset: 0
+    connectOffset: 0,
+    frameMode: sanitizeThreadFrameMode(config.frameMode, 'outer')
   };
 }
 
@@ -5286,7 +5398,8 @@ function buildMagicThread() {
     jump: nextJump,
     width: DEFAULT_THREAD_SIZE,
     color: colorPick,
-    startHole: parseBoundedInt(base.startHole, 1, getCurrentStitchHoleCount(), 1)
+    startHole: parseBoundedInt(base.startHole, 1, getCurrentStitchHoleCount(), 1),
+    frameMode: sanitizeThreadFrameMode(base.frameMode, 'outer')
   });
 }
 
@@ -5309,6 +5422,9 @@ function applyExperiencePaletteColorChoice(colorValue) {
   if (paletteMode === 'global') {
     threads.forEach(function(thread) {
       thread.color = color;
+      if (color !== 'rainbow') {
+        thread.solidColor = sanitizeThreadSolidColor(color, thread.solidColor || '#1982c4');
+      }
     });
     return;
   }
@@ -5355,6 +5471,9 @@ function applyExperiencePaletteColorChoice(colorValue) {
     targetIndex = 0;
   }
   threads[targetIndex].color = color;
+  if (color !== 'rainbow') {
+    threads[targetIndex].solidColor = sanitizeThreadSolidColor(color, threads[targetIndex].solidColor || '#1982c4');
+  }
 }
 
 function syncHoleNumberToggles() {
@@ -5398,6 +5517,15 @@ function refreshKidThreadPicker() {
 
   kidThreadToggle.disabled = false;
 
+  function getFrameModeBadge(thread) {
+    if (!nestedFrameEnabled || !thread) return '';
+    var mode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+    if (mode === 'inner') return ' I';
+    if (mode === 'bridge') return ' O->I';
+    if (mode === 'bridge-reverse') return ' I->O';
+    return ' O';
+  }
+
   for (var i = 0; i < threads.length; i++) {
     var thread = threads[i];
     var option = document.createElement('button');
@@ -5412,7 +5540,7 @@ function refreshKidThreadPicker() {
     applyThreadSwatchStyle(swatch, thread.color);
 
     var label = document.createElement('span');
-    label.textContent = 'Thread ' + (i + 1);
+    label.textContent = 'Thread ' + (i + 1) + getFrameModeBadge(thread);
 
     option.appendChild(swatch);
     option.appendChild(label);
@@ -5422,7 +5550,7 @@ function refreshKidThreadPicker() {
   var selectedIndex = getKidTargetThreadIndex();
   var selectedThread = threads[selectedIndex];
   if (selectedThread) {
-    kidThreadActiveLabel.textContent = 'Thread ' + (selectedIndex + 1);
+    kidThreadActiveLabel.textContent = 'Thread ' + (selectedIndex + 1) + getFrameModeBadge(selectedThread);
     applyThreadSwatchStyle(kidThreadActiveSwatch, selectedThread.color);
   }
 }
@@ -5444,6 +5572,7 @@ function syncKidControlsFromSelectedThread() {
     setElementDisplay(advancedThreadsTitle, false, '');
     setElementDisplay(threadControlsContainer, false, '');
     syncBasicMathSliderVisibility();
+    syncNestedFrameControls();
     return;
   }
 
@@ -5462,6 +5591,7 @@ function syncKidControlsFromSelectedThread() {
   widthSlider.value = threads[index].width;
   syncKidStitchByControl();
   syncBasicMathSliderVisibility();
+  syncNestedFrameControls();
   updateKidControlValues();
 }
 
@@ -5996,20 +6126,40 @@ function computePoints() {
   var radius = geometry.radius;
 
   points = [];
+  outerFramePoints = [];
+  innerFramePoints = [];
+  if (!isFinite(n) || n < 3) return;
 
   // Circle already has exact uniform spacing with equal-angle sampling.
   if (currentShape === 'circle') {
     for (var i = 0; i < n; i++) {
       var t = (-Math.PI / 2) + ((2 * Math.PI * i) / n);
-      points.push(shapePointAtAngle(t, center, radius));
+      outerFramePoints.push(shapePointAtAngle(t, center, radius));
     }
+
+    if (nestedFrameEnabled) {
+      var innerRadiusCircle = radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+      for (var ci = 0; ci < n; ci++) {
+        var tc = (-Math.PI / 2) + ((2 * Math.PI * ci) / n);
+        innerFramePoints.push(shapePointAtAngle(tc, center, innerRadiusCircle));
+      }
+    }
+    points = nestedFrameEnabled ? outerFramePoints.concat(innerFramePoints) : outerFramePoints.slice();
     return;
   }
 
   // Non-circular shapes need perimeter-based resampling for visual uniformity.
   var sampleCount = Math.max(360, n * 12);
   var boundarySamples = buildShapeBoundarySamples(sampleCount, center, radius);
-  points = sampleEvenlyAlongClosedPolyline(boundarySamples, n);
+  outerFramePoints = sampleEvenlyAlongClosedPolyline(boundarySamples, n);
+
+  if (nestedFrameEnabled) {
+    var innerRadius = radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+    var innerBoundarySamples = buildShapeBoundarySamples(sampleCount, center, innerRadius);
+    innerFramePoints = sampleEvenlyAlongClosedPolyline(innerBoundarySamples, n);
+  }
+
+  points = nestedFrameEnabled ? outerFramePoints.concat(innerFramePoints) : outerFramePoints.slice();
 }
 
 function signedAreaOfClosedPolyline(vertices) {
@@ -6077,7 +6227,12 @@ function lineIntersection(a1, a2, b1, b2) {
 
 function getPolygonCornerVertices() {
   var geometry = getShapeGeometry();
+  return getPolygonCornerVerticesForGeometry(geometry);
+}
+
+function getPolygonCornerVerticesForGeometry(geometry) {
   var vertices = [];
+  if (!geometry) return null;
 
   if (currentShape === 'triangle') {
     for (var i = 0; i < 3; i++) {
@@ -6142,32 +6297,47 @@ function offsetConvexPolygon(vertices, distance) {
 function drawShapeBorder() {
   if (!borderEnabled) return;
 
-  var borderGeometry = getBorderGeometryForCurrentShape();
-  if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
+  function drawBorderPair(borderGeometry) {
+    if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
 
-  var polygonVertices = borderGeometry.isPolygon ? borderGeometry.polygonVertices : null;
-  var outerSamples = borderGeometry.outerSamples;
-  var innerSamples = borderGeometry.innerSamples;
+    var polygonVertices = borderGeometry.isPolygon ? borderGeometry.polygonVertices : null;
 
-  var outerPath = new Path(outerSamples);
-  outerPath.closed = true;
-  outerPath.strokeColor = BORDER_STROKE_COLOR;
-  outerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
-  outerPath.strokeCap = 'round';
-  outerPath.miterLimit = 8;
+    var outerPath = new Path(borderGeometry.outerSamples);
+    outerPath.closed = true;
+    outerPath.strokeColor = BORDER_STROKE_COLOR;
+    outerPath.strokeWidth = BORDER_STROKE_WIDTH;
+    outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
+    outerPath.strokeCap = 'round';
+    outerPath.miterLimit = 8;
 
-  var innerPath = new Path(innerSamples);
-  innerPath.closed = true;
-  innerPath.strokeColor = BORDER_STROKE_COLOR;
-  innerPath.strokeWidth = BORDER_STROKE_WIDTH;
-  innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
-  innerPath.strokeCap = 'round';
-  innerPath.miterLimit = 8;
+    var innerPath = new Path(borderGeometry.innerSamples);
+    innerPath.closed = true;
+    innerPath.strokeColor = BORDER_STROKE_COLOR;
+    innerPath.strokeWidth = BORDER_STROKE_WIDTH;
+    innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
+    innerPath.strokeCap = 'round';
+    innerPath.miterLimit = 8;
+  }
+
+  drawBorderPair(getBorderGeometryForCurrentShape());
+
+  if (!nestedFrameEnabled) return;
+  var geometry = getShapeGeometry();
+  var nestedGeometry = {
+    center: geometry.center,
+    radius: geometry.radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)
+  };
+  drawBorderPair(getBorderGeometryForGeometry(nestedGeometry));
 }
 
 function getBorderGeometryForCurrentShape() {
-  var polygonVertices = getPolygonCornerVertices();
+  return getBorderGeometryForGeometry(getShapeGeometry());
+}
+
+function getBorderGeometryForGeometry(geometry) {
+  if (!geometry) return null;
+
+  var polygonVertices = getPolygonCornerVerticesForGeometry(geometry);
   var outerSamples;
   var innerSamples;
 
@@ -6177,7 +6347,6 @@ function getBorderGeometryForCurrentShape() {
     innerSamples = offsetConvexPolygon(polygonVertices, -BORDER_INNER_GAP);
   } else {
     // Curved/organic shapes continue to use dense polyline offsets.
-    var geometry = getShapeGeometry();
     var boundarySamples = buildShapeBoundarySamples(480, geometry.center, geometry.radius);
     if (!boundarySamples.length) return;
     outerSamples = offsetClosedPolyline(boundarySamples, BORDER_OUTER_GAP);
@@ -6196,7 +6365,8 @@ function getBorderGeometryForCurrentShape() {
    DRAWING THREADS
 ------------------------------ */
 function computeSequence(thread) {
-  var n = points.length;
+  var n = getCurrentStitchHoleCount();
+  if (!n) return [];
 
   if (thread.sequence && thread.sequence.type === 'custom') {
     return thread.sequence.list;
@@ -6284,8 +6454,35 @@ function computeSequence(thread) {
 }
 
 function computeSegments(thread) {
-  var n = points.length;
+  var n = getCurrentStitchHoleCount();
   if (!n || !thread) return [];
+
+  function resolveFrameMode() {
+    if (!nestedFrameEnabled) return 'outer';
+    return sanitizeThreadFrameMode(thread.frameMode, 'outer');
+  }
+
+  function toGlobalIndex(localIndex, ring) {
+    var idx = ((localIndex % n) + n) % n;
+    if (ring === 'inner' && nestedFrameEnabled) {
+      return n + idx;
+    }
+    return idx;
+  }
+
+  function mapPair(sourceLocal, mappedLocal) {
+    var frameMode = resolveFrameMode();
+    if (frameMode === 'inner') {
+      return [toGlobalIndex(sourceLocal, 'inner'), toGlobalIndex(mappedLocal, 'inner')];
+    }
+    if (frameMode === 'bridge') {
+      return [toGlobalIndex(sourceLocal, 'outer'), toGlobalIndex(mappedLocal, 'inner')];
+    }
+    if (frameMode === 'bridge-reverse') {
+      return [toGlobalIndex(sourceLocal, 'inner'), toGlobalIndex(mappedLocal, 'outer')];
+    }
+    return [toGlobalIndex(sourceLocal, 'outer'), toGlobalIndex(mappedLocal, 'outer')];
+  }
 
   if (thread.jumpMode === 'connect') {
     ensureThreadConnectConfig(thread);
@@ -6300,7 +6497,7 @@ function computeSegments(thread) {
       var mappedLabel = (multiplier * sourceLabel + offset - 1) % n;
       if (mappedLabel < 0) mappedLabel += n;
       var mapped = mappedLabel;
-      segments.push([sourceIndex, mapped]);
+      segments.push(mapPair(sourceIndex, mapped));
     }
     return segments;
   }
@@ -6308,7 +6505,7 @@ function computeSegments(thread) {
   var seq = computeSequence(thread);
   var chained = [];
   for (var j = 0; j < seq.length; j++) {
-    chained.push([seq[j], seq[(j + 1) % seq.length]]);
+    chained.push(mapPair(seq[j], seq[(j + 1) % seq.length]));
   }
   return chained;
 }
@@ -9590,7 +9787,7 @@ function animateMashrabiya() {
 }
 
 function shouldShowHoleNumbersNow() {
-  var holeCount = parseInt(holesSlider.value, 10);
+  var holeCount = getCurrentStitchHoleCount();
   if (!isFinite(holeCount)) return false;
   return showHoleNumbers && holeCount <= HOLE_NUMBER_AUTO_HIDE_THRESHOLD;
 }
@@ -9624,6 +9821,38 @@ function getOutwardDirectionAtHole(index, ccw) {
   }
 
   return outward.normalize(1);
+}
+
+function getOutwardDirectionAtHoleFromRing(ringPoints, index, ccw, invert) {
+  if (!ringPoints || !ringPoints.length) return new Point(0, -1);
+
+  var n = ringPoints.length;
+  var prev = ringPoints[(index - 1 + n) % n];
+  var curr = ringPoints[index];
+  var next = ringPoints[(index + 1) % n];
+  var tangent = next.subtract(prev);
+
+  if (tangent.length <= 0.001) {
+    var fromCenter = curr.subtract(view.center);
+    if (fromCenter.length <= 0.001) return new Point(0, -1);
+    var fallbackDirection = fromCenter.normalize(1);
+    return invert ? fallbackDirection.multiply(-1) : fallbackDirection;
+  }
+
+  var outwardRotation = ccw ? -90 : 90;
+  var outward = tangent.normalize(1).rotate(outwardRotation);
+  if (outward.length <= 0.001) {
+    var fallback = curr.subtract(view.center);
+    if (fallback.length <= 0.001) return new Point(0, -1);
+    outward = fallback.normalize(1);
+  }
+
+  if (outward.dot(curr.subtract(view.center)) < 0) {
+    outward = outward.multiply(-1);
+  }
+
+  outward = outward.normalize(1);
+  return invert ? outward.multiply(-1) : outward;
 }
 
 function getBoundsExtentAlongDirection(item, direction) {
@@ -10024,13 +10253,24 @@ function buildCurrentDesignSvgString(options) {
   lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
 
   if (borderEnabled && BORDER_INCLUDE_IN_SVG) {
-    var borderGeometry = getBorderGeometryForCurrentShape();
-    if (borderGeometry && borderGeometry.outerSamples && borderGeometry.innerSamples) {
+    function appendBorderPair(borderGeometry) {
+      if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
       var lineJoin = borderGeometry.isPolygon ? 'miter' : 'round';
       var outerPathData = svgPathFromPoints(borderGeometry.outerSamples);
       var innerPathData = svgPathFromPoints(borderGeometry.innerSamples);
       lines.push('<path d="' + outerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
       lines.push('<path d="' + innerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
+    }
+
+    appendBorderPair(getBorderGeometryForCurrentShape());
+
+    if (nestedFrameEnabled) {
+      var geometry = getShapeGeometry();
+      var nestedGeometry = {
+        center: geometry.center,
+        radius: geometry.radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)
+      };
+      appendBorderPair(getBorderGeometryForGeometry(nestedGeometry));
     }
   }
 
@@ -10057,40 +10297,58 @@ function buildCurrentDesignSvgString(options) {
     }
   }
 
-  for (var i = 0; i < points.length; i++) {
-    lines.push('<circle cx="' + formatSvgNumber(points[i].x) + '" cy="' + formatSvgNumber(points[i].y) + '" r="3" fill="#333"/>');
+  function exportRingHoles(ringPoints) {
+    if (!ringPoints || !ringPoints.length) return;
+    for (var i = 0; i < ringPoints.length; i++) {
+      lines.push('<circle cx="' + formatSvgNumber(ringPoints[i].x) + '" cy="' + formatSvgNumber(ringPoints[i].y) + '" r="3" fill="#333"/>');
+    }
+  }
+
+  exportRingHoles(outerFramePoints.length ? outerFramePoints : points);
+  if (nestedFrameEnabled && innerFramePoints.length) {
+    exportRingHoles(innerFramePoints);
   }
 
   if (shouldShowHoleNumbersNow()) {
-    var holeCount = parseInt(holesSlider.value, 10);
+    var holeCount = getCurrentStitchHoleCount();
     if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
     var fontSize = getHoleNumberFontSize(holeCount);
-    var ccw = signedAreaOfClosedPolyline(points) > 0;
 
-    for (var j = 0; j < points.length; j++) {
-      var text = String(j + 1);
-      var outward = getOutwardDirectionAtHole(j, ccw);
-      var extent = estimateTextExtentAlongDirection(text, fontSize);
-      var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+    function exportRingLabels(ringPoints, invertOutward, isInnerRing) {
+      if (!ringPoints || !ringPoints.length) return;
+      var ccw = signedAreaOfClosedPolyline(ringPoints) > 0;
+      var ringFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
 
-      if (metrics.maxOffset < metrics.minOffset) {
-        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
-        var reducedFont = Math.max(6, Math.min(fontSize, availableBand * 1.6));
-        if (reducedFont < fontSize) {
-          fontSize = reducedFont;
-          extent = estimateTextExtentAlongDirection(text, fontSize);
-          metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+      for (var j = 0; j < ringPoints.length; j++) {
+        var text = String(j + 1);
+        var outward = getOutwardDirectionAtHoleFromRing(ringPoints, j, ccw, invertOutward);
+        var extent = estimateTextExtentAlongDirection(text, ringFontSize);
+        var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+
+        if (metrics.maxOffset < metrics.minOffset) {
+          var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
+          var reducedFont = Math.max(6, Math.min(ringFontSize, availableBand * 1.6));
+          if (reducedFont < ringFontSize) {
+            ringFontSize = reducedFont;
+            extent = estimateTextExtentAlongDirection(text, ringFontSize);
+            metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+          }
         }
-      }
 
-      var labelPos = points[j].add(outward.multiply(metrics.offset));
-      lines.push(
-        '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
-        '" fill="#555" font-size="' + formatSvgNumber(fontSize) +
-        '" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="middle">' +
-        text +
-        '</text>'
-      );
+        var labelPos = ringPoints[j].add(outward.multiply(metrics.offset));
+        lines.push(
+          '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
+          '" fill="#555" font-size="' + formatSvgNumber(ringFontSize) +
+          '" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="middle">' +
+          text +
+          '</text>'
+        );
+      }
+    }
+
+    exportRingLabels(outerFramePoints.length ? outerFramePoints : points, false, false);
+    if (nestedFrameEnabled && innerFramePoints.length) {
+      exportRingLabels(innerFramePoints, false, true);
     }
   }
 
@@ -10110,6 +10368,8 @@ function createCurrentDesignSvgBlob(options) {
 }
 
 function buildStitchingGuideText(fileBaseName, options) {
+  options = options || {};
+
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
     if (mode === 'sequence') return 'Step list';
@@ -10117,9 +10377,28 @@ function buildStitchingGuideText(fileBaseName, options) {
     return 'Addition';
   }
 
+  function getReadableFrameMode(mode) {
+    var normalized = sanitizeThreadFrameMode(mode, 'outer');
+    if (normalized === 'inner') return 'Inner ring';
+    if (normalized === 'bridge') return 'Bridge outer -> inner';
+    if (normalized === 'bridge-reverse') return 'Bridge inner -> outer';
+    return 'Outer ring';
+  }
+
+  function formatHoleReference(index, holeCount) {
+    if (!nestedFrameEnabled) {
+      return String(index + 1);
+    }
+    if (index >= holeCount) {
+      return 'I' + String((index - holeCount) + 1);
+    }
+    return 'O' + String(index + 1);
+  }
+
   function appendConnections(targetLines, segments) {
+    var holeCount = Math.max(1, getCurrentStitchHoleCount());
     for (var idx = 0; idx < segments.length; idx++) {
-      targetLines.push('    ' + String(segments[idx][0] + 1) + ' -> ' + String(segments[idx][1] + 1));
+      targetLines.push('    ' + formatHoleReference(segments[idx][0], holeCount) + ' -> ' + formatHoleReference(segments[idx][1], holeCount));
     }
   }
 
@@ -10134,7 +10413,12 @@ function buildStitchingGuideText(fileBaseName, options) {
   lines.push('Parameters');
   lines.push('Global');
   lines.push('Shape: ' + currentShape);
-  lines.push('Holes: ' + holesSlider.value);
+  lines.push('Holes per frame: ' + holesSlider.value);
+  lines.push('Inner frame enabled: ' + (nestedFrameEnabled ? 'yes' : 'no'));
+  if (nestedFrameEnabled) {
+    lines.push('Inner frame ratio: ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ' of outer radius');
+    lines.push('Total physical holes: ' + String(getCurrentStitchHoleCount() * 2));
+  }
   lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
   lines.push('Hole numbers visible in export: ' + (shouldShowHoleNumbersNow() ? 'yes' : 'no'));
   lines.push('Include stitched threads in SVG: ' + (options.includeThreads ? 'yes' : 'no'));
@@ -10148,7 +10432,8 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Color: ' + String(paramThread.color));
     lines.push('  Size: ' + String(paramThread.width));
     lines.push('  Stitch mode: ' + getReadableStitchMode(paramThread.jumpMode));
-    lines.push('  Start hole: ' + String(parseBoundedInt(paramThread.startHole, 1, Math.max(1, points.length || MAX_HOLES), 1)));
+    lines.push('  Frame path: ' + getReadableFrameMode(paramThread.frameMode));
+    lines.push('  Start hole: ' + String(parseBoundedInt(paramThread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
     lines.push('  Add value: ' + String(paramThread.jump));
     if (paramThread.jumpMode === 'connect') {
       lines.push('  Multiply by: ' + String(paramThread.connectMultiplier));
@@ -10164,9 +10449,17 @@ function buildStitchingGuideText(fileBaseName, options) {
 
   lines.push('');
   lines.push('Preparation');
-  lines.push('1. Manufacture the board with shape "' + currentShape + '" and ' + String(points.length) + ' numbered holes.');
-  lines.push('2. Number holes clockwise as shown in the preview/export from 1 to ' + String(points.length) + '.');
-  lines.push('3. Use one thread sequence section per listed thread below.');
+  if (nestedFrameEnabled) {
+    lines.push('1. Manufacture two concentric "' + currentShape + '" frames with matching hole counts.');
+    lines.push('2. Outer frame: ' + String(getCurrentStitchHoleCount()) + ' holes, numbered clockwise O1..O' + String(getCurrentStitchHoleCount()) + '.');
+    lines.push('3. Inner frame: same hole count, radius ratio ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ', numbered clockwise I1..I' + String(getCurrentStitchHoleCount()) + '.');
+    lines.push('4. Keep O1 and I1 angularly aligned as shown in the SVG preview.');
+    lines.push('5. Use one thread sequence section per listed thread below.');
+  } else {
+    lines.push('1. Manufacture the board with shape "' + currentShape + '" and ' + String(points.length) + ' numbered holes.');
+    lines.push('2. Number holes clockwise as shown in the preview/export from 1 to ' + String(points.length) + '.');
+    lines.push('3. Use one thread sequence section per listed thread below.');
+  }
   lines.push('');
 
   for (var i = 0; i < threads.length; i++) {
@@ -10178,10 +10471,12 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Mode: ' + modeName);
     lines.push('  Color: ' + String(thread.color));
     lines.push('  Width: ' + String(thread.width));
-    lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, points.length), 1)));
+    lines.push('  Frame path: ' + getReadableFrameMode(thread.frameMode));
+    lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
 
     if (thread.jumpMode === 'connect') {
-      lines.push('  Rule: target = ((multiplier * source + offset - 1) mod n) + 1, using labels 1..n.');
+      lines.push('  Rule: target = ((multiplier * source + offset - 1) mod n) + 1.');
+      lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
       lines.push('  Offset: ' + String(thread.connectOffset));
       lines.push('  Full connections:');
@@ -10198,7 +10493,8 @@ function buildStitchingGuideText(fileBaseName, options) {
       lines.push('  Full connections:');
       appendConnections(lines, segments);
     } else {
-      lines.push('  Rule: next = ((current + add - 1) mod n) + 1, using labels 1..n.');
+      lines.push('  Rule: next = ((current + add - 1) mod n) + 1.');
+      lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
       lines.push('  Add value: ' + String(thread.jump));
       lines.push('  Full connections:');
       appendConnections(lines, segments);
@@ -10208,6 +10504,10 @@ function buildStitchingGuideText(fileBaseName, options) {
   }
 
   lines.push('Notes');
+  if (nestedFrameEnabled) {
+    lines.push('- Connection labels use O# for outer and I# for inner frame references.');
+    lines.push('- Keep both frames centered and aligned during fabrication for accurate stitching.');
+  }
   lines.push('- If threads are hidden in the exported SVG, use this guide for reconstruction.');
   lines.push('- Keep consistent thread tension to match the on-screen reference closely.');
 
@@ -10458,21 +10758,27 @@ async function runExportFromModalSelection() {
 
 function drawHoles() {
   var numbersVisible = shouldShowHoleNumbersNow();
-  var holeCount = parseInt(holesSlider.value, 10);
+  var holeCount = getCurrentStitchHoleCount();
   if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
   var fontSize = getHoleNumberFontSize(holeCount);
-  var ccw = signedAreaOfClosedPolyline(points) > 0;
   holeNumberLabelsByIndex = Object.create(null);
   highlightedHoleNumbers = [];
-  for (var i = 0; i < points.length; i++) {
-    new Path.Circle(points[i], 3).fillColor = '#333';
-    if (numbersVisible) {
-      var outward = getOutwardDirectionAtHole(i, ccw);
 
-      var label = new PointText(points[i]);
+  function drawRingHoles(ringPoints, indexOffset, invertOutward, isInnerRing) {
+    if (!ringPoints || !ringPoints.length) return;
+    var ccw = signedAreaOfClosedPolyline(ringPoints) > 0;
+    var ringBaseFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
+
+    for (var i = 0; i < ringPoints.length; i++) {
+      new Path.Circle(ringPoints[i], 3).fillColor = '#333';
+      if (!numbersVisible) continue;
+
+      var outward = getOutwardDirectionAtHoleFromRing(ringPoints, i, ccw, invertOutward);
+
+      var label = new PointText(ringPoints[i]);
       label.justification = 'center';
       label.fillColor = '#555';
-      label.fontSize = fontSize;
+      label.fontSize = ringBaseFontSize;
       label.fontWeight = 'normal';
       label.content = String(i + 1);
 
@@ -10481,7 +10787,6 @@ function drawHoles() {
       var minOffset = metrics.minOffset;
       var maxOffset = metrics.maxOffset;
 
-      // If space is tight, reduce label size before final placement.
       if (maxOffset < minOffset) {
         var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE) - (3 + LABEL_HOLE_CLEARANCE);
         var targetFont = Math.max(6, Math.min(label.fontSize, availableBand * 1.6));
@@ -10496,13 +10801,17 @@ function drawHoles() {
 
       var clampedOffset = metrics.offset;
       if (maxOffset < minOffset) {
-        // Recompute fallback offset against latest bounds when tight.
         clampedOffset = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE).offset;
       }
-      label.position = points[i].add(outward.multiply(clampedOffset));
+      label.position = ringPoints[i].add(outward.multiply(clampedOffset));
 
-      holeNumberLabelsByIndex[i] = label;
+      holeNumberLabelsByIndex[indexOffset + i] = label;
     }
+  }
+
+  drawRingHoles(outerFramePoints.length ? outerFramePoints : points, 0, false, false);
+  if (nestedFrameEnabled && innerFramePoints.length) {
+    drawRingHoles(innerFramePoints, getCurrentStitchHoleCount(), false, true);
   }
 }
 
@@ -10748,7 +11057,17 @@ function renderThreadControls() {
 
   threads.forEach((thread, index) => {
     ensureThreadConnectConfig(thread);
+    thread.frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+    if (thread.color === 'rainbow') {
+      thread.solidColor = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
+    } else {
+      thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+    }
     normalizeThreadHoleDependentValues(thread, holeCount);
+
+    var threadColorInputValue = thread.color === 'rainbow'
+      ? sanitizeThreadSolidColor(thread.solidColor, '#1982c4')
+      : sanitizeThreadSolidColor(thread.color, '#1982c4');
 
     var div = document.createElement('div');
     div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
@@ -10760,7 +11079,7 @@ function renderThreadControls() {
 
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
-      Color: <input type="color" value="${thread.color}" id="color-${index}"><br>
+      Color: <input type="color" value="${threadColorInputValue}" id="color-${index}"><br>
       Stitch by:
       <select id="jump-mode-${index}">
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
@@ -10768,6 +11087,15 @@ function renderThreadControls() {
         <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Step list</option>
         <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
       </select><br>
+      ${nestedFrameEnabled ? `
+      Frame path:
+      <select id="frame-mode-${index}">
+        <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer ring</option>
+        <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner ring</option>
+        <option value="bridge" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge' ? 'selected' : ''}>Bridge outer→inner</option>
+        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Bridge inner→outer</option>
+      </select><br>
+      ` : ''}
       ${isFixedMode ? `
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
       ` : ''}
@@ -10822,6 +11150,7 @@ function renderThreadControls() {
 
     document.getElementById(`color-${index}`).addEventListener('input', e => {
       thread.color = e.target.value;
+      thread.solidColor = sanitizeThreadSolidColor(e.target.value, thread.solidColor || '#1982c4');
       syncKidControlsFromSelectedThread();
       redrawAnimationInPlace();
     });
@@ -10863,6 +11192,14 @@ function renderThreadControls() {
       renderThreadControls();
       redrawForPathChange();
     });
+
+    var frameModeInput = document.getElementById(`frame-mode-${index}`);
+    if (frameModeInput) {
+      frameModeInput.addEventListener('change', e => {
+        thread.frameMode = sanitizeThreadFrameMode(e.target.value, thread.frameMode || 'outer');
+        redrawForPathChange();
+      });
+    }
 
     var formulaInput = document.getElementById(`jump-formula-${index}`);
     if (formulaInput) {
@@ -10965,7 +11302,14 @@ function renderThreadControls() {
     }
 
     document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
-      thread.color = e.target.checked ? 'rainbow' : '#000000';
+      if (e.target.checked) {
+        if (thread.color !== 'rainbow') {
+          thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+        }
+        thread.color = 'rainbow';
+      } else {
+        thread.color = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
+      }
       syncKidControlsFromSelectedThread();
       redrawAnimationInPlace();
     });
@@ -11056,6 +11400,21 @@ if (advancedHolesNumberInput) {
   advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberInput);
   advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberCommit);
   advancedHolesNumberInput.addEventListener('blur', handleAdvancedHolesNumberCommit);
+}
+if (nestedFrameEnabledInput) {
+  nestedFrameEnabledInput.addEventListener('change', function() {
+    nestedFrameEnabled = !!nestedFrameEnabledInput.checked;
+    syncNestedFrameControls();
+    renderThreadControls();
+    redrawForPathChange();
+  });
+}
+if (nestedFrameRatioSelect) {
+  nestedFrameRatioSelect.addEventListener('change', function() {
+    nestedFrameRatio = sanitizeNestedFrameRatio(nestedFrameRatioSelect.value, nestedFrameRatio);
+    syncNestedFrameControls();
+    redrawForPathChange();
+  });
 }
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
