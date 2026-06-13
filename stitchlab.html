@@ -2213,6 +2213,24 @@ function loadNarrationTextFromExperienceInfoFrame(pathValue) {
     function readFromFrame() {
       var assignedSrc = normalizeAllowedAboutDocPath(experienceInfoHtmlFrame.getAttribute('src') || '');
       if (assignedSrc !== resolvedPath) return '';
+      var loadedHref = getFrameHref();
+      if (!loadedHref || loadedHref === 'about:blank' || loadedHref.indexOf('about:blank') === 0) return '';
+      var loadedPath = '';
+      try {
+        var parsed = new URL(loadedHref, window.location.href);
+        var pathname = String(parsed.pathname || '').replace(/^\/+/, '');
+        loadedPath = normalizeAllowedAboutDocPath(pathname);
+      } catch (error) {
+        loadedPath = '';
+      }
+      if (loadedPath !== resolvedPath) {
+        narrationDebugLog('log', 'Experience info iframe contains different loaded document; waiting.', {
+          expectedPath: resolvedPath,
+          loadedHref: loadedHref,
+          loadedPath: loadedPath
+        });
+        return '';
+      }
       var frameDoc = null;
       try {
         frameDoc = experienceInfoHtmlFrame.contentDocument || (experienceInfoHtmlFrame.contentWindow && experienceInfoHtmlFrame.contentWindow.document);
@@ -4165,14 +4183,6 @@ function getExperienceNarrationScript(experienceId) {
     aboutHtmlPath: experience.aboutHtmlPath || ''
   });
 
-  if (Object.prototype.hasOwnProperty.call(experienceNarrationTextCache, resolvedExperienceId)) {
-    narrationDebugLog('log', 'Narration cache hit.', {
-      experienceId: resolvedExperienceId,
-      textLength: String(experienceNarrationTextCache[resolvedExperienceId] || '').length
-    });
-    return Promise.resolve(experienceNarrationTextCache[resolvedExperienceId]);
-  }
-
   var fallback = getExperienceNarrationFallbackText(experience);
   var aboutHtmlPath = normalizeAllowedAboutDocPath(experience.aboutHtmlPath || '');
   if (!aboutHtmlPath) {
@@ -4209,8 +4219,7 @@ function getExperienceNarrationScript(experienceId) {
         });
         return fallback;
       }
-      experienceNarrationTextCache[resolvedExperienceId] = normalized;
-      narrationDebugLog('log', 'Narration extraction succeeded and cached.', {
+      narrationDebugLog('log', 'Narration extraction succeeded.', {
         experienceId: resolvedExperienceId,
         textLength: normalized.length,
         text: normalized
