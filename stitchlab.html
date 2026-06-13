@@ -976,6 +976,20 @@
     cursor: pointer;
   }
 
+  .thread-card strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .thread-card input[type="color"],
+  .thread-card input[type="number"],
+  .thread-card input[type="text"],
+  .thread-card select,
+  .thread-card button {
+    margin-top: 2px;
+    margin-bottom: 4px;
+  }
+
   .thread-card.selected {
     border-color: #1982c4;
     box-shadow: 0 0 0 2px rgba(25, 130, 196, 0.15);
@@ -6505,13 +6519,12 @@ function computeSegments(thread) {
     ensureThreadConnectConfig(thread);
     var segments = [];
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
-    var offset = Math.round(Number(thread.connectOffset || 0));
-    var startIndex = parseBoundedInt(thread.startHole, 1, n, 1) - 1;
+    var startOffset = parseBoundedInt(thread.startHole, 1, n, 1) - 1;
     for (var i = 0; i < n; i++) {
-      var sourceIndex = (startIndex + i) % n;
+      var sourceIndex = i;
       // Use label-based (1..n) arithmetic so visible hole numbers match mapping behavior.
       var sourceLabel = sourceIndex + 1;
-      var mappedLabel = (multiplier * sourceLabel + offset - 1) % n;
+      var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % n;
       if (mappedLabel < 0) mappedLabel += n;
       var mapped = mappedLabel;
       segments.push(mapPair(sourceIndex, mapped));
@@ -10454,7 +10467,6 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Add value: ' + String(paramThread.jump));
     if (paramThread.jumpMode === 'connect') {
       lines.push('  Multiply by: ' + String(paramThread.connectMultiplier));
-      lines.push('  Offset: ' + String(paramThread.connectOffset));
     }
     if (paramThread.jumpMode === 'sequence') {
       lines.push('  Step list: ' + String(paramThread.jumpSequence || ''));
@@ -10492,10 +10504,10 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
 
     if (thread.jumpMode === 'connect') {
-      lines.push('  Rule: target = ((multiplier * source + offset - 1) mod n) + 1.');
+      lines.push('  Rule: target = ((multiplier * source + start - 2) mod n) + 1.');
       lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
-      lines.push('  Offset: ' + String(thread.connectOffset));
+      lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
       lines.push('  Full connections:');
       appendConnections(lines, segments);
     } else if (thread.jumpMode === 'sequence') {
@@ -11097,6 +11109,15 @@ function renderThreadControls() {
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
       Color: <input type="color" value="${threadColorInputValue}" id="color-${index}"><br>
+      ${nestedFrameEnabled ? `
+      Frame:
+      <select id="frame-mode-${index}">
+        <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
+        <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
+        <option value="bridge" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge' ? 'selected' : ''}>Bridge outer→inner</option>
+        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Bridge inner→outer</option>
+      </select><br>
+      ` : ''}
       Stitch by:
       <select id="jump-mode-${index}">
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
@@ -11104,15 +11125,6 @@ function renderThreadControls() {
         <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>Step list</option>
         <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
       </select><br>
-      ${nestedFrameEnabled ? `
-      Frame path:
-      <select id="frame-mode-${index}">
-        <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer ring</option>
-        <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner ring</option>
-        <option value="bridge" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge' ? 'selected' : ''}>Bridge outer→inner</option>
-        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Bridge inner→outer</option>
-      </select><br>
-      ` : ''}
       ${isFixedMode ? `
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
       ` : ''}
@@ -11139,17 +11151,7 @@ function renderThreadControls() {
       Start hole: <input class="advanced-inline-number" type="number" min="1" max="${holeCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      Offset (add-on): <input class="advanced-inline-number" type="number" min="0" max="${MAX_HOLES}" value="${thread.connectOffset}" id="connect-offset-number-${index}" aria-label="Thread ${index + 1} offset value"><br>
-      <div class="jump-help">For each hole i, connect to (multiplier × i + offset) mod n.</div>
-      <div class="jump-preset-row">
-        <select id="connect-preset-${index}">
-          <option value="">Preset multiplier...</option>
-          <option value="2,0">Cardioid (m=2, offset=0)</option>
-          <option value="3,0">Nephroid (m=3, offset=0)</option>
-          <option value="4,0">Times 4 (m=4, offset=0)</option>
-        </select>
-        <button type="button" id="use-connect-preset-${index}">Use</button>
-      </div>
+      <div class="jump-help">For each hole i, connect to (multiplier × i + start - 1) mod n.</div>
       ` : ''}
       Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
@@ -11264,39 +11266,6 @@ function renderThreadControls() {
       connectMultiplierNumberInput.addEventListener('change', e => {
         thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
         e.target.value = String(thread.connectMultiplier);
-      });
-    }
-
-    var connectOffsetNumberInput = document.getElementById(`connect-offset-number-${index}`);
-    if (connectOffsetNumberInput) {
-      connectOffsetNumberInput.addEventListener('input', e => {
-        if (e.target.value === '') return;
-        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
-        e.target.value = String(thread.connectOffset);
-        if (index === getKidTargetThreadIndex()) {
-          syncKidControlsFromSelectedThread();
-        }
-        redrawForPathChange();
-      });
-      connectOffsetNumberInput.addEventListener('change', e => {
-        thread.connectOffset = parseBoundedInt(e.target.value, 0, MAX_HOLES, thread.connectOffset || 0);
-        e.target.value = String(thread.connectOffset);
-      });
-    }
-
-    var useConnectPresetBtn = document.getElementById(`use-connect-preset-${index}`);
-    if (useConnectPresetBtn) {
-      useConnectPresetBtn.addEventListener('click', () => {
-        var raw = document.getElementById(`connect-preset-${index}`).value;
-        if (!raw) return;
-        var parts = raw.split(',');
-        if (parts.length !== 2) return;
-        thread.jumpMode = 'connect';
-        thread.connectMultiplier = parseInt(parts[0], 10);
-        thread.connectOffset = parseInt(parts[1], 10);
-        renderThreadControls();
-        syncKidControlsFromSelectedThread();
-        redrawForPathChange();
       });
     }
 
@@ -11455,7 +11424,6 @@ kidStitchBySelect.addEventListener('change', () => {
   if (choice === 'multiply') {
     thread.jumpMode = 'connect';
     thread.connectMultiplier = 2;
-    thread.connectOffset = 0;
   } else if (choice === 'add') {
     if (thread.jumpMode === 'connect') {
       thread.jumpMode = 'fixed';
