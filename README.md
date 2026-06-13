@@ -21,13 +21,10 @@ Contributor terms:
 
 ## Current Milestones
 
-1. Dynamic add/multiply bounds guardrail [Completed]
-2. Triangula experience (Sierpinski world) [Completed]
-3. Squarus experience (polyonimo world) [Completed]
-4. Mashrabiya experience (Islamic rosette world)
-5. Experience title bar (animated stitched reveal)
-6. Stitch library (offline-first)
-7. Advanced stitch ribbon motion (Option 4)
+1. Mashrabiya experience (Islamic rosette world)
+2. Experience title bar (animated stitched reveal)
+3. Stitch library (offline-first)
+4. Advanced stitch ribbon motion (Option 4)
 
 ## Recently Completed
 
@@ -42,6 +39,9 @@ Contributor terms:
 9. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
 10. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
 11. Triangula experience (Sierpinski world) core delivery complete (entry, controls, recursive rendering/animation, color modes, and export support)
+12. Dynamic add/multiply bounds guardrail [Completed]
+13. Triangula experience (Sierpinski world) [Completed]
+14. Squarus experience (polyonimo world) [Completed]
 
 ## TODO Backlog
 
@@ -93,10 +93,7 @@ Contributor terms:
 
 ## Suggested Delivery Order
 
-1. Dynamic add/multiply bounds guardrail
-2. Triangula experience (Sierpinski world) [Completed]
-3. Squarus experience (polyonimo world) [Essentially Complete]
-4. Mashrabiya experience (Islamic rosette world)
-5. Experience title bar (animated stitched reveal)
-6. Stitch library (offline-first)
-7. Advanced stitch ribbon motion (Option 4)
+1. Mashrabiya experience (Islamic rosette world)
+2. Stitch library (offline-first)
+3. Experience title bar (animated stitched reveal)
+4. Advanced stitch ribbon motion (Option 4)
