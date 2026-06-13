@@ -21,9 +21,9 @@ Contributor terms:
 
 ## Current Milestones
 
-1. Dynamic add/multiply bounds guardrail
+1. Dynamic add/multiply bounds guardrail [Completed]
 2. Triangula experience (Sierpinski world) [Completed]
-3. Squarus experience (polyonimo world) [Essentially Complete]
+3. Squarus experience (polyonimo world) [Completed]
 4. Mashrabiya experience (Islamic rosette world)
 5. Experience title bar (animated stitched reveal)
 6. Stitch library (offline-first)
@@ -45,54 +45,7 @@ Contributor terms:
 
 ## TODO Backlog
 
-1. **Dynamic add/multiply bounds guardrail**
-	 - Add dynamic control bounds so add/multiply upper limits are constrained by current hole count.
-	 - Keep behavior predictable when hole count changes (for example clamp/normalize with clear value feedback).
-	 - Preserve advanced-user intent where possible (for example optional free numeric entry in advanced mode).
-
-2. **Triangula experience (Sierpinski world) [Completed]**
-	- Status: Core roadmap scope is complete. Remaining Triangula work should be treated as optional polish or regression follow-up only.
-	- Entry trigger and transition:
-	  - When the user stitches/discovers an equilateral triangle in Stitching mode, offer an optional prompt to "Enter Triangula".
-	  - If confirmed, transition by scrolling the current stitch shape out of canvas view along a path congruent with an edge of the equilateral triangle.
-	  - Slide a single triangle into view as the opening state for Triangula.
-	- Core experience:
-	  - Generate Sierpinski triangle constructions with increasing recursion/complexity levels.
-	  - Provide zoomed interval navigation so users can inspect progressively smaller triangles that become visually subtle at higher levels.
-	  - Support triangle-count specification for generated sets/instances.
-	  - Constrain count controls to valid calculable Sierpinski sets (powers of 3, for example 1, 3, 9, 27, 81, 243, 729).
-	  - Ensure render pipeline clamps to supported depth/count sets so requested values always produce stable drawable output.
-	  - Support style toggles for fill vs edge rendering.
-	  - Support full color control in both kid-friendly and advanced forms.
-	- Controls and UX consistency:
-	  - Preserve the primary interaction model: a kid-friendly control band and an advanced control panel with deeper parameterization.
-	  - Keep control semantics, labels, and responsiveness aligned with existing Stitching mode conventions so this feels like the same product family.
-	- Return path:
-	  - Provide a clear "Follow the thread" action that transitions users back to Stitching mode.
-	- Audio/animation behavior parity:
-	  - Preserve music behavior exactly: play continuously while animation is running and while sliders are actively moving; pause when animation is idle and controls are at rest.
-
-3. **Squarus experience (polyonimo world) [Essentially Complete]**
-	- Status: Core roadmap scope is essentially complete. Remaining work should be treated as optional polish or regression follow-up only.
-	- Entry trigger and transition:
-	  - When the user stitches/discovers a square in Stitching mode, offer an optional prompt to "Enter Squarus".
-	  - Reuse the same polished transition language used by other world entries so Squarus feels native to the same product family.
-	  - Slide or stitch-transform into an initial square-grid framing state that clearly signals a shift from line stitching into tile composition.
-	- Core experience:
-	  - Focus on polyonimo generation via square counts (for example mono- through higher-order families).
-	  - Let users select target square count and generate candidate polyonimoes from that count.
-	  - Support parametric exploration of filling parent shapes with different square-count polyonimoes.
-	  - Provide controls for layout/packing strategy and orientation transforms (rotate/reflect) to compare fill outcomes.
-	  - Keep visual legibility at different counts with clear tile outlines, optional fill palettes, and contrast-safe defaults.
-	- Controls and UX consistency:
-	  - Preserve the same kid-friendly controls plus advanced panel model used in Stitching and Triangula.
-	  - Keep parameter labels and feedback simple for younger users while exposing advanced knobs for count/rule tuning.
-	- Return path:
-	  - Include a clear "Follow the thread" action to transition back to Stitching mode.
-	- Audio/animation behavior parity:
-	  - Keep the same activity-driven music lifecycle as the main app (play during animation/active adjustment, pause at rest).
-
-4. **Mashrabiya experience (Islamic rosette world)**
+1. **Mashrabiya experience (Islamic rosette world)**
 	- Entry trigger and transition:
 	  - When the user stitches/discovers a Mystic Rose in Stitching mode, offer an optional prompt to "Enter Mashrabiya".
 	  - Reuse a similarly polished scene transition language so movement into Mashrabiya feels native to the app (not a hard context switch).
@@ -112,19 +65,19 @@ Contributor terms:
 	- Audio/animation behavior parity:
 	  - Keep the same activity-driven music lifecycle as the main app (play during animation/active adjustment, pause at rest).
 
-5. **Stitch library (offline-first)**
+2. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-6. **Experience title bar (animated stitched reveal)**
+3. **Experience title bar (animated stitched reveal)**
 	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
 	- Trigger the reveal on initial page load and on transition into a new experience/world.
 	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
 	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
 
-7. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+4. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
