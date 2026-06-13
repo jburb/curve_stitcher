@@ -273,6 +273,31 @@
     flex-wrap: wrap;
     gap: 10px;
   }
+
+  .top-holes-control {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: #f7f9ff;
+    border: 1px solid #d9e2f4;
+    min-width: 184px;
+  }
+
+  .top-holes-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #334b72;
+    line-height: 1;
+  }
+
+  .top-holes-control input[type=range] {
+    width: 152px;
+  }
   .shape-btn {
     width: 48px;
     height: 48px;
@@ -1212,6 +1237,13 @@
     .shape-picker-group {
       gap: 8px;
     }
+    .top-holes-control {
+      min-width: 152px;
+      padding: 4px 6px;
+    }
+    .top-holes-control input[type=range] {
+      width: 124px;
+    }
   }
 </style>
 </head>
@@ -1230,6 +1262,10 @@
       <div class="shape-btn" data-shape="square">⬜</div>
       <div class="shape-btn" data-shape="star">⭐</div>
       <div class="shape-btn" data-shape="heart">❤️</div>
+    </div>
+    <div class="top-holes-control" id="top-holes-block">
+      <div class="top-holes-label">⚫ Holes <span class="slider-value" id="holes-value">35</span></div>
+      <input id="holes" type="range" min="3" max="144" value="35" aria-label="Hole count">
     </div>
     <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
   </div>
@@ -1326,6 +1362,14 @@
     </select>
   </div>
 
+  <div class="slider-block">
+    <div class="slider-label"><span class="thread-size-icon" aria-hidden="true">◍</span> Thread Size <span class="slider-value" id="width-value">2</span></div>
+    <input id="width" type="range" min="1" max="10" value="2">
+  </div>
+</div>
+
+<!-- SLIDERS -->
+<div id="sliders">
   <div class="kid-thread-tools">
     <button id="add-magic-thread" class="kid-thread-btn" type="button">Add Thread</button>
     <button id="remove-last-thread" class="kid-thread-btn" type="button">Remove Last Thread</button>
@@ -1339,14 +1383,6 @@
       </button>
       <div id="kid-thread-menu" class="kid-thread-menu" role="listbox" hidden></div>
     </div>
-  </div>
-</div>
-
-<!-- SLIDERS -->
-<div id="sliders">
-  <div class="slider-block">
-    <div class="slider-label">⚫ Holes <span class="slider-value" id="holes-value">35</span></div>
-    <input id="holes" type="range" min="3" max="144" value="35">
   </div>
   <div class="slider-block">
     <div class="slider-label">🧵 Stitch by...</div>
@@ -1362,10 +1398,6 @@
   <div class="slider-block" id="multiply-slider-block" style="display:none;">
     <div class="slider-label">✖ Multiply <span class="slider-value" id="multiply-value">2</span></div>
     <input id="multiply" type="range" min="1" max="12" value="2">
-  </div>
-  <div class="slider-block">
-    <div class="slider-label"><span class="thread-size-icon" aria-hidden="true">◍</span> Thread Size <span class="slider-value" id="width-value">2</span></div>
-    <input id="width" type="range" min="1" max="10" value="2">
   </div>
   <div class="slider-block" id="start-hole-block">
     <div class="slider-label">🎯 Start hole</div>
