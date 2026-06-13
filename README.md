@@ -38,10 +38,9 @@ Contributor terms:
 8. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
 9. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
 10. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
-11. Triangula experience (Sierpinski world) core delivery complete (entry, controls, recursive rendering/animation, color modes, and export support)
+11. Triangula
 12. Dynamic add/multiply bounds guardrail
-13. Triangula experience (Sierpinski world)
-14. Squarus experience (polyonimo world)
+14. Squarus
 
 ## TODO Backlog
 

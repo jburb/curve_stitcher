@@ -1380,11 +1380,11 @@
   </div>
   <div class="slider-block" id="triangula-start-block" style="display:none;">
     <div class="slider-label">▶ Start triangles <span class="slider-value" id="triangula-start-value">1</span></div>
-    <input id="triangula-start-count" type="range" min="1" max="729" value="1">
+    <input id="triangula-start-count" type="range" min="0" max="6" step="1" value="0">
   </div>
   <div class="slider-block" id="triangula-target-block" style="display:none;">
     <div class="slider-label">🏁 Target triangles <span class="slider-value" id="triangula-target-value">27</span></div>
-    <input id="triangula-target-count" type="range" min="1" max="729" value="27">
+    <input id="triangula-target-count" type="range" min="0" max="6" step="1" value="3">
   </div>
   <div class="slider-block" id="squarus-order-block" style="display:none;">
     <div class="slider-label">⬛ Squares</div>
@@ -2651,6 +2651,19 @@ function normalizeTriangulaDrawableCount(value, role, fallback) {
 
 function sanitizeTriangulaCount(value, fallback, role) {
   return normalizeTriangulaDrawableCount(value, role, fallback);
+}
+
+function getTriangulaCountIndexFromValue(value, role, fallback) {
+  var normalized = normalizeTriangulaDrawableCount(value, role, fallback);
+  var index = TRIANGULA_DRAWABLE_COUNTS.indexOf(normalized);
+  if (index === -1) return 0;
+  return index;
+}
+
+function getTriangulaCountFromSliderIndex(indexValue, role, fallback) {
+  var fallbackIndex = getTriangulaCountIndexFromValue(fallback, role, fallback);
+  var index = parseBoundedInt(indexValue, 0, TRIANGULA_DRAWABLE_COUNTS.length - 1, fallbackIndex);
+  return TRIANGULA_DRAWABLE_COUNTS[index];
 }
 
 function sanitizeTriangulaColorMode(value, fallback) {
@@ -3997,10 +4010,16 @@ function syncTriangulaControls() {
   }
 
   if (triangulaStartSlider) {
-    triangulaStartSlider.value = String(triangulaStartCount);
+    triangulaStartSlider.min = '0';
+    triangulaStartSlider.max = String(TRIANGULA_DRAWABLE_COUNTS.length - 1);
+    triangulaStartSlider.step = '1';
+    triangulaStartSlider.value = String(getTriangulaCountIndexFromValue(triangulaStartCount, 'start', 1));
   }
   if (triangulaTargetSlider) {
-    triangulaTargetSlider.value = String(triangulaTargetCount);
+    triangulaTargetSlider.min = '0';
+    triangulaTargetSlider.max = String(TRIANGULA_DRAWABLE_COUNTS.length - 1);
+    triangulaTargetSlider.step = '1';
+    triangulaTargetSlider.value = String(getTriangulaCountIndexFromValue(triangulaTargetCount, 'target', triangulaStartCount));
   }
   if (triangulaStartValue) {
     triangulaStartValue.textContent = String(triangulaStartCount);
@@ -12041,20 +12060,24 @@ if (triangulaConstructionModeSelect) {
 
 if (triangulaStartSlider) {
   triangulaStartSlider.addEventListener('input', () => {
-    applyTriangulaCountUpdate(triangulaStartSlider.value, triangulaTargetCount, true);
+    var startCountFromSlider = getTriangulaCountFromSliderIndex(triangulaStartSlider.value, 'start', triangulaStartCount);
+    applyTriangulaCountUpdate(startCountFromSlider, triangulaTargetCount, true);
   });
   triangulaStartSlider.addEventListener('change', () => {
-    applyTriangulaCountUpdate(triangulaStartSlider.value, triangulaTargetCount, false);
+    var startCountFromSlider = getTriangulaCountFromSliderIndex(triangulaStartSlider.value, 'start', triangulaStartCount);
+    applyTriangulaCountUpdate(startCountFromSlider, triangulaTargetCount, false);
     settleSliderMotion(triangulaStartSlider);
   });
 }
 
 if (triangulaTargetSlider) {
   triangulaTargetSlider.addEventListener('input', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, true);
+    var targetCountFromSlider = getTriangulaCountFromSliderIndex(triangulaTargetSlider.value, 'target', triangulaTargetCount);
+    applyTriangulaCountUpdate(triangulaStartCount, targetCountFromSlider, true);
   });
   triangulaTargetSlider.addEventListener('change', () => {
-    applyTriangulaCountUpdate(triangulaStartCount, triangulaTargetSlider.value, false);
+    var targetCountFromSlider = getTriangulaCountFromSliderIndex(triangulaTargetSlider.value, 'target', triangulaTargetCount);
+    applyTriangulaCountUpdate(triangulaStartCount, targetCountFromSlider, false);
     settleSliderMotion(triangulaTargetSlider);
   });
 }
