@@ -71,6 +71,17 @@ body {
   );*/
 }
 
+/* Non-masked float utilities for rectangular images */
+.float-left {
+  float: left;
+  margin: 0 24px 20px 0;
+}
+
+.float-right {
+  float: right;
+  margin: 0 0 20px 24px;
+}
+
 /* Simple mobile fallback */
 @media (max-width: 700px) {
   /*.portrait-left,
@@ -114,5 +125,12 @@ body {
 
   .layout p {
     clear: both;
+  }
+
+  .float-left,
+  .float-right {
+    float: none;
+    display: block;
+    margin: 0 auto 16px auto;
   }
 }
