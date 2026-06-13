@@ -1963,7 +1963,6 @@ var EXPERIENCE_LIBRARY = {
     infoText: 'Stitching turns math into thread motion. Pick a shape, set holes, then stitch by adding or multiplying to explore geometric patterns and unlock new worlds.',
     narrationText: 'Welcome to Stitching. Here, arithmetic becomes thread paths. Adjust holes, choose add or multiply, and watch geometry emerge one stitch at a time.',
     aboutHtmlPath: 'docs/about/stitching.html',
-    narrationTextPath: 'docs/about/stitching.txt',
     uiProfile: {
       allowedShapes: ['circle', 'triangle', 'square', 'star', 'heart'],
       fixedShape: null,
@@ -1998,7 +1997,6 @@ var EXPERIENCE_LIBRARY = {
     infoText: 'Triangula explores recursive triangle patterns inspired by Sierpinski structures. Zoom and iterate to discover repeating self-similarity.',
     narrationText: 'Welcome to Triangula. This world explores self-similar triangle growth and recursive geometry.',
     aboutHtmlPath: 'docs/about/triangula.html',
-    narrationTextPath: 'docs/about/triangula.txt',
     uiProfile: {
       allowedShapes: ['triangle'],
       fixedShape: 'triangle',
@@ -2045,7 +2043,6 @@ var EXPERIENCE_LIBRARY = {
     infoText: 'Squarus will focus on polyonimo generation through square counts, with parametric exploration of filling shapes using polyonimoes at different square-count levels.',
     narrationText: 'Welcome to Squarus. This upcoming world centers on polyonimo generation by square counts, with parametric exploration of filling shapes using different square-count polyonimoes.',
     aboutHtmlPath: 'docs/about/squarus.html',
-    narrationTextPath: 'docs/about/squarus.txt',
     uiProfile: {
       allowedShapes: ['square'],
       fixedShape: 'square',
@@ -4124,8 +4121,7 @@ function toggleExperienceNarration() {
   narrationDebugLog('log', 'Narration toggle invoked.', {
     experienceId: currentExperienceId,
     hasActiveUtterance: !!experienceNarrationUtterance,
-    aboutHtmlPath: experience.aboutHtmlPath || '',
-    narrationTextPath: experience.narrationTextPath || ''
+    aboutHtmlPath: experience.aboutHtmlPath || ''
   });
   if (experienceNarrationUtterance) {
     stopExperienceNarration();
