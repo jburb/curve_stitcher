@@ -1244,7 +1244,7 @@
     <button id="experience-info-close" type="button">Close</button>
   </div>
   <p id="experience-info-text"></p>
-  <iframe id="experience-info-html" title="Experience details" hidden loading="lazy"></iframe>
+  <iframe id="experience-info-html" title="Experience details" hidden loading="lazy" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
   <div class="experience-info-actions">
     <button id="experience-narrate-toggle" type="button" aria-pressed="false">Hear this</button>
     <span id="experience-narration-status" role="status" aria-live="polite"></span>
@@ -2114,10 +2114,341 @@ var EXPERIENCE_LIBRARY = {
     }
   }
 };
+
+function getAllowedAboutDocPathSet() {
+  var allowed = Object.create(null);
+  var experienceIds = Object.keys(EXPERIENCE_LIBRARY || {});
+  for (var i = 0; i < experienceIds.length; i++) {
+    var experience = EXPERIENCE_LIBRARY[experienceIds[i]];
+    if (!experience || typeof experience.aboutHtmlPath !== 'string') continue;
+    var rawPath = experience.aboutHtmlPath.trim();
+    if (!rawPath) continue;
+    allowed[rawPath] = true;
+  }
+  return allowed;
+}
+
+function extractNarrationParagraphsFromDocument(doc) {
+  if (!doc) return '';
+  var parts = [];
+  var seenTexts = Object.create(null);
+
+  function pushText(value) {
+    var text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    if (seenTexts[text]) return;
+    seenTexts[text] = true;
+    parts.push(text);
+  }
+
+  var paragraphNodes = [];
+  try {
+    paragraphNodes = doc.querySelectorAll('p');
+  } catch (error) {
+    paragraphNodes = [];
+  }
+
+  for (var i = 0; i < paragraphNodes.length; i++) {
+    pushText(paragraphNodes[i].textContent);
+  }
+
+  // If no paragraph tags were found, try common readable content blocks.
+  if (!parts.length) {
+    var blockNodes = [];
+    try {
+      blockNodes = doc.querySelectorAll('figcaption, blockquote, h2, h3, li');
+    } catch (error) {
+      blockNodes = [];
+    }
+    for (var j = 0; j < blockNodes.length; j++) {
+      pushText(blockNodes[j].textContent);
+    }
+  }
+
+  // Last-resort fallback: flatten visible body text into paragraph-like chunks.
+  if (!parts.length) {
+    var rawBodyText = '';
+    if (doc.body) {
+      rawBodyText = String(doc.body.innerText || doc.body.textContent || '');
+    } else if (doc.documentElement) {
+      rawBodyText = String(doc.documentElement.textContent || '');
+    }
+
+    var lines = rawBodyText.replace(/\r/g, '\n').split(/\n+/);
+    for (var k = 0; k < lines.length; k++) {
+      var line = String(lines[k] || '').replace(/\s+/g, ' ').trim();
+      if (!line) continue;
+      pushText(line);
+    }
+  }
+
+  var extracted = parts.join('\n\n').trim();
+  narrationDebugLog('log', 'Extracted narration text from document.', {
+    documentUrl: doc.location && doc.location.href ? String(doc.location.href) : '',
+    documentTitle: doc.title || '',
+    readyState: doc.readyState || '',
+    paragraphCount: paragraphNodes.length,
+    extractedChunkCount: parts.length,
+    textLength: extracted.length,
+    text: extracted
+  });
+  return extracted;
+}
+
+function loadNarrationTextFromExperienceInfoFrame(pathValue) {
+  return new Promise(function(resolve, reject) {
+    narrationDebugLog('log', 'Trying narration source: experience info iframe.', { path: pathValue });
+    var resolvedPath = normalizeAllowedAboutDocPath(pathValue);
+    if (!resolvedPath) {
+      narrationDebugLog('warn', 'Experience info iframe source rejected: invalid about path.', { path: pathValue });
+      reject(new Error('Invalid about html path'));
+      return;
+    }
+    if (!experienceInfoHtmlFrame) {
+      narrationDebugLog('warn', 'Experience info iframe source unavailable: iframe element missing.');
+      reject(new Error('Narration info iframe unavailable'));
+      return;
+    }
+
+    function readFromFrame() {
+      var assignedSrc = normalizeAllowedAboutDocPath(experienceInfoHtmlFrame.getAttribute('src') || '');
+      if (assignedSrc !== resolvedPath) return '';
+      var frameDoc = null;
+      try {
+        frameDoc = experienceInfoHtmlFrame.contentDocument || (experienceInfoHtmlFrame.contentWindow && experienceInfoHtmlFrame.contentWindow.document);
+      } catch (error) {
+        frameDoc = null;
+      }
+      if (!frameDoc) return '';
+      return extractNarrationParagraphsFromDocument(frameDoc);
+    }
+
+    function getFrameHref() {
+      try {
+        if (experienceInfoHtmlFrame.contentWindow && experienceInfoHtmlFrame.contentWindow.location) {
+          return String(experienceInfoHtmlFrame.contentWindow.location.href || '');
+        }
+      } catch (error) {
+        // ignore
+      }
+      return '';
+    }
+
+    var immediateText = readFromFrame();
+    if (immediateText) {
+      narrationDebugLog('log', 'Narration source success: experience info iframe (immediate read).', {
+        path: resolvedPath,
+        textLength: immediateText.length,
+        text: immediateText
+      });
+      resolve(immediateText);
+      return;
+    }
+
+    var settled = false;
+
+    function settleOk(textValue) {
+      if (settled) return;
+      settled = true;
+      experienceInfoHtmlFrame.removeEventListener('load', handleLoad);
+      narrationDebugLog('log', 'Narration source success: experience info iframe (post-load read).', {
+        path: resolvedPath,
+        textLength: String(textValue || '').length,
+        text: String(textValue || '')
+      });
+      resolve(String(textValue || ''));
+    }
+
+    function settleErr(error) {
+      if (settled) return;
+      settled = true;
+      experienceInfoHtmlFrame.removeEventListener('load', handleLoad);
+      narrationDebugLog('warn', 'Narration source failed: experience info iframe.', {
+        path: resolvedPath,
+        error: String((error && error.message) || error || 'unknown error')
+      });
+      reject(error || new Error('Narration info iframe load failed'));
+    }
+
+    function handleLoad() {
+      var loadedText = readFromFrame();
+      if (loadedText) {
+        settleOk(loadedText);
+      } else {
+        settleErr(new Error('Narration info iframe had no paragraph text'));
+      }
+    }
+
+    experienceInfoHtmlFrame.addEventListener('load', handleLoad);
+    var normalizedAssignedSrc = normalizeAllowedAboutDocPath(experienceInfoHtmlFrame.getAttribute('src') || '');
+    var currentHref = getFrameHref();
+    var frameIsBlank = currentHref === 'about:blank' || currentHref.indexOf('about:blank') === 0;
+    if (normalizedAssignedSrc !== resolvedPath || frameIsBlank) {
+      narrationDebugLog('log', 'Experience info iframe src differs; setting src for narration read.', { path: resolvedPath });
+      experienceInfoHtmlFrame.setAttribute('src', resolvedPath);
+    }
+
+    window.setTimeout(function() {
+      if (settled) return;
+      settleErr(new Error('Narration info iframe request timed out'));
+    }, 5000);
+  });
+}
+
+function normalizeAllowedAboutDocPath(pathValue) {
+  if (typeof pathValue !== 'string') return '';
+  var rawPath = pathValue.trim();
+  if (!rawPath) return '';
+
+  var cleanedPath = rawPath.split('#')[0].split('?')[0].trim();
+  if (!cleanedPath) return '';
+
+  // Block protocol/absolute traversal-like inputs and allow only known about docs.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(cleanedPath)) return '';
+  if (cleanedPath.indexOf('//') === 0) return '';
+  if (cleanedPath.charAt(0) === '/') return '';
+  if (cleanedPath.indexOf('..') !== -1) return '';
+
+  var allowedSet = getAllowedAboutDocPathSet();
+  if (!allowedSet[cleanedPath]) return '';
+  return cleanedPath;
+}
+
+function loadNarrationTextFromAboutHtml(pathValue) {
+  return new Promise(function(resolve, reject) {
+    narrationDebugLog('log', 'Trying narration source: hidden about-html iframe fallback.', { path: pathValue });
+    var resolvedPath = normalizeAllowedAboutDocPath(pathValue);
+    if (!resolvedPath) {
+      narrationDebugLog('warn', 'Hidden about-html iframe source rejected: invalid about path.', { path: pathValue });
+      reject(new Error('Invalid about html path'));
+      return;
+    }
+    if (!document || !document.body) {
+      narrationDebugLog('warn', 'Hidden about-html iframe source unavailable: document body missing.');
+      reject(new Error('Narration about-html load unavailable'));
+      return;
+    }
+
+    var iframe = document.createElement('iframe');
+    var settled = false;
+
+    function cleanup() {
+      iframe.onload = null;
+      iframe.onerror = null;
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }
+
+    function settleOk(textValue) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      narrationDebugLog('log', 'Narration source success: hidden about-html iframe.', {
+        path: resolvedPath,
+        textLength: String(textValue || '').length,
+        text: String(textValue || '')
+      });
+      resolve(String(textValue || ''));
+    }
+
+    function settleErr(error) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      narrationDebugLog('warn', 'Narration source failed: hidden about-html iframe.', {
+        path: resolvedPath,
+        error: String((error && error.message) || error || 'unknown error')
+      });
+      reject(error || new Error('Narration about-html load failed'));
+    }
+
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.tabIndex = -1;
+    iframe.setAttribute('sandbox', 'allow-same-origin');
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+
+    iframe.onload = function() {
+      try {
+        var frameDoc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+        if (!frameDoc) {
+          settleErr(new Error('Narration about-html document unavailable'));
+          return;
+        }
+        var frameHref = '';
+        try {
+          frameHref = iframe.contentWindow && iframe.contentWindow.location
+            ? String(iframe.contentWindow.location.href || '')
+            : '';
+        } catch (error) {
+          frameHref = '';
+        }
+        var isAboutBlank = frameHref === 'about:blank' || frameHref.indexOf('about:blank') === 0;
+        if (isAboutBlank) {
+          narrationDebugLog('log', 'Hidden about-html iframe loaded about:blank; waiting for real document load.', {
+            expectedPath: resolvedPath,
+            currentHref: frameHref
+          });
+          return;
+        }
+        var textValue = extractNarrationParagraphsFromDocument(frameDoc);
+        settleOk(textValue);
+      } catch (error) {
+        settleErr(error);
+      }
+    };
+
+    iframe.onerror = function() {
+      settleErr(new Error('Narration about-html request failed'));
+    };
+
+    iframe.setAttribute('src', resolvedPath);
+    document.body.appendChild(iframe);
+
+    window.setTimeout(function() {
+      if (settled) return;
+      settleErr(new Error('Narration about-html request timed out'));
+    }, 5000);
+  });
+}
+
+function enforceExperienceInfoFrameAllowlist() {
+  if (!experienceInfoHtmlFrame) return;
+
+  var currentExperience = getExperienceById(currentExperienceId);
+  var safePath = normalizeAllowedAboutDocPath(currentExperience.aboutHtmlPath || '');
+  if (!safePath) {
+    experienceInfoHtmlFrame.removeAttribute('src');
+    return;
+  }
+
+  var assignedSrc = normalizeAllowedAboutDocPath(experienceInfoHtmlFrame.getAttribute('src') || '');
+  if (assignedSrc !== safePath) {
+    experienceInfoHtmlFrame.setAttribute('src', safePath);
+  }
+}
+
 var currentExperienceId = 'stitching';
 var experienceNarrationUtterance = null;
 var experienceNarrationTextCache = Object.create(null);
 var experienceNarrationFetchById = Object.create(null);
+var NARRATION_DEBUG = true;
+
+function narrationDebugLog(level, message, details) {
+  if (!NARRATION_DEBUG || !window.console) return;
+  var fn = console[level] || console.log;
+  if (typeof details === 'undefined') {
+    fn.call(console, '[Narration] ' + message);
+  } else {
+    fn.call(console, '[Narration] ' + message, details);
+  }
+}
 var triangulaColorMode = 'band-1';
 var triangulaConstructionMode = 'shrink-duplicate';
 var triangulaStartCount = 1;
@@ -3772,6 +4103,12 @@ function stopExperienceNarration() {
 
 function toggleExperienceNarration() {
   var experience = getExperienceById(currentExperienceId);
+  narrationDebugLog('log', 'Narration toggle invoked.', {
+    experienceId: currentExperienceId,
+    hasActiveUtterance: !!experienceNarrationUtterance,
+    aboutHtmlPath: experience.aboutHtmlPath || '',
+    narrationTextPath: experience.narrationTextPath || ''
+  });
   if (experienceNarrationUtterance) {
     stopExperienceNarration();
     return;
@@ -3784,6 +4121,11 @@ function toggleExperienceNarration() {
   var experienceId = currentExperienceId;
   syncExperienceNarrationState(false, 'Loading narration...');
   getExperienceNarrationScript(experienceId).then(function(script) {
+    narrationDebugLog('log', 'Narration script resolved.', {
+      experienceId: experienceId,
+      textLength: String(script || '').length,
+      text: String(script || '')
+    });
     if (currentExperienceId !== experienceId) {
       syncExperienceNarrationState(false, '');
       return;
@@ -3805,6 +4147,7 @@ function toggleExperienceNarration() {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   }).catch(function() {
+    narrationDebugLog('error', 'Narration script failed to load.');
     syncExperienceNarrationState(false, 'Narration could not load.');
   });
 }
@@ -3815,36 +4158,71 @@ function getExperienceNarrationFallbackText(experience) {
 
 function getExperienceNarrationScript(experienceId) {
   var resolvedExperienceId = resolveExperienceId(experienceId) || currentExperienceId;
+  var experience = getExperienceById(resolvedExperienceId);
+  narrationDebugLog('log', 'Resolving narration script.', {
+    requestedExperienceId: experienceId,
+    resolvedExperienceId: resolvedExperienceId,
+    aboutHtmlPath: experience.aboutHtmlPath || ''
+  });
+
   if (Object.prototype.hasOwnProperty.call(experienceNarrationTextCache, resolvedExperienceId)) {
+    narrationDebugLog('log', 'Narration cache hit.', {
+      experienceId: resolvedExperienceId,
+      textLength: String(experienceNarrationTextCache[resolvedExperienceId] || '').length
+    });
     return Promise.resolve(experienceNarrationTextCache[resolvedExperienceId]);
   }
 
-  var experience = getExperienceById(resolvedExperienceId);
   var fallback = getExperienceNarrationFallbackText(experience);
-  if (!experience.narrationTextPath || typeof fetch !== 'function') {
-    experienceNarrationTextCache[resolvedExperienceId] = fallback;
+  var aboutHtmlPath = normalizeAllowedAboutDocPath(experience.aboutHtmlPath || '');
+  if (!aboutHtmlPath) {
+    narrationDebugLog('warn', 'No valid about html path; using fallback narration text.', {
+      experienceId: resolvedExperienceId,
+      fallbackTextLength: String(fallback || '').length,
+      fallbackText: String(fallback || '')
+    });
     return Promise.resolve(fallback);
   }
 
   if (experienceNarrationFetchById[resolvedExperienceId]) {
+    narrationDebugLog('log', 'Narration request already in flight; reusing promise.', {
+      experienceId: resolvedExperienceId
+    });
     return experienceNarrationFetchById[resolvedExperienceId];
   }
 
-  experienceNarrationFetchById[resolvedExperienceId] = fetch(experience.narrationTextPath)
-    .then(function(response) {
-      if (!response.ok) {
-        throw new Error('Narration text fetch failed');
-      }
-      return response.text();
+  experienceNarrationFetchById[resolvedExperienceId] = loadNarrationTextFromExperienceInfoFrame(aboutHtmlPath)
+    .catch(function() {
+      narrationDebugLog('log', 'Falling back to hidden about-html iframe narration source.', {
+        experienceId: resolvedExperienceId,
+        path: aboutHtmlPath
+      });
+      return loadNarrationTextFromAboutHtml(aboutHtmlPath);
     })
     .then(function(text) {
       var normalized = String(text || '').trim();
-      var narration = normalized || fallback;
-      experienceNarrationTextCache[resolvedExperienceId] = narration;
-      return narration;
+      if (!normalized) {
+        narrationDebugLog('warn', 'Narration extraction returned empty text; using fallback.', {
+          experienceId: resolvedExperienceId,
+          fallbackTextLength: String(fallback || '').length,
+          fallbackText: String(fallback || '')
+        });
+        return fallback;
+      }
+      experienceNarrationTextCache[resolvedExperienceId] = normalized;
+      narrationDebugLog('log', 'Narration extraction succeeded and cached.', {
+        experienceId: resolvedExperienceId,
+        textLength: normalized.length,
+        text: normalized
+      });
+      return normalized;
     })
     .catch(function() {
-      experienceNarrationTextCache[resolvedExperienceId] = fallback;
+      narrationDebugLog('warn', 'Narration extraction failed; using fallback.', {
+        experienceId: resolvedExperienceId,
+        fallbackTextLength: String(fallback || '').length,
+        fallbackText: String(fallback || '')
+      });
       return fallback;
     })
     .finally(function() {
@@ -3873,7 +4251,7 @@ function renderExperienceTitleStatic() {
 function applyCurrentExperienceInfo() {
   var experience = getExperienceById(currentExperienceId);
   experienceInfoTitle.textContent = experience.infoTitle || ('About ' + (experience.title || 'Experience'));
-  var aboutHtmlPath = experience.aboutHtmlPath || '';
+  var aboutHtmlPath = normalizeAllowedAboutDocPath(experience.aboutHtmlPath || '');
   var hasHtmlAbout = !!aboutHtmlPath;
   experienceInfoText.hidden = hasHtmlAbout;
   experienceInfoText.textContent = experience.infoText || '';
@@ -3882,6 +4260,8 @@ function applyCurrentExperienceInfo() {
     if (hasHtmlAbout) {
       if (experienceInfoHtmlFrame.getAttribute('src') !== aboutHtmlPath) {
         experienceInfoHtmlFrame.setAttribute('src', aboutHtmlPath);
+      } else {
+        enforceExperienceInfoFrameAllowlist();
       }
     } else {
       experienceInfoHtmlFrame.removeAttribute('src');
@@ -11921,6 +12301,12 @@ experienceInfoClose.addEventListener('click', () => {
   syncExperienceInfoPanel(false);
   experienceInfoToggle.focus();
 });
+
+if (experienceInfoHtmlFrame) {
+  experienceInfoHtmlFrame.addEventListener('load', () => {
+    enforceExperienceInfoFrameAllowlist();
+  });
+}
 
 experienceNarrateToggle.addEventListener('click', () => {
   toggleExperienceNarration();

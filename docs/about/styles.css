@@ -82,6 +82,54 @@ body {
   margin: 0 0 20px 24px;
 }
 
+/* Semantic figure/caption support for about pages */
+.about-figure {
+  width: 260px;
+  margin: 0;
+}
+
+.about-figure-left {
+  float: left;
+  margin: 0 24px 20px 0;
+}
+
+.about-figure-right {
+  float: right;
+  margin: 0 0 20px 24px;
+}
+
+.about-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.about-figure figcaption {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #4b5565;
+}
+
+/* Clip-only helpers (mask without float/margin) */
+.clip-left {
+  clip-path: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+}
+
+.clip-right {
+  clip-path: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 70%,
+    85% 100%, 15% 100%,
+    0% 70%, 0% 20%
+  );
+}
+
 /* Simple mobile fallback */
 @media (max-width: 700px) {
   /*.portrait-left,
@@ -131,6 +179,12 @@ body {
   .float-right {
     float: none;
     display: block;
+    margin: 0 auto 16px auto;
+  }
+
+  .about-figure-left,
+  .about-figure-right {
+    float: none;
     margin: 0 auto 16px auto;
   }
 }
