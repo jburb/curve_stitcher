@@ -21,7 +21,7 @@ Contributor terms:
 
 ## Current Milestones
 
-1. Mashrabiya experience (Islamic rosette world)
+1. Mashrabiya experience
 2. Experience title bar (animated stitched reveal)
 3. Stitch library (offline-first)
 4. Advanced stitch ribbon motion (Option 4)
@@ -39,31 +39,15 @@ Contributor terms:
 9. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
 10. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
 11. Triangula experience (Sierpinski world) core delivery complete (entry, controls, recursive rendering/animation, color modes, and export support)
-12. Dynamic add/multiply bounds guardrail [Completed]
-13. Triangula experience (Sierpinski world) [Completed]
-14. Squarus experience (polyonimo world) [Completed]
+12. Dynamic add/multiply bounds guardrail
+13. Triangula experience (Sierpinski world)
+14. Squarus experience (polyonimo world)
 
 ## TODO Backlog
 
-1. **Mashrabiya experience (Islamic rosette world)**
+1. **Mashrabiya experience**
 	- Entry trigger and transition:
-	  - When the user stitches/discovers a Mystic Rose in Stitching mode, offer an optional prompt to "Enter Mashrabiya".
-	  - Reuse a similarly polished scene transition language so movement into Mashrabiya feels native to the app (not a hard context switch).
-	  - Define and document the strict unlock definition of "rosette" before finalizing discovery detection logic.
-	  - Current implementation status: rosette discovery unlocking is intentionally disabled behind a feature flag until the strict detection definition is finalized.
-	  - Candidate strict rule to evaluate: complete-graph rosette for 5-12 holes (each hole connected to every other hole), potentially as a dedicated Mashrabiya subtype/milestone.
-	- Core experience:
-	  - Generate Islamic rosettes ("mystic roses") as the primary geometric object.
-	  - Support varying fold/point structures (for example 6-fold, 8-fold, 12-fold and beyond) to produce distinct rosette families.
-	  - Support fill color variation to produce different tiling and ornamental outcomes.
 	  - Allow edge/line styling controls where relevant to preserve geometric legibility at different fold counts.
-	- Controls and UX consistency:
-	  - Mirror the same kid-friendly and advanced control framework used in Stitching mode and Triangula.
-	  - Keep mode-switching and value feedback legible for younger users while still enabling advanced precision.
-	- Return path:
-	  - Include "Follow the thread" navigation back to Stitching mode.
-	- Audio/animation behavior parity:
-	  - Keep the same activity-driven music lifecycle as the main app (play during animation/active adjustment, pause at rest).
 
 2. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
@@ -93,7 +77,7 @@ Contributor terms:
 
 ## Suggested Delivery Order
 
-1. Mashrabiya experience (Islamic rosette world)
+1. Mashrabiya experience
 2. Stitch library (offline-first)
 3. Experience title bar (animated stitched reveal)
 4. Advanced stitch ribbon motion (Option 4)
