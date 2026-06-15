@@ -7,6 +7,25 @@
 <!-- Paper.js -->
 <script src="js/paper-full.min.js"></script>
 <script src="js/jszip.min.js"></script>
+<script>
+  (function() {
+    var storageKey = 'stitchlab.theme.v1';
+    var resolvedTheme = 'light';
+    try {
+      var storedTheme = window.localStorage ? window.localStorage.getItem(storageKey) : null;
+      if (storedTheme === 'dark' || storedTheme === 'light') {
+        resolvedTheme = storedTheme;
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        resolvedTheme = 'dark';
+      }
+    } catch (error) {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        resolvedTheme = 'dark';
+      }
+    }
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+  })();
+</script>
 
 <style>
   @font-face {
@@ -258,6 +277,7 @@
   }
   .top-bar-right {
     justify-content: flex-end;
+    gap: 10px;
   }
   .top-bar-center {
     display: flex;
@@ -1189,6 +1209,203 @@
     color: #fff;
   }
 
+  :root {
+    --ui-page-bg: #f7f7fb;
+    --ui-control-surface: #ffffff;
+    --ui-control-border: #eeeeee;
+    --ui-canvas-backdrop: #f7f7fb;
+    --ui-pane-surface: #fafafa;
+    --ui-pane-border: #dddddd;
+    --ui-pane-card-surface: #ffffff;
+    --ui-pane-card-border: #d7e0f3;
+    --ui-pane-soft-surface: #f4f8ff;
+    --ui-pane-soft-border: #c7d7ef;
+    --ui-pane-text: #2f4368;
+    --ui-pane-muted-text: #5f7090;
+    --ui-focus-outline: #1982c4;
+  }
+
+  html[data-theme="dark"] {
+    --ui-page-bg: #151719;
+    --ui-control-surface: #1d2024;
+    --ui-control-border: #2b2f34;
+    --ui-canvas-backdrop: #171a1e;
+    --ui-pane-surface: #1b1e22;
+    --ui-pane-border: #2e333a;
+    --ui-pane-card-surface: #23272d;
+    --ui-pane-card-border: #363d46;
+    --ui-pane-soft-surface: #2a2f36;
+    --ui-pane-soft-border: #3a424d;
+    --ui-pane-text: #d7e0ec;
+    --ui-pane-muted-text: #aeb9c8;
+    --ui-focus-outline: #7ab6ff;
+  }
+
+  body {
+    background: var(--ui-page-bg);
+  }
+
+  #shape-bar,
+  #activity-bar,
+  #sliders {
+    background: var(--ui-control-surface);
+  }
+
+  #shape-bar {
+    border-bottom-color: var(--ui-control-border);
+  }
+
+  #activity-bar {
+    border-top-color: var(--ui-control-border);
+    border-bottom-color: var(--ui-control-border);
+  }
+
+  #sliders {
+    border-top-color: var(--ui-control-border);
+  }
+
+  #canvas-container {
+    background: var(--ui-canvas-backdrop);
+  }
+
+  #discovery-panel,
+  #advanced-panel {
+    background: var(--ui-pane-surface);
+    color: var(--ui-pane-text);
+  }
+
+  #discovery-panel {
+    border-right-color: var(--ui-pane-border);
+  }
+
+  #advanced-panel {
+    border-left-color: var(--ui-pane-border);
+  }
+
+  #advanced-header h3,
+  #discovery-header h3,
+  .discovery-subtitle,
+  .jump-help,
+  .advanced-global-help,
+  .advanced-section-title,
+  .discovery-card h4,
+  .discovery-card p,
+  .discovery-passphrase-entry label,
+  .discovery-passphrase-feedback {
+    color: var(--ui-pane-muted-text);
+  }
+
+  .discovery-card,
+  .thread-card,
+  .advanced-global-controls,
+  .discovery-passphrase-entry {
+    background: var(--ui-pane-card-surface);
+    border-color: var(--ui-pane-card-border);
+    color: var(--ui-pane-text);
+  }
+
+  .discovery-card .discovery-passphrase,
+  .discovery-back-btn {
+    background: var(--ui-pane-soft-surface);
+    border-color: var(--ui-pane-soft-border);
+    color: var(--ui-pane-text);
+  }
+
+  #close-advanced,
+  #close-discovery,
+  .advanced-reset-btn,
+  .advanced-add-thread,
+  #discovery-passphrase-input,
+  #advanced-panel input,
+  #advanced-panel select,
+  #advanced-panel button,
+  #discovery-panel button,
+  #discovery-panel input,
+  #discovery-panel select {
+    background: var(--ui-pane-card-surface);
+    border-color: var(--ui-pane-card-border);
+    color: var(--ui-pane-text);
+  }
+
+  #advanced-panel input:focus,
+  #advanced-panel select:focus,
+  #advanced-panel button:focus,
+  #discovery-panel input:focus,
+  #discovery-panel select:focus,
+  #discovery-panel button:focus {
+    outline-color: var(--ui-focus-outline);
+  }
+
+  html[data-theme="dark"] .top-icon-btn,
+  html[data-theme="dark"] .shape-btn {
+    background: #2a2f36;
+    color: #e1e7f0;
+  }
+
+  html[data-theme="dark"] .top-icon-btn.active,
+  html[data-theme="dark"] .shape-btn.active {
+    outline-color: var(--ui-focus-outline);
+  }
+
+  html[data-theme="dark"] #myCanvas {
+    border-color: #3a3f46;
+  }
+
+  html[data-theme="dark"] #sliders .slider-label,
+  html[data-theme="dark"] #sliders .thread-size-icon,
+  html[data-theme="dark"] #activity-bar .slider-label,
+  html[data-theme="dark"] #activity-bar .thread-size-icon,
+  html[data-theme="dark"] #activity-bar .kid-thread-picker,
+  html[data-theme="dark"] #activity-bar .kid-tempo-group,
+  html[data-theme="dark"] #activity-bar .kid-audio-group,
+  html[data-theme="dark"] #activity-bar .curve-type-select,
+  html[data-theme="dark"] #sliders .curve-type-select {
+    color: #d7e0ec;
+  }
+
+  html[data-theme="dark"] #sliders .slider-value {
+    background: #2a2f36;
+    color: #d7e0ec;
+  }
+
+  html[data-theme="dark"] #activity-bar .kid-thread-btn,
+  html[data-theme="dark"] #activity-bar .kid-thread-toggle,
+  html[data-theme="dark"] #activity-bar .kid-thread-menu,
+  html[data-theme="dark"] #activity-bar .kid-song-menu,
+  html[data-theme="dark"] #activity-bar .kid-tempo-btn,
+  html[data-theme="dark"] #activity-bar .curve-type-select,
+  html[data-theme="dark"] #sliders .curve-type-select,
+  html[data-theme="dark"] #sliders input[type="number"],
+  html[data-theme="dark"] #sliders input[type="text"] {
+    background: #2a2f36;
+    border-color: #434a55;
+    color: #e1e7f0;
+  }
+
+  html[data-theme="dark"] #activity-bar .kid-thread-picker,
+  html[data-theme="dark"] #activity-bar .kid-audio-group,
+  html[data-theme="dark"] #activity-bar .kid-tempo-group {
+    background: #252a31;
+    border-color: #3f4651;
+  }
+
+  html[data-theme="dark"] #activity-bar .kid-thread-option:hover,
+  html[data-theme="dark"] #activity-bar .kid-song-option:hover {
+    background: #333941;
+  }
+
+  html[data-theme="dark"] #activity-bar .kid-thread-btn.is-active,
+  html[data-theme="dark"] #activity-bar .kid-tempo-btn.is-active,
+  html[data-theme="dark"] #activity-bar .kid-song-toggle:not(:disabled).is-active,
+  html[data-theme="dark"] #activity-bar .kid-thread-option.active,
+  html[data-theme="dark"] #activity-bar .kid-song-option.active,
+  html[data-theme="dark"] #sliders .shape-btn.active,
+  html[data-theme="dark"] #sliders .top-icon-btn.active {
+    background: #2f343b;
+    border-color: #444c57;
+    color: #e7edf8;
+  }
+
   @media (max-width: 720px) {
     #experience-title-label {
       font-size: 18px;
@@ -1234,6 +1451,7 @@
     <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
   </div>
   <div class="top-bar-right">
+    <button id="theme-toggle" class="top-icon-btn" type="button" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false">🌙</button>
     <button id="gear" class="top-icon-btn" type="button" title="Open advanced controls" aria-label="Open advanced controls" aria-pressed="false">⚙️</button>
   </div>
 </div>
@@ -1681,6 +1899,7 @@ var holesValue  = document.getElementById('holes-value');
 var jumpValue   = document.getElementById('jump-value');
 var multiplyValue = document.getElementById('multiply-value');
 var widthValue  = document.getElementById('width-value');
+var themeToggleBtn = document.getElementById('theme-toggle');
 var animateBtn  = document.getElementById('animate');
 var kidTempoSlowBtn = document.getElementById('kid-tempo-slow');
 var kidTempoNormalBtn = document.getElementById('kid-tempo-normal');
@@ -1872,11 +2091,13 @@ var BORDER_INCLUDE_IN_SVG = true;
 var EXPERIENCE_OVERLAY_POSITION_CLASS = 'pos-top-center';
 
 var borderEnabled = true;
+var THEME_STORAGE_KEY = 'stitchlab.theme.v1';
 var STITCHING_STATE_CACHE_KEY = 'stitchlab.stitchingState.v1';
 var TRIANGULA_STATE_CACHE_KEY = 'stitchlab.triangulaState.v1';
 var SQUARUS_STATE_CACHE_KEY = 'stitchlab.squarusState.v1';
 var MASHRABIYA_STATE_CACHE_KEY = 'stitchlab.mashrabiyaState.v1';
 var EXPERIENCE_PLAYBACK_STATE_KEY = 'stitchlab.experiencePlaybackState.v1';
+var currentTheme = 'light';
 var stitchingStateCache = null;
 var stitchingStateCacheLoadedFromStorage = false;
 var stitchingStateSnapshotAvailable = false;
@@ -3683,6 +3904,41 @@ function syncMusicToggleButton() {
   musicToggleBtn.setAttribute('aria-pressed', isMusicMuted ? 'true' : 'false');
   musicToggleBtn.setAttribute('aria-label', isMusicMuted ? 'Unmute music' : 'Mute music');
   musicToggleBtn.title = isMusicMuted ? 'Unmute music' : 'Mute music';
+}
+
+function sanitizeTheme(value, fallback) {
+  if (value === 'dark' || value === 'light') return value;
+  return fallback || 'light';
+}
+
+function syncThemeToggleButton() {
+  if (!themeToggleBtn) return;
+  var isDark = currentTheme === 'dark';
+  themeToggleBtn.textContent = isDark ? '☀️' : '🌙';
+  themeToggleBtn.classList.toggle('active', isDark);
+  themeToggleBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+  themeToggleBtn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+  themeToggleBtn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+}
+
+function applyTheme(theme, options) {
+  options = options || {};
+  var normalizedTheme = sanitizeTheme(theme, 'light');
+  currentTheme = normalizedTheme;
+  document.documentElement.setAttribute('data-theme', normalizedTheme);
+  if (options.persist !== false) {
+    appStateStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+  }
+  syncThemeToggleButton();
+}
+
+function initializeThemeFromStorage() {
+  var storedTheme = sanitizeTheme(appStateStorage.getItem(THEME_STORAGE_KEY), '');
+  var attrTheme = sanitizeTheme(document.documentElement.getAttribute('data-theme'), 'light');
+  if (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    storedTheme = 'dark';
+  }
+  applyTheme(storedTheme || attrTheme, { persist: false });
 }
 
 function isReduceMotionPreferred() {
@@ -12426,9 +12682,16 @@ musicToggleBtn.addEventListener('click', () => {
   scheduleUrlStateSync(false);
 });
 
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  });
+}
+
 /* ------------------------------
    INITIALIZE
 ------------------------------ */
+initializeThemeFromStorage();
 renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
