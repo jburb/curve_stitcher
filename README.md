@@ -1,6 +1,40 @@
 # StitchLab
 An interactive, kid-friendly and advanced-friendly curve stitching playground inspired by Mary Everest Boole, focused on geometric pattern discovery, animated thread construction, and export-ready design workflows.
 
+[![E2E Playwright](https://github.com/jburb/curve_stitcher/actions/workflows/e2e-playwright.yml/badge.svg)](https://github.com/jburb/curve_stitcher/actions/workflows/e2e-playwright.yml)
+
+## E2E Regression Tests (Playwright)
+
+This repository includes dev-only Playwright tests for repeatable regression coverage.
+
+Current covered checks:
+- Stitching shape selection persists to URL and survives refresh.
+- SVG export flow opens/closes correctly and does not throw the export failure alert.
+
+### Run Locally
+
+1. Install dependencies:
+	- `npm install`
+2. Install Playwright browser (Chromium):
+	- `npm run test:e2e:install`
+3. Run tests:
+	- `npm run test:e2e`
+
+Optional:
+- Headed run: `npm run test:e2e:headed`
+- Interactive UI mode: `npm run test:e2e:ui`
+
+### Packaging Safety Guardrails
+
+- Playwright is in `devDependencies` only.
+- Tests are isolated under `tests/e2e/`.
+- Local test artifacts are ignored via `.gitignore`:
+  - `node_modules/`
+  - `playwright-report/`
+  - `test-results/`
+
+This setup does not change runtime app behavior and should not be included in mobile/desktop packaged artifacts.
+
 ## License
 
 This project is licensed under GNU General Public License v3.0. See [LICENSE](LICENSE).
