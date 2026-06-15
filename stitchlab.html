@@ -2074,6 +2074,7 @@ var ROSETTE_DISCOVERY_RECIPES = [
   }
 ];
 var DISCOVERY_FLOAT_DURATION_MS = 4400;
+var RETURN_TO_STITCHING_TRAIL_DURATION_MS = 350;
 var discoveryTimer = null;
 var discoveredShapeKeys = Object.create(null);
 var unlockedSongIds = [];
@@ -4805,21 +4806,23 @@ function animateReturnToStitchingTrail(startPoint, endPoint) {
   var angle = Math.atan2(dy, dx);
   var trailColor = getActiveTrailColor();
   var trailColorStrong = toRgbaColor(trailColor, 0.85);
-  var trailColorSoft = toRgbaColor(trailColor, 0.18);
-  var trailColorNone = toRgbaColor(trailColor, 0);
+  var lineThickness = 2;
+  var lineHalfThickness = lineThickness / 2;
+  var headSize = 7;
+  var headHalfSize = headSize / 2;
 
   var line = document.createElement('div');
   line.className = 'return-thread-trail-line';
-  line.style.left = Math.round(startPoint.x) + 'px';
-  line.style.top = Math.round(startPoint.y) + 'px';
-  line.style.width = Math.round(distance) + 'px';
+  line.style.left = startPoint.x + 'px';
+  line.style.top = (startPoint.y - lineHalfThickness) + 'px';
+  line.style.width = distance + 'px';
   line.style.transform = 'rotate(' + angle + 'rad) scaleX(0.08)';
-  line.style.background = 'linear-gradient(90deg, ' + trailColorStrong + ' 0%, ' + trailColorSoft + ' 72%, ' + trailColorNone + ' 100%)';
+  line.style.background = trailColorStrong;
 
   var head = document.createElement('div');
   head.className = 'return-thread-trail-head';
-  head.style.left = Math.round(startPoint.x - 3) + 'px';
-  head.style.top = Math.round(startPoint.y - 3) + 'px';
+  head.style.left = (startPoint.x - headHalfSize) + 'px';
+  head.style.top = (startPoint.y - headHalfSize) + 'px';
   head.style.background = trailColor;
   head.style.boxShadow = '0 0 0 3px ' + toRgbaColor(trailColor, 0.22);
 
@@ -4827,20 +4830,48 @@ function animateReturnToStitchingTrail(startPoint, endPoint) {
   document.body.appendChild(head);
 
   if (typeof line.animate === 'function' && typeof head.animate === 'function') {
+    var durationMs = RETURN_TO_STITCHING_TRAIL_DURATION_MS;
+    var destinationHoldMs = Math.max(120, Math.round(durationMs * 0.22));
+    var retractDurationMs = Math.max(260, Math.round(durationMs * 0.74));
+    var rotateScaleStart = 'rotate(' + angle + 'rad) scaleX(0.08)';
+    var rotateScaleFull = 'rotate(' + angle + 'rad) scaleX(1)';
+    function buildDestinationAnchoredRetractTransform(scale) {
+      var clampedScale = Math.max(0, Math.min(1, scale));
+      var translateX = distance * (1 - clampedScale);
+      return 'rotate(' + angle + 'rad) translateX(' + translateX + 'px) scaleX(' + clampedScale + ')';
+    }
     var lineAnim = line.animate(
       [
-        { transform: 'rotate(' + angle + 'rad) scaleX(0.08)', opacity: 0 },
-        { transform: 'rotate(' + angle + 'rad) scaleX(1)', opacity: 1, offset: 0.42 },
-        { transform: 'rotate(' + angle + 'rad) scaleX(1)', opacity: 0, offset: 1 }
+        { transform: rotateScaleStart, opacity: 0 },
+        { transform: rotateScaleFull, opacity: 1, offset: 0.22 },
+        { transform: rotateScaleFull, opacity: 1, offset: 1 }
       ],
       {
-        duration: 520,
+        duration: durationMs,
         easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
         fill: 'forwards'
       }
     );
     lineAnim.onfinish = function() {
-      line.remove();
+      window.setTimeout(function() {
+        var retractAnim = line.animate(
+          [
+            { transform: buildDestinationAnchoredRetractTransform(1), opacity: 1 },
+            { transform: buildDestinationAnchoredRetractTransform(0), opacity: 1 }
+          ],
+          {
+            duration: retractDurationMs,
+            easing: 'cubic-bezier(0.22, 0.55, 0.35, 1)',
+            fill: 'forwards'
+          }
+        );
+        retractAnim.onfinish = function() {
+          line.remove();
+        };
+        retractAnim.oncancel = function() {
+          line.remove();
+        };
+      }, destinationHoldMs);
     };
     lineAnim.oncancel = function() {
       line.remove();
@@ -4849,17 +4880,20 @@ function animateReturnToStitchingTrail(startPoint, endPoint) {
     var headAnim = head.animate(
       [
         { transform: 'translate(0, 0) scale(0.8)', opacity: 0 },
-        { transform: 'translate(' + Math.round(dx * 0.88) + 'px, ' + Math.round(dy * 0.88) + 'px) scale(1)', opacity: 1, offset: 0.78 },
-        { transform: 'translate(' + Math.round(dx) + 'px, ' + Math.round(dy) + 'px) scale(0.9)', opacity: 0, offset: 1 }
+        { transform: 'translate(' + (dx * 0.22) + 'px, ' + (dy * 0.22) + 'px) scale(1)', opacity: 1, offset: 0.18 },
+        { transform: 'translate(' + (dx * 0.88) + 'px, ' + (dy * 0.88) + 'px) scale(1)', opacity: 1, offset: 0.8 },
+        { transform: 'translate(' + dx + 'px, ' + dy + 'px) scale(0.94)', opacity: 1, offset: 1 }
       ],
       {
-        duration: 520,
+        duration: durationMs,
         easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
         fill: 'forwards'
       }
     );
     headAnim.onfinish = function() {
-      head.remove();
+      window.setTimeout(function() {
+        head.remove();
+      }, destinationHoldMs);
     };
     headAnim.oncancel = function() {
       head.remove();
@@ -4870,18 +4904,13 @@ function animateReturnToStitchingTrail(startPoint, endPoint) {
   window.setTimeout(function() {
     line.remove();
     head.remove();
-  }, 560);
+  }, RETURN_TO_STITCHING_TRAIL_DURATION_MS + Math.max(120, Math.round(RETURN_TO_STITCHING_TRAIL_DURATION_MS * 0.22)) + Math.max(260, Math.round(RETURN_TO_STITCHING_TRAIL_DURATION_MS * 0.74)) + 40);
 }
 
 function getActiveTrailColor() {
   var fallbackColor = '#1982c4';
-
-  if (currentExperienceId === 'triangula') {
-    if (triangulaColorMode === 'band-1') return triangulaBandColors.band1 || fallbackColor;
-    if (triangulaColorMode === 'band-2') return triangulaBandColors.band2 || fallbackColor;
-    if (triangulaColorMode === 'band-4') return triangulaBandColors.band4 || fallbackColor;
-    return normalizeTriangulaFillColor(triangulaSourceColor, triangulaBandColors.band1 || fallbackColor);
-  }
+  var cachedStitchingThreadColor = getCachedActiveStitchingThreadColor();
+  if (cachedStitchingThreadColor) return cachedStitchingThreadColor;
 
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex >= 0 && threads[targetIndex]) {
@@ -4890,6 +4919,26 @@ function getActiveTrailColor() {
   }
 
   return fallbackColor;
+}
+
+function getCachedActiveStitchingThreadColor() {
+  var snapshot = hydrateStitchingStateCacheFromStorage();
+  if (!snapshot || !stitchingStateSnapshotAvailable) return null;
+
+  var cachedThreads = parseStitchingThreadState(snapshot.threadState, [sanitizeThreadDescriptor({}, null)]);
+  if (!cachedThreads.length) return null;
+
+  var cachedIndex = parseBoundedInt(snapshot.selectedThreadIndex, 0, cachedThreads.length - 1, 0);
+  var cachedThread = cachedThreads[cachedIndex];
+  if (!cachedThread) return null;
+
+  var cachedColor = sanitizeThreadColor(cachedThread.color, null);
+  if (cachedColor && cachedColor !== 'rainbow') return cachedColor;
+
+  var cachedSolidColor = sanitizeThreadSolidColor(cachedThread.solidColor, '#1982c4');
+  if (cachedSolidColor && cachedSolidColor !== 'rainbow') return cachedSolidColor;
+
+  return null;
 }
 
 function toRgbaColor(colorValue, alpha) {
