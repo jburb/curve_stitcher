@@ -12534,7 +12534,8 @@ if (triangulaFractalModeSelect) {
 if (squarusOrderSelect) {
   squarusOrderSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderSelect.value, 1, 6, squarusOrder);
-    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, squarusPieceCount, squarusOrder);
+    var maxPieces = getSquarusTotalPiecesForOrder(squarusOrder);
+    squarusPieceCount = normalizeSquarusPieceCount(maxPieces, maxPieces, squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
@@ -12543,7 +12544,8 @@ if (squarusOrderSelect) {
 if (squarusOrderInlineSelect) {
   squarusOrderInlineSelect.addEventListener('change', () => {
     squarusOrder = parseBoundedInt(squarusOrderInlineSelect.value, 1, 6, squarusOrder);
-    squarusPieceCount = normalizeSquarusPieceCount(squarusPieceCount, squarusPieceCount, squarusOrder);
+    var maxPieces = getSquarusTotalPiecesForOrder(squarusOrder);
+    squarusPieceCount = normalizeSquarusPieceCount(maxPieces, maxPieces, squarusOrder);
     syncSquarusControls();
     redrawForPathChange();
   });
