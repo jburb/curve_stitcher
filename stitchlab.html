@@ -699,9 +699,15 @@
     font-weight: 600;
   }
   .play-pause-btn {
-    width: 36px;
+    min-width: 78px;
     height: 30px;
-    font-size: 16px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .play-pause-btn.is-playing {
+    box-shadow: inset 0 0 0 1px rgba(35, 76, 142, 0.18), 0 0 0 2px rgba(47, 95, 179, 0.14);
   }
 
   /* --- ADVANCED PANEL --- */
@@ -1427,6 +1433,13 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
+  html[data-theme="dark"] #activity-bar .play-pause-btn.is-playing {
+    background: #3f4d5f;
+    border-color: #6e84a2;
+    color: #f4f8ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 2px rgba(117, 147, 188, 0.25);
+  }
+
   @media (max-width: 720px) {
     #experience-title-label {
       font-size: 18px;
@@ -1530,7 +1543,7 @@
 <div id="activity-bar">
   <div id="playback-controls">
     <div class="kid-tempo-group" aria-label="Kid-friendly tempo controls">
-      <button class="kid-tempo-btn play-pause-btn" id="animate" type="button" aria-pressed="false" aria-label="Watch it stitch" title="Watch it stitch">▶</button>
+      <button class="kid-tempo-btn play-pause-btn" id="animate" type="button" aria-pressed="false" aria-label="Start stitch animation" title="Start stitch animation">▶ Play</button>
       <button id="kid-tempo-slow" class="kid-tempo-btn" type="button" title="Slow speed" aria-label="Slow speed">🐢</button>
       <button id="kid-tempo-normal" class="kid-tempo-btn" type="button" title="Just right speed" aria-label="Just right speed">🚶</button>
       <button id="kid-tempo-fast" class="kid-tempo-btn" type="button" title="Fast speed" aria-label="Fast speed">🐇</button>
@@ -6480,23 +6493,26 @@ function applyTempoValue(bpm, options) {
 function syncAnimateButtonLabel() {
   if (!animateBtn) return;
   if (animationPlaybackState === 'playing') {
-    animateBtn.textContent = '⏸';
+    animateBtn.textContent = '⏸ Pause';
+    animateBtn.classList.add('is-playing');
     animateBtn.setAttribute('aria-pressed', 'true');
-    animateBtn.setAttribute('aria-label', 'Pause stitching');
-    animateBtn.title = 'Pause stitching';
+    animateBtn.setAttribute('aria-label', 'Pause stitch animation');
+    animateBtn.title = 'Pause stitch animation';
     return;
   }
   if (animationPlaybackState === 'paused') {
-    animateBtn.textContent = '▶';
+    animateBtn.textContent = '▶ Resume';
+    animateBtn.classList.remove('is-playing');
     animateBtn.setAttribute('aria-pressed', 'false');
-    animateBtn.setAttribute('aria-label', 'Resume stitching');
-    animateBtn.title = 'Resume stitching';
+    animateBtn.setAttribute('aria-label', 'Resume stitch animation');
+    animateBtn.title = 'Resume stitch animation';
     return;
   }
-  animateBtn.textContent = '▶';
+  animateBtn.textContent = '▶ Play';
+  animateBtn.classList.remove('is-playing');
   animateBtn.setAttribute('aria-pressed', 'false');
-  animateBtn.setAttribute('aria-label', 'Watch it stitch');
-  animateBtn.title = 'Watch it stitch';
+  animateBtn.setAttribute('aria-label', 'Start stitch animation');
+  animateBtn.title = 'Start stitch animation';
 }
 
 function applyDefaultTempo() {
