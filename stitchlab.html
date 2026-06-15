@@ -418,7 +418,7 @@
     height: 100%;
     display: block;
     border: 1px solid #ddd;
-    background: #fff;
+    background: var(--ui-canvas-fill);
     border-radius: 12px;
   }
 
@@ -1214,6 +1214,8 @@
     --ui-control-surface: #ffffff;
     --ui-control-border: #eeeeee;
     --ui-canvas-backdrop: #f7f7fb;
+    --ui-canvas-fill: #ffffff;
+    --ui-dark-canvas-fill: #101317;
     --ui-pane-surface: #fafafa;
     --ui-pane-border: #dddddd;
     --ui-pane-card-surface: #ffffff;
@@ -1230,6 +1232,7 @@
     --ui-control-surface: #1d2024;
     --ui-control-border: #2b2f34;
     --ui-canvas-backdrop: #171a1e;
+    --ui-canvas-fill: var(--ui-dark-canvas-fill);
     --ui-pane-surface: #1b1e22;
     --ui-pane-border: #2e333a;
     --ui-pane-card-surface: #23272d;
@@ -2086,6 +2089,14 @@ var LABEL_BORDER_CLEARANCE = 1.2;
 var LABEL_BORDER_CLEARANCE_SVG = 3.2;
 var LABEL_OUTER_BIAS = 0.72;
 var BORDER_STROKE_COLOR = '#2f4368';
+var BORDER_STROKE_COLOR_DARK = '#d9e0eb';
+var HOLE_FILL_COLOR = '#333';
+var HOLE_FILL_COLOR_DARK = '#f1f4f8';
+var HOLE_LABEL_COLOR = '#555';
+var HOLE_LABEL_COLOR_DARK = '#d3dae5';
+var HOLE_LABEL_HIGHLIGHT_COLOR = '#1f2f4d';
+var HOLE_LABEL_HIGHLIGHT_COLOR_DARK = '#ffffff';
+var EXPERIENCE_TITLE_COLOR_DARK = '#f0f4fb';
 var BORDER_INCLUDE_IN_SVG = true;
 // Other supported values: 'pos-bottom-center', 'pos-top-left', 'pos-top-right'.
 var EXPERIENCE_OVERLAY_POSITION_CLASS = 'pos-top-center';
@@ -2098,6 +2109,7 @@ var SQUARUS_STATE_CACHE_KEY = 'stitchlab.squarusState.v1';
 var MASHRABIYA_STATE_CACHE_KEY = 'stitchlab.mashrabiyaState.v1';
 var EXPERIENCE_PLAYBACK_STATE_KEY = 'stitchlab.experiencePlaybackState.v1';
 var currentTheme = 'light';
+var forceExportRenderColors = false;
 var stitchingStateCache = null;
 var stitchingStateCacheLoadedFromStorage = false;
 var stitchingStateSnapshotAvailable = false;
@@ -3930,6 +3942,10 @@ function applyTheme(theme, options) {
     appStateStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
   }
   syncThemeToggleButton();
+  if (options.refreshVisuals !== false) {
+    renderExperienceTitleStatic();
+    redrawAnimationInPlace();
+  }
 }
 
 function initializeThemeFromStorage() {
@@ -3938,7 +3954,36 @@ function initializeThemeFromStorage() {
   if (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     storedTheme = 'dark';
   }
-  applyTheme(storedTheme || attrTheme, { persist: false });
+  applyTheme(storedTheme || attrTheme, { persist: false, refreshVisuals: false });
+}
+
+function getThemeBorderStrokeColor() {
+  if (forceExportRenderColors) return BORDER_STROKE_COLOR;
+  if (currentTheme === 'dark') return BORDER_STROKE_COLOR_DARK;
+  return BORDER_STROKE_COLOR;
+}
+
+function getThemeHoleFillColor() {
+  if (forceExportRenderColors) return HOLE_FILL_COLOR;
+  if (currentTheme === 'dark') return HOLE_FILL_COLOR_DARK;
+  return HOLE_FILL_COLOR;
+}
+
+function getThemeHoleLabelColor() {
+  if (forceExportRenderColors) return HOLE_LABEL_COLOR;
+  if (currentTheme === 'dark') return HOLE_LABEL_COLOR_DARK;
+  return HOLE_LABEL_COLOR;
+}
+
+function getThemeHoleLabelHighlightColor() {
+  if (forceExportRenderColors) return HOLE_LABEL_HIGHLIGHT_COLOR;
+  if (currentTheme === 'dark') return HOLE_LABEL_HIGHLIGHT_COLOR_DARK;
+  return HOLE_LABEL_HIGHLIGHT_COLOR;
+}
+
+function getThemeExperienceTitleColor(baseColor) {
+  if (currentTheme === 'dark') return EXPERIENCE_TITLE_COLOR_DARK;
+  return baseColor || '#1f4f94';
 }
 
 function isReduceMotionPreferred() {
@@ -4516,7 +4561,7 @@ function renderExperienceTitleStatic() {
   if (!experienceTitleLabel) return;
   var experience = getExperienceById(currentExperienceId);
   var title = experience.title || 'Stitching';
-  var color = experience.strokeColor || '#1f4f94';
+  var color = getThemeExperienceTitleColor(experience.strokeColor || '#1f4f94');
   var fontFamily = experience.titleFontFamily || 'Nunito';
 
   if (experienceSrTitle) {
@@ -5895,7 +5940,7 @@ function setHoleNumberHighlight(index, isHighlighted) {
   var label = holeNumberLabelsByIndex[index];
   if (!label) return;
   label.fontWeight = isHighlighted ? 'bold' : 'normal';
-  label.fillColor = isHighlighted ? '#1f2f4d' : '#555';
+  label.fillColor = isHighlighted ? getThemeHoleLabelHighlightColor() : getThemeHoleLabelColor();
 }
 
 function clearHighlightedHoleNumbers() {
@@ -6987,6 +7032,7 @@ function offsetConvexPolygon(vertices, distance) {
 
 function drawShapeBorder() {
   if (!borderEnabled) return;
+  var borderStrokeColor = getThemeBorderStrokeColor();
 
   function drawBorderPair(borderGeometry) {
     if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
@@ -6995,7 +7041,7 @@ function drawShapeBorder() {
 
     var outerPath = new Path(borderGeometry.outerSamples);
     outerPath.closed = true;
-    outerPath.strokeColor = BORDER_STROKE_COLOR;
+    outerPath.strokeColor = borderStrokeColor;
     outerPath.strokeWidth = BORDER_STROKE_WIDTH;
     outerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
     outerPath.strokeCap = 'round';
@@ -7003,7 +7049,7 @@ function drawShapeBorder() {
 
     var innerPath = new Path(borderGeometry.innerSamples);
     innerPath.closed = true;
-    innerPath.strokeColor = BORDER_STROKE_COLOR;
+    innerPath.strokeColor = borderStrokeColor;
     innerPath.strokeWidth = BORDER_STROKE_WIDTH;
     innerPath.strokeJoin = polygonVertices ? 'miter' : 'round';
     innerPath.strokeCap = 'round';
@@ -10675,6 +10721,9 @@ function buildTriangulaDesignSvgString() {
   var width = Math.round(view.viewSize.width);
   var height = Math.round(view.viewSize.height);
   var lines = [];
+  var borderStrokeColor = BORDER_STROKE_COLOR;
+  var holeFillColor = HOLE_FILL_COLOR;
+  var holeLabelColor = HOLE_LABEL_COLOR;
   var base = getTriangulaBaseTriangle(1);
   var endDepth = triangulaCountToDepth(triangulaTargetCount);
 
@@ -10948,8 +10997,8 @@ function buildCurrentDesignSvgString(options) {
       var lineJoin = borderGeometry.isPolygon ? 'miter' : 'round';
       var outerPathData = svgPathFromPoints(borderGeometry.outerSamples);
       var innerPathData = svgPathFromPoints(borderGeometry.innerSamples);
-      lines.push('<path d="' + outerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
-      lines.push('<path d="' + innerPathData + '" fill="none" stroke="' + BORDER_STROKE_COLOR + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
+      lines.push('<path d="' + outerPathData + '" fill="none" stroke="' + borderStrokeColor + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
+      lines.push('<path d="' + innerPathData + '" fill="none" stroke="' + borderStrokeColor + '" stroke-width="' + BORDER_STROKE_WIDTH + '" stroke-linejoin="' + lineJoin + '" stroke-linecap="round" stroke-miterlimit="8"/>');
     }
 
     appendBorderPair(getBorderGeometryForCurrentShape());
@@ -10990,7 +11039,7 @@ function buildCurrentDesignSvgString(options) {
   function exportRingHoles(ringPoints) {
     if (!ringPoints || !ringPoints.length) return;
     for (var i = 0; i < ringPoints.length; i++) {
-      lines.push('<circle cx="' + formatSvgNumber(ringPoints[i].x) + '" cy="' + formatSvgNumber(ringPoints[i].y) + '" r="3" fill="#333"/>');
+      lines.push('<circle cx="' + formatSvgNumber(ringPoints[i].x) + '" cy="' + formatSvgNumber(ringPoints[i].y) + '" r="3" fill="' + holeFillColor + '"/>');
     }
   }
 
@@ -11028,7 +11077,7 @@ function buildCurrentDesignSvgString(options) {
         var labelPos = ringPoints[j].add(outward.multiply(metrics.offset));
         lines.push(
           '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
-          '" fill="#555" font-size="' + formatSvgNumber(ringFontSize) +
+          '" fill="' + holeLabelColor + '" font-size="' + formatSvgNumber(ringFontSize) +
           '" font-family="Nunito, sans-serif" text-anchor="middle" dominant-baseline="middle">' +
           text +
           '</text>'
@@ -11342,27 +11391,36 @@ function createStitchingGuideBlob(fileBaseName, options) {
 }
 
 function downloadPreviewImage(fileBaseName) {
-  var canvas = document.getElementById('myCanvas');
-  if (!canvas || typeof canvas.toBlob !== 'function') {
-    return;
-  }
-  canvas.toBlob(function(blob) {
+  capturePreviewImageBlob(function(blob) {
     if (!blob) return;
     triggerBlobDownload(blob, fileBaseName + '-preview.png');
-  }, 'image/png');
+  });
 }
 
 function createPreviewImageBlob() {
   return new Promise(function(resolve) {
-    var canvas = document.getElementById('myCanvas');
-    if (!canvas || typeof canvas.toBlob !== 'function') {
-      resolve(null);
-      return;
-    }
-    canvas.toBlob(function(blob) {
+    capturePreviewImageBlob(function(blob) {
       resolve(blob || null);
-    }, 'image/png');
+    });
   });
+}
+
+function capturePreviewImageBlob(callback) {
+  var canvas = document.getElementById('myCanvas');
+  if (!canvas || typeof canvas.toBlob !== 'function') {
+    callback(null);
+    return;
+  }
+
+  var previousForcedExportColors = forceExportRenderColors;
+  forceExportRenderColors = true;
+  redrawAnimationInPlace();
+
+  canvas.toBlob(function(blob) {
+    forceExportRenderColors = previousForcedExportColors;
+    redrawAnimationInPlace();
+    callback(blob || null);
+  }, 'image/png');
 }
 
 async function downloadExportZipBundle(fileBaseName, options) {
@@ -11450,6 +11508,8 @@ function drawHoles() {
   var holeCount = getCurrentStitchHoleCount();
   if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
   var fontSize = getHoleNumberFontSize(holeCount);
+  var holeFillColor = getThemeHoleFillColor();
+  var holeLabelColor = getThemeHoleLabelColor();
   holeNumberLabelsByIndex = Object.create(null);
   highlightedHoleNumbers = [];
 
@@ -11459,14 +11519,14 @@ function drawHoles() {
     var ringBaseFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
 
     for (var i = 0; i < ringPoints.length; i++) {
-      new Path.Circle(ringPoints[i], 3).fillColor = '#333';
+      new Path.Circle(ringPoints[i], 3).fillColor = holeFillColor;
       if (!numbersVisible) continue;
 
       var outward = getOutwardDirectionAtHoleFromRing(ringPoints, i, ccw, invertOutward);
 
       var label = new PointText(ringPoints[i]);
       label.justification = 'center';
-      label.fillColor = '#555';
+      label.fillColor = holeLabelColor;
       label.fontSize = ringBaseFontSize;
       label.fontWeight = 'normal';
       label.content = String(i + 1);
