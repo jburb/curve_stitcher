@@ -3631,7 +3631,10 @@ function syncAppStateFromRuntime() {
   var cachedStitchingState = hydrateStitchingStateCacheFromStorage();
   appState.common.shape = (currentExperienceId === 'stitching')
     ? currentShape
-    : sanitizeShape(cachedStitchingState && cachedStitchingState.shape, appState.common.shape || 'circle');
+    : sanitizeShape(
+      stitchingFrameShape,
+      sanitizeShape(cachedStitchingState && cachedStitchingState.shape, appState.common.shape || 'circle')
+    );
   appState.common.bpm = currentAnimationBpm;
   appState.common.musicMuted = !!isMusicMuted;
   appState.common.songId = currentSongId;
@@ -3680,6 +3683,7 @@ function buildSearchParamsFromAppState() {
   var params = new URLSearchParams();
   setUrlStateParam(params, 'version', APP_STATE_URL_VERSION);
   setUrlStateParam(params, 'experienceId', appState.experienceId);
+  setUrlStateParam(params, 'stitchingShape', sanitizeShape(appState.common.shape, stitchingFrameShape || 'circle'));
   if (appState.experienceId === 'stitching') {
     setUrlStateParam(params, 'stitchingShowHoleNumbers', appState.stitching.showHoleNumbers ? '1' : '0');
     setUrlStateParam(params, 'stitchingBorderEnabled', appState.stitching.borderEnabled ? '1' : '0');
@@ -3778,9 +3782,18 @@ function applyStateFromCurrentUrl(options) {
       }
     }
 
+    var explicitStitchingShape = sanitizeShape(getUrlStateParam(params, 'stitchingShape'), '');
+    if (explicitStitchingShape) {
+      stitchingFrameShape = explicitStitchingShape;
+    } else {
+      stitchingFrameShape = sanitizeShape(stitchingFrameShape, 'circle');
+    }
+
     var profile = getExperienceUiProfile(currentExperienceId);
     if (requestedExperience === 'stitching') {
-      setCurrentShape(sanitizeShape(stitchingFrameShape, currentShape), false);
+      var requestedStitchingShape = explicitStitchingShape || sanitizeShape(stitchingFrameShape, currentShape || 'circle');
+      setCurrentShape(requestedStitchingShape, false);
+      stitchingFrameShape = sanitizeShape(requestedStitchingShape, stitchingFrameShape || 'circle');
     } else if (profile && profile.fixedShape) {
       setCurrentShape(profile.fixedShape, false);
     }
@@ -11047,6 +11060,9 @@ function buildCurrentDesignSvgString(options) {
   }
 
   var includeThreads = options.includeThreads !== false;
+  var borderStrokeColor = BORDER_STROKE_COLOR;
+  var holeFillColor = HOLE_FILL_COLOR;
+  var holeLabelColor = HOLE_LABEL_COLOR;
 
   // Export a fresh static snapshot independent from transient animation artifacts.
   computePoints();
@@ -12246,8 +12262,26 @@ if (startHoleInput) {
     redrawForPathChange();
   }
 
-  startHoleInput.addEventListener('input', handleStartHoleInputChange);
-  startHoleInput.addEventListener('change', handleStartHoleInputChange);
+  function settleStartHolePlaybackMotion() {
+    settleSliderMotion(startHoleInput);
+  }
+
+  function beginStartHolePlaybackMotion() {
+    markSliderAsMoving(startHoleInput);
+    updateMusicPlaybackState();
+  }
+
+  startHoleInput.addEventListener('pointerdown', beginStartHolePlaybackMotion);
+  startHoleInput.addEventListener('input', function() {
+    beginStartHolePlaybackMotion();
+    handleStartHoleInputChange();
+  });
+  startHoleInput.addEventListener('change', function() {
+    beginStartHolePlaybackMotion();
+    handleStartHoleInputChange();
+    settleStartHolePlaybackMotion();
+  });
+  startHoleInput.addEventListener('blur', settleStartHolePlaybackMotion);
 }
 multiplySlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
@@ -12830,7 +12864,11 @@ if (hasUrlStateParams()) {
   var initialExperience = resolveExperienceId(getUrlStateParam(initialParams, 'experienceId')) || 'stitching';
   setCurrentExperience(initialExperience, { suppressUrlSync: true });
   if (initialExperience === 'stitching') {
-    setCurrentShape(sanitizeShape(stitchingFrameShape, currentShape), false);
+    var initialUrlStitchingShape = sanitizeShape(getUrlStateParam(initialParams, 'stitchingShape'), '');
+    setCurrentShape(
+      initialUrlStitchingShape || sanitizeShape(stitchingFrameShape, currentShape || 'circle'),
+      false
+    );
   }
 } else {
   setCurrentExperience('stitching');
