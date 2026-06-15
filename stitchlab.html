@@ -1373,6 +1373,7 @@
 
   html[data-theme="dark"] #activity-bar .kid-thread-btn,
   html[data-theme="dark"] #activity-bar .kid-thread-toggle,
+  html[data-theme="dark"] #activity-bar .kid-song-toggle,
   html[data-theme="dark"] #activity-bar .kid-thread-menu,
   html[data-theme="dark"] #activity-bar .kid-song-menu,
   html[data-theme="dark"] #activity-bar .kid-tempo-btn,
@@ -1383,6 +1384,11 @@
     background: #2a2f36;
     border-color: #434a55;
     color: #e1e7f0;
+  }
+
+  html[data-theme="dark"] #activity-bar .kid-song-toggle:not(:disabled):hover {
+    background: #333941;
+    border-color: #505967;
   }
 
   html[data-theme="dark"] #activity-bar .kid-thread-picker,
@@ -1412,6 +1418,13 @@
     background: #2f343b;
     border-color: #444c57;
     color: #e7edf8;
+  }
+
+  html[data-theme="dark"] #activity-bar .kid-tempo-btn.is-active {
+    background: #465363;
+    border-color: #667a95;
+    color: #f5f8ff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
   @media (max-width: 720px) {
