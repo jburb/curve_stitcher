@@ -1493,7 +1493,7 @@
     }
 
     @supports (-moz-appearance: none) {
-      body::after {
+      html::after {
         content: '';
         position: fixed;
         left: 0;
@@ -1506,7 +1506,7 @@
         z-index: 0;
       }
 
-      html[data-theme="dark"] body::after {
+      html[data-theme="dark"]::after {
         background: #1d2024;
       }
     }
