@@ -1475,40 +1475,16 @@
     #sliders {
       background: #ffffff;
       background: var(--ui-control-surface);
-      position: relative;
-      z-index: 1;
       padding-bottom: 40px;
       padding-bottom: calc(40px + env(safe-area-inset-bottom));
-      box-shadow: 0 120px 0 0 #ffffff;
-      box-shadow: 0 120px 0 0 var(--ui-control-surface);
     }
 
     html[data-theme="dark"] #sliders {
       background: #1d2024;
-      box-shadow: 0 120px 0 0 #1d2024;
     }
 
     #sliders input[type=range] {
       touch-action: pan-x;
-    }
-
-    @supports (-moz-appearance: none) {
-      html::after {
-        content: '';
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: calc(56px + env(safe-area-inset-bottom));
-        background: #ffffff;
-        background: var(--ui-control-surface);
-        pointer-events: none;
-        z-index: 0;
-      }
-
-      html[data-theme="dark"]::after {
-        background: #1d2024;
-      }
     }
   }
 </style>
