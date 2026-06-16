@@ -125,4 +125,72 @@ test.describe('StitchLab regressions', () => {
     await page.selectOption('#squarus-order', '5');
     await expect(page.locator('#squarus-order-inline')).toHaveValue('5');
   });
+
+  test('slider touchmove events are not canceled by global handlers', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const touchMoveProbe = await page.evaluate(() => {
+      const slider = document.getElementById('holes');
+      if (!slider) {
+        return { missingSlider: true };
+      }
+
+      const event = document.createEvent('Event');
+      event.initEvent('touchmove', true, true);
+      const dispatchResult = slider.dispatchEvent(event);
+
+      return {
+        missingSlider: false,
+        defaultPrevented: event.defaultPrevented,
+        dispatchResult
+      };
+    });
+
+    expect(touchMoveProbe.missingSlider).toBe(false);
+    expect(touchMoveProbe.defaultPrevented).toBe(false);
+    expect(touchMoveProbe.dispatchResult).toBe(true);
+  });
+
+  test('mobile layout baseline remains usable at phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/stitchlab.html');
+
+    await expect(page.locator('#shape-bar')).toBeVisible();
+    await expect(page.locator('#canvas-container')).toBeVisible();
+    await expect(page.locator('#sliders')).toBeVisible();
+
+    const layoutProbe = await page.evaluate(() => {
+      const shapeBar = document.getElementById('shape-bar');
+      const canvas = document.getElementById('canvas-container');
+      const sliders = document.getElementById('sliders');
+      if (!shapeBar || !canvas || !sliders) {
+        return { ok: false, reason: 'missing-elements' };
+      }
+
+      const shapeRect = shapeBar.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const slidersRect = sliders.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const body = document.body;
+      const root = document.documentElement;
+      const maxScrollWidth = Math.max(body.scrollWidth, root.scrollWidth);
+
+      return {
+        ok: true,
+        shapeTop: shapeRect.top,
+        canvasHeight: canvasRect.height,
+        slidersBottom: slidersRect.bottom,
+        viewportHeight,
+        viewportWidth,
+        maxScrollWidth
+      };
+    });
+
+    expect(layoutProbe.ok).toBe(true);
+    expect(layoutProbe.shapeTop).toBeGreaterThanOrEqual(0);
+    expect(layoutProbe.canvasHeight).toBeGreaterThan(120);
+    expect(layoutProbe.slidersBottom).toBeLessThanOrEqual(layoutProbe.viewportHeight + 2);
+    expect(layoutProbe.maxScrollWidth).toBeLessThanOrEqual(layoutProbe.viewportWidth + 2);
+  });
 });
