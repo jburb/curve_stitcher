@@ -582,10 +582,17 @@
     align-items: center;
     gap: 8px;
   }
+  #sliders .slider-label {
+    min-height: 1.5em;
+  }
   .thread-size-icon {
     color: #4f5f77;
-    font-size: 14px;
+    font-size: 1em;
     line-height: 1;
+    width: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .slider-value {
     min-width: 28px;
@@ -1475,8 +1482,8 @@
     #sliders {
       background: #ffffff;
       background: var(--ui-control-surface);
-      padding-bottom: 40px;
-      padding-bottom: calc(40px + env(safe-area-inset-bottom));
+      padding-bottom: 35px;
+      padding-bottom: calc(35px + env(safe-area-inset-bottom));
     }
 
     html[data-theme="dark"] #sliders {
