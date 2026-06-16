@@ -1491,6 +1491,25 @@
     #sliders input[type=range] {
       touch-action: pan-x;
     }
+
+    @supports (-moz-appearance: none) {
+      body::after {
+        content: '';
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: calc(56px + env(safe-area-inset-bottom));
+        background: #ffffff;
+        background: var(--ui-control-surface);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      html[data-theme="dark"] body::after {
+        background: #1d2024;
+      }
+    }
   }
 </style>
 </head>
