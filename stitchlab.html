@@ -71,6 +71,7 @@
   html {
     height: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
   }
   
   body {
@@ -86,6 +87,24 @@
     min-height: 100svh;
     min-height: 100dvh;
     overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* Keep touch gestures on controls from panning the viewport on mobile. */
+  #shape-bar,
+  #activity-bar,
+  #sliders,
+  #canvas-container {
+    overscroll-behavior: contain;
+  }
+
+  #activity-bar,
+  #sliders,
+  .slider-block,
+  .kid-tempo-group,
+  .kid-audio-group,
+  .kid-thread-tools {
+    touch-action: manipulation;
   }
 
   .experience-inline {
@@ -599,6 +618,7 @@
   }
   input[type=range] {
     width: 160px;
+    touch-action: pan-x;
   }
 
   /* --- COLOR PALETTE --- */
