@@ -1473,8 +1473,13 @@
 
   @media (hover: none) and (pointer: coarse) and (max-width: 1100px) {
     #sliders {
-      padding-bottom: 28px;
-      padding-bottom: calc(28px + env(safe-area-inset-bottom));
+      background: var(--ui-control-surface);
+      padding-bottom: 40px;
+      padding-bottom: calc(40px + env(safe-area-inset-bottom));
+    }
+
+    #sliders input[type=range] {
+      touch-action: pan-x;
     }
   }
 </style>
