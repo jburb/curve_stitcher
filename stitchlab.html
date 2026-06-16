@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>StitchLab</title>
 
 <!-- Paper.js -->
@@ -12195,18 +12196,6 @@ document.addEventListener('blur', function(event) {
   if (!slider) return;
   settleSliderMotion(slider);
 }, true);
-
-function isTouchScrollSuppressionTarget(target) {
-  if (!target || !target.closest) return false;
-  if (target.closest('#discovery-panel.open, #advanced-panel.open')) return false;
-  return !!target.closest('input[type="range"], #sliders, #activity-bar, #shape-bar, .slider-block, .kid-tempo-group, .kid-audio-group, .kid-thread-tools');
-}
-
-// iOS Safari may ignore touch-action for range controls; explicitly stop scroll chaining.
-document.addEventListener('touchmove', function(event) {
-  if (!isTouchScrollSuppressionTarget(event.target)) return;
-  event.preventDefault();
-}, { passive: false });
 
 function handleHolesSliderChange() {
   syncJumpBoundsFromHoleCount();
