@@ -374,6 +374,119 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+  .onboarding-help-btn {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  html:not([data-theme="dark"]) #onboarding-help {
+    color: #000000;
+  }
+  #onboarding-help.has-onboarding-pulse {
+    box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
+    animation: discoveryPulse 1.15s ease-in-out infinite;
+  }
+  .onboarding-quickstart {
+    position: fixed;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(460px, calc(100vw - 24px));
+    z-index: 92;
+    background: var(--ui-pane-card-surface, #ffffff);
+    color: var(--ui-pane-text, #2f4368);
+    border: 1px solid var(--ui-pane-card-border, #d7e0f3);
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 12px 30px rgba(18, 35, 66, 0.18);
+  }
+  .onboarding-quickstart[hidden] {
+    display: none;
+  }
+  .onboarding-quickstart h4 {
+    margin: 0 0 6px;
+    font-size: 15px;
+  }
+  .onboarding-quickstart p {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--ui-pane-muted-text, #5f7090);
+  }
+  .onboarding-quickstart-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .onboarding-chip-btn {
+    border: 1px solid #cfd9ef;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #2f4368;
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .onboarding-chip-btn.primary {
+    background: #2f5fb3;
+    border-color: #2f5fb3;
+    color: #ffffff;
+  }
+  .onboarding-hints-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 89;
+  }
+  .onboarding-hint {
+    position: fixed;
+    transform: translate(-50%, -100%);
+    background: rgba(47, 67, 104, 0.92);
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .onboarding-hint[hidden] {
+    display: none;
+  }
+  .onboarding-tour {
+    position: fixed;
+    z-index: 94;
+    width: min(320px, calc(100vw - 24px));
+    background: var(--ui-pane-card-surface, #ffffff);
+    color: var(--ui-pane-text, #2f4368);
+    border: 1px solid var(--ui-pane-card-border, #d7e0f3);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 12px 28px rgba(18, 35, 66, 0.2);
+  }
+  .onboarding-tour[hidden] {
+    display: none;
+  }
+  .onboarding-tour-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .onboarding-tour-text {
+    font-size: 12px;
+    color: var(--ui-pane-muted-text, #5f7090);
+    margin: 0 0 8px;
+  }
+  .onboarding-tour-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .onboarding-target {
+    outline: 3px solid var(--ui-focus-outline, #1982c4);
+    outline-offset: 3px;
+    border-radius: 10px;
+  }
   .discovery-float-icon {
     position: fixed;
     left: 0;
@@ -1363,6 +1476,17 @@
     outline-color: var(--ui-focus-outline);
   }
 
+  html[data-theme="dark"] #experience-info-toggle {
+    border-color: rgba(156, 188, 243, 0.85);
+    background: rgba(75, 98, 136, 0.68);
+    color: #f5f8ff;
+    box-shadow: 0 0 0 1px rgba(20, 32, 52, 0.35), 0 2px 6px rgba(8, 12, 18, 0.4);
+  }
+
+  html[data-theme="dark"] #experience-info-toggle:hover {
+    background: rgba(93, 121, 166, 0.82);
+  }
+
   html[data-theme="dark"] #myCanvas {
     border-color: #3a3f46;
   }
@@ -1526,8 +1650,33 @@
     <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
   </div>
   <div class="top-bar-right">
+    <button id="onboarding-help" class="top-icon-btn onboarding-help-btn" type="button" title="Show quick guidance" aria-label="Show quick guidance" aria-pressed="false">?</button>
     <button id="theme-toggle" class="top-icon-btn" type="button" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false">🌙</button>
     <button id="gear" class="top-icon-btn" type="button" title="Open advanced controls" aria-label="Open advanced controls" aria-pressed="false">⚙️</button>
+  </div>
+</div>
+
+<div id="onboarding-quickstart" class="onboarding-quickstart" hidden>
+  <h4 id="onboarding-quickstart-title">Welcome to StitchLab</h4>
+  <p id="onboarding-quickstart-text">Try this: choose a frame shape, drag Holes or Add, then press Play.</p>
+  <div class="onboarding-quickstart-actions">
+    <button id="onboarding-dismiss" class="onboarding-chip-btn" type="button">Skip</button>
+    <button id="onboarding-start-tour" class="onboarding-chip-btn primary" type="button">Learn in 60s</button>
+  </div>
+</div>
+
+<div id="onboarding-hints" class="onboarding-hints-layer" aria-hidden="true">
+  <div id="onboarding-hint-shape" class="onboarding-hint" hidden>Pick a frame shape to begin.</div>
+  <div id="onboarding-hint-holes" class="onboarding-hint" hidden>Drag Holes to change stitch density.</div>
+  <div id="onboarding-hint-play" class="onboarding-hint" hidden>Press Play to watch stitching.</div>
+</div>
+
+<div id="onboarding-tour" class="onboarding-tour" hidden>
+  <p id="onboarding-tour-title" class="onboarding-tour-title">Quick tour</p>
+  <p id="onboarding-tour-text" class="onboarding-tour-text"></p>
+  <div class="onboarding-tour-actions">
+    <button id="onboarding-tour-skip" class="onboarding-chip-btn" type="button">Skip</button>
+    <button id="onboarding-tour-next" class="onboarding-chip-btn primary" type="button">Next</button>
   </div>
 </div>
 
@@ -1999,6 +2148,21 @@ var experienceInfoHtmlFrame = document.getElementById('experience-info-html');
 var experienceInfoClose = document.getElementById('experience-info-close');
 var experienceNarrateToggle = document.getElementById('experience-narrate-toggle');
 var experienceNarrationStatus = document.getElementById('experience-narration-status');
+var onboardingHelpBtn = document.getElementById('onboarding-help');
+var onboardingQuickStart = document.getElementById('onboarding-quickstart');
+var onboardingQuickStartTitle = document.getElementById('onboarding-quickstart-title');
+var onboardingQuickStartText = document.getElementById('onboarding-quickstart-text');
+var onboardingDismissBtn = document.getElementById('onboarding-dismiss');
+var onboardingStartTourBtn = document.getElementById('onboarding-start-tour');
+var onboardingHintsLayer = document.getElementById('onboarding-hints');
+var onboardingHintShape = document.getElementById('onboarding-hint-shape');
+var onboardingHintHoles = document.getElementById('onboarding-hint-holes');
+var onboardingHintPlay = document.getElementById('onboarding-hint-play');
+var onboardingTour = document.getElementById('onboarding-tour');
+var onboardingTourTitle = document.getElementById('onboarding-tour-title');
+var onboardingTourText = document.getElementById('onboarding-tour-text');
+var onboardingTourSkipBtn = document.getElementById('onboarding-tour-skip');
+var onboardingTourNextBtn = document.getElementById('onboarding-tour-next');
 
 var threads = [
   {
@@ -2181,6 +2345,7 @@ var TRIANGULA_STATE_CACHE_KEY = 'stitchlab.triangulaState.v1';
 var SQUARUS_STATE_CACHE_KEY = 'stitchlab.squarusState.v1';
 var MASHRABIYA_STATE_CACHE_KEY = 'stitchlab.mashrabiyaState.v1';
 var EXPERIENCE_PLAYBACK_STATE_KEY = 'stitchlab.experiencePlaybackState.v1';
+var ONBOARDING_STATE_KEY = 'stitchlab.onboarding.v1';
 var currentTheme = 'light';
 var forceExportRenderColors = false;
 var stitchingStateCache = null;
@@ -2236,6 +2401,585 @@ function getAppStateStorage() {
 }
 
 var appStateStorage = getAppStateStorage();
+var onboardingState = {
+  quickStartDismissed: false,
+  tourCompleted: false
+};
+var ONBOARDING_HINTS_ENABLED = false;
+var onboardingInteractionMarked = false;
+var onboardingHintsDismissed = false;
+var onboardingTourSteps = [];
+var onboardingTourIndex = -1;
+var onboardingTourTarget = null;
+var onboardingGuideContent = null;
+
+function getOnboardingTailSteps() {
+  return [
+    {
+      title: 'Discovery Library',
+      text: 'Open Discovery to browse unlocked experiences, enter experience passphrases, or return to stitching.',
+      selector: '#discovery-toggle'
+    },
+    {
+      title: 'Advanced Controls',
+      text: 'Open Advanced controls for deeper settings and export tools.',
+      selector: '#gear'
+    }
+  ];
+}
+
+function getOnboardingPlaybackSteps(experienceLabel) {
+  return [
+    {
+      title: 'Play Animation',
+      text: 'Press Play to animate this ' + experienceLabel + ' pattern.',
+      selector: '#animate'
+    },
+    {
+      title: 'Slow Tempo',
+      text: 'Use turtle speed for easier step-by-step observation.',
+      selector: '#kid-tempo-slow'
+    },
+    {
+      title: 'Normal Tempo',
+      text: 'Use normal speed for balanced playback.',
+      selector: '#kid-tempo-normal'
+    },
+    {
+      title: 'Fast Tempo',
+      text: 'Use rabbit speed to preview outcomes quickly.',
+      selector: '#kid-tempo-fast'
+    },
+    {
+      title: 'Song Picker',
+      text: 'Choose background music unlocked by discovered shapes.',
+      selector: '#kid-song-toggle'
+    },
+    {
+      title: 'Music Toggle',
+      text: 'Mute or unmute background music.',
+      selector: '#toggle-music'
+    }
+  ];
+}
+
+function getDefaultOnboardingGuideContent() {
+  return {
+    quickStartTitle: 'Welcome To StitchLab',
+    quickStartText: 'Try this: choose a frame shape, drag Holes or Add, then press Play.',
+    hints: {
+      shape: {
+        text: 'Pick a frame shape to begin.',
+        selector: '.shape-picker-group'
+      },
+      control: {
+        text: 'Drag Holes to change stitch density.',
+        selector: '#holes'
+      },
+      play: {
+        text: 'Press Play to watch stitching.',
+        selector: '#animate'
+      }
+    },
+    steps: [
+      {
+        title: 'Pick A Shape',
+        text: 'Start by choosing a frame shape.',
+        selector: '.shape-picker-group'
+      },
+      {
+        title: 'Toggle Hole Numbers',
+        text: 'Show or hide point labels around the frame.',
+        selector: '#toggle-hole-numbers'
+      }
+    ].concat(getOnboardingPlaybackSteps('stitching')).concat([
+      {
+        title: 'Add Thread',
+        text: 'Create another thread layer to combine patterns.',
+        selector: '#add-magic-thread'
+      },
+      {
+        title: 'Remove Last Thread',
+        text: 'Remove the most recently added thread.',
+        selector: '#remove-last-thread'
+      },
+      {
+        title: 'Choose Active Thread',
+        text: 'Pick which thread receives color and parameter edits.',
+        selector: '#kid-thread-toggle'
+      },
+      {
+        title: 'Set Hole Density',
+        text: 'Drag Holes to change point count and pattern complexity.',
+        selector: '#holes'
+      },
+      {
+        title: 'Choose Stitch Math',
+        text: 'Switch between adding and multiplying to calculate the stitch connections.',
+        selector: '#kid-stitch-by'
+      },
+      {
+        title: 'Change Stitch Connections',
+        text: 'Increase or decrease to make the stitch connections longer or shorter.',
+        selector: '#jump'
+      },
+      {
+        title: 'Set Thread Size',
+        text: 'Adjust line thickness for the active thread.',
+        selector: '#width'
+      },
+      {
+        title: 'Choose Start Hole',
+        text: 'Set the first hole where the selected thread begins.',
+        selector: '#start-hole'
+      }
+    ]).concat(getOnboardingTailSteps())
+  };
+}
+
+function getOnboardingGuideContentForExperience(experienceId) {
+  if (experienceId === 'triangula') {
+    return {
+      quickStartTitle: 'Welcome To Triangula',
+      quickStartText: 'Try this: set start and target triangles, then press Play.',
+      hints: {
+        shape: {
+          text: 'Triangula starts with triangle growth.',
+          selector: '#triangula-start-count'
+        },
+        control: {
+          text: 'Set your target triangle count.',
+          selector: '#triangula-target-count'
+        },
+        play: {
+          text: 'Press Play to animate each triangle layer.',
+          selector: '#animate'
+        }
+      },
+      steps: [
+        {
+          title: 'Frame Shape',
+          text: 'Triangula uses a fixed triangle frame.',
+          selector: '.shape-picker-group'
+        }
+      ].concat(getOnboardingPlaybackSteps('triangula')).concat([
+        {
+          title: 'Choose Construction',
+          text: 'Increase triangles either by cutting or shrinking and duplicating.',
+          selector: '#triangula-construction-mode'
+        },
+        {
+          title: 'Choose Color Scope',
+          text: 'Pick which triangle band receives the active color.',
+          selector: '#triangula-color-scope'
+        },
+        {
+          title: 'Set Start Triangles',
+          text: 'Choose how many triangles start the pattern.',
+          selector: '#triangula-start-count'
+        },
+        {
+          title: 'Set Target Triangles',
+          text: 'Choose how many triangles end the pattern.',
+          selector: '#triangula-target-count'
+        }
+      ]).concat(getOnboardingTailSteps())
+    };
+  }
+
+  if (experienceId === 'squarus') {
+    return {
+      quickStartTitle: 'Welcome To Squarus',
+      quickStartText: 'Try this: choose square order, set layout and pieces, then press Play.',
+      hints: {
+        shape: {
+          text: 'Pick the polyomino family size.',
+          selector: '#squarus-order-inline'
+        },
+        control: {
+          text: 'Adjust pieces placed for complexity.',
+          selector: '#squarus-piece-count'
+        },
+        play: {
+          text: 'Press Play to watch the square arrangement animate.',
+          selector: '#animate'
+        }
+      },
+      steps: [
+        {
+          title: 'Frame Shape',
+          text: 'Squarus uses a fixed square frame.',
+          selector: '.shape-picker-group'
+        }
+      ].concat(getOnboardingPlaybackSteps('squarus')).concat([
+        {
+          title: 'Choose Square Order',
+          text: 'Select monomino through hexomino families.',
+          selector: '#squarus-order-inline'
+        },
+        {
+          title: 'Choose Placement Style',
+          text: 'Switch between puzzle-piece placement and formula-only placement.',
+          selector: '#squarus-contact-mode-inline'
+        },
+        {
+          title: 'Pick A Layout Formula',
+          text: 'Choose how pieces are arranged on the canvas.',
+          selector: '#squarus-layout-inline'
+        },
+        {
+          title: 'Set Pieces Placed',
+          text: 'Drag to place more or fewer pieces.',
+          selector: '#squarus-piece-count'
+        },
+        {
+          title: 'Set Piece Order',
+          text: 'Adjust ordering for polyomino placement.',
+          selector: '#squarus-sequence-seed'
+        },
+        {
+          title: 'Randomize Piece Order',
+          text: 'Generate a random placement order.',
+          selector: '#squarus-sequence-randomize'
+        }
+      ]).concat(getOnboardingTailSteps())
+    };
+  }
+
+  if (experienceId === 'mashrabiya') {
+    return {
+      quickStartTitle: 'Welcome To Mashrabiya',
+      quickStartText: 'Try this: choose petal fold and colors, then press Play.',
+      hints: {
+        shape: {
+          text: 'Choose a petal fold profile.',
+          selector: '#mashrabiya-fold'
+        },
+        control: {
+          text: 'Tune motif colors to your taste.',
+          selector: '#mashrabiya-star-color'
+        },
+        play: {
+          text: 'Press Play to watch the rosette emerge.',
+          selector: '#animate'
+        }
+      },
+      steps: [
+        {
+          title: 'Frame Shape',
+          text: 'Mashrabiya uses a fixed rosette frame.',
+          selector: '.shape-picker-group'
+        }
+      ].concat(getOnboardingPlaybackSteps('mashrabiya')).concat([
+        {
+          title: 'Choose Petal Fold',
+          text: 'Select 6, 8, or 12-fold symmetry.',
+          selector: '#mashrabiya-fold'
+        },
+        {
+          title: 'Set Inner Star Color',
+          text: 'Pick a color for the central star.',
+          selector: '#mashrabiya-star-color'
+        },
+        {
+          title: 'Set Petal Color',
+          text: 'Adjust petal tone for contrast.',
+          selector: '#mashrabiya-petal-color'
+        },
+        {
+          title: 'Set Star Points Color',
+          text: 'Choose color for the outer star points.',
+          selector: '#mashrabiya-point-color'
+        }
+      ]).concat(getOnboardingTailSteps())
+    };
+  }
+
+  return getDefaultOnboardingGuideContent();
+}
+
+function sanitizeOnboardingState(rawState) {
+  if (!rawState || typeof rawState !== 'object') {
+    return {
+      quickStartDismissed: false,
+      tourCompleted: false
+    };
+  }
+  return {
+    quickStartDismissed: !!rawState.quickStartDismissed,
+    tourCompleted: !!rawState.tourCompleted
+  };
+}
+
+function hydrateOnboardingState() {
+  var raw = appStateStorage.getItem(ONBOARDING_STATE_KEY);
+  if (!raw) return;
+  try {
+    onboardingState = sanitizeOnboardingState(JSON.parse(raw));
+  } catch (error) {
+    onboardingState = sanitizeOnboardingState(null);
+  }
+}
+
+function persistOnboardingState() {
+  appStateStorage.setItem(ONBOARDING_STATE_KEY, JSON.stringify(onboardingState));
+}
+
+function setOnboardingStatePatch(patch) {
+  onboardingState = Object.assign({}, onboardingState, patch || {});
+  persistOnboardingState();
+}
+
+function getElementCenterCoordinates(element) {
+  if (!element || !element.getBoundingClientRect) return null;
+  var rect = element.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+    top: rect.top,
+    bottom: rect.bottom,
+    left: rect.left,
+    right: rect.right
+  };
+}
+
+function isElementVisibleForOnboarding(element) {
+  if (!element || !element.getBoundingClientRect) return false;
+  var rect = element.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
+  var style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+  if (!style) return true;
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+function resolveOnboardingTarget(selector) {
+  if (!selector) return null;
+  var element = document.querySelector(selector);
+  return isElementVisibleForOnboarding(element) ? element : null;
+}
+
+function applyOnboardingGuideContentForCurrentExperience() {
+  onboardingGuideContent = getOnboardingGuideContentForExperience(currentExperienceId);
+  onboardingTourSteps = (onboardingGuideContent && onboardingGuideContent.steps) ? onboardingGuideContent.steps.slice() : [];
+
+  if (onboardingQuickStartTitle) {
+    onboardingQuickStartTitle.textContent = onboardingGuideContent.quickStartTitle || 'Welcome To StitchLab';
+  }
+  if (onboardingQuickStartText) {
+    onboardingQuickStartText.textContent = onboardingGuideContent.quickStartText || 'Try this: choose a frame shape, drag Holes or Add, then press Play.';
+  }
+  if (onboardingHintShape && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.shape) {
+    onboardingHintShape.textContent = onboardingGuideContent.hints.shape.text;
+  }
+  if (onboardingHintHoles && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.control) {
+    onboardingHintHoles.textContent = onboardingGuideContent.hints.control.text;
+  }
+  if (onboardingHintPlay && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.play) {
+    onboardingHintPlay.textContent = onboardingGuideContent.hints.play.text;
+  }
+}
+
+function positionHintBubble(hintElement, targetElement, verticalOffset) {
+  if (!hintElement || !targetElement) return;
+  var center = getElementCenterCoordinates(targetElement);
+  if (!center) return;
+  hintElement.style.left = center.x + 'px';
+  hintElement.style.top = Math.max(44, center.top - (verticalOffset || 12)) + 'px';
+}
+
+function positionOnboardingHints() {
+  if (!ONBOARDING_HINTS_ENABLED) return;
+  if (onboardingHintsDismissed) return;
+  var hints = onboardingGuideContent && onboardingGuideContent.hints ? onboardingGuideContent.hints : getDefaultOnboardingGuideContent().hints;
+  positionHintBubble(onboardingHintShape, resolveOnboardingTarget(hints.shape && hints.shape.selector), 14);
+  positionHintBubble(onboardingHintHoles, resolveOnboardingTarget(hints.control && hints.control.selector), 14);
+  positionHintBubble(onboardingHintPlay, resolveOnboardingTarget(hints.play && hints.play.selector), 14);
+}
+
+function showOnboardingHints() {
+  if (!ONBOARDING_HINTS_ENABLED) {
+    hideOnboardingHints();
+    return;
+  }
+  if (onboardingHintsDismissed || !onboardingHintsLayer) return;
+  var hints = onboardingGuideContent && onboardingGuideContent.hints ? onboardingGuideContent.hints : getDefaultOnboardingGuideContent().hints;
+  if (onboardingHintShape) onboardingHintShape.hidden = !resolveOnboardingTarget(hints.shape && hints.shape.selector);
+  if (onboardingHintHoles) onboardingHintHoles.hidden = !resolveOnboardingTarget(hints.control && hints.control.selector);
+  if (onboardingHintPlay) onboardingHintPlay.hidden = !resolveOnboardingTarget(hints.play && hints.play.selector);
+  positionOnboardingHints();
+}
+
+function hideOnboardingHints() {
+  if (onboardingHintShape) onboardingHintShape.hidden = true;
+  if (onboardingHintHoles) onboardingHintHoles.hidden = true;
+  if (onboardingHintPlay) onboardingHintPlay.hidden = true;
+}
+
+function dismissOnboardingHints() {
+  if (onboardingHintsDismissed) return;
+  onboardingHintsDismissed = true;
+  hideOnboardingHints();
+}
+
+function markOnboardingInteraction() {
+  if (onboardingInteractionMarked) return;
+  onboardingInteractionMarked = true;
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
+  dismissOnboardingHints();
+  if (!onboardingState.quickStartDismissed && onboardingQuickStart) {
+    onboardingQuickStart.hidden = true;
+    setOnboardingStatePatch({ quickStartDismissed: true });
+  }
+}
+
+function markOnboardingInteractionFromEvent(event) {
+  if (!event || !event.target) {
+    markOnboardingInteraction();
+    return;
+  }
+  if (onboardingQuickStart && onboardingQuickStart.contains(event.target)) {
+    return;
+  }
+  if (onboardingTour && onboardingTour.contains(event.target)) {
+    return;
+  }
+  markOnboardingInteraction();
+}
+
+function clearOnboardingTourTarget() {
+  if (!onboardingTourTarget) return;
+  onboardingTourTarget.classList.remove('onboarding-target');
+  onboardingTourTarget = null;
+}
+
+function hideOnboardingTour() {
+  clearOnboardingTourTarget();
+  onboardingTourIndex = -1;
+  if (onboardingTour) onboardingTour.hidden = true;
+}
+
+function dismissOnboardingUiForExperienceChange() {
+  if (onboardingQuickStart) onboardingQuickStart.hidden = true;
+  hideOnboardingHints();
+  hideOnboardingTour();
+  onboardingHintsDismissed = true;
+}
+
+function positionOnboardingTourForTarget(targetElement) {
+  if (!onboardingTour || !targetElement) return;
+  var rect = targetElement.getBoundingClientRect();
+  var margin = 12;
+  var proposedTop = rect.bottom + 10;
+  var maxTop = window.innerHeight - onboardingTour.offsetHeight - margin;
+  if (proposedTop > maxTop) {
+    proposedTop = Math.max(margin, rect.top - onboardingTour.offsetHeight - 10);
+  }
+  var proposedLeft = rect.left + rect.width / 2 - onboardingTour.offsetWidth / 2;
+  proposedLeft = Math.max(margin, Math.min(proposedLeft, window.innerWidth - onboardingTour.offsetWidth - margin));
+  onboardingTour.style.top = proposedTop + 'px';
+  onboardingTour.style.left = proposedLeft + 'px';
+}
+
+function showOnboardingTourStep(index) {
+  if (!onboardingTour || index < 0 || index >= onboardingTourSteps.length) return;
+  var nextIndex = -1;
+  var step = null;
+  var target = null;
+  for (var i = index; i < onboardingTourSteps.length; i++) {
+    step = onboardingTourSteps[i];
+    target = resolveOnboardingTarget(step && step.selector);
+    if (target) {
+      nextIndex = i;
+      break;
+    }
+  }
+  if (nextIndex < 0) {
+    completeOnboardingTour();
+    return;
+  }
+  clearOnboardingTourTarget();
+  onboardingTourTarget = target;
+  onboardingTourTarget.classList.add('onboarding-target');
+  onboardingTourIndex = nextIndex;
+  onboardingTourTitle.textContent = step.title;
+  onboardingTourText.textContent = step.text;
+  onboardingTourNextBtn.textContent = nextIndex === onboardingTourSteps.length - 1 ? 'Done' : 'Next';
+  onboardingTour.hidden = false;
+  positionOnboardingTourForTarget(target);
+}
+
+function startOnboardingTour() {
+  applyOnboardingGuideContentForCurrentExperience();
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
+  if (onboardingQuickStart) onboardingQuickStart.hidden = true;
+  dismissOnboardingHints();
+  showOnboardingTourStep(0);
+}
+
+function completeOnboardingTour() {
+  hideOnboardingTour();
+  setOnboardingStatePatch({
+    quickStartDismissed: true,
+    tourCompleted: true
+  });
+}
+
+function handleOnboardingTourNext() {
+  if (onboardingTourIndex < 0) {
+    startOnboardingTour();
+    return;
+  }
+  if (onboardingTourIndex >= onboardingTourSteps.length - 1) {
+    completeOnboardingTour();
+    return;
+  }
+  showOnboardingTourStep(onboardingTourIndex + 1);
+}
+
+function handleOnboardingTourSkip() {
+  hideOnboardingTour();
+  setOnboardingStatePatch({
+    quickStartDismissed: true
+  });
+}
+
+function showOnboardingQuickStartIfNeeded() {
+  if (!onboardingQuickStart) return;
+  if (onboardingState.quickStartDismissed || hasUrlStateParams()) {
+    onboardingQuickStart.hidden = true;
+    return;
+  }
+  onboardingQuickStart.hidden = false;
+}
+
+function dismissOnboardingQuickStart() {
+  if (!onboardingQuickStart) return;
+  onboardingQuickStart.hidden = true;
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
+  setOnboardingStatePatch({ quickStartDismissed: true });
+}
+
+function syncOnboardingHelpPulse() {
+  if (!onboardingHelpBtn) return;
+  var shouldPulse = !onboardingInteractionMarked;
+  onboardingHelpBtn.classList.toggle('has-onboarding-pulse', shouldPulse);
+}
+
+function refreshOnboardingOverlayPositions() {
+  positionOnboardingHints();
+  if (!onboardingTour || onboardingTour.hidden || !onboardingTourTarget) return;
+  positionOnboardingTourForTarget(onboardingTourTarget);
+}
+
+function initializeOnboarding() {
+  hydrateOnboardingState();
+  onboardingHintsDismissed = false;
+  applyOnboardingGuideContentForCurrentExperience();
+  showOnboardingQuickStartIfNeeded();
+  showOnboardingHints();
+  refreshOnboardingOverlayPositions();
+  syncOnboardingHelpPulse();
+}
 
 function clearSessionScopedCachesOnLoad() {
   var cacheKeys = [
@@ -4700,6 +5444,9 @@ function setCurrentExperience(experienceId, options) {
 
   // keep options arg for API compatibility
   currentExperienceId = experience.id;
+  if (previousExperienceId !== currentExperienceId) {
+    dismissOnboardingUiForExperienceChange();
+  }
 
   if (currentExperienceId === 'squarus') {
     if (previousExperienceId !== 'squarus') {
@@ -4738,6 +5485,8 @@ function setCurrentExperience(experienceId, options) {
   applyCurrentExperienceInfo();
   syncExportUiCopy();
   renderExperienceTitleStatic();
+  applyOnboardingGuideContentForCurrentExperience();
+  refreshOnboardingOverlayPositions();
 
   if (currentExperienceId === 'stitching') {
     scheduleDiscoveryEvaluation();
@@ -12908,6 +13657,74 @@ if (themeToggleBtn) {
   });
 }
 
+if (onboardingHelpBtn) {
+  onboardingHelpBtn.addEventListener('click', function() {
+    if (onboardingTour && !onboardingTour.hidden) {
+      handleOnboardingTourSkip();
+      return;
+    }
+    startOnboardingTour();
+  });
+}
+
+if (onboardingDismissBtn) {
+  onboardingDismissBtn.addEventListener('click', function() {
+    dismissOnboardingQuickStart();
+    dismissOnboardingHints();
+  });
+}
+
+if (onboardingStartTourBtn) {
+  onboardingStartTourBtn.addEventListener('click', function() {
+    setOnboardingStatePatch({ quickStartDismissed: true });
+    startOnboardingTour();
+  });
+}
+
+if (onboardingTourNextBtn) {
+  onboardingTourNextBtn.addEventListener('click', handleOnboardingTourNext);
+}
+
+if (onboardingTourSkipBtn) {
+  onboardingTourSkipBtn.addEventListener('click', handleOnboardingTourSkip);
+}
+
+window.addEventListener('resize', refreshOnboardingOverlayPositions);
+
+window.addEventListener('orientationchange', function() {
+  window.setTimeout(refreshOnboardingOverlayPositions, 120);
+});
+
+document.addEventListener('pointerdown', markOnboardingInteractionFromEvent, true);
+document.addEventListener('touchstart', markOnboardingInteractionFromEvent, true);
+document.addEventListener('mousedown', markOnboardingInteractionFromEvent, true);
+document.addEventListener('click', markOnboardingInteractionFromEvent, true);
+document.addEventListener('input', markOnboardingInteractionFromEvent, true);
+document.addEventListener('change', markOnboardingInteractionFromEvent, true);
+document.addEventListener('keydown', function(event) {
+  if (!event) return;
+  if (event.key === 'Tab' || event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt' || event.key === 'Meta') {
+    return;
+  }
+  markOnboardingInteractionFromEvent(event);
+}, true);
+
+shapeButtons.forEach(function(btn) {
+  btn.addEventListener('click', markOnboardingInteraction);
+});
+
+if (holesSlider) {
+  holesSlider.addEventListener('input', markOnboardingInteraction);
+}
+
+if (jumpSlider) {
+  jumpSlider.addEventListener('input', markOnboardingInteraction);
+}
+
+if (animateBtn) {
+  animateBtn.addEventListener('click', markOnboardingInteraction);
+}
+
 /* ------------------------------
    INITIALIZE
 ------------------------------ */
@@ -12963,6 +13780,7 @@ if (hasUrlStateParams()) {
 scheduleDiscoveryEvaluation();
 syncExportUiCopy();
 scheduleUrlStateSync(true);
+initializeOnboarding();
 window.setCurrentExperience = setCurrentExperience;
 
 </script>
