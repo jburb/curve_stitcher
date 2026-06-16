@@ -1475,12 +1475,17 @@
     #sliders {
       background: #ffffff;
       background: var(--ui-control-surface);
+      position: relative;
+      z-index: 1;
       padding-bottom: 40px;
       padding-bottom: calc(40px + env(safe-area-inset-bottom));
+      box-shadow: 0 120px 0 0 #ffffff;
+      box-shadow: 0 120px 0 0 var(--ui-control-surface);
     }
 
     html[data-theme="dark"] #sliders {
       background: #1d2024;
+      box-shadow: 0 120px 0 0 #1d2024;
     }
 
     #sliders input[type=range] {
