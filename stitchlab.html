@@ -376,6 +376,15 @@
   }
   .onboarding-help-btn {
     font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  html:not([data-theme="dark"]) #onboarding-help {
+    color: #000000;
+  }
+  #onboarding-help.has-onboarding-pulse {
+    box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
+    animation: discoveryPulse 1.15s ease-in-out infinite;
   }
   .onboarding-quickstart {
     position: fixed;
@@ -1467,6 +1476,17 @@
     outline-color: var(--ui-focus-outline);
   }
 
+  html[data-theme="dark"] #experience-info-toggle {
+    border-color: rgba(156, 188, 243, 0.85);
+    background: rgba(75, 98, 136, 0.68);
+    color: #f5f8ff;
+    box-shadow: 0 0 0 1px rgba(20, 32, 52, 0.35), 0 2px 6px rgba(8, 12, 18, 0.4);
+  }
+
+  html[data-theme="dark"] #experience-info-toggle:hover {
+    background: rgba(93, 121, 166, 0.82);
+  }
+
   html[data-theme="dark"] #myCanvas {
     border-color: #3a3f46;
   }
@@ -1630,7 +1650,7 @@
     <button id="toggle-hole-numbers" class="top-icon-btn" type="button" title="Toggle hole numbers" aria-label="Toggle hole numbers" aria-pressed="false">🔢</button>
   </div>
   <div class="top-bar-right">
-    <button id="onboarding-help" class="top-icon-btn onboarding-help-btn" type="button" title="Show quick guidance" aria-label="Show quick guidance" aria-pressed="false">❔</button>
+    <button id="onboarding-help" class="top-icon-btn onboarding-help-btn" type="button" title="Show quick guidance" aria-label="Show quick guidance" aria-pressed="false">?</button>
     <button id="theme-toggle" class="top-icon-btn" type="button" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false">🌙</button>
     <button id="gear" class="top-icon-btn" type="button" title="Open advanced controls" aria-label="Open advanced controls" aria-pressed="false">⚙️</button>
   </div>
@@ -2804,6 +2824,7 @@ function dismissOnboardingHints() {
 function markOnboardingInteraction() {
   if (onboardingInteractionMarked) return;
   onboardingInteractionMarked = true;
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
   dismissOnboardingHints();
   if (!onboardingState.quickStartDismissed && onboardingQuickStart) {
     onboardingQuickStart.hidden = true;
@@ -2889,6 +2910,7 @@ function showOnboardingTourStep(index) {
 
 function startOnboardingTour() {
   applyOnboardingGuideContentForCurrentExperience();
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
   if (onboardingQuickStart) onboardingQuickStart.hidden = true;
   dismissOnboardingHints();
   showOnboardingTourStep(0);
@@ -2933,7 +2955,14 @@ function showOnboardingQuickStartIfNeeded() {
 function dismissOnboardingQuickStart() {
   if (!onboardingQuickStart) return;
   onboardingQuickStart.hidden = true;
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
   setOnboardingStatePatch({ quickStartDismissed: true });
+}
+
+function syncOnboardingHelpPulse() {
+  if (!onboardingHelpBtn) return;
+  var shouldPulse = !onboardingInteractionMarked;
+  onboardingHelpBtn.classList.toggle('has-onboarding-pulse', shouldPulse);
 }
 
 function refreshOnboardingOverlayPositions() {
@@ -2949,6 +2978,7 @@ function initializeOnboarding() {
   showOnboardingQuickStartIfNeeded();
   showOnboardingHints();
   refreshOnboardingOverlayPositions();
+  syncOnboardingHelpPulse();
 }
 
 function clearSessionScopedCachesOnLoad() {
