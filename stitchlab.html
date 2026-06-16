@@ -1463,6 +1463,12 @@
     .shape-picker-group {
       gap: 8px;
     }
+
+    /* Lift slider touch targets away from the bottom-edge gesture zone on phones. */
+    #sliders {
+      padding-bottom: 28px;
+      padding-bottom: calc(28px + env(safe-area-inset-bottom));
+    }
   }
 </style>
 </head>
