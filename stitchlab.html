@@ -12165,6 +12165,13 @@ document.addEventListener('pointerdown', function(event) {
   updateMusicPlaybackState();
 });
 
+document.addEventListener('touchstart', function(event) {
+  var slider = event.target && event.target.closest ? event.target.closest('input[type="range"]') : null;
+  if (!slider) return;
+  markSliderAsMoving(slider);
+  updateMusicPlaybackState();
+}, { passive: true });
+
 document.addEventListener('input', function(event) {
   var slider = event.target && event.target.matches && event.target.matches('input[type="range"]') ? event.target : null;
   if (!slider) return;
@@ -12188,6 +12195,18 @@ document.addEventListener('blur', function(event) {
   if (!slider) return;
   settleSliderMotion(slider);
 }, true);
+
+function isTouchScrollSuppressionTarget(target) {
+  if (!target || !target.closest) return false;
+  if (target.closest('#discovery-panel.open, #advanced-panel.open')) return false;
+  return !!target.closest('input[type="range"], #sliders, #activity-bar, #shape-bar, .slider-block, .kid-tempo-group, .kid-audio-group, .kid-thread-tools');
+}
+
+// iOS Safari may ignore touch-action for range controls; explicitly stop scroll chaining.
+document.addEventListener('touchmove', function(event) {
+  if (!isTouchScrollSuppressionTarget(event.target)) return;
+  event.preventDefault();
+}, { passive: false });
 
 function handleHolesSliderChange() {
   syncJumpBoundsFromHoleCount();
