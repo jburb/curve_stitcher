@@ -2489,13 +2489,13 @@ function getDefaultOnboardingGuideContent() {
       },
       {
         title: 'Toggle Hole Numbers',
-        text: 'Show or hide point labels around the frame.',
+        text: 'Show or hide hole numbers around the frame.',
         selector: '#toggle-hole-numbers'
       }
     ].concat(getOnboardingPlaybackSteps('stitching')).concat([
       {
         title: 'Add Thread',
-        text: 'Create another thread layer to combine patterns.',
+        text: 'Add another thread to combine patterns.',
         selector: '#add-magic-thread'
       },
       {
@@ -2505,12 +2505,12 @@ function getDefaultOnboardingGuideContent() {
       },
       {
         title: 'Choose Active Thread',
-        text: 'Pick which thread receives color and parameter edits.',
+        text: 'Pick which thread receives color and control changes.',
         selector: '#kid-thread-toggle'
       },
       {
         title: 'Set Hole Density',
-        text: 'Drag Holes to change point count and pattern complexity.',
+        text: 'Drag Holes to change hole count and pattern complexity.',
         selector: '#holes'
       },
       {
@@ -2525,7 +2525,7 @@ function getDefaultOnboardingGuideContent() {
       },
       {
         title: 'Set Thread Size',
-        text: 'Adjust line thickness for the active thread.',
+        text: 'Adjust thickness of the active thread.',
         selector: '#width'
       },
       {
@@ -2541,14 +2541,14 @@ function getOnboardingGuideContentForExperience(experienceId) {
   if (experienceId === 'triangula') {
     return {
       quickStartTitle: 'Welcome To Triangula',
-      quickStartText: 'Try this: set start and target triangles, then press Play.',
+      quickStartText: 'Try this: set start and end triangles, then press Play.',
       hints: {
         shape: {
           text: 'Triangula starts with triangle growth.',
           selector: '#triangula-start-count'
         },
         control: {
-          text: 'Set your target triangle count.',
+          text: 'Set your end triangle count.',
           selector: '#triangula-target-count'
         },
         play: {
@@ -2613,28 +2613,28 @@ function getOnboardingGuideContentForExperience(experienceId) {
         }
       ].concat(getOnboardingPlaybackSteps('squarus')).concat([
         {
-          title: 'Choose Square Order',
-          text: 'Select monomino through hexomino families.',
+          title: 'Choose Polyomino Type',
+          text: 'Select a type from 1-square (monomino) through 6-square (hexomino) families.',
           selector: '#squarus-order-inline'
         },
         {
           title: 'Choose Placement Style',
-          text: 'Switch between puzzle-piece placement and formula-only placement.',
+          text: 'Switch between puzzle-style placement and art-style placement.',
           selector: '#squarus-contact-mode-inline'
         },
         {
           title: 'Pick A Layout Formula',
-          text: 'Choose how pieces are arranged on the canvas.',
+          text: 'Choose how polyominoes are arranged on the canvas.',
           selector: '#squarus-layout-inline'
         },
         {
-          title: 'Set Pieces Placed',
-          text: 'Drag to place more or fewer pieces.',
+          title: 'Set # of Pieces Placed',
+          text: 'Drag to place more or fewer polyominoes.',
           selector: '#squarus-piece-count'
         },
         {
           title: 'Set Piece Order',
-          text: 'Adjust ordering for polyomino placement.',
+          text: 'Adjust the order of polyominoes placed.',
           selector: '#squarus-sequence-seed'
         },
         {
@@ -2652,7 +2652,7 @@ function getOnboardingGuideContentForExperience(experienceId) {
       quickStartText: 'Try this: choose petal fold and colors, then press Play.',
       hints: {
         shape: {
-          text: 'Choose a petal fold profile.',
+          text: 'Choose a petal fold count.',
           selector: '#mashrabiya-fold'
         },
         control: {
