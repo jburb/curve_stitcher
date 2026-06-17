@@ -13556,6 +13556,14 @@ document.addEventListener('click', (event) => {
   if (!experienceInfoPanel.hasAttribute('hidden') && !experienceInfoPanel.contains(event.target) && !experienceInfoToggle.contains(event.target)) {
     syncExperienceInfoPanel(false);
   }
+  if (advancedPanel.classList.contains('open') && !advancedPanel.contains(event.target) && !gearBtn.contains(event.target)) {
+    advancedPanel.classList.remove('open');
+    syncAdvancedToggleButton();
+  }
+  if (discoveryPanel.classList.contains('open') && !discoveryPanel.contains(event.target) && !discoveryToggleBtn.contains(event.target)) {
+    discoveryPanel.classList.remove('open');
+    syncDiscoveryToggleButton();
+  }
 });
 
 experienceInfoToggle.addEventListener('click', () => {
