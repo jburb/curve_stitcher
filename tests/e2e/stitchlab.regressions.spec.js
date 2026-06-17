@@ -151,6 +151,46 @@ test.describe('StitchLab regressions', () => {
     expect(touchMoveProbe.dispatchResult).toBe(true);
   });
 
+  test('playback remains operable after orientation-style viewport changes', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/stitchlab.html');
+
+    const animateBtn = page.locator('#animate');
+
+    await animateBtn.click();
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('playing');
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('idle');
+    await expect(animateBtn).toContainText('Play');
+
+    await animateBtn.click();
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('playing');
+
+    await animateBtn.click();
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('paused');
+    await expect(animateBtn).toContainText('Resume');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('idle');
+    await expect(animateBtn).toContainText('Play');
+
+    await animateBtn.click();
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('playing');
+  });
+
   test('mobile layout baseline remains usable at phone viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/stitchlab.html');

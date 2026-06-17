@@ -1609,6 +1609,14 @@
     }
   }
 
+  @media (max-width: 720px) and (display-mode: standalone),
+         (max-width: 720px) and (display-mode: fullscreen) {
+    #sliders {
+      padding-bottom: 42px;
+      padding-bottom: calc(42px + env(safe-area-inset-bottom));
+    }
+  }
+
   @media (hover: none) and (pointer: coarse) and (min-width: 721px) and (max-width: 1100px) {
     #shape-bar {
       padding-top: 14px;
@@ -7588,13 +7596,10 @@ function fitCanvasToStage() {
 
   view.viewSize = new Size(size, size);
 
-  if (animationActive) {
-    animationActive = false;
-    view.onFrame = null;
-    animationState = null;
-    triangulaAnimationState = null;
-    mashrabiyaAnimationState = null;
-    updateMusicPlaybackState();
+  // Viewport changes (zoom/orientation) can invalidate frame timing/state.
+  // Always normalize playback state so controls never get stuck in paused/resume limbo.
+  if (animationActive || animationPlaybackState === 'paused') {
+    stopAnimationIfActive();
   }
 
   drawStatic();
@@ -12643,7 +12648,12 @@ function animateStitch() {
 
 function resumeAnimationIfPaused() {
   if (animationActive) return;
-  if (!animationState && !triangulaAnimationState && !squarusAnimationState && !mashrabiyaAnimationState) return;
+  if (!animationState && !triangulaAnimationState && !squarusAnimationState && !mashrabiyaAnimationState) {
+    animationPlaybackState = 'idle';
+    syncAnimateButtonLabel();
+    animateStitch();
+    return;
+  }
   animationActive = true;
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
