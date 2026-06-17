@@ -1342,6 +1342,56 @@
     color: #fff;
   }
 
+  .kid-save-intro {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #4e6285;
+  }
+
+  .kid-save-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+
+  .kid-save-option {
+    border: 1px solid #cfdaef;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #2f4368;
+    padding: 10px;
+    text-align: left;
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+  }
+
+  .kid-save-option:hover {
+    border-color: #9ab5e6;
+    box-shadow: 0 6px 18px rgba(30, 56, 101, 0.12);
+  }
+
+  .kid-save-option-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #23395e;
+  }
+
+  .kid-save-option-text {
+    font-size: 12px;
+    color: #5b6f92;
+    line-height: 1.35;
+  }
+
+  .kid-save-option-visual {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    border: 1px solid #d8e2f4;
+    background: #f7faff;
+    display: block;
+  }
+
   :root {
     --ui-page-bg: #f7f7fb;
     --ui-control-surface: #ffffff;
@@ -1653,6 +1703,7 @@
 <div id="shape-bar">
   <div class="top-bar-left">
     <button id="discovery-toggle" class="top-icon-btn" type="button" title="Open discovery library" aria-label="Open discovery library" aria-pressed="false">🧭</button>
+    <button id="kid-save-toggle" class="top-icon-btn" type="button" title="Save your pattern" aria-label="Save your pattern" aria-pressed="false">💾</button>
   </div>
   <div class="top-bar-center">
     <div class="shape-picker-group">
@@ -1949,7 +2000,7 @@
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Export</div>
-      <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Export SVG</button></div>
+      <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Save Pattern</button></div>
       <div id="advanced-export-help" class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
     </div>
     <div class="advanced-subsection" id="triangula-advanced-subsection" style="display:none;">
@@ -2026,6 +2077,41 @@
   </div>
 </div>
 
+<div id="kid-save-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="kid-save-title">
+  <div class="modal-card">
+    <h4 id="kid-save-title">Save your pattern</h4>
+    <p class="kid-save-intro">Choose what you want to save.</p>
+    <div class="kid-save-options">
+      <button id="kid-save-image-option" class="kid-save-option" type="button">
+        <svg class="kid-save-option-visual" viewBox="0 0 160 90" aria-hidden="true" focusable="false">
+          <rect x="8" y="8" width="144" height="74" rx="8" fill="#ffffff" stroke="#b9cbeb"/>
+          <circle cx="44" cy="34" r="9" fill="#ffd37c"/>
+          <path d="M22 68 L58 44 L80 60 L102 48 L138 68 Z" fill="#8fb4ec"/>
+          <path d="M22 68 L58 44 L80 60 L102 48 L138 68" stroke="#517dbb" stroke-width="2" fill="none"/>
+        </svg>
+        <span class="kid-save-option-title">Picture only</span>
+        <span class="kid-save-option-text">Saves one PNG picture of what you made.</span>
+      </button>
+      <button id="kid-save-make-option" class="kid-save-option" type="button">
+        <svg class="kid-save-option-visual" viewBox="0 0 160 90" aria-hidden="true" focusable="false">
+          <rect x="12" y="10" width="86" height="60" rx="6" fill="#ffffff" stroke="#b9cbeb"/>
+          <rect x="22" y="22" width="66" height="6" rx="3" fill="#8fb4ec"/>
+          <rect x="22" y="34" width="54" height="6" rx="3" fill="#a7c4f0"/>
+          <rect x="22" y="46" width="58" height="6" rx="3" fill="#a7c4f0"/>
+          <rect x="98" y="18" width="50" height="46" rx="6" fill="#f4f8ff" stroke="#97b5e8"/>
+          <path d="M106 30 H140 M106 40 H140 M106 50 H134" stroke="#638ac7" stroke-width="3" stroke-linecap="round"/>
+          <text x="123" y="78" text-anchor="middle" font-size="11" font-family="Nunito, sans-serif" fill="#456a9f">ZIP</text>
+        </svg>
+        <span class="kid-save-option-title">Picture + maker files</span>
+        <span class="kid-save-option-text">Saves a ZIP with an SVG, a PNG preview, and simple instructions.</span>
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button id="kid-save-cancel-btn" type="button" class="modal-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 paper.install(window);
 paper.setup('myCanvas');
@@ -2062,6 +2148,10 @@ var exportIncludeGuideInput = document.getElementById('export-include-guide');
 var exportIncludePreviewInput = document.getElementById('export-include-preview');
 var exportConfirmBtn = document.getElementById('export-confirm-btn');
 var exportCancelBtn = document.getElementById('export-cancel-btn');
+var kidSaveModal = document.getElementById('kid-save-modal');
+var kidSaveImageOptionBtn = document.getElementById('kid-save-image-option');
+var kidSaveMakeOptionBtn = document.getElementById('kid-save-make-option');
+var kidSaveCancelBtn = document.getElementById('kid-save-cancel-btn');
 var canvasContainer = document.getElementById('canvas-container');
 var canvasStage = document.getElementById('canvas-stage');
 var shapeButtons = Array.prototype.slice.call(document.querySelectorAll('.shape-btn'));
@@ -2122,6 +2212,7 @@ var holeNumbersToggleBtn = document.getElementById('toggle-hole-numbers');
 var backToStitchingBtn = document.getElementById('back-to-stitching');
 var discoveryReturnRow = document.getElementById('discovery-return-row');
 var discoveryToggleBtn = document.getElementById('discovery-toggle');
+var kidSaveToggleBtn = document.getElementById('kid-save-toggle');
 var closeDiscoveryBtn = document.getElementById('close-discovery');
 var paletteContainer = document.getElementById('palette');
 var musicToggleBtn = document.getElementById('toggle-music');
@@ -2430,6 +2521,11 @@ var onboardingGuideContent = null;
 
 function getOnboardingTailSteps() {
   return [
+    {
+      title: 'Save Your Pattern',
+      text: 'Tap Save to download a picture, or a ZIP with picture + maker files.',
+      selector: '#kid-save-toggle'
+    },
     {
       title: 'Discovery Library',
       text: 'Open Discovery to browse unlocked experiences, enter experience passphrases, or return to stitching.',
@@ -5553,6 +5649,13 @@ function syncDiscoveryToggleButton() {
   discoveryToggleBtn.title = isOpen ? 'Close discovery library' : 'Open discovery library';
   discoveryToggleBtn.classList.toggle('active', isOpen);
   discoveryToggleBtn.classList.toggle('has-unseen', hasUnseenDiscoveries && !isOpen);
+}
+
+function syncKidSaveToggleButton() {
+  if (!kidSaveToggleBtn || !kidSaveModal) return;
+  var isOpen = kidSaveModal.classList.contains('open');
+  kidSaveToggleBtn.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+  kidSaveToggleBtn.classList.toggle('active', isOpen);
 }
 
 function syncAdvancedToggleButton() {
@@ -11878,6 +11981,14 @@ function buildCurrentDesignSvgString(options) {
   }
 
   var includeThreads = options.includeThreads !== false;
+  var includeStitchingBorder = borderEnabled;
+  var includeStitchingHoleNumbers = shouldShowHoleNumbersNow();
+  if (options.forceStitchingBorder === true) {
+    includeStitchingBorder = true;
+  }
+  if (options.forceStitchingHoleNumbers === true) {
+    includeStitchingHoleNumbers = true;
+  }
   var borderStrokeColor = BORDER_STROKE_COLOR;
   var holeFillColor = HOLE_FILL_COLOR;
   var holeLabelColor = HOLE_LABEL_COLOR;
@@ -11892,7 +12003,7 @@ function buildCurrentDesignSvgString(options) {
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
 
-  if (borderEnabled && BORDER_INCLUDE_IN_SVG) {
+  if (includeStitchingBorder && BORDER_INCLUDE_IN_SVG) {
     function appendBorderPair(borderGeometry) {
       if (!borderGeometry || !borderGeometry.outerSamples || !borderGeometry.innerSamples) return;
       var lineJoin = borderGeometry.isPolygon ? 'miter' : 'round';
@@ -11949,7 +12060,7 @@ function buildCurrentDesignSvgString(options) {
     exportRingHoles(innerFramePoints);
   }
 
-  if (shouldShowHoleNumbersNow()) {
+  if (includeStitchingHoleNumbers) {
     var holeCount = getCurrentStitchHoleCount();
     if (!isFinite(holeCount)) holeCount = DEFAULT_HOLES;
     var fontSize = getHoleNumberFontSize(holeCount);
@@ -12009,6 +12120,7 @@ function createCurrentDesignSvgBlob(options) {
 
 function buildStitchingGuideText(fileBaseName, options) {
   options = options || {};
+  var includeStitchingHoleNumbers = shouldShowHoleNumbersNow() || options.forceStitchingHoleNumbers === true;
 
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
@@ -12060,7 +12172,7 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('Total physical holes: ' + String(getCurrentStitchHoleCount() * 2));
   }
   lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
-  lines.push('Hole numbers visible in export: ' + (shouldShowHoleNumbersNow() ? 'yes' : 'no'));
+  lines.push('Hole numbers visible in export: ' + (includeStitchingHoleNumbers ? 'yes' : 'no'));
   lines.push('Include stitched threads in SVG: ' + (options.includeThreads ? 'yes' : 'no'));
   lines.push('');
   lines.push('Threads');
@@ -12291,10 +12403,13 @@ function createStitchingGuideBlob(fileBaseName, options) {
   return new Blob([text], { type: 'text/plain;charset=utf-8' });
 }
 
-function downloadPreviewImage(fileBaseName) {
+function downloadPreviewImage(fileBaseName, options) {
+  options = options || {};
+  var appendPreviewSuffix = options.appendPreviewSuffix !== false;
   capturePreviewImageBlob(function(blob) {
     if (!blob) return;
-    triggerBlobDownload(blob, fileBaseName + '-preview.png');
+    var fileName = appendPreviewSuffix ? (fileBaseName + '-preview.png') : (fileBaseName + '.png');
+    triggerBlobDownload(blob, fileName);
   });
 }
 
@@ -12372,6 +12487,18 @@ function closeExportOptionsModal() {
   exportOptionsModal.classList.remove('open');
 }
 
+function openKidSaveModal() {
+  if (!kidSaveModal) return;
+  kidSaveModal.classList.add('open');
+  syncKidSaveToggleButton();
+}
+
+function closeKidSaveModal() {
+  if (!kidSaveModal) return;
+  kidSaveModal.classList.remove('open');
+  syncKidSaveToggleButton();
+}
+
 async function runExportFromModalSelection() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
@@ -12402,6 +12529,44 @@ async function runExportFromModalSelection() {
   }
 
   closeExportOptionsModal();
+}
+
+async function runKidFriendlySaveSelection(mode) {
+  var normalizedMode = mode === 'make' ? 'make' : 'image';
+  var proposedName = normalizeExportBaseName(getTimestampLabel());
+  var requestedName = window.prompt('What would you like to call it?', proposedName);
+  if (requestedName === null) {
+    return;
+  }
+  var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(requestedName));
+  var options = {
+    includeThreads: false,
+    includeGuide: normalizedMode === 'make',
+    includePreview: true,
+    forceStitchingBorder: normalizedMode === 'make' && currentExperienceId === 'stitching',
+    forceStitchingHoleNumbers: normalizedMode === 'make' && currentExperienceId === 'stitching'
+  };
+
+  try {
+    if (normalizedMode === 'image') {
+      downloadPreviewImage(baseName, { appendPreviewSuffix: false });
+    } else if (typeof JSZip === 'undefined') {
+      downloadCurrentDesignSvg(baseName, options);
+      if (options.includeGuide) {
+        downloadStitchingGuide(baseName, options);
+      }
+      if (options.includePreview) {
+        downloadPreviewImage(baseName);
+      }
+    } else {
+      await downloadExportZipBundle(baseName, options);
+    }
+  } catch (error) {
+    console.error('Kid save failed:', error);
+    alert('Save failed. Please try again.');
+  }
+
+  closeKidSaveModal();
 }
 
 function drawHoles() {
@@ -13234,8 +13399,48 @@ exportOptionsModal.addEventListener('click', (event) => {
   }
 });
 
+if (kidSaveToggleBtn) {
+  kidSaveToggleBtn.addEventListener('click', () => {
+    if (kidSaveModal && kidSaveModal.classList.contains('open')) {
+      closeKidSaveModal();
+      return;
+    }
+    openKidSaveModal();
+  });
+}
+
+if (kidSaveCancelBtn) {
+  kidSaveCancelBtn.addEventListener('click', () => {
+    closeKidSaveModal();
+  });
+}
+
+if (kidSaveImageOptionBtn) {
+  kidSaveImageOptionBtn.addEventListener('click', () => {
+    runKidFriendlySaveSelection('image');
+  });
+}
+
+if (kidSaveMakeOptionBtn) {
+  kidSaveMakeOptionBtn.addEventListener('click', () => {
+    runKidFriendlySaveSelection('make');
+  });
+}
+
+if (kidSaveModal) {
+  kidSaveModal.addEventListener('click', (event) => {
+    if (event.target === kidSaveModal) {
+      closeKidSaveModal();
+    }
+  });
+}
+
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
+  if (kidSaveModal.classList.contains('open')) {
+    closeKidSaveModal();
+    return;
+  }
   if (exportOptionsModal.classList.contains('open')) {
     closeExportOptionsModal();
     return;
