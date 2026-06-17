@@ -386,6 +386,13 @@
     box-shadow: 0 0 0 4px rgba(47, 95, 179, 0.32);
     animation: discoveryPulse 1.15s ease-in-out infinite;
   }
+  html[data-theme="dark"] #discovery-toggle.has-unseen,
+  html[data-theme="dark"] #onboarding-help.has-onboarding-pulse {
+    box-shadow: 0 0 0 4px rgba(141, 182, 255, 0.62), 0 0 14px rgba(120, 168, 255, 0.45);
+  }
+  html[data-theme="dark"] #discovery-toggle.has-unseen::after {
+    box-shadow: 0 0 0 2px #2a2f36;
+  }
   .onboarding-quickstart {
     position: fixed;
     top: 78px;
@@ -1770,7 +1777,7 @@
 
   <div class="kid-thread-tools">
     <button id="add-magic-thread" class="kid-thread-btn" type="button">Add Thread</button>
-    <button id="remove-last-thread" class="kid-thread-btn" type="button">Remove Last Thread</button>
+    <button id="remove-thread" class="kid-thread-btn" type="button">Remove Thread</button>
     <div class="kid-thread-picker" id="kid-thread-picker">Stitching:
       <button id="kid-thread-toggle" class="kid-thread-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">
         <span class="kid-thread-current">
@@ -2099,7 +2106,7 @@ var squarusContactModeSelect = document.getElementById('squarus-contact-mode');
 var squarusSequenceNumberInput = document.getElementById('squarus-sequence-number');
 var squarusSequenceRandomizeAdvancedBtn = document.getElementById('squarus-sequence-randomize-advanced');
 var addMagicThreadBtn = document.getElementById('add-magic-thread');
-var removeLastThreadBtn = document.getElementById('remove-last-thread');
+var removeLastThreadBtn = document.getElementById('remove-thread');
 var addThreadBtn = document.getElementById('add-thread');
 var threadControlsContainer = document.getElementById('thread-controls');
 var advancedThreadsTitle = document.querySelector('#advanced-panel .advanced-section-title');
@@ -2499,9 +2506,9 @@ function getDefaultOnboardingGuideContent() {
         selector: '#add-magic-thread'
       },
       {
-        title: 'Remove Last Thread',
-        text: 'Remove the most recently added thread.',
-        selector: '#remove-last-thread'
+        title: 'Remove Selected Thread',
+        text: 'Remove whichever thread is currently selected.',
+        selector: '#remove-thread'
       },
       {
         title: 'Choose Active Thread',
@@ -13630,8 +13637,15 @@ addMagicThreadBtn.addEventListener('click', () => {
 
 removeLastThreadBtn.addEventListener('click', () => {
   if (threads.length <= 1) return;
-  threads.pop();
-  selectedThreadIndex = threads.length - 1;
+  var indexToRemove = getKidTargetThreadIndex();
+  if (indexToRemove < 0 || indexToRemove >= threads.length) return;
+  threads.splice(indexToRemove, 1);
+  if (!threads.length) {
+    threads.push(buildMagicThread());
+    selectedThreadIndex = 0;
+  } else {
+    selectedThreadIndex = Math.min(indexToRemove, threads.length - 1);
+  }
   renderThreadControls();
   syncKidControlsFromSelectedThread();
   redrawForPathChange();
