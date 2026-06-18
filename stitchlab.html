@@ -2395,21 +2395,28 @@ var ROSETTE_DISCOVERY_RECIPES = [
   {
     key: 'rosette-8-fold-dense-64',
     holeCount: 64,
-    allowRotation: true,
+    allowRotation: false,
+    requireNestedFrameEnabled: true,
+    requiredNestedFrameRatio: 0.5,
+    requiredInnerHoleCount: 32,
     threads: [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
       { jumpMode: 'fixed', jump: 16, startHole: 9 },
-      { jumpMode: 'fixed', jump: 28, startHole: 3 }
+      { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 32 }
     ]
   },
   {
-    key: 'rosette-6-fold-dense-48',
-    holeCount: 48,
-    allowRotation: true,
+    key: 'rosette-6-fold-dense-96',
+    holeCount: 96,
+    allowRotation: false,
+    requireNestedFrameEnabled: true,
+    requiredNestedFrameRatio: 0.5,
+    requiredInnerHoleCount: 48,
     threads: [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
-      { jumpMode: 'fixed', jump: 16, startHole: 9 },
-      { jumpMode: 'fixed', jump: 20, startHole: 3 }
+      { jumpMode: 'fixed', jump: 18, startHole: 4, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 },
+      { jumpMode: 'fixed', jump: 18, startHole: 6, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 },
+      { jumpMode: 'fixed', jump: 18, startHole: 8, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 }
     ]
   }
 ];
@@ -10524,8 +10531,9 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     bridgePoints.push(pointAt(halfAngle, bridgeRadius));
   }
 
-  // Dense lifted stitch-vertex construction for 12/8/6 folds.
-  var scaffoldCount = safeFold * 8;
+  // Dense lifted stitch-vertex construction for rosette folds.
+  // 6-fold uses 96 points to preserve the intended hexagon + projected-thread geometry.
+  var scaffoldCount = (safeFold === 6) ? 96 : (safeFold * 8);
   var scaffoldAngleStep = (Math.PI * 2) / scaffoldCount;
   var scaffoldRadius = petalRadius;
   var scaffoldPhase = -Math.PI / 2;
@@ -10615,6 +10623,36 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     };
   }
 
+  function buildProjectedSegmentsFromInnerSequence(innerPoints, innerSequence) {
+    var segments = [];
+    for (var i = 0; i < innerSequence.length; i++) {
+      var fromInner = innerPoints[innerSequence[i]];
+      var toInner = innerPoints[innerSequence[(i + 1) % innerSequence.length]];
+      if (!fromInner || !toInner || fromInner.getDistance(toInner) <= 1e-6) continue;
+
+      var projection = getOuterProjectionPairForRosetteSegment(fromInner, toInner);
+      if (projection.fromHit && projection.fromHit.getDistance(fromInner) > 1e-6) {
+        segments.push({ from: projection.fromHit, to: fromInner, tag: 'thread3', edgeIndex: segments.length });
+      }
+      segments.push({ from: fromInner, to: toInner, tag: 'thread3', edgeIndex: segments.length });
+      if (projection.toHit && projection.toHit.getDistance(toInner) > 1e-6) {
+        segments.push({ from: toInner, to: projection.toHit, tag: 'thread3', edgeIndex: segments.length });
+      }
+    }
+    return segments;
+  }
+
+  function buildInnerScaffoldRing(innerCount, innerRatio) {
+    var points = [];
+    var count = Math.max(3, parseBoundedInt(innerCount, 3, MAX_HOLES, Math.round(scaffoldCount * 0.5)));
+    var ratio = Math.max(0.1, Math.min(0.95, isFinite(innerRatio) ? innerRatio : 0.5));
+    var innerRadius = scaffoldRadius * ratio;
+    for (var i = 0; i < count; i++) {
+      points.push(pointAt(scaffoldPhase + i * ((Math.PI * 2) / count), innerRadius));
+    }
+    return points;
+  }
+
   if (safeFold === 12 && scaffoldCount === 96) {
     var rosetteInnerRatio = 0.5;
     var rosetteInnerCount = 48;
@@ -10628,22 +10666,37 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     var thread3InnerSequence = buildMashrabiyaStepSequence(rosetteInnerCount, 2, 20);
     starSequence = thread3InnerSequence.slice();
     starJump = 20;
+    starThreadSegments = buildProjectedSegmentsFromInnerSequence(innerScaffoldPoints, thread3InnerSequence);
+  } else if (safeFold === 8 && scaffoldCount === 64) {
+    var rosette8InnerPoints = buildInnerScaffoldRing(32, 0.5);
+    innerGuideCircleVertices = rosette8InnerPoints.slice();
+    var thread3InnerSequence8 = buildMashrabiyaStepSequence(rosette8InnerPoints.length, 2, 20);
+    starSequence = thread3InnerSequence8.slice();
+    starJump = 20;
+    starThreadSegments = buildProjectedSegmentsFromInnerSequence(rosette8InnerPoints, thread3InnerSequence8);
+  } else if (safeFold === 6 && scaffoldCount === 96) {
+    // 6-fold uses one outer hexagon (start 1, step 16), then three projected inner threads.
+    firstPolygonSequence = buildMashrabiyaStepSequence(scaffoldCount, 0, 16);
+    offsetPolygonSequence = [];
+
+    var rosette6InnerPoints = buildInnerScaffoldRing(48, 0.5);
+    innerGuideCircleVertices = rosette6InnerPoints.slice();
+    var rosette6Starts = [3, 5, 7]; // start holes 4, 6, 8 in 1-based indexing
     starThreadSegments = [];
 
-    for (var si = 0; si < thread3InnerSequence.length; si++) {
-      var fromInner = innerScaffoldPoints[thread3InnerSequence[si]];
-      var toInner = innerScaffoldPoints[thread3InnerSequence[(si + 1) % thread3InnerSequence.length]];
-      if (!fromInner || !toInner || fromInner.getDistance(toInner) <= 1e-6) continue;
-
-      var projection = getOuterProjectionPairForRosetteSegment(fromInner, toInner);
-      if (projection.fromHit && projection.fromHit.getDistance(fromInner) > 1e-6) {
-        starThreadSegments.push({ from: projection.fromHit, to: fromInner, tag: 'thread3', edgeIndex: starThreadSegments.length });
+    for (var rs = 0; rs < rosette6Starts.length; rs++) {
+      var sequence6 = buildMashrabiyaStepSequence(rosette6InnerPoints.length, rosette6Starts[rs], 18);
+      if (!starSequence || !starSequence.length) {
+        starSequence = sequence6.slice();
       }
-      starThreadSegments.push({ from: fromInner, to: toInner, tag: 'thread3', edgeIndex: starThreadSegments.length });
-      if (projection.toHit && projection.toHit.getDistance(toInner) > 1e-6) {
-        starThreadSegments.push({ from: toInner, to: projection.toHit, tag: 'thread3', edgeIndex: starThreadSegments.length });
+      var projected = buildProjectedSegmentsFromInnerSequence(rosette6InnerPoints, sequence6);
+      for (var ps = 0; ps < projected.length; ps++) {
+        projected[ps].edgeIndex = starThreadSegments.length;
+        starThreadSegments.push(projected[ps]);
       }
     }
+
+    starJump = 18;
   }
 
   function buildLegacyFillGeometry(starVertices) {
