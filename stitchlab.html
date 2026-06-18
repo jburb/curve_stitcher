@@ -7506,18 +7506,18 @@ function drawAnimatedSegments(thread, segments, segmentCount) {
   if (!segments || !segments.length || segmentCount <= 0) return;
   var maxSegments = Math.min(segmentCount, segments.length);
   for (var i = 0; i < maxSegments; i++) {
-    var endpoint = getThreadSegmentEndpoints(thread, segments[i]);
-    if (!endpoint) continue;
-
-    var seg = new Path();
-    seg.strokeWidth = thread.width;
-    if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
-    } else {
-      seg.strokeColor = thread.color;
+    var parts = getThreadSegmentDrawParts(thread, segments[i]);
+    for (var p = 0; p < parts.length; p++) {
+      var seg = new Path();
+      seg.strokeWidth = thread.width;
+      if (thread.color === 'rainbow') {
+        seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
+      } else {
+        seg.strokeColor = thread.color;
+      }
+      seg.add(parts[p].fromPoint);
+      seg.add(parts[p].toPoint);
     }
-    seg.add(endpoint.fromPoint);
-    seg.add(endpoint.toPoint);
   }
 }
 
@@ -8002,6 +8002,59 @@ function lineIntersection(a1, a2, b1, b2) {
   return a1.add(r.multiply(t));
 }
 
+function lineSegmentIntersection(lineStart, lineEnd, segmentStart, segmentEnd) {
+  var lineDir = lineEnd.subtract(lineStart);
+  var segDir = segmentEnd.subtract(segmentStart);
+  var cross = lineDir.cross(segDir);
+  if (Math.abs(cross) <= 1e-8) {
+    return null;
+  }
+
+  var delta = segmentStart.subtract(lineStart);
+  var t = delta.cross(segDir) / cross;
+  var u = delta.cross(lineDir) / cross;
+  if (u < -1e-7 || u > 1 + 1e-7) {
+    return null;
+  }
+
+  return lineStart.add(lineDir.multiply(t));
+}
+
+function getOuterBoundaryVerticesForProjection() {
+  var geometry = getShapeGeometry();
+  var polygonVertices = getPolygonCornerVerticesForGeometry(geometry);
+  if (polygonVertices && polygonVertices.length >= 3) {
+    return polygonVertices;
+  }
+  return buildShapeBoundarySamples(960, geometry.center, geometry.radius);
+}
+
+function getOuterIntersectionsForInfiniteLine(lineStart, lineEnd) {
+  var vertices = getOuterBoundaryVerticesForProjection();
+  if (!vertices || vertices.length < 2) return [];
+
+  var hits = [];
+  for (var i = 0; i < vertices.length; i++) {
+    var segmentStart = vertices[i];
+    var segmentEnd = vertices[(i + 1) % vertices.length];
+    var hit = lineSegmentIntersection(lineStart, lineEnd, segmentStart, segmentEnd);
+    if (!hit) continue;
+
+    var duplicate = false;
+    for (var h = 0; h < hits.length; h++) {
+      if (hits[h].getDistance(hit) <= 0.5) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) {
+      hits.push(hit);
+    }
+  }
+
+  return hits;
+}
+
 function getPolygonCornerVertices() {
   var geometry = getShapeGeometry();
   return getPolygonCornerVerticesForGeometry(geometry);
@@ -8274,9 +8327,12 @@ function computeSegments(thread) {
     } else if (frameMode === 'bridge') {
       sourceRing = 'outer';
       targetRing = 'inner';
-    } else if (frameMode === 'bridge-reverse' || frameMode === 'bridge-reverse-project') {
+    } else if (frameMode === 'bridge-reverse') {
       sourceRing = 'inner';
       targetRing = 'outer';
+    } else if (frameMode === 'bridge-reverse-project') {
+      sourceRing = 'inner';
+      targetRing = 'inner';
     }
 
     var sourceCount = countForRing(sourceRing);
@@ -8330,41 +8386,120 @@ function getThreadSegmentEndpoints(thread, segment) {
   var toPoint = points[toIndex];
   if (!fromPoint || !toPoint) return null;
 
-  if (isThreadRadialProjectionMode(thread)) {
-    var geometry = getShapeGeometry();
-    var radial = fromPoint.subtract(geometry.center);
-    if (radial.length > 0.001) {
-      var angle = Math.atan2(radial.y, radial.x);
-      toPoint = shapePointAtAngle(angle, geometry.center, geometry.radius);
-    }
-  }
-
   return {
     fromIndex: fromIndex,
     toIndex: toIndex,
     fromPoint: fromPoint,
     toPoint: toPoint,
-    highlightPair: isThreadRadialProjectionMode(thread) ? [fromIndex, fromIndex] : [fromIndex, toIndex]
+    highlightPair: [fromIndex, toIndex]
   };
+}
+
+function getOuterProjectionPairForSegment(fromPoint, toPoint) {
+  if (!fromPoint || !toPoint) return { fromHit: null, toHit: null };
+
+  var segmentDirection = toPoint.subtract(fromPoint);
+  var segmentLength = segmentDirection.length;
+  if (segmentLength <= 0.001) return { fromHit: null, toHit: null };
+
+  var unit = segmentDirection.normalize(1);
+  var hits = getOuterIntersectionsForInfiniteLine(fromPoint, toPoint);
+  if (!hits || !hits.length) return { fromHit: null, toHit: null };
+
+  var fromHit = null;
+  var toHit = null;
+  var bestBefore = -Infinity;
+  var bestAfter = Infinity;
+  var minT = Infinity;
+  var maxT = -Infinity;
+  var minPoint = null;
+  var maxPoint = null;
+
+  for (var i = 0; i < hits.length; i++) {
+    var t = hits[i].subtract(fromPoint).dot(unit);
+
+    if (t < minT) {
+      minT = t;
+      minPoint = hits[i];
+    }
+    if (t > maxT) {
+      maxT = t;
+      maxPoint = hits[i];
+    }
+
+    if (t < -1e-4 && t > bestBefore) {
+      bestBefore = t;
+      fromHit = hits[i];
+    }
+    if (t > segmentLength + 1e-4 && t < bestAfter) {
+      bestAfter = t;
+      toHit = hits[i];
+    }
+  }
+
+  // Fallback for edge/tangent degeneracies: use extremal hits along the segment axis.
+  if (!fromHit) {
+    fromHit = minPoint;
+  }
+  if (!toHit) {
+    toHit = maxPoint;
+  }
+
+  return {
+    fromHit: fromHit,
+    toHit: toHit
+  };
+}
+
+function getThreadSegmentDrawParts(thread, segment) {
+  var endpoint = getThreadSegmentEndpoints(thread, segment);
+  if (!endpoint) return [];
+
+  if (!isThreadRadialProjectionMode(thread)) {
+    return [
+      {
+        fromPoint: endpoint.fromPoint,
+        toPoint: endpoint.toPoint
+      }
+    ];
+  }
+
+  var projection = getOuterProjectionPairForSegment(endpoint.fromPoint, endpoint.toPoint);
+  var projectedFrom = projection.fromHit;
+  var projectedTo = projection.toHit;
+  var parts = [];
+
+  if (projectedFrom && projectedFrom.getDistance(endpoint.fromPoint) > 0.001) {
+    parts.push({ fromPoint: projectedFrom, toPoint: endpoint.fromPoint });
+  }
+
+  parts.push({ fromPoint: endpoint.fromPoint, toPoint: endpoint.toPoint });
+
+  if (projectedTo && projectedTo.getDistance(endpoint.toPoint) > 0.001) {
+    parts.push({ fromPoint: endpoint.toPoint, toPoint: projectedTo });
+  }
+
+  return parts;
 }
 
 function drawThread(thread) {
   var segments = computeSegments(thread);
 
   for (var i = 0; i < segments.length; i++) {
-    var endpoint = getThreadSegmentEndpoints(thread, segments[i]);
-    if (!endpoint) continue;
-    var seg = new Path();
-    seg.strokeWidth = thread.width;
+    var parts = getThreadSegmentDrawParts(thread, segments[i]);
+    for (var p = 0; p < parts.length; p++) {
+      var seg = new Path();
+      seg.strokeWidth = thread.width;
 
-    if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
-    } else {
-      seg.strokeColor = thread.color;
+      if (thread.color === 'rainbow') {
+        seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
+      } else {
+        seg.strokeColor = thread.color;
+      }
+
+      seg.add(parts[p].fromPoint);
+      seg.add(parts[p].toPoint);
     }
-
-    seg.add(endpoint.fromPoint);
-    seg.add(endpoint.toPoint);
   }
 }
 
@@ -12130,21 +12265,19 @@ function buildCurrentDesignSvgString(options) {
       var thread = threads[t];
       var segments = computeSegments(thread);
       for (var s = 0; s < segments.length; s++) {
-        var endpoint = getThreadSegmentEndpoints(thread, segments[s]);
-        if (!endpoint) continue;
-        var fromPoint = endpoint.fromPoint;
-        var toPoint = endpoint.toPoint;
-
+        var parts = getThreadSegmentDrawParts(thread, segments[s]);
         var strokeColor = thread.color === 'rainbow'
           ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
           : colorToSvg(thread.color);
 
-        lines.push(
-          '<line x1="' + formatSvgNumber(fromPoint.x) + '" y1="' + formatSvgNumber(fromPoint.y) +
-          '" x2="' + formatSvgNumber(toPoint.x) + '" y2="' + formatSvgNumber(toPoint.y) +
-          '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
-          '" stroke-linecap="round" stroke-linejoin="round"/>'
-        );
+        for (var p = 0; p < parts.length; p++) {
+          lines.push(
+            '<line x1="' + formatSvgNumber(parts[p].fromPoint.x) + '" y1="' + formatSvgNumber(parts[p].fromPoint.y) +
+            '" x2="' + formatSvgNumber(parts[p].toPoint.x) + '" y2="' + formatSvgNumber(parts[p].toPoint.y) +
+            '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
+            '" stroke-linecap="round" stroke-linejoin="round"/>'
+          );
+        }
       }
     }
   }
@@ -12254,9 +12387,10 @@ function buildStitchingGuideText(fileBaseName, options) {
     var frameMode = sanitizeThreadFrameMode(thread && thread.frameMode, 'outer');
     for (var idx = 0; idx < segments.length; idx++) {
       var fromRef = formatHoleReference(segments[idx][0], holeCount);
-      var toRef = frameMode === 'bridge-reverse-project'
-        ? 'outer boundary (radial projection)'
-        : formatHoleReference(segments[idx][1], holeCount);
+      var toRef = formatHoleReference(segments[idx][1], holeCount);
+      if (frameMode === 'bridge-reverse-project') {
+        toRef += ' (+ radial extensions to outer frame at both ends)';
+      }
       targetLines.push('    ' + fromRef + ' -> ' + toRef);
     }
   }
@@ -12985,6 +13119,9 @@ function renderThreadControls() {
   threads.forEach((thread, index) => {
     ensureThreadConnectConfig(thread);
     thread.frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+    if (thread.frameMode === 'bridge' || thread.frameMode === 'bridge-reverse') {
+      thread.frameMode = 'bridge-reverse-project';
+    }
     if (thread.color === 'rainbow') {
       thread.solidColor = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
     } else {
@@ -13014,9 +13151,7 @@ function renderThreadControls() {
       <select id="frame-mode-${index}">
         <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
         <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
-        <option value="bridge" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge' ? 'selected' : ''}>Bridge outer→inner</option>
-        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Bridge inner→outer</option>
-        <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Bridge inner→outer (projected)</option>
+        <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Inner -&gt; Outer (Projected)</option>
       </select><br>
       ` : ''}
       Stitch by:
