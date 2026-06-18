@@ -3987,7 +3987,7 @@ function sanitizeNestedFrameRatio(value, fallback) {
 }
 
 function sanitizeThreadFrameMode(value, fallback) {
-  var allowed = ['outer', 'inner', 'bridge', 'bridge-reverse'];
+  var allowed = ['outer', 'inner', 'bridge', 'bridge-reverse', 'bridge-reverse-project'];
   if (allowed.indexOf(value) === -1) {
     return allowed.indexOf(fallback) !== -1 ? fallback : 'outer';
   }
@@ -7007,6 +7007,36 @@ function getCurrentStitchHoleCount() {
   return parseBoundedInt(holesSlider && holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES);
 }
 
+function getCurrentInnerStitchHoleCount() {
+  if (!nestedFrameEnabled) return 0;
+  var outerCount = getCurrentStitchHoleCount();
+  var ratio = sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+  var scaledInnerCount = Math.round(outerCount * ratio);
+  return parseBoundedInt(scaledInnerCount, 3, MAX_HOLES, Math.max(3, Math.round(outerCount * DEFAULT_NESTED_FRAME_RATIO)));
+}
+
+function getCurrentTotalStitchHoleCount() {
+  return getCurrentStitchHoleCount() + getCurrentInnerStitchHoleCount();
+}
+
+function getThreadSourceRing(thread) {
+  var mode = sanitizeThreadFrameMode(thread && thread.frameMode, 'outer');
+  if (mode === 'inner' || mode === 'bridge-reverse' || mode === 'bridge-reverse-project') {
+    return 'inner';
+  }
+  return 'outer';
+}
+
+function getThreadSourceHoleCount(thread) {
+  var outerCount = getCurrentStitchHoleCount();
+  var innerCount = getCurrentInnerStitchHoleCount();
+  var sourceRing = getThreadSourceRing(thread);
+  if (sourceRing === 'inner' && nestedFrameEnabled && innerCount > 0) {
+    return innerCount;
+  }
+  return outerCount;
+}
+
 function getCurrentJumpLimit() {
   return Math.max(1, getCurrentStitchHoleCount() - 1);
 }
@@ -7030,14 +7060,20 @@ function syncJumpBoundsFromHoleCount() {
   }
 
   for (var i = 0; i < threads.length; i++) {
-    normalizeThreadHoleDependentValues(threads[i], holeCount);
+    normalizeThreadHoleDependentValues(threads[i], getThreadSourceHoleCount(threads[i]));
   }
 
   var selected = getKidTargetThreadIndex();
   if (selected >= 0 && threads[selected] && jumpSlider) {
+    var selectedJumpLimit = Math.max(1, getThreadSourceHoleCount(threads[selected]) - 1);
+    jumpSlider.max = String(selectedJumpLimit);
+    threads[selected].jump = parseBoundedInt(threads[selected].jump, 1, selectedJumpLimit, threads[selected].jump || 1);
     jumpSlider.value = String(threads[selected].jump);
   }
   if (selected >= 0 && threads[selected] && startHoleInput) {
+    var selectedHoleCount = getThreadSourceHoleCount(threads[selected]);
+    startHoleInput.max = String(selectedHoleCount);
+    threads[selected].startHole = parseBoundedInt(threads[selected].startHole, 1, selectedHoleCount, threads[selected].startHole || 1);
     startHoleInput.value = String(threads[selected].startHole);
   }
 }
@@ -7260,6 +7296,7 @@ function refreshKidThreadPicker() {
     if (mode === 'inner') return ' I';
     if (mode === 'bridge') return ' O->I';
     if (mode === 'bridge-reverse') return ' I->O';
+    if (mode === 'bridge-reverse-project') return ' I->R';
     return ' O';
   }
 
@@ -7318,10 +7355,15 @@ function syncKidControlsFromSelectedThread() {
   refreshKidThreadPicker();
   if (index < 0) return;
   ensureThreadConnectConfig(threads[index]);
-  normalizeThreadHoleDependentValues(threads[index], getCurrentStitchHoleCount());
+  var sourceHoleCount = getThreadSourceHoleCount(threads[index]);
+  var sourceJumpLimit = Math.max(1, sourceHoleCount - 1);
+  normalizeThreadHoleDependentValues(threads[index], sourceHoleCount);
   if (startHoleInput) {
-    startHoleInput.max = String(getCurrentStitchHoleCount());
+    startHoleInput.max = String(sourceHoleCount);
     startHoleInput.value = String(threads[index].startHole);
+  }
+  if (jumpSlider) {
+    jumpSlider.max = String(sourceJumpLimit);
   }
   jumpSlider.value = threads[index].jump;
   multiplySlider.value = threads[index].connectMultiplier;
@@ -7464,9 +7506,8 @@ function drawAnimatedSegments(thread, segments, segmentCount) {
   if (!segments || !segments.length || segmentCount <= 0) return;
   var maxSegments = Math.min(segmentCount, segments.length);
   for (var i = 0; i < maxSegments; i++) {
-    var fromIndex = segments[i][0];
-    var toIndex = segments[i][1];
-    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
+    var endpoint = getThreadSegmentEndpoints(thread, segments[i]);
+    if (!endpoint) continue;
 
     var seg = new Path();
     seg.strokeWidth = thread.width;
@@ -7475,8 +7516,8 @@ function drawAnimatedSegments(thread, segments, segmentCount) {
     } else {
       seg.strokeColor = thread.color;
     }
-    seg.add(points[fromIndex]);
-    seg.add(points[toIndex]);
+    seg.add(endpoint.fromPoint);
+    seg.add(endpoint.toPoint);
   }
 }
 
@@ -7491,12 +7532,10 @@ function getAnimationSecondsPerSegment() {
 function drawAnimatedSegmentProgress(thread, segments, segmentIndex, progress) {
   if (!segments || !segments.length || segmentIndex < 0 || segmentIndex >= segments.length) return null;
 
-  var fromIndex = segments[segmentIndex][0];
-  var toIndex = segments[segmentIndex][1];
-  var startPoint = points[fromIndex];
-  var endPoint = points[toIndex];
-
-  if (!startPoint || !endPoint) return null;
+  var endpoint = getThreadSegmentEndpoints(thread, segments[segmentIndex]);
+  if (!endpoint) return null;
+  var startPoint = endpoint.fromPoint;
+  var endPoint = endpoint.toPoint;
 
   var p = Math.max(0, Math.min(1, progress));
   // A slight ease-out makes the pull feel more organic without changing tempo.
@@ -7521,7 +7560,7 @@ function drawAnimatedSegmentProgress(thread, segments, segmentIndex, progress) {
     pullHead.opacity = 0.88;
   }
 
-  return [fromIndex, toIndex];
+  return endpoint.highlightPair;
 }
 
 function drawSegmentSettleAccent(settle) {
@@ -7531,11 +7570,11 @@ function drawSegmentSettleAccent(settle) {
   var segments = settle.segments;
   if (!segments || !segments.length || settle.segmentIndex < 0 || settle.segmentIndex >= segments.length) return;
 
-  var fromIndex = segments[settle.segmentIndex][0];
-  var toIndex = segments[settle.segmentIndex][1];
-  var startPoint = points[fromIndex];
-  var endPoint = points[toIndex];
-  if (!startPoint || !endPoint) return;
+  var thread = threads[settle.threadIndex];
+  var endpoint = getThreadSegmentEndpoints(thread, segments[settle.segmentIndex]);
+  if (!endpoint) return;
+  var startPoint = endpoint.fromPoint;
+  var endPoint = endpoint.toPoint;
 
   var ratio = Math.max(0, Math.min(1, settle.remaining / settle.duration));
   var settleStrength = ratio * ratio;
@@ -7548,7 +7587,8 @@ function drawSegmentSettleAccent(settle) {
   if (incoming.length <= 0) return;
 
   var nextSegment = segments[(settle.segmentIndex + 1) % segments.length];
-  var nextPoint = nextSegment ? points[nextSegment[1]] : null;
+  var nextEndpoint = nextSegment ? getThreadSegmentEndpoints(thread, nextSegment) : null;
+  var nextPoint = nextEndpoint ? nextEndpoint.toPoint : null;
   var outgoing = nextPoint ? nextPoint.subtract(endPoint) : null;
 
   var tangent = incoming.normalize(1);
@@ -7561,7 +7601,6 @@ function drawSegmentSettleAccent(settle) {
 
   var overshootPoint = endPoint.add(tangent.normalize(overshootAmount));
 
-  var thread = threads[settle.threadIndex];
   var color = thread.color === 'rainbow'
     ? rainbowColor(settle.segmentIndex / Math.max(1, segments.length))
     : thread.color;
@@ -7857,7 +7896,8 @@ function sampleEvenlyAlongClosedPolyline(vertices, count) {
 }
 
 function computePoints() {
-  var n = parseInt(holesSlider.value, 10);
+  var outerCount = getCurrentStitchHoleCount();
+  var innerCount = getCurrentInnerStitchHoleCount();
   var geometry = getShapeGeometry();
   var center = geometry.center;
   var radius = geometry.radius;
@@ -7865,19 +7905,19 @@ function computePoints() {
   points = [];
   outerFramePoints = [];
   innerFramePoints = [];
-  if (!isFinite(n) || n < 3) return;
+  if (!isFinite(outerCount) || outerCount < 3) return;
 
   // Circle already has exact uniform spacing with equal-angle sampling.
   if (currentShape === 'circle') {
-    for (var i = 0; i < n; i++) {
-      var t = (-Math.PI / 2) + ((2 * Math.PI * i) / n);
+    for (var i = 0; i < outerCount; i++) {
+      var t = (-Math.PI / 2) + ((2 * Math.PI * i) / outerCount);
       outerFramePoints.push(shapePointAtAngle(t, center, radius));
     }
 
-    if (nestedFrameEnabled) {
+    if (nestedFrameEnabled && innerCount > 0) {
       var innerRadiusCircle = radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
-      for (var ci = 0; ci < n; ci++) {
-        var tc = (-Math.PI / 2) + ((2 * Math.PI * ci) / n);
+      for (var ci = 0; ci < innerCount; ci++) {
+        var tc = (-Math.PI / 2) + ((2 * Math.PI * ci) / innerCount);
         innerFramePoints.push(shapePointAtAngle(tc, center, innerRadiusCircle));
       }
     }
@@ -7886,14 +7926,14 @@ function computePoints() {
   }
 
   // Non-circular shapes need perimeter-based resampling for visual uniformity.
-  var sampleCount = Math.max(360, n * 12);
+  var sampleCount = Math.max(360, outerCount * 12);
   var boundarySamples = buildShapeBoundarySamples(sampleCount, center, radius);
-  outerFramePoints = sampleEvenlyAlongClosedPolyline(boundarySamples, n);
+  outerFramePoints = sampleEvenlyAlongClosedPolyline(boundarySamples, outerCount);
 
-  if (nestedFrameEnabled) {
+  if (nestedFrameEnabled && innerCount > 0) {
     var innerRadius = radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
     var innerBoundarySamples = buildShapeBoundarySamples(sampleCount, center, innerRadius);
-    innerFramePoints = sampleEvenlyAlongClosedPolyline(innerBoundarySamples, n);
+    innerFramePoints = sampleEvenlyAlongClosedPolyline(innerBoundarySamples, innerCount);
   }
 
   points = nestedFrameEnabled ? outerFramePoints.concat(innerFramePoints) : outerFramePoints.slice();
@@ -8102,8 +8142,8 @@ function getBorderGeometryForGeometry(geometry) {
 /* ------------------------------
    DRAWING THREADS
 ------------------------------ */
-function computeSequence(thread) {
-  var n = getCurrentStitchHoleCount();
+function computeSequence(thread, holeCount) {
+  var n = parseBoundedInt(holeCount, 3, MAX_HOLES, getCurrentStitchHoleCount());
   if (!n) return [];
 
   if (thread.sequence && thread.sequence.type === 'custom') {
@@ -8192,54 +8232,82 @@ function computeSequence(thread) {
 }
 
 function computeSegments(thread) {
-  var n = getCurrentStitchHoleCount();
-  if (!n || !thread) return [];
+  var nOuter = getCurrentStitchHoleCount();
+  var nInner = nestedFrameEnabled ? getCurrentInnerStitchHoleCount() : 0;
+  if (!nOuter || !thread) return [];
 
   function resolveFrameMode() {
     if (!nestedFrameEnabled) return 'outer';
     return sanitizeThreadFrameMode(thread.frameMode, 'outer');
   }
 
+  function countForRing(ring) {
+    if (ring === 'inner') {
+      return nInner > 0 ? nInner : nOuter;
+    }
+    return nOuter;
+  }
+
   function toGlobalIndex(localIndex, ring) {
-    var idx = ((localIndex % n) + n) % n;
-    if (ring === 'inner' && nestedFrameEnabled) {
-      return n + idx;
+    var ringCount = countForRing(ring);
+    var idx = ((localIndex % ringCount) + ringCount) % ringCount;
+    if (ring === 'inner' && nestedFrameEnabled && nInner > 0) {
+      return nOuter + idx;
     }
     return idx;
   }
 
+  function remapLocalIndex(localIndex, fromCount, toCount) {
+    if (!isFinite(fromCount) || fromCount <= 0 || !isFinite(toCount) || toCount <= 0) return 0;
+    var normalized = ((localIndex % fromCount) + fromCount) % fromCount;
+    var projected = Math.floor((normalized * toCount) / fromCount);
+    return ((projected % toCount) + toCount) % toCount;
+  }
+
   function mapPair(sourceLocal, mappedLocal) {
     var frameMode = resolveFrameMode();
+    var sourceRing = 'outer';
+    var targetRing = 'outer';
     if (frameMode === 'inner') {
-      return [toGlobalIndex(sourceLocal, 'inner'), toGlobalIndex(mappedLocal, 'inner')];
+      sourceRing = 'inner';
+      targetRing = 'inner';
+    } else if (frameMode === 'bridge') {
+      sourceRing = 'outer';
+      targetRing = 'inner';
+    } else if (frameMode === 'bridge-reverse' || frameMode === 'bridge-reverse-project') {
+      sourceRing = 'inner';
+      targetRing = 'outer';
     }
-    if (frameMode === 'bridge') {
-      return [toGlobalIndex(sourceLocal, 'outer'), toGlobalIndex(mappedLocal, 'inner')];
-    }
-    if (frameMode === 'bridge-reverse') {
-      return [toGlobalIndex(sourceLocal, 'inner'), toGlobalIndex(mappedLocal, 'outer')];
-    }
-    return [toGlobalIndex(sourceLocal, 'outer'), toGlobalIndex(mappedLocal, 'outer')];
+
+    var sourceCount = countForRing(sourceRing);
+    var targetCount = countForRing(targetRing);
+    var sourceResolved = ((sourceLocal % sourceCount) + sourceCount) % sourceCount;
+    var targetResolved = remapLocalIndex(mappedLocal, sourceCount, targetCount);
+
+    return [toGlobalIndex(sourceResolved, sourceRing), toGlobalIndex(targetResolved, targetRing)];
   }
+
+  var sourceHoleCount = getThreadSourceHoleCount(thread);
+  if (!isFinite(sourceHoleCount) || sourceHoleCount < 1) return [];
 
   if (thread.jumpMode === 'connect') {
     ensureThreadConnectConfig(thread);
     var segments = [];
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
-    var startOffset = parseBoundedInt(thread.startHole, 1, n, 1) - 1;
-    for (var i = 0; i < n; i++) {
+    var startOffset = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1) - 1;
+    for (var i = 0; i < sourceHoleCount; i++) {
       var sourceIndex = i;
       // Use label-based (1..n) arithmetic so visible hole numbers match mapping behavior.
       var sourceLabel = sourceIndex + 1;
-      var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % n;
-      if (mappedLabel < 0) mappedLabel += n;
+      var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % sourceHoleCount;
+      if (mappedLabel < 0) mappedLabel += sourceHoleCount;
       var mapped = mappedLabel;
       segments.push(mapPair(sourceIndex, mapped));
     }
     return segments;
   }
 
-  var seq = computeSequence(thread);
+  var seq = computeSequence(thread, sourceHoleCount);
   var chained = [];
   for (var j = 0; j < seq.length; j++) {
     chained.push(mapPair(seq[j], seq[(j + 1) % seq.length]));
@@ -8247,13 +8315,45 @@ function computeSegments(thread) {
   return chained;
 }
 
+function isThreadRadialProjectionMode(thread) {
+  if (!nestedFrameEnabled) return false;
+  return sanitizeThreadFrameMode(thread && thread.frameMode, 'outer') === 'bridge-reverse-project';
+}
+
+function getThreadSegmentEndpoints(thread, segment) {
+  if (!segment || !segment.length) return null;
+  var fromIndex = segment[0];
+  var toIndex = segment[1];
+  if (!isFinite(fromIndex) || !isFinite(toIndex)) return null;
+
+  var fromPoint = points[fromIndex];
+  var toPoint = points[toIndex];
+  if (!fromPoint || !toPoint) return null;
+
+  if (isThreadRadialProjectionMode(thread)) {
+    var geometry = getShapeGeometry();
+    var radial = fromPoint.subtract(geometry.center);
+    if (radial.length > 0.001) {
+      var angle = Math.atan2(radial.y, radial.x);
+      toPoint = shapePointAtAngle(angle, geometry.center, geometry.radius);
+    }
+  }
+
+  return {
+    fromIndex: fromIndex,
+    toIndex: toIndex,
+    fromPoint: fromPoint,
+    toPoint: toPoint,
+    highlightPair: isThreadRadialProjectionMode(thread) ? [fromIndex, fromIndex] : [fromIndex, toIndex]
+  };
+}
+
 function drawThread(thread) {
   var segments = computeSegments(thread);
 
   for (var i = 0; i < segments.length; i++) {
-    var fromIndex = segments[i][0];
-    var toIndex = segments[i][1];
-    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
+    var endpoint = getThreadSegmentEndpoints(thread, segments[i]);
+    if (!endpoint) continue;
     var seg = new Path();
     seg.strokeWidth = thread.width;
 
@@ -8263,8 +8363,8 @@ function drawThread(thread) {
       seg.strokeColor = thread.color;
     }
 
-    seg.add(points[fromIndex]);
-    seg.add(points[toIndex]);
+    seg.add(endpoint.fromPoint);
+    seg.add(endpoint.toPoint);
   }
 }
 
@@ -12030,9 +12130,10 @@ function buildCurrentDesignSvgString(options) {
       var thread = threads[t];
       var segments = computeSegments(thread);
       for (var s = 0; s < segments.length; s++) {
-        var fromPoint = points[segments[s][0]];
-        var toPoint = points[segments[s][1]];
-        if (!fromPoint || !toPoint) continue;
+        var endpoint = getThreadSegmentEndpoints(thread, segments[s]);
+        if (!endpoint) continue;
+        var fromPoint = endpoint.fromPoint;
+        var toPoint = endpoint.toPoint;
 
         var strokeColor = thread.color === 'rainbow'
           ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
@@ -12134,6 +12235,7 @@ function buildStitchingGuideText(fileBaseName, options) {
     if (normalized === 'inner') return 'Inner ring';
     if (normalized === 'bridge') return 'Bridge outer -> inner';
     if (normalized === 'bridge-reverse') return 'Bridge inner -> outer';
+    if (normalized === 'bridge-reverse-project') return 'Bridge inner -> outer radial projection';
     return 'Outer ring';
   }
 
@@ -12147,10 +12249,15 @@ function buildStitchingGuideText(fileBaseName, options) {
     return 'O' + String(index + 1);
   }
 
-  function appendConnections(targetLines, segments) {
+  function appendConnections(targetLines, segments, thread) {
     var holeCount = Math.max(1, getCurrentStitchHoleCount());
+    var frameMode = sanitizeThreadFrameMode(thread && thread.frameMode, 'outer');
     for (var idx = 0; idx < segments.length; idx++) {
-      targetLines.push('    ' + formatHoleReference(segments[idx][0], holeCount) + ' -> ' + formatHoleReference(segments[idx][1], holeCount));
+      var fromRef = formatHoleReference(segments[idx][0], holeCount);
+      var toRef = frameMode === 'bridge-reverse-project'
+        ? 'outer boundary (radial projection)'
+        : formatHoleReference(segments[idx][1], holeCount);
+      targetLines.push('    ' + fromRef + ' -> ' + toRef);
     }
   }
 
@@ -12169,7 +12276,8 @@ function buildStitchingGuideText(fileBaseName, options) {
   lines.push('Inner frame enabled: ' + (nestedFrameEnabled ? 'yes' : 'no'));
   if (nestedFrameEnabled) {
     lines.push('Inner frame ratio: ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ' of outer radius');
-    lines.push('Total physical holes: ' + String(getCurrentStitchHoleCount() * 2));
+    lines.push('Inner frame holes: ' + String(getCurrentInnerStitchHoleCount()));
+    lines.push('Total physical holes: ' + String(getCurrentTotalStitchHoleCount()));
   }
   lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
   lines.push('Hole numbers visible in export: ' + (includeStitchingHoleNumbers ? 'yes' : 'no'));
@@ -12185,7 +12293,7 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Size: ' + String(paramThread.width));
     lines.push('  Stitch mode: ' + getReadableStitchMode(paramThread.jumpMode));
     lines.push('  Frame path: ' + getReadableFrameMode(paramThread.frameMode));
-    lines.push('  Start hole: ' + String(parseBoundedInt(paramThread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
+    lines.push('  Start hole: ' + String(parseBoundedInt(paramThread.startHole, 1, Math.max(1, getThreadSourceHoleCount(paramThread)), 1)));
     lines.push('  Add value: ' + String(paramThread.jump));
     if (paramThread.jumpMode === 'connect') {
       lines.push('  Multiply by: ' + String(paramThread.connectMultiplier));
@@ -12203,7 +12311,7 @@ function buildStitchingGuideText(fileBaseName, options) {
   if (nestedFrameEnabled) {
     lines.push('1. Manufacture two concentric "' + currentShape + '" frames with matching hole counts.');
     lines.push('2. Outer frame: ' + String(getCurrentStitchHoleCount()) + ' holes, numbered clockwise O1..O' + String(getCurrentStitchHoleCount()) + '.');
-    lines.push('3. Inner frame: same hole count, radius ratio ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ', numbered clockwise I1..I' + String(getCurrentStitchHoleCount()) + '.');
+    lines.push('3. Inner frame: ' + String(getCurrentInnerStitchHoleCount()) + ' holes at radius ratio ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ', numbered clockwise I1..I' + String(getCurrentInnerStitchHoleCount()) + '.');
     lines.push('4. Keep O1 and I1 angularly aligned as shown in the SVG preview.');
     lines.push('5. Use one thread sequence section per listed thread below.');
   } else {
@@ -12223,32 +12331,32 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Color: ' + String(thread.color));
     lines.push('  Width: ' + String(thread.width));
     lines.push('  Frame path: ' + getReadableFrameMode(thread.frameMode));
-    lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
+    lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
 
     if (thread.jumpMode === 'connect') {
       lines.push('  Rule: target = ((multiplier * source + start - 2) mod n) + 1.');
-      lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
+      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
-      lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
+      lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'sequence') {
       lines.push('  Rule: repeat the provided step list from each current hole, wrapping modulo n.');
       lines.push('  Step list: ' + String(thread.jumpSequence || ''));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'formula') {
       lines.push('  Rule: evaluate expression per step, then connect current -> (current + step) mod n.');
       lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
       lines.push('  Base add value: ' + String(thread.jump));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     } else {
       lines.push('  Rule: next = ((current + add - 1) mod n) + 1.');
-      lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
+      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Add value: ' + String(thread.jump));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     }
 
     lines.push('');
@@ -12864,7 +12972,6 @@ function renderThreadControls() {
   var container = document.getElementById('thread-controls');
   container.innerHTML = '';
   var holeCount = getCurrentStitchHoleCount();
-  var jumpLimit = Math.max(1, holeCount - 1);
 
   if (!threads.length) {
     selectedThreadIndex = -1;
@@ -12883,7 +12990,9 @@ function renderThreadControls() {
     } else {
       thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
     }
-    normalizeThreadHoleDependentValues(thread, holeCount);
+    var sourceHoleCount = getThreadSourceHoleCount(thread);
+    var jumpLimit = Math.max(1, sourceHoleCount - 1);
+    normalizeThreadHoleDependentValues(thread, sourceHoleCount);
 
     var threadColorInputValue = thread.color === 'rainbow'
       ? sanitizeThreadSolidColor(thread.solidColor, '#1982c4')
@@ -12907,6 +13016,7 @@ function renderThreadControls() {
         <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
         <option value="bridge" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge' ? 'selected' : ''}>Bridge outer→inner</option>
         <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Bridge inner→outer</option>
+        <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Bridge inner→outer (projected)</option>
       </select><br>
       ` : ''}
       Stitch by:
@@ -12939,7 +13049,7 @@ function renderThreadControls() {
       Step list: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
       <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
       ` : ''}
-      Start hole: <input class="advanced-inline-number" type="number" min="1" max="${holeCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>
+      Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
       <div class="jump-help">For each hole i, connect to (multiplier × i + start - 1) mod n.</div>
@@ -12987,12 +13097,14 @@ function renderThreadControls() {
     if (startHoleNumberInput) {
       startHoleNumberInput.addEventListener('input', e => {
         if (e.target.value === '') return;
-        thread.startHole = parseBoundedInt(e.target.value, 1, holeCount, thread.startHole || 1);
+        var localSourceCount = getThreadSourceHoleCount(thread);
+        thread.startHole = parseBoundedInt(e.target.value, 1, localSourceCount, thread.startHole || 1);
         e.target.value = String(thread.startHole);
         redrawForPathChange();
       });
       startHoleNumberInput.addEventListener('change', e => {
-        thread.startHole = parseBoundedInt(e.target.value, 1, holeCount, thread.startHole || 1);
+        var localSourceCount = getThreadSourceHoleCount(thread);
+        thread.startHole = parseBoundedInt(e.target.value, 1, localSourceCount, thread.startHole || 1);
         e.target.value = String(thread.startHole);
       });
     }
