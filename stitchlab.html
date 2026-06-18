@@ -2363,8 +2363,8 @@ var DISCOVERY_LIBRARY = {
     description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
     songId: 'rosette',
-    passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then jump 44 from start 3; from third-thread pairs around each hexagon vertex, the twelve-petal rose appears.',
-    passphraseInputEnabled: false
+    passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the twelve-petal rose appears.',
+    passphraseInputEnabled: true
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
@@ -2382,11 +2382,14 @@ var ROSETTE_DISCOVERY_RECIPES = [
   {
     key: 'rosette-12-fold-dense-96',
     holeCount: 96,
-    allowRotation: true,
+    allowRotation: false,
+    requireNestedFrameEnabled: true,
+    requiredNestedFrameRatio: 0.5,
+    requiredInnerHoleCount: 48,
     threads: [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
       { jumpMode: 'fixed', jump: 16, startHole: 9 },
-      { jumpMode: 'fixed', jump: 44, startHole: 3 }
+      { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 }
     ]
   },
   {
@@ -6713,29 +6716,43 @@ function threadHasSquareDiscovery(thread) {
   return false;
 }
 
-function normalizeRosetteThreadSignature(thread, holeCount) {
+function normalizeRosetteThreadSignature(thread, holeCount, options) {
+  options = options || {};
   if (!thread || !isFinite(holeCount) || holeCount < 3) return null;
   if (thread.jumpMode && thread.jumpMode !== 'fixed') return null;
 
+  var frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+  var innerHoleCountDefault = parseBoundedInt(options.innerHoleCount, 3, MAX_HOLES, getCurrentInnerStitchHoleCount());
+  var sourceHoleCount = parseBoundedInt(thread.sourceHoleCount, 3, MAX_HOLES, holeCount);
+  if (!thread.sourceHoleCount) {
+    if (frameMode === 'inner' || frameMode === 'bridge-reverse' || frameMode === 'bridge-reverse-project') {
+      sourceHoleCount = innerHoleCountDefault;
+    } else {
+      sourceHoleCount = holeCount;
+    }
+  }
+
   var rawJump = parseInt(thread.jump, 10);
   if (!isFinite(rawJump)) return null;
-  var jump = ((rawJump % holeCount) + holeCount) % holeCount;
+  var jump = ((rawJump % sourceHoleCount) + sourceHoleCount) % sourceHoleCount;
   if (jump === 0) return null;
 
   var rawStartHole = parseInt(thread.startHole, 10);
   if (!isFinite(rawStartHole)) {
     rawStartHole = 1;
   }
-  var startHole = ((rawStartHole - 1) % holeCount + holeCount) % holeCount + 1;
+  var startHole = ((rawStartHole - 1) % sourceHoleCount + sourceHoleCount) % sourceHoleCount + 1;
 
   return {
     jump: jump,
-    startHole: startHole
+    startHole: startHole,
+    frameMode: frameMode,
+    sourceHoleCount: sourceHoleCount
   };
 }
 
 function buildRosetteSignatureKey(signature) {
-  return String(signature.jump) + '|' + String(signature.startHole);
+  return String(signature.jump) + '|' + String(signature.startHole) + '|' + String(signature.frameMode || 'outer') + '|' + String(signature.sourceHoleCount || 0);
 }
 
 function areRosetteSignatureMultisetsEqual(left, right) {
@@ -6760,9 +6777,12 @@ function areRosetteSignatureMultisetsEqual(left, right) {
 }
 
 function rotateRosetteSignature(signature, delta, holeCount) {
+  var sourceCount = parseBoundedInt(signature.sourceHoleCount, 3, MAX_HOLES, holeCount);
   return {
     jump: signature.jump,
-    startHole: ((signature.startHole - 1 + delta) % holeCount + holeCount) % holeCount + 1
+    startHole: ((signature.startHole - 1 + delta) % sourceCount + sourceCount) % sourceCount + 1,
+    frameMode: signature.frameMode,
+    sourceHoleCount: sourceCount
   };
 }
 
@@ -6817,7 +6837,9 @@ function isRosetteDiscoveryCandidate() {
 
   var candidateSignatures = [];
   for (var i = 0; i < threads.length; i++) {
-    var signature = normalizeRosetteThreadSignature(threads[i], holeCount);
+    var signature = normalizeRosetteThreadSignature(threads[i], holeCount, {
+      innerHoleCount: getCurrentInnerStitchHoleCount()
+    });
     if (signature) {
       candidateSignatures.push(signature);
     }
@@ -6828,11 +6850,25 @@ function isRosetteDiscoveryCandidate() {
     if (!recipe) continue;
     if (parseInt(recipe.holeCount, 10) !== holeCount) continue;
     if (!recipe.threads || !recipe.threads.length) continue;
+    if (recipe.requireNestedFrameEnabled && !nestedFrameEnabled) continue;
+    if (isFinite(recipe.requiredNestedFrameRatio)) {
+      var requiredRatio = sanitizeNestedFrameRatio(recipe.requiredNestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+      var activeRatio = sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+      if (Math.abs(requiredRatio - activeRatio) > 1e-8) continue;
+    }
+    if (isFinite(recipe.requiredInnerHoleCount)) {
+      if (getCurrentInnerStitchHoleCount() !== parseBoundedInt(recipe.requiredInnerHoleCount, 3, MAX_HOLES, getCurrentInnerStitchHoleCount())) {
+        continue;
+      }
+    }
 
     var recipeSignatures = [];
     var recipeIsValid = true;
+    var recipeInnerCount = parseBoundedInt(recipe.requiredInnerHoleCount, 3, MAX_HOLES, Math.round(holeCount * sanitizeNestedFrameRatio(recipe.requiredNestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)));
     for (var t = 0; t < recipe.threads.length; t++) {
-      var recipeSignature = normalizeRosetteThreadSignature(recipe.threads[t], holeCount);
+      var recipeSignature = normalizeRosetteThreadSignature(recipe.threads[t], holeCount, {
+        innerHoleCount: recipeInnerCount
+      });
       if (!recipeSignature) {
         recipeIsValid = false;
         break;
@@ -10499,6 +10535,107 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
   var offsetPolygonSequence = buildMashrabiyaStepSequence(scaffoldCount, 8, 16);
   var starJump = Math.max(1, Math.round(scaffoldCount / 2) - 4);
   var starSequence = buildMashrabiyaStepSequence(scaffoldCount, 2, starJump);
+  var starThreadSegments = buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'thread3');
+
+  function getCircleIntersectionsForInfiniteLine(lineStart, lineEnd, circleCenter, circleRadius) {
+    var direction = lineEnd.subtract(lineStart);
+    var a = direction.dot(direction);
+    if (a <= 1e-8) return [];
+    var f = lineStart.subtract(circleCenter);
+    var b = 2 * f.dot(direction);
+    var c = f.dot(f) - (circleRadius * circleRadius);
+    var discriminant = (b * b) - (4 * a * c);
+    if (discriminant < 0) return [];
+
+    var sqrtDisc = Math.sqrt(Math.max(0, discriminant));
+    var t1 = (-b - sqrtDisc) / (2 * a);
+    var t2 = (-b + sqrtDisc) / (2 * a);
+    var hits = [lineStart.add(direction.multiply(t1))];
+    if (Math.abs(t2 - t1) > 1e-8) {
+      hits.push(lineStart.add(direction.multiply(t2)));
+    }
+    return hits;
+  }
+
+  function getOuterProjectionPairForRosetteSegment(fromPoint, toPoint) {
+    var direction = toPoint.subtract(fromPoint);
+    var segmentLength = direction.length;
+    if (segmentLength <= 0.001) {
+      return { fromHit: null, toHit: null };
+    }
+    var unit = direction.normalize(1);
+    var hits = getCircleIntersectionsForInfiniteLine(fromPoint, toPoint, center, scaffoldRadius);
+    if (!hits.length) {
+      return { fromHit: null, toHit: null };
+    }
+
+    var fromHit = null;
+    var toHit = null;
+    var bestBefore = -Infinity;
+    var bestAfter = Infinity;
+    var minT = Infinity;
+    var maxT = -Infinity;
+    var minPoint = null;
+    var maxPoint = null;
+
+    for (var i = 0; i < hits.length; i++) {
+      var t = hits[i].subtract(fromPoint).dot(unit);
+      if (t < minT) {
+        minT = t;
+        minPoint = hits[i];
+      }
+      if (t > maxT) {
+        maxT = t;
+        maxPoint = hits[i];
+      }
+      if (t < -1e-4 && t > bestBefore) {
+        bestBefore = t;
+        fromHit = hits[i];
+      }
+      if (t > segmentLength + 1e-4 && t < bestAfter) {
+        bestAfter = t;
+        toHit = hits[i];
+      }
+    }
+
+    if (!fromHit) fromHit = minPoint;
+    if (!toHit) toHit = maxPoint;
+
+    return {
+      fromHit: fromHit,
+      toHit: toHit
+    };
+  }
+
+  if (safeFold === 12 && scaffoldCount === 96) {
+    var rosetteInnerRatio = 0.5;
+    var rosetteInnerCount = 48;
+    var rosetteInnerRadius = scaffoldRadius * rosetteInnerRatio;
+    var innerScaffoldPoints = [];
+    for (var ip = 0; ip < rosetteInnerCount; ip++) {
+      innerScaffoldPoints.push(pointAt(scaffoldPhase + ip * ((Math.PI * 2) / rosetteInnerCount), rosetteInnerRadius));
+    }
+
+    var thread3InnerSequence = buildMashrabiyaStepSequence(rosetteInnerCount, 2, 20);
+    starSequence = thread3InnerSequence.slice();
+    starJump = 20;
+    starThreadSegments = [];
+
+    for (var si = 0; si < thread3InnerSequence.length; si++) {
+      var fromInner = innerScaffoldPoints[thread3InnerSequence[si]];
+      var toInner = innerScaffoldPoints[thread3InnerSequence[(si + 1) % thread3InnerSequence.length]];
+      if (!fromInner || !toInner || fromInner.getDistance(toInner) <= 1e-6) continue;
+
+      var projection = getOuterProjectionPairForRosetteSegment(fromInner, toInner);
+      if (projection.fromHit && projection.fromHit.getDistance(fromInner) > 1e-6) {
+        starThreadSegments.push({ from: projection.fromHit, to: fromInner, tag: 'thread3', edgeIndex: starThreadSegments.length });
+      }
+      starThreadSegments.push({ from: fromInner, to: toInner, tag: 'thread3', edgeIndex: starThreadSegments.length });
+      if (projection.toHit && projection.toHit.getDistance(toInner) > 1e-6) {
+        starThreadSegments.push({ from: toInner, to: projection.toHit, tag: 'thread3', edgeIndex: starThreadSegments.length });
+      }
+    }
+  }
 
   function buildLegacyFillGeometry(starVertices) {
     var legacyPetals = [];
@@ -10860,7 +10997,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
   var stitchedSegments = [];
   stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, firstPolygonSequence, 'thread1'));
   stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, offsetPolygonSequence, 'thread2'));
-  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'thread3'));
+  stitchedSegments = stitchedSegments.concat(starThreadSegments);
 
   var extractedFaces = extractFacesFromSegments(stitchedSegments);
   var starPathVertices = buildStarInnerVertices(scaffoldPoints, starSequence);
@@ -11419,6 +11556,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     firstPolygonSequence: firstPolygonSequence,
     offsetPolygonSequence: offsetPolygonSequence,
     starSequence: starSequence,
+    starThreadSegments: starThreadSegments,
     starJump: starJump,
     petals: petals,
     pointRegions: pointRegions,
@@ -11521,7 +11659,7 @@ function drawMashrabiyaStitchedLines(geometry, opacity) {
   drawMashrabiyaClosedStrokeProgress(geometry.guideCircleVertices, '#82511f', 2, lineOpacity, 1);
   drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, 1);
   drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, 1);
-  drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.starSequence, '#82511f', 2, lineOpacity, 1);
+  drawMashrabiyaSegmentListProgress(geometry.starThreadSegments, '#82511f', 2, lineOpacity, 1);
 }
 
 function drawMashrabiyaSequenceProgress(pointsList, sequence, color, strokeWidth, opacity, progress) {
@@ -11569,6 +11707,54 @@ function drawMashrabiyaSequenceProgress(pointsList, sequence, color, strokeWidth
     } else {
       var ratio = edgeLen > 0 ? (remaining / edgeLen) : 0;
       path.add(edgeStart.add(edgeEnd.subtract(edgeStart).multiply(ratio)));
+      break;
+    }
+  }
+}
+
+function drawMashrabiyaSegmentListProgress(segments, color, strokeWidth, opacity, progress) {
+  if (!segments || !segments.length) return;
+  var p = clamp01(progress);
+  var strokeOpacity = Math.max(0, Math.min(1, opacity));
+  if (p <= 0 || strokeOpacity <= 0) return;
+
+  var lengths = [];
+  var totalLength = 0;
+  for (var i = 0; i < segments.length; i++) {
+    var segment = segments[i];
+    if (!segment || !segment.from || !segment.to) {
+      lengths.push(0);
+      continue;
+    }
+    var length = segment.from.getDistance(segment.to);
+    lengths.push(length);
+    totalLength += length;
+  }
+  if (!isFinite(totalLength) || totalLength <= 1e-6) return;
+
+  var targetLength = totalLength * p;
+  var traversed = 0;
+
+  for (var s = 0; s < segments.length; s++) {
+    var edge = segments[s];
+    var edgeLen = lengths[s];
+    if (!edge || !edge.from || !edge.to || edgeLen <= 1e-6) continue;
+
+    var remaining = targetLength - traversed;
+    if (remaining <= 0) break;
+
+    var path = new Path();
+    path.strokeColor = color;
+    path.strokeWidth = strokeWidth;
+    path.opacity = strokeOpacity;
+    path.add(edge.from);
+
+    if (remaining >= edgeLen) {
+      path.add(edge.to);
+      traversed += edgeLen;
+    } else {
+      var ratio = remaining / edgeLen;
+      path.add(edge.from.add(edge.to.subtract(edge.from).multiply(ratio)));
       break;
     }
   }
@@ -11636,7 +11822,7 @@ function renderMashrabiyaAnimationStateFrame(state) {
     dCircle: state.geometry.fold,
     dOuter: state.geometry.firstPolygonSequence.length,
     dOffset: state.geometry.offsetPolygonSequence.length,
-    dStar: state.geometry.starSequence.length,
+    dStar: (state.geometry.starThreadSegments && state.geometry.starThreadSegments.length) ? state.geometry.starThreadSegments.length : state.geometry.starSequence.length,
     dFillStar: Math.max(2, Math.round(state.geometry.fold * 0.5)),
     dFillPetal: Math.max(2, Math.round(state.geometry.fold * 0.5)),
     dFillPoint: Math.max(2, Math.round(state.geometry.fold * 0.5))
@@ -11668,7 +11854,7 @@ function renderMashrabiyaAnimationStateFrame(state) {
   drawMashrabiyaClosedStrokeProgress(state.geometry.guideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sCircle, dCircle));
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOuter, dOuter));
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOffset, dOffset));
-  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.starSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
+  drawMashrabiyaSegmentListProgress(state.geometry.starThreadSegments, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
 
   var selectStar = mashrabiyaPhaseProgress(t, sFillStar, dFillStar);
   var selectPetal = mashrabiyaPhaseProgress(t, sFillPetal, dFillPetal);
@@ -11735,7 +11921,7 @@ function animateMashrabiya() {
     dCircle: geometry.fold,
     dOuter: geometry.firstPolygonSequence.length,
     dOffset: geometry.offsetPolygonSequence.length,
-    dStar: geometry.starSequence.length,
+    dStar: (geometry.starThreadSegments && geometry.starThreadSegments.length) ? geometry.starThreadSegments.length : geometry.starSequence.length,
     dFillStar: Math.max(2, Math.round(geometry.fold * 0.5)),
     dFillPetal: Math.max(2, Math.round(geometry.fold * 0.5)),
     dFillPoint: Math.max(2, Math.round(geometry.fold * 0.5))
