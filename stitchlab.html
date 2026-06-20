@@ -2363,8 +2363,8 @@ var DISCOVERY_LIBRARY = {
     description: 'Unlocked the path to Mashrabiya.',
     experienceName: 'Mashrabiya',
     songId: 'rosette',
-    passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then jump 44 from start 3; from third-thread pairs around each hexagon vertex, the twelve-petal rose appears.',
-    passphraseInputEnabled: false
+    passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the twelve-petal rose appears.',
+    passphraseInputEnabled: true
   }
 };
 var DISCOVERY_STABILIZE_MS = 900;
@@ -2382,31 +2382,41 @@ var ROSETTE_DISCOVERY_RECIPES = [
   {
     key: 'rosette-12-fold-dense-96',
     holeCount: 96,
-    allowRotation: true,
+    allowRotation: false,
+    requireNestedFrameEnabled: true,
+    requiredNestedFrameRatio: 0.5,
+    requiredInnerHoleCount: 48,
     threads: [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
       { jumpMode: 'fixed', jump: 16, startHole: 9 },
-      { jumpMode: 'fixed', jump: 44, startHole: 3 }
+      { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 }
     ]
   },
   {
     key: 'rosette-8-fold-dense-64',
     holeCount: 64,
-    allowRotation: true,
+    allowRotation: false,
+    requireNestedFrameEnabled: true,
+    requiredNestedFrameRatio: 0.5,
+    requiredInnerHoleCount: 32,
     threads: [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
       { jumpMode: 'fixed', jump: 16, startHole: 9 },
-      { jumpMode: 'fixed', jump: 28, startHole: 3 }
+      { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 32 }
     ]
   },
   {
-    key: 'rosette-6-fold-dense-48',
-    holeCount: 48,
-    allowRotation: true,
+    key: 'rosette-6-fold-dense-96',
+    holeCount: 96,
+    allowRotation: false,
+    requireNestedFrameEnabled: true,
+    requiredNestedFrameRatio: 0.5,
+    requiredInnerHoleCount: 48,
     threads: [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
-      { jumpMode: 'fixed', jump: 16, startHole: 9 },
-      { jumpMode: 'fixed', jump: 20, startHole: 3 }
+      { jumpMode: 'fixed', jump: 18, startHole: 4, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 },
+      { jumpMode: 'fixed', jump: 18, startHole: 6, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 },
+      { jumpMode: 'fixed', jump: 18, startHole: 8, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 }
     ]
   }
 ];
@@ -3643,8 +3653,8 @@ var mashrabiyaGeometryMode = 'stitch-vertex';
 var mashrabiyaStarColor = '#f4d35e';
 var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
-var mashrabiyaDevPreviewEnabled = false; // set true to bypass discovery gate during development
-var mashrabiyaDebugLabelsEnabled = false; // set to false for final release
+var mashrabiyaDevPreviewEnabled = true; // set true to bypass discovery gate during development
+var mashrabiyaDebugLabelsEnabled = true; // set to false for final release
 var mashrabiyaDebugKeepStitchLinesVisible = true; // debug: set false to restore fade-out behavior
 var mashrabiyaDebugFillOpacityScale = 0.45; // debug: set to 1 for final release opacity
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
@@ -3779,6 +3789,14 @@ function getUrlStateParam(params, logicalKey) {
 function hasUrlStateKey(params, logicalKey) {
   var key = URL_STATE_PARAM_KEYS[logicalKey];
   return !!(key && params.has(key));
+}
+
+function getDiscoveryKeyForExperience(experienceId) {
+  var resolved = resolveExperienceId(experienceId);
+  if (resolved === 'triangula') return 'triangle';
+  if (resolved === 'squarus') return 'square';
+  if (resolved === 'mashrabiya') return 'rosette';
+  return null;
 }
 
 function normalizeTriangulaDrawableCount(value, role, fallback) {
@@ -3987,7 +4005,7 @@ function sanitizeNestedFrameRatio(value, fallback) {
 }
 
 function sanitizeThreadFrameMode(value, fallback) {
-  var allowed = ['outer', 'inner', 'bridge', 'bridge-reverse'];
+  var allowed = ['outer', 'inner', 'bridge', 'bridge-reverse', 'bridge-reverse-project'];
   if (allowed.indexOf(value) === -1) {
     return allowed.indexOf(fallback) !== -1 ? fallback : 'outer';
   }
@@ -4678,17 +4696,16 @@ function applyStateFromCurrentUrl(options) {
 
   try {
     withUrlSyncSuspended(function() {
+    if (allowExperienceUrlDiscoveryUnlock && hasExplicitExperienceParam) {
+      var unlockKey = getDiscoveryKeyForExperience(requestedExperience);
+      if (unlockKey) {
+        unlockDiscovery(unlockKey);
+      }
+    }
+
     if (hasExplicitExperienceParam) {
       setCurrentExperience(requestedExperience, { suppressUrlSync: true });
       requestedExperience = currentExperienceId;
-    }
-
-    if (allowExperienceUrlDiscoveryUnlock && hasExplicitExperienceParam) {
-      if (requestedExperience === 'triangula') {
-        unlockDiscovery('triangle');
-      } else if (requestedExperience === 'squarus') {
-        unlockDiscovery('square');
-      }
     }
 
     var explicitStitchingShape = sanitizeShape(getUrlStateParam(params, 'stitchingShape'), '');
@@ -6713,29 +6730,43 @@ function threadHasSquareDiscovery(thread) {
   return false;
 }
 
-function normalizeRosetteThreadSignature(thread, holeCount) {
+function normalizeRosetteThreadSignature(thread, holeCount, options) {
+  options = options || {};
   if (!thread || !isFinite(holeCount) || holeCount < 3) return null;
   if (thread.jumpMode && thread.jumpMode !== 'fixed') return null;
 
+  var frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+  var innerHoleCountDefault = parseBoundedInt(options.innerHoleCount, 3, MAX_HOLES, getCurrentInnerStitchHoleCount());
+  var sourceHoleCount = parseBoundedInt(thread.sourceHoleCount, 3, MAX_HOLES, holeCount);
+  if (!thread.sourceHoleCount) {
+    if (frameMode === 'inner' || frameMode === 'bridge-reverse' || frameMode === 'bridge-reverse-project') {
+      sourceHoleCount = innerHoleCountDefault;
+    } else {
+      sourceHoleCount = holeCount;
+    }
+  }
+
   var rawJump = parseInt(thread.jump, 10);
   if (!isFinite(rawJump)) return null;
-  var jump = ((rawJump % holeCount) + holeCount) % holeCount;
+  var jump = ((rawJump % sourceHoleCount) + sourceHoleCount) % sourceHoleCount;
   if (jump === 0) return null;
 
   var rawStartHole = parseInt(thread.startHole, 10);
   if (!isFinite(rawStartHole)) {
     rawStartHole = 1;
   }
-  var startHole = ((rawStartHole - 1) % holeCount + holeCount) % holeCount + 1;
+  var startHole = ((rawStartHole - 1) % sourceHoleCount + sourceHoleCount) % sourceHoleCount + 1;
 
   return {
     jump: jump,
-    startHole: startHole
+    startHole: startHole,
+    frameMode: frameMode,
+    sourceHoleCount: sourceHoleCount
   };
 }
 
 function buildRosetteSignatureKey(signature) {
-  return String(signature.jump) + '|' + String(signature.startHole);
+  return String(signature.jump) + '|' + String(signature.startHole) + '|' + String(signature.frameMode || 'outer') + '|' + String(signature.sourceHoleCount || 0);
 }
 
 function areRosetteSignatureMultisetsEqual(left, right) {
@@ -6760,9 +6791,12 @@ function areRosetteSignatureMultisetsEqual(left, right) {
 }
 
 function rotateRosetteSignature(signature, delta, holeCount) {
+  var sourceCount = parseBoundedInt(signature.sourceHoleCount, 3, MAX_HOLES, holeCount);
   return {
     jump: signature.jump,
-    startHole: ((signature.startHole - 1 + delta) % holeCount + holeCount) % holeCount + 1
+    startHole: ((signature.startHole - 1 + delta) % sourceCount + sourceCount) % sourceCount + 1,
+    frameMode: signature.frameMode,
+    sourceHoleCount: sourceCount
   };
 }
 
@@ -6817,7 +6851,9 @@ function isRosetteDiscoveryCandidate() {
 
   var candidateSignatures = [];
   for (var i = 0; i < threads.length; i++) {
-    var signature = normalizeRosetteThreadSignature(threads[i], holeCount);
+    var signature = normalizeRosetteThreadSignature(threads[i], holeCount, {
+      innerHoleCount: getCurrentInnerStitchHoleCount()
+    });
     if (signature) {
       candidateSignatures.push(signature);
     }
@@ -6828,11 +6864,25 @@ function isRosetteDiscoveryCandidate() {
     if (!recipe) continue;
     if (parseInt(recipe.holeCount, 10) !== holeCount) continue;
     if (!recipe.threads || !recipe.threads.length) continue;
+    if (recipe.requireNestedFrameEnabled && !nestedFrameEnabled) continue;
+    if (isFinite(recipe.requiredNestedFrameRatio)) {
+      var requiredRatio = sanitizeNestedFrameRatio(recipe.requiredNestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+      var activeRatio = sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+      if (Math.abs(requiredRatio - activeRatio) > 1e-8) continue;
+    }
+    if (isFinite(recipe.requiredInnerHoleCount)) {
+      if (getCurrentInnerStitchHoleCount() !== parseBoundedInt(recipe.requiredInnerHoleCount, 3, MAX_HOLES, getCurrentInnerStitchHoleCount())) {
+        continue;
+      }
+    }
 
     var recipeSignatures = [];
     var recipeIsValid = true;
+    var recipeInnerCount = parseBoundedInt(recipe.requiredInnerHoleCount, 3, MAX_HOLES, Math.round(holeCount * sanitizeNestedFrameRatio(recipe.requiredNestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)));
     for (var t = 0; t < recipe.threads.length; t++) {
-      var recipeSignature = normalizeRosetteThreadSignature(recipe.threads[t], holeCount);
+      var recipeSignature = normalizeRosetteThreadSignature(recipe.threads[t], holeCount, {
+        innerHoleCount: recipeInnerCount
+      });
       if (!recipeSignature) {
         recipeIsValid = false;
         break;
@@ -7007,6 +7057,36 @@ function getCurrentStitchHoleCount() {
   return parseBoundedInt(holesSlider && holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES);
 }
 
+function getCurrentInnerStitchHoleCount() {
+  if (!nestedFrameEnabled) return 0;
+  var outerCount = getCurrentStitchHoleCount();
+  var ratio = sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
+  var scaledInnerCount = Math.round(outerCount * ratio);
+  return parseBoundedInt(scaledInnerCount, 3, MAX_HOLES, Math.max(3, Math.round(outerCount * DEFAULT_NESTED_FRAME_RATIO)));
+}
+
+function getCurrentTotalStitchHoleCount() {
+  return getCurrentStitchHoleCount() + getCurrentInnerStitchHoleCount();
+}
+
+function getThreadSourceRing(thread) {
+  var mode = sanitizeThreadFrameMode(thread && thread.frameMode, 'outer');
+  if (mode === 'inner' || mode === 'bridge-reverse' || mode === 'bridge-reverse-project') {
+    return 'inner';
+  }
+  return 'outer';
+}
+
+function getThreadSourceHoleCount(thread) {
+  var outerCount = getCurrentStitchHoleCount();
+  var innerCount = getCurrentInnerStitchHoleCount();
+  var sourceRing = getThreadSourceRing(thread);
+  if (sourceRing === 'inner' && nestedFrameEnabled && innerCount > 0) {
+    return innerCount;
+  }
+  return outerCount;
+}
+
 function getCurrentJumpLimit() {
   return Math.max(1, getCurrentStitchHoleCount() - 1);
 }
@@ -7030,14 +7110,20 @@ function syncJumpBoundsFromHoleCount() {
   }
 
   for (var i = 0; i < threads.length; i++) {
-    normalizeThreadHoleDependentValues(threads[i], holeCount);
+    normalizeThreadHoleDependentValues(threads[i], getThreadSourceHoleCount(threads[i]));
   }
 
   var selected = getKidTargetThreadIndex();
   if (selected >= 0 && threads[selected] && jumpSlider) {
+    var selectedJumpLimit = Math.max(1, getThreadSourceHoleCount(threads[selected]) - 1);
+    jumpSlider.max = String(selectedJumpLimit);
+    threads[selected].jump = parseBoundedInt(threads[selected].jump, 1, selectedJumpLimit, threads[selected].jump || 1);
     jumpSlider.value = String(threads[selected].jump);
   }
   if (selected >= 0 && threads[selected] && startHoleInput) {
+    var selectedHoleCount = getThreadSourceHoleCount(threads[selected]);
+    startHoleInput.max = String(selectedHoleCount);
+    threads[selected].startHole = parseBoundedInt(threads[selected].startHole, 1, selectedHoleCount, threads[selected].startHole || 1);
     startHoleInput.value = String(threads[selected].startHole);
   }
 }
@@ -7260,6 +7346,7 @@ function refreshKidThreadPicker() {
     if (mode === 'inner') return ' I';
     if (mode === 'bridge') return ' O->I';
     if (mode === 'bridge-reverse') return ' I->O';
+    if (mode === 'bridge-reverse-project') return ' I->R';
     return ' O';
   }
 
@@ -7318,10 +7405,15 @@ function syncKidControlsFromSelectedThread() {
   refreshKidThreadPicker();
   if (index < 0) return;
   ensureThreadConnectConfig(threads[index]);
-  normalizeThreadHoleDependentValues(threads[index], getCurrentStitchHoleCount());
+  var sourceHoleCount = getThreadSourceHoleCount(threads[index]);
+  var sourceJumpLimit = Math.max(1, sourceHoleCount - 1);
+  normalizeThreadHoleDependentValues(threads[index], sourceHoleCount);
   if (startHoleInput) {
-    startHoleInput.max = String(getCurrentStitchHoleCount());
+    startHoleInput.max = String(sourceHoleCount);
     startHoleInput.value = String(threads[index].startHole);
+  }
+  if (jumpSlider) {
+    jumpSlider.max = String(sourceJumpLimit);
   }
   jumpSlider.value = threads[index].jump;
   multiplySlider.value = threads[index].connectMultiplier;
@@ -7464,19 +7556,18 @@ function drawAnimatedSegments(thread, segments, segmentCount) {
   if (!segments || !segments.length || segmentCount <= 0) return;
   var maxSegments = Math.min(segmentCount, segments.length);
   for (var i = 0; i < maxSegments; i++) {
-    var fromIndex = segments[i][0];
-    var toIndex = segments[i][1];
-    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
-
-    var seg = new Path();
-    seg.strokeWidth = thread.width;
-    if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
-    } else {
-      seg.strokeColor = thread.color;
+    var parts = getThreadSegmentDrawParts(thread, segments[i]);
+    for (var p = 0; p < parts.length; p++) {
+      var seg = new Path();
+      seg.strokeWidth = thread.width;
+      if (thread.color === 'rainbow') {
+        seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
+      } else {
+        seg.strokeColor = thread.color;
+      }
+      seg.add(parts[p].fromPoint);
+      seg.add(parts[p].toPoint);
     }
-    seg.add(points[fromIndex]);
-    seg.add(points[toIndex]);
   }
 }
 
@@ -7491,12 +7582,10 @@ function getAnimationSecondsPerSegment() {
 function drawAnimatedSegmentProgress(thread, segments, segmentIndex, progress) {
   if (!segments || !segments.length || segmentIndex < 0 || segmentIndex >= segments.length) return null;
 
-  var fromIndex = segments[segmentIndex][0];
-  var toIndex = segments[segmentIndex][1];
-  var startPoint = points[fromIndex];
-  var endPoint = points[toIndex];
-
-  if (!startPoint || !endPoint) return null;
+  var endpoint = getThreadSegmentEndpoints(thread, segments[segmentIndex]);
+  if (!endpoint) return null;
+  var startPoint = endpoint.fromPoint;
+  var endPoint = endpoint.toPoint;
 
   var p = Math.max(0, Math.min(1, progress));
   // A slight ease-out makes the pull feel more organic without changing tempo.
@@ -7521,7 +7610,7 @@ function drawAnimatedSegmentProgress(thread, segments, segmentIndex, progress) {
     pullHead.opacity = 0.88;
   }
 
-  return [fromIndex, toIndex];
+  return endpoint.highlightPair;
 }
 
 function drawSegmentSettleAccent(settle) {
@@ -7531,11 +7620,11 @@ function drawSegmentSettleAccent(settle) {
   var segments = settle.segments;
   if (!segments || !segments.length || settle.segmentIndex < 0 || settle.segmentIndex >= segments.length) return;
 
-  var fromIndex = segments[settle.segmentIndex][0];
-  var toIndex = segments[settle.segmentIndex][1];
-  var startPoint = points[fromIndex];
-  var endPoint = points[toIndex];
-  if (!startPoint || !endPoint) return;
+  var thread = threads[settle.threadIndex];
+  var endpoint = getThreadSegmentEndpoints(thread, segments[settle.segmentIndex]);
+  if (!endpoint) return;
+  var startPoint = endpoint.fromPoint;
+  var endPoint = endpoint.toPoint;
 
   var ratio = Math.max(0, Math.min(1, settle.remaining / settle.duration));
   var settleStrength = ratio * ratio;
@@ -7548,7 +7637,8 @@ function drawSegmentSettleAccent(settle) {
   if (incoming.length <= 0) return;
 
   var nextSegment = segments[(settle.segmentIndex + 1) % segments.length];
-  var nextPoint = nextSegment ? points[nextSegment[1]] : null;
+  var nextEndpoint = nextSegment ? getThreadSegmentEndpoints(thread, nextSegment) : null;
+  var nextPoint = nextEndpoint ? nextEndpoint.toPoint : null;
   var outgoing = nextPoint ? nextPoint.subtract(endPoint) : null;
 
   var tangent = incoming.normalize(1);
@@ -7561,7 +7651,6 @@ function drawSegmentSettleAccent(settle) {
 
   var overshootPoint = endPoint.add(tangent.normalize(overshootAmount));
 
-  var thread = threads[settle.threadIndex];
   var color = thread.color === 'rainbow'
     ? rainbowColor(settle.segmentIndex / Math.max(1, segments.length))
     : thread.color;
@@ -7857,7 +7946,8 @@ function sampleEvenlyAlongClosedPolyline(vertices, count) {
 }
 
 function computePoints() {
-  var n = parseInt(holesSlider.value, 10);
+  var outerCount = getCurrentStitchHoleCount();
+  var innerCount = getCurrentInnerStitchHoleCount();
   var geometry = getShapeGeometry();
   var center = geometry.center;
   var radius = geometry.radius;
@@ -7865,19 +7955,19 @@ function computePoints() {
   points = [];
   outerFramePoints = [];
   innerFramePoints = [];
-  if (!isFinite(n) || n < 3) return;
+  if (!isFinite(outerCount) || outerCount < 3) return;
 
   // Circle already has exact uniform spacing with equal-angle sampling.
   if (currentShape === 'circle') {
-    for (var i = 0; i < n; i++) {
-      var t = (-Math.PI / 2) + ((2 * Math.PI * i) / n);
+    for (var i = 0; i < outerCount; i++) {
+      var t = (-Math.PI / 2) + ((2 * Math.PI * i) / outerCount);
       outerFramePoints.push(shapePointAtAngle(t, center, radius));
     }
 
-    if (nestedFrameEnabled) {
+    if (nestedFrameEnabled && innerCount > 0) {
       var innerRadiusCircle = radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
-      for (var ci = 0; ci < n; ci++) {
-        var tc = (-Math.PI / 2) + ((2 * Math.PI * ci) / n);
+      for (var ci = 0; ci < innerCount; ci++) {
+        var tc = (-Math.PI / 2) + ((2 * Math.PI * ci) / innerCount);
         innerFramePoints.push(shapePointAtAngle(tc, center, innerRadiusCircle));
       }
     }
@@ -7886,14 +7976,14 @@ function computePoints() {
   }
 
   // Non-circular shapes need perimeter-based resampling for visual uniformity.
-  var sampleCount = Math.max(360, n * 12);
+  var sampleCount = Math.max(360, outerCount * 12);
   var boundarySamples = buildShapeBoundarySamples(sampleCount, center, radius);
-  outerFramePoints = sampleEvenlyAlongClosedPolyline(boundarySamples, n);
+  outerFramePoints = sampleEvenlyAlongClosedPolyline(boundarySamples, outerCount);
 
-  if (nestedFrameEnabled) {
+  if (nestedFrameEnabled && innerCount > 0) {
     var innerRadius = radius * sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
     var innerBoundarySamples = buildShapeBoundarySamples(sampleCount, center, innerRadius);
-    innerFramePoints = sampleEvenlyAlongClosedPolyline(innerBoundarySamples, n);
+    innerFramePoints = sampleEvenlyAlongClosedPolyline(innerBoundarySamples, innerCount);
   }
 
   points = nestedFrameEnabled ? outerFramePoints.concat(innerFramePoints) : outerFramePoints.slice();
@@ -7960,6 +8050,59 @@ function lineIntersection(a1, a2, b1, b2) {
   }
   var t = b1.subtract(a1).cross(s) / rxs;
   return a1.add(r.multiply(t));
+}
+
+function lineSegmentIntersection(lineStart, lineEnd, segmentStart, segmentEnd) {
+  var lineDir = lineEnd.subtract(lineStart);
+  var segDir = segmentEnd.subtract(segmentStart);
+  var cross = lineDir.cross(segDir);
+  if (Math.abs(cross) <= 1e-8) {
+    return null;
+  }
+
+  var delta = segmentStart.subtract(lineStart);
+  var t = delta.cross(segDir) / cross;
+  var u = delta.cross(lineDir) / cross;
+  if (u < -1e-7 || u > 1 + 1e-7) {
+    return null;
+  }
+
+  return lineStart.add(lineDir.multiply(t));
+}
+
+function getOuterBoundaryVerticesForProjection() {
+  var geometry = getShapeGeometry();
+  var polygonVertices = getPolygonCornerVerticesForGeometry(geometry);
+  if (polygonVertices && polygonVertices.length >= 3) {
+    return polygonVertices;
+  }
+  return buildShapeBoundarySamples(960, geometry.center, geometry.radius);
+}
+
+function getOuterIntersectionsForInfiniteLine(lineStart, lineEnd) {
+  var vertices = getOuterBoundaryVerticesForProjection();
+  if (!vertices || vertices.length < 2) return [];
+
+  var hits = [];
+  for (var i = 0; i < vertices.length; i++) {
+    var segmentStart = vertices[i];
+    var segmentEnd = vertices[(i + 1) % vertices.length];
+    var hit = lineSegmentIntersection(lineStart, lineEnd, segmentStart, segmentEnd);
+    if (!hit) continue;
+
+    var duplicate = false;
+    for (var h = 0; h < hits.length; h++) {
+      if (hits[h].getDistance(hit) <= 0.5) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) {
+      hits.push(hit);
+    }
+  }
+
+  return hits;
 }
 
 function getPolygonCornerVertices() {
@@ -8102,8 +8245,8 @@ function getBorderGeometryForGeometry(geometry) {
 /* ------------------------------
    DRAWING THREADS
 ------------------------------ */
-function computeSequence(thread) {
-  var n = getCurrentStitchHoleCount();
+function computeSequence(thread, holeCount) {
+  var n = parseBoundedInt(holeCount, 3, MAX_HOLES, getCurrentStitchHoleCount());
   if (!n) return [];
 
   if (thread.sequence && thread.sequence.type === 'custom') {
@@ -8192,54 +8335,85 @@ function computeSequence(thread) {
 }
 
 function computeSegments(thread) {
-  var n = getCurrentStitchHoleCount();
-  if (!n || !thread) return [];
+  var nOuter = getCurrentStitchHoleCount();
+  var nInner = nestedFrameEnabled ? getCurrentInnerStitchHoleCount() : 0;
+  if (!nOuter || !thread) return [];
 
   function resolveFrameMode() {
     if (!nestedFrameEnabled) return 'outer';
     return sanitizeThreadFrameMode(thread.frameMode, 'outer');
   }
 
+  function countForRing(ring) {
+    if (ring === 'inner') {
+      return nInner > 0 ? nInner : nOuter;
+    }
+    return nOuter;
+  }
+
   function toGlobalIndex(localIndex, ring) {
-    var idx = ((localIndex % n) + n) % n;
-    if (ring === 'inner' && nestedFrameEnabled) {
-      return n + idx;
+    var ringCount = countForRing(ring);
+    var idx = ((localIndex % ringCount) + ringCount) % ringCount;
+    if (ring === 'inner' && nestedFrameEnabled && nInner > 0) {
+      return nOuter + idx;
     }
     return idx;
   }
 
+  function remapLocalIndex(localIndex, fromCount, toCount) {
+    if (!isFinite(fromCount) || fromCount <= 0 || !isFinite(toCount) || toCount <= 0) return 0;
+    var normalized = ((localIndex % fromCount) + fromCount) % fromCount;
+    var projected = Math.floor((normalized * toCount) / fromCount);
+    return ((projected % toCount) + toCount) % toCount;
+  }
+
   function mapPair(sourceLocal, mappedLocal) {
     var frameMode = resolveFrameMode();
+    var sourceRing = 'outer';
+    var targetRing = 'outer';
     if (frameMode === 'inner') {
-      return [toGlobalIndex(sourceLocal, 'inner'), toGlobalIndex(mappedLocal, 'inner')];
+      sourceRing = 'inner';
+      targetRing = 'inner';
+    } else if (frameMode === 'bridge') {
+      sourceRing = 'outer';
+      targetRing = 'inner';
+    } else if (frameMode === 'bridge-reverse') {
+      sourceRing = 'inner';
+      targetRing = 'outer';
+    } else if (frameMode === 'bridge-reverse-project') {
+      sourceRing = 'inner';
+      targetRing = 'inner';
     }
-    if (frameMode === 'bridge') {
-      return [toGlobalIndex(sourceLocal, 'outer'), toGlobalIndex(mappedLocal, 'inner')];
-    }
-    if (frameMode === 'bridge-reverse') {
-      return [toGlobalIndex(sourceLocal, 'inner'), toGlobalIndex(mappedLocal, 'outer')];
-    }
-    return [toGlobalIndex(sourceLocal, 'outer'), toGlobalIndex(mappedLocal, 'outer')];
+
+    var sourceCount = countForRing(sourceRing);
+    var targetCount = countForRing(targetRing);
+    var sourceResolved = ((sourceLocal % sourceCount) + sourceCount) % sourceCount;
+    var targetResolved = remapLocalIndex(mappedLocal, sourceCount, targetCount);
+
+    return [toGlobalIndex(sourceResolved, sourceRing), toGlobalIndex(targetResolved, targetRing)];
   }
+
+  var sourceHoleCount = getThreadSourceHoleCount(thread);
+  if (!isFinite(sourceHoleCount) || sourceHoleCount < 1) return [];
 
   if (thread.jumpMode === 'connect') {
     ensureThreadConnectConfig(thread);
     var segments = [];
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
-    var startOffset = parseBoundedInt(thread.startHole, 1, n, 1) - 1;
-    for (var i = 0; i < n; i++) {
+    var startOffset = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1) - 1;
+    for (var i = 0; i < sourceHoleCount; i++) {
       var sourceIndex = i;
       // Use label-based (1..n) arithmetic so visible hole numbers match mapping behavior.
       var sourceLabel = sourceIndex + 1;
-      var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % n;
-      if (mappedLabel < 0) mappedLabel += n;
+      var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % sourceHoleCount;
+      if (mappedLabel < 0) mappedLabel += sourceHoleCount;
       var mapped = mappedLabel;
       segments.push(mapPair(sourceIndex, mapped));
     }
     return segments;
   }
 
-  var seq = computeSequence(thread);
+  var seq = computeSequence(thread, sourceHoleCount);
   var chained = [];
   for (var j = 0; j < seq.length; j++) {
     chained.push(mapPair(seq[j], seq[(j + 1) % seq.length]));
@@ -8247,24 +8421,135 @@ function computeSegments(thread) {
   return chained;
 }
 
+function isThreadRadialProjectionMode(thread) {
+  if (!nestedFrameEnabled) return false;
+  return sanitizeThreadFrameMode(thread && thread.frameMode, 'outer') === 'bridge-reverse-project';
+}
+
+function getThreadSegmentEndpoints(thread, segment) {
+  if (!segment || !segment.length) return null;
+  var fromIndex = segment[0];
+  var toIndex = segment[1];
+  if (!isFinite(fromIndex) || !isFinite(toIndex)) return null;
+
+  var fromPoint = points[fromIndex];
+  var toPoint = points[toIndex];
+  if (!fromPoint || !toPoint) return null;
+
+  return {
+    fromIndex: fromIndex,
+    toIndex: toIndex,
+    fromPoint: fromPoint,
+    toPoint: toPoint,
+    highlightPair: [fromIndex, toIndex]
+  };
+}
+
+function getOuterProjectionPairForSegment(fromPoint, toPoint) {
+  if (!fromPoint || !toPoint) return { fromHit: null, toHit: null };
+
+  var segmentDirection = toPoint.subtract(fromPoint);
+  var segmentLength = segmentDirection.length;
+  if (segmentLength <= 0.001) return { fromHit: null, toHit: null };
+
+  var unit = segmentDirection.normalize(1);
+  var hits = getOuterIntersectionsForInfiniteLine(fromPoint, toPoint);
+  if (!hits || !hits.length) return { fromHit: null, toHit: null };
+
+  var fromHit = null;
+  var toHit = null;
+  var bestBefore = -Infinity;
+  var bestAfter = Infinity;
+  var minT = Infinity;
+  var maxT = -Infinity;
+  var minPoint = null;
+  var maxPoint = null;
+
+  for (var i = 0; i < hits.length; i++) {
+    var t = hits[i].subtract(fromPoint).dot(unit);
+
+    if (t < minT) {
+      minT = t;
+      minPoint = hits[i];
+    }
+    if (t > maxT) {
+      maxT = t;
+      maxPoint = hits[i];
+    }
+
+    if (t < -1e-4 && t > bestBefore) {
+      bestBefore = t;
+      fromHit = hits[i];
+    }
+    if (t > segmentLength + 1e-4 && t < bestAfter) {
+      bestAfter = t;
+      toHit = hits[i];
+    }
+  }
+
+  // Fallback for edge/tangent degeneracies: use extremal hits along the segment axis.
+  if (!fromHit) {
+    fromHit = minPoint;
+  }
+  if (!toHit) {
+    toHit = maxPoint;
+  }
+
+  return {
+    fromHit: fromHit,
+    toHit: toHit
+  };
+}
+
+function getThreadSegmentDrawParts(thread, segment) {
+  var endpoint = getThreadSegmentEndpoints(thread, segment);
+  if (!endpoint) return [];
+
+  if (!isThreadRadialProjectionMode(thread)) {
+    return [
+      {
+        fromPoint: endpoint.fromPoint,
+        toPoint: endpoint.toPoint
+      }
+    ];
+  }
+
+  var projection = getOuterProjectionPairForSegment(endpoint.fromPoint, endpoint.toPoint);
+  var projectedFrom = projection.fromHit;
+  var projectedTo = projection.toHit;
+  var parts = [];
+
+  if (projectedFrom && projectedFrom.getDistance(endpoint.fromPoint) > 0.001) {
+    parts.push({ fromPoint: projectedFrom, toPoint: endpoint.fromPoint });
+  }
+
+  parts.push({ fromPoint: endpoint.fromPoint, toPoint: endpoint.toPoint });
+
+  if (projectedTo && projectedTo.getDistance(endpoint.toPoint) > 0.001) {
+    parts.push({ fromPoint: endpoint.toPoint, toPoint: projectedTo });
+  }
+
+  return parts;
+}
+
 function drawThread(thread) {
   var segments = computeSegments(thread);
 
   for (var i = 0; i < segments.length; i++) {
-    var fromIndex = segments[i][0];
-    var toIndex = segments[i][1];
-    if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
-    var seg = new Path();
-    seg.strokeWidth = thread.width;
+    var parts = getThreadSegmentDrawParts(thread, segments[i]);
+    for (var p = 0; p < parts.length; p++) {
+      var seg = new Path();
+      seg.strokeWidth = thread.width;
 
-    if (thread.color === 'rainbow') {
-      seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
-    } else {
-      seg.strokeColor = thread.color;
+      if (thread.color === 'rainbow') {
+        seg.strokeColor = rainbowColor(i / Math.max(1, segments.length));
+      } else {
+        seg.strokeColor = thread.color;
+      }
+
+      seg.add(parts[p].fromPoint);
+      seg.add(parts[p].toPoint);
     }
-
-    seg.add(points[fromIndex]);
-    seg.add(points[toIndex]);
   }
 }
 
@@ -10231,6 +10516,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
   var scaffoldPoints = [];
   var bridgePoints = [];
   var guideCircleVertices = [];
+  var innerGuideCircleVertices = [];
 
   var circleSampleCount = 180;
   for (var sample = 0; sample < circleSampleCount; sample++) {
@@ -10245,8 +10531,9 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     bridgePoints.push(pointAt(halfAngle, bridgeRadius));
   }
 
-  // Dense lifted stitch-vertex construction for 12/8/6 folds.
-  var scaffoldCount = safeFold * 8;
+  // Dense lifted stitch-vertex construction for rosette folds.
+  // 6-fold uses 96 points to preserve the intended hexagon + projected-thread geometry.
+  var scaffoldCount = (safeFold === 6) ? 96 : (safeFold * 8);
   var scaffoldAngleStep = (Math.PI * 2) / scaffoldCount;
   var scaffoldRadius = petalRadius;
   var scaffoldPhase = -Math.PI / 2;
@@ -10264,6 +10551,153 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
   var offsetPolygonSequence = buildMashrabiyaStepSequence(scaffoldCount, 8, 16);
   var starJump = Math.max(1, Math.round(scaffoldCount / 2) - 4);
   var starSequence = buildMashrabiyaStepSequence(scaffoldCount, 2, starJump);
+  var starThreadSegments = buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'thread3');
+
+  function getCircleIntersectionsForInfiniteLine(lineStart, lineEnd, circleCenter, circleRadius) {
+    var direction = lineEnd.subtract(lineStart);
+    var a = direction.dot(direction);
+    if (a <= 1e-8) return [];
+    var f = lineStart.subtract(circleCenter);
+    var b = 2 * f.dot(direction);
+    var c = f.dot(f) - (circleRadius * circleRadius);
+    var discriminant = (b * b) - (4 * a * c);
+    if (discriminant < 0) return [];
+
+    var sqrtDisc = Math.sqrt(Math.max(0, discriminant));
+    var t1 = (-b - sqrtDisc) / (2 * a);
+    var t2 = (-b + sqrtDisc) / (2 * a);
+    var hits = [lineStart.add(direction.multiply(t1))];
+    if (Math.abs(t2 - t1) > 1e-8) {
+      hits.push(lineStart.add(direction.multiply(t2)));
+    }
+    return hits;
+  }
+
+  function getOuterProjectionPairForRosetteSegment(fromPoint, toPoint) {
+    var direction = toPoint.subtract(fromPoint);
+    var segmentLength = direction.length;
+    if (segmentLength <= 0.001) {
+      return { fromHit: null, toHit: null };
+    }
+    var unit = direction.normalize(1);
+    var hits = getCircleIntersectionsForInfiniteLine(fromPoint, toPoint, center, scaffoldRadius);
+    if (!hits.length) {
+      return { fromHit: null, toHit: null };
+    }
+
+    var fromHit = null;
+    var toHit = null;
+    var bestBefore = -Infinity;
+    var bestAfter = Infinity;
+    var minT = Infinity;
+    var maxT = -Infinity;
+    var minPoint = null;
+    var maxPoint = null;
+
+    for (var i = 0; i < hits.length; i++) {
+      var t = hits[i].subtract(fromPoint).dot(unit);
+      if (t < minT) {
+        minT = t;
+        minPoint = hits[i];
+      }
+      if (t > maxT) {
+        maxT = t;
+        maxPoint = hits[i];
+      }
+      if (t < -1e-4 && t > bestBefore) {
+        bestBefore = t;
+        fromHit = hits[i];
+      }
+      if (t > segmentLength + 1e-4 && t < bestAfter) {
+        bestAfter = t;
+        toHit = hits[i];
+      }
+    }
+
+    if (!fromHit) fromHit = minPoint;
+    if (!toHit) toHit = maxPoint;
+
+    return {
+      fromHit: fromHit,
+      toHit: toHit
+    };
+  }
+
+  function buildProjectedSegmentsFromInnerSequence(innerPoints, innerSequence) {
+    var segments = [];
+    for (var i = 0; i < innerSequence.length; i++) {
+      var fromInner = innerPoints[innerSequence[i]];
+      var toInner = innerPoints[innerSequence[(i + 1) % innerSequence.length]];
+      if (!fromInner || !toInner || fromInner.getDistance(toInner) <= 1e-6) continue;
+
+      var projection = getOuterProjectionPairForRosetteSegment(fromInner, toInner);
+      if (projection.fromHit && projection.fromHit.getDistance(fromInner) > 1e-6) {
+        segments.push({ from: projection.fromHit, to: fromInner, tag: 'thread3', edgeIndex: segments.length });
+      }
+      segments.push({ from: fromInner, to: toInner, tag: 'thread3', edgeIndex: segments.length });
+      if (projection.toHit && projection.toHit.getDistance(toInner) > 1e-6) {
+        segments.push({ from: toInner, to: projection.toHit, tag: 'thread3', edgeIndex: segments.length });
+      }
+    }
+    return segments;
+  }
+
+  function buildInnerScaffoldRing(innerCount, innerRatio) {
+    var points = [];
+    var count = Math.max(3, parseBoundedInt(innerCount, 3, MAX_HOLES, Math.round(scaffoldCount * 0.5)));
+    var ratio = Math.max(0.1, Math.min(0.95, isFinite(innerRatio) ? innerRatio : 0.5));
+    var innerRadius = scaffoldRadius * ratio;
+    for (var i = 0; i < count; i++) {
+      points.push(pointAt(scaffoldPhase + i * ((Math.PI * 2) / count), innerRadius));
+    }
+    return points;
+  }
+
+  if (safeFold === 12 && scaffoldCount === 96) {
+    var rosetteInnerRatio = 0.5;
+    var rosetteInnerCount = 48;
+    var rosetteInnerRadius = scaffoldRadius * rosetteInnerRatio;
+    var innerScaffoldPoints = [];
+    for (var ip = 0; ip < rosetteInnerCount; ip++) {
+      innerScaffoldPoints.push(pointAt(scaffoldPhase + ip * ((Math.PI * 2) / rosetteInnerCount), rosetteInnerRadius));
+    }
+    innerGuideCircleVertices = innerScaffoldPoints.slice();
+
+    var thread3InnerSequence = buildMashrabiyaStepSequence(rosetteInnerCount, 2, 20);
+    starSequence = thread3InnerSequence.slice();
+    starJump = 20;
+    starThreadSegments = buildProjectedSegmentsFromInnerSequence(innerScaffoldPoints, thread3InnerSequence);
+  } else if (safeFold === 8 && scaffoldCount === 64) {
+    var rosette8InnerPoints = buildInnerScaffoldRing(32, 0.5);
+    innerGuideCircleVertices = rosette8InnerPoints.slice();
+    var thread3InnerSequence8 = buildMashrabiyaStepSequence(rosette8InnerPoints.length, 2, 20);
+    starSequence = thread3InnerSequence8.slice();
+    starJump = 20;
+    starThreadSegments = buildProjectedSegmentsFromInnerSequence(rosette8InnerPoints, thread3InnerSequence8);
+  } else if (safeFold === 6 && scaffoldCount === 96) {
+    // 6-fold uses one outer hexagon (start 1, step 16), then three projected inner threads.
+    firstPolygonSequence = buildMashrabiyaStepSequence(scaffoldCount, 0, 16);
+    offsetPolygonSequence = [];
+
+    var rosette6InnerPoints = buildInnerScaffoldRing(48, 0.5);
+    innerGuideCircleVertices = rosette6InnerPoints.slice();
+    var rosette6Starts = [3, 5, 7]; // start holes 4, 6, 8 in 1-based indexing
+    starThreadSegments = [];
+
+    for (var rs = 0; rs < rosette6Starts.length; rs++) {
+      var sequence6 = buildMashrabiyaStepSequence(rosette6InnerPoints.length, rosette6Starts[rs], 18);
+      if (!starSequence || !starSequence.length) {
+        starSequence = sequence6.slice();
+      }
+      var projected = buildProjectedSegmentsFromInnerSequence(rosette6InnerPoints, sequence6);
+      for (var ps = 0; ps < projected.length; ps++) {
+        projected[ps].edgeIndex = starThreadSegments.length;
+        starThreadSegments.push(projected[ps]);
+      }
+    }
+
+    starJump = 18;
+  }
 
   function buildLegacyFillGeometry(starVertices) {
     var legacyPetals = [];
@@ -10625,12 +11059,20 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
   var stitchedSegments = [];
   stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, firstPolygonSequence, 'thread1'));
   stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, offsetPolygonSequence, 'thread2'));
-  stitchedSegments = stitchedSegments.concat(buildTaggedSegmentsFromSequence(scaffoldPoints, starSequence, 'thread3'));
+  stitchedSegments = stitchedSegments.concat(starThreadSegments);
 
   var extractedFaces = extractFacesFromSegments(stitchedSegments);
   var starPathVertices = buildStarInnerVertices(scaffoldPoints, starSequence);
   var petals = [];
   var pointRegions = [];
+  var faceDiagnostics = {
+    summary: {
+      fold: safeFold,
+      geometryMode: safeGeometryMode,
+      extractedFaceCount: extractedFaces ? extractedFaces.length : 0
+    },
+    faces: []
+  };
 
   function normalizeAnglePositive(theta) {
     var twoPi = Math.PI * 2;
@@ -10721,6 +11163,36 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     for (var i = 0; i < scaffoldVertexIndices.length; i++) {
       var vertexPoint = scaffoldPoints[scaffoldVertexIndices[i]];
       if (pointOnPolygonBoundary(vertexPoint, face.vertices)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var starThreadVertices = [];
+  var seenStarThreadVertex = Object.create(null);
+  for (var st = 0; st < starThreadSegments.length; st++) {
+    var stFrom = starThreadSegments[st] && starThreadSegments[st].from;
+    var stTo = starThreadSegments[st] && starThreadSegments[st].to;
+    if (stFrom) {
+      var stFromKey = vertexKey(stFrom);
+      if (!seenStarThreadVertex[stFromKey]) {
+        seenStarThreadVertex[stFromKey] = true;
+        starThreadVertices.push(stFrom);
+      }
+    }
+    if (stTo) {
+      var stToKey = vertexKey(stTo);
+      if (!seenStarThreadVertex[stToKey]) {
+        seenStarThreadVertex[stToKey] = true;
+        starThreadVertices.push(stTo);
+      }
+    }
+  }
+
+  function faceContainsStarThreadVertex(face) {
+    for (var i = 0; i < starThreadVertices.length; i++) {
+      if (pointOnPolygonBoundary(starThreadVertices[i], face.vertices)) {
         return true;
       }
     }
@@ -10974,11 +11446,13 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       var radiusFromCenter = centroid.getDistance(center);
       var angle = Math.atan2(centroid.y - center.y, centroid.x - center.x);
       var hasScaffold = faceContainsScaffoldVertex(face);
+      var hasStarThread = faceContainsStarThreadVertex(face);
       faceInfo.push({
         face: face,
         radius: radiusFromCenter,
         angle: angle,
-        hasScaffold: hasScaffold
+        hasScaffold: hasScaffold,
+        hasStarThread: hasStarThread
       });
     }
 
@@ -10994,7 +11468,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
 
     // 1) pickStarFaces: connected inner components (can merge multiple atomic faces).
     var starCandidates = faceInfo.filter(function(info) {
-      return !info.hasScaffold && info.radius <= (starRadiusMean * 1.35);
+      return !info.hasScaffold && (info.hasStarThread || info.radius <= (starRadiusMean * 1.35));
     });
     if (!starCandidates.length) {
       starCandidates = faceInfo.filter(function(info) {
@@ -11005,6 +11479,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     var starComponentsByBin = buildConnectedComponentsByBin(starCandidates, adjacency);
     var selectedStarComponents = [];
     var usedStarFaceIds = Object.create(null);
+    var selectedStarFaceIds = Object.create(null);
 
     for (var sb = 0; sb < safeFold; sb++) {
       var starBucket = starComponentsByBin[sb] || [];
@@ -11023,6 +11498,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       selectedStarComponents.push(chosenStar);
       for (var sfi = 0; sfi < chosenStar.faces.length; sfi++) {
         usedStarFaceIds[String(chosenStar.faces[sfi].id)] = true;
+        selectedStarFaceIds[String(chosenStar.faces[sfi].id)] = true;
       }
       var mergedStar = mergeFacesToPolygon(chosenStar.faces);
       if (mergedStar.length >= 3) {
@@ -11056,7 +11532,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
 
     // 2) pickPetalFaces: connected outer scaffold components, one per sector.
     var petalInfoCandidates = faceInfo.filter(function(info) {
-      return info.hasScaffold && info.radius > (starRadiusMean * 1.3);
+      return info.hasScaffold && (info.hasStarThread || info.radius > (starRadiusMean * 1.3));
     });
     if (!petalInfoCandidates.length) {
       petalInfoCandidates = faceInfo.filter(function(info) {
@@ -11066,6 +11542,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
 
     var petalComponentsByBin = buildConnectedComponentsByBin(petalInfoCandidates, adjacency);
     var selectedPetalFaceIds = Object.create(null);
+    var selectedPointFaceIds = Object.create(null);
 
     for (var pb = 0; pb < safeFold; pb++) {
       var petalBucket = petalComponentsByBin[pb] || [];
@@ -11145,6 +11622,9 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
         });
         var mergedTriangle = mergeFacesToPolygon(triBucket[tk].faces);
         if (mergedTriangle.length >= 3) {
+          for (var tif = 0; tif < triBucket[tk].faces.length; tif++) {
+            selectedPointFaceIds[String(triBucket[tk].faces[tif].id)] = true;
+          }
           pointRegions.push(mergedTriangle);
           debugRegions.push({
             label: 'T ' + tb + ' (' + triBucket[tk].faces.length + ')',
@@ -11154,6 +11634,41 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
         }
       }
     }
+
+    for (var fd = 0; fd < faceInfo.length; fd++) {
+      var info = faceInfo[fd];
+      var face = info.face;
+      var faceId = String(face.id);
+      var classification = 'other';
+      if (selectedStarFaceIds[faceId]) {
+        classification = 'star';
+      } else if (selectedPetalFaceIds[faceId]) {
+        classification = 'petal';
+      } else if (selectedPointFaceIds[faceId]) {
+        classification = 'point';
+      }
+      faceDiagnostics.faces.push({
+        id: face.id,
+        bin: getFaceBin(face),
+        classification: classification,
+        radius: info.radius,
+        angle: info.angle,
+        hasScaffold: !!info.hasScaffold,
+        hasStarThread: !!info.hasStarThread,
+        hasCircleEdge: !!face.hasCircleEdge,
+        starEdgeCount: parseBoundedInt(face.starEdgeCount, 0, 9999, 0),
+        areaAbs: Math.abs(face.areaAbs || 0),
+        centroid: {
+          x: face.centroid.x,
+          y: face.centroid.y
+        },
+        vertexCount: (face.vertices && face.vertices.length) ? face.vertices.length : 0
+      });
+    }
+
+    faceDiagnostics.summary.selectedStarFaceCount = Object.keys(selectedStarFaceIds).length;
+    faceDiagnostics.summary.selectedPetalFaceCount = Object.keys(selectedPetalFaceIds).length;
+    faceDiagnostics.summary.selectedPointFaceCount = Object.keys(selectedPointFaceIds).length;
   }
 
   if (!starPathVertices || starPathVertices.length < safeFold) {
@@ -11180,16 +11695,19 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     geometryMode: safeGeometryMode,
     scaffoldPoints: scaffoldPoints,
     scaffoldCount: scaffoldCount,
+    innerGuideCircleVertices: innerGuideCircleVertices,
     circleSequence: circleSequence,
     firstPolygonSequence: firstPolygonSequence,
     offsetPolygonSequence: offsetPolygonSequence,
     starSequence: starSequence,
+    starThreadSegments: starThreadSegments,
     starJump: starJump,
     petals: petals,
     pointRegions: pointRegions,
     starPathVertices: starPathVertices,
     starRegions: starRegions,
-    debugRegions: debugRegions
+    debugRegions: debugRegions,
+    faceDiagnostics: faceDiagnostics
   };
 }
 
@@ -11279,6 +11797,41 @@ function drawMashrabiyaDebugLabels(debugRegions, opacity) {
   }
 }
 
+function drawMashrabiyaFaceDiagnostics(faceDiagnostics, opacity) {
+  if (!mashrabiyaDebugLabelsEnabled || !faceDiagnostics || !faceDiagnostics.faces || !faceDiagnostics.faces.length) return;
+  var alpha = Math.max(0, Math.min(1, isFinite(opacity) ? opacity : 1));
+  if (alpha <= 0) return;
+
+  for (var i = 0; i < faceDiagnostics.faces.length; i++) {
+    var face = faceDiagnostics.faces[i];
+    if (!face || !face.centroid) continue;
+
+    var classColor = '#666666';
+    var classToken = 'O';
+    if (face.classification === 'star') {
+      classColor = '#9c6f1d';
+      classToken = 'S';
+    } else if (face.classification === 'petal') {
+      classColor = '#a9491e';
+      classToken = 'P';
+    } else if (face.classification === 'point') {
+      classColor = '#a73631';
+      classToken = 'T';
+    }
+
+    var text = new PointText({
+      point: new Point(face.centroid.x, face.centroid.y + 3),
+      content: 'F' + String(face.id) + ' ' + classToken + ' b' + String(face.bin),
+      justification: 'center',
+      fillColor: classColor,
+      fontFamily: 'Arial',
+      fontSize: 8,
+      fontWeight: 'bold'
+    });
+    text.opacity = 0.86 * alpha;
+  }
+}
+
 function drawMashrabiyaStitchedLines(geometry, opacity) {
   if (!geometry) return;
   var lineOpacity = Math.max(0, Math.min(1, opacity));
@@ -11286,7 +11839,8 @@ function drawMashrabiyaStitchedLines(geometry, opacity) {
   drawMashrabiyaClosedStrokeProgress(geometry.guideCircleVertices, '#82511f', 2, lineOpacity, 1);
   drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, 1);
   drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, 1);
-  drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.starSequence, '#82511f', 2, lineOpacity, 1);
+  drawMashrabiyaClosedStrokeProgress(geometry.innerGuideCircleVertices, '#82511f', 2, lineOpacity, 1);
+  drawMashrabiyaSegmentListProgress(geometry.starThreadSegments, '#82511f', 2, lineOpacity, 1);
 }
 
 function drawMashrabiyaSequenceProgress(pointsList, sequence, color, strokeWidth, opacity, progress) {
@@ -11334,6 +11888,54 @@ function drawMashrabiyaSequenceProgress(pointsList, sequence, color, strokeWidth
     } else {
       var ratio = edgeLen > 0 ? (remaining / edgeLen) : 0;
       path.add(edgeStart.add(edgeEnd.subtract(edgeStart).multiply(ratio)));
+      break;
+    }
+  }
+}
+
+function drawMashrabiyaSegmentListProgress(segments, color, strokeWidth, opacity, progress) {
+  if (!segments || !segments.length) return;
+  var p = clamp01(progress);
+  var strokeOpacity = Math.max(0, Math.min(1, opacity));
+  if (p <= 0 || strokeOpacity <= 0) return;
+
+  var lengths = [];
+  var totalLength = 0;
+  for (var i = 0; i < segments.length; i++) {
+    var segment = segments[i];
+    if (!segment || !segment.from || !segment.to) {
+      lengths.push(0);
+      continue;
+    }
+    var length = segment.from.getDistance(segment.to);
+    lengths.push(length);
+    totalLength += length;
+  }
+  if (!isFinite(totalLength) || totalLength <= 1e-6) return;
+
+  var targetLength = totalLength * p;
+  var traversed = 0;
+
+  for (var s = 0; s < segments.length; s++) {
+    var edge = segments[s];
+    var edgeLen = lengths[s];
+    if (!edge || !edge.from || !edge.to || edgeLen <= 1e-6) continue;
+
+    var remaining = targetLength - traversed;
+    if (remaining <= 0) break;
+
+    var path = new Path();
+    path.strokeColor = color;
+    path.strokeWidth = strokeWidth;
+    path.opacity = strokeOpacity;
+    path.add(edge.from);
+
+    if (remaining >= edgeLen) {
+      path.add(edge.to);
+      traversed += edgeLen;
+    } else {
+      var ratio = remaining / edgeLen;
+      path.add(edge.from.add(edge.to.subtract(edge.from).multiply(ratio)));
       break;
     }
   }
@@ -11401,7 +12003,8 @@ function renderMashrabiyaAnimationStateFrame(state) {
     dCircle: state.geometry.fold,
     dOuter: state.geometry.firstPolygonSequence.length,
     dOffset: state.geometry.offsetPolygonSequence.length,
-    dStar: state.geometry.starSequence.length,
+    dInner: (state.geometry.innerGuideCircleVertices && state.geometry.innerGuideCircleVertices.length) ? Math.max(2, Math.round(state.geometry.innerGuideCircleVertices.length / 6)) : 0,
+    dStar: (state.geometry.starThreadSegments && state.geometry.starThreadSegments.length) ? state.geometry.starThreadSegments.length : state.geometry.starSequence.length,
     dFillStar: Math.max(2, Math.round(state.geometry.fold * 0.5)),
     dFillPetal: Math.max(2, Math.round(state.geometry.fold * 0.5)),
     dFillPoint: Math.max(2, Math.round(state.geometry.fold * 0.5))
@@ -11410,6 +12013,7 @@ function renderMashrabiyaAnimationStateFrame(state) {
   var dCircle = timeline.dCircle;
   var dOuter = timeline.dOuter;
   var dOffset = timeline.dOffset;
+  var dInner = timeline.dInner || 0;
   var dStar = timeline.dStar;
   var dFillStar = timeline.dFillStar;
   var dFillPetal = timeline.dFillPetal;
@@ -11419,7 +12023,8 @@ function renderMashrabiyaAnimationStateFrame(state) {
   var sCircle = 0;
   var sOuter = sCircle + dCircle;
   var sOffset = sOuter + dOuter;
-  var sStar = sOffset + dOffset;
+  var sInner = sOffset + dOffset;
+  var sStar = sInner + dInner;
   var sFillStar = sStar + dStar;
   var sFillPetal = sFillStar + dFillStar;
   var sFillPoint = sFillPetal + dFillPetal;
@@ -11433,7 +12038,10 @@ function renderMashrabiyaAnimationStateFrame(state) {
   drawMashrabiyaClosedStrokeProgress(state.geometry.guideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sCircle, dCircle));
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOuter, dOuter));
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOffset, dOffset));
-  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.starSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
+  if (dInner > 0) {
+    drawMashrabiyaClosedStrokeProgress(state.geometry.innerGuideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sInner, dInner));
+  }
+  drawMashrabiyaSegmentListProgress(state.geometry.starThreadSegments, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
 
   var selectStar = mashrabiyaPhaseProgress(t, sFillStar, dFillStar);
   var selectPetal = mashrabiyaPhaseProgress(t, sFillPetal, dFillPetal);
@@ -11454,7 +12062,7 @@ function renderMashrabiyaAnimationStateFrame(state) {
     pointFillProgress
   );
 
-  drawMashrabiyaDebugLabels(state.geometry.debugRegions, 0.95);
+  drawMashrabiyaFaceDiagnostics(state.geometry.faceDiagnostics, 0.95);
 
   state.durationBeats = sEnd;
   clearHighlightedHoleNumbers();
@@ -11467,8 +12075,54 @@ function drawMashrabiyaStatic() {
   if (mashrabiyaDebugKeepStitchLinesVisible) {
     drawMashrabiyaStitchedLines(geometry, 0.92);
   }
-  drawMashrabiyaDebugLabels(geometry.debugRegions, 1);
+  drawMashrabiyaFaceDiagnostics(geometry.faceDiagnostics, 1);
   clearHighlightedHoleNumbers();
+}
+
+function buildMashrabiyaFaceSnapshot(geometry) {
+  if (!geometry) return null;
+  var diagnostics = geometry.faceDiagnostics || { summary: {}, faces: [] };
+  var snapshot = {
+    version: 1,
+    timestamp: new Date().toISOString(),
+    experience: 'mashrabiya',
+    fold: geometry.fold,
+    geometryMode: geometry.geometryMode,
+    summary: diagnostics.summary || {},
+    faces: (diagnostics.faces || []).map(function(face) {
+      return {
+        id: face.id,
+        bin: face.bin,
+        classification: face.classification,
+        radius: Math.round(face.radius * 1000) / 1000,
+        angle: Math.round(face.angle * 1000000) / 1000000,
+        hasScaffold: !!face.hasScaffold,
+        hasStarThread: !!face.hasStarThread,
+        hasCircleEdge: !!face.hasCircleEdge,
+        starEdgeCount: face.starEdgeCount,
+        areaAbs: Math.round(face.areaAbs * 1000) / 1000,
+        centroid: {
+          x: Math.round(face.centroid.x * 1000) / 1000,
+          y: Math.round(face.centroid.y * 1000) / 1000
+        },
+        vertexCount: face.vertexCount
+      };
+    })
+  };
+  return snapshot;
+}
+
+function exportMashrabiyaFaceSnapshot() {
+  var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
+  var snapshot = buildMashrabiyaFaceSnapshot(geometry);
+  if (!snapshot) return null;
+  try {
+    var payload = JSON.stringify(snapshot, null, 2);
+    console.log('Mashrabiya face snapshot:', payload);
+  } catch (error) {
+    console.warn('Unable to serialize Mashrabiya face snapshot.', error);
+  }
+  return snapshot;
 }
 
 function runMashrabiyaAnimationFrame(event) {
@@ -11500,12 +12154,13 @@ function animateMashrabiya() {
     dCircle: geometry.fold,
     dOuter: geometry.firstPolygonSequence.length,
     dOffset: geometry.offsetPolygonSequence.length,
-    dStar: geometry.starSequence.length,
+    dInner: (geometry.innerGuideCircleVertices && geometry.innerGuideCircleVertices.length) ? Math.max(2, Math.round(geometry.innerGuideCircleVertices.length / 6)) : 0,
+    dStar: (geometry.starThreadSegments && geometry.starThreadSegments.length) ? geometry.starThreadSegments.length : geometry.starSequence.length,
     dFillStar: Math.max(2, Math.round(geometry.fold * 0.5)),
     dFillPetal: Math.max(2, Math.round(geometry.fold * 0.5)),
     dFillPoint: Math.max(2, Math.round(geometry.fold * 0.5))
   };
-  var durationBeats = timeline.dCircle + timeline.dOuter + timeline.dOffset + timeline.dStar + timeline.dFillStar + timeline.dFillPetal + timeline.dFillPoint;
+  var durationBeats = timeline.dCircle + timeline.dOuter + timeline.dOffset + timeline.dInner + timeline.dStar + timeline.dFillStar + timeline.dFillPetal + timeline.dFillPoint;
 
   mashrabiyaAnimationState = {
     elapsedBeats: 0,
@@ -12030,20 +12685,19 @@ function buildCurrentDesignSvgString(options) {
       var thread = threads[t];
       var segments = computeSegments(thread);
       for (var s = 0; s < segments.length; s++) {
-        var fromPoint = points[segments[s][0]];
-        var toPoint = points[segments[s][1]];
-        if (!fromPoint || !toPoint) continue;
-
+        var parts = getThreadSegmentDrawParts(thread, segments[s]);
         var strokeColor = thread.color === 'rainbow'
           ? colorToSvg(rainbowColor(s / Math.max(1, segments.length)))
           : colorToSvg(thread.color);
 
-        lines.push(
-          '<line x1="' + formatSvgNumber(fromPoint.x) + '" y1="' + formatSvgNumber(fromPoint.y) +
-          '" x2="' + formatSvgNumber(toPoint.x) + '" y2="' + formatSvgNumber(toPoint.y) +
-          '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
-          '" stroke-linecap="round" stroke-linejoin="round"/>'
-        );
+        for (var p = 0; p < parts.length; p++) {
+          lines.push(
+            '<line x1="' + formatSvgNumber(parts[p].fromPoint.x) + '" y1="' + formatSvgNumber(parts[p].fromPoint.y) +
+            '" x2="' + formatSvgNumber(parts[p].toPoint.x) + '" y2="' + formatSvgNumber(parts[p].toPoint.y) +
+            '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(thread.width) +
+            '" stroke-linecap="round" stroke-linejoin="round"/>'
+          );
+        }
       }
     }
   }
@@ -12134,6 +12788,7 @@ function buildStitchingGuideText(fileBaseName, options) {
     if (normalized === 'inner') return 'Inner ring';
     if (normalized === 'bridge') return 'Bridge outer -> inner';
     if (normalized === 'bridge-reverse') return 'Bridge inner -> outer';
+    if (normalized === 'bridge-reverse-project') return 'Bridge inner -> outer radial projection';
     return 'Outer ring';
   }
 
@@ -12147,10 +12802,16 @@ function buildStitchingGuideText(fileBaseName, options) {
     return 'O' + String(index + 1);
   }
 
-  function appendConnections(targetLines, segments) {
+  function appendConnections(targetLines, segments, thread) {
     var holeCount = Math.max(1, getCurrentStitchHoleCount());
+    var frameMode = sanitizeThreadFrameMode(thread && thread.frameMode, 'outer');
     for (var idx = 0; idx < segments.length; idx++) {
-      targetLines.push('    ' + formatHoleReference(segments[idx][0], holeCount) + ' -> ' + formatHoleReference(segments[idx][1], holeCount));
+      var fromRef = formatHoleReference(segments[idx][0], holeCount);
+      var toRef = formatHoleReference(segments[idx][1], holeCount);
+      if (frameMode === 'bridge-reverse-project') {
+        toRef += ' (+ radial extensions to outer frame at both ends)';
+      }
+      targetLines.push('    ' + fromRef + ' -> ' + toRef);
     }
   }
 
@@ -12169,7 +12830,8 @@ function buildStitchingGuideText(fileBaseName, options) {
   lines.push('Inner frame enabled: ' + (nestedFrameEnabled ? 'yes' : 'no'));
   if (nestedFrameEnabled) {
     lines.push('Inner frame ratio: ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ' of outer radius');
-    lines.push('Total physical holes: ' + String(getCurrentStitchHoleCount() * 2));
+    lines.push('Inner frame holes: ' + String(getCurrentInnerStitchHoleCount()));
+    lines.push('Total physical holes: ' + String(getCurrentTotalStitchHoleCount()));
   }
   lines.push('Border enabled: ' + (borderEnabled ? 'yes' : 'no'));
   lines.push('Hole numbers visible in export: ' + (includeStitchingHoleNumbers ? 'yes' : 'no'));
@@ -12185,7 +12847,7 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Size: ' + String(paramThread.width));
     lines.push('  Stitch mode: ' + getReadableStitchMode(paramThread.jumpMode));
     lines.push('  Frame path: ' + getReadableFrameMode(paramThread.frameMode));
-    lines.push('  Start hole: ' + String(parseBoundedInt(paramThread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
+    lines.push('  Start hole: ' + String(parseBoundedInt(paramThread.startHole, 1, Math.max(1, getThreadSourceHoleCount(paramThread)), 1)));
     lines.push('  Add value: ' + String(paramThread.jump));
     if (paramThread.jumpMode === 'connect') {
       lines.push('  Multiply by: ' + String(paramThread.connectMultiplier));
@@ -12203,7 +12865,7 @@ function buildStitchingGuideText(fileBaseName, options) {
   if (nestedFrameEnabled) {
     lines.push('1. Manufacture two concentric "' + currentShape + '" frames with matching hole counts.');
     lines.push('2. Outer frame: ' + String(getCurrentStitchHoleCount()) + ' holes, numbered clockwise O1..O' + String(getCurrentStitchHoleCount()) + '.');
-    lines.push('3. Inner frame: same hole count, radius ratio ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ', numbered clockwise I1..I' + String(getCurrentStitchHoleCount()) + '.');
+    lines.push('3. Inner frame: ' + String(getCurrentInnerStitchHoleCount()) + ' holes at radius ratio ' + String(sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO)) + ', numbered clockwise I1..I' + String(getCurrentInnerStitchHoleCount()) + '.');
     lines.push('4. Keep O1 and I1 angularly aligned as shown in the SVG preview.');
     lines.push('5. Use one thread sequence section per listed thread below.');
   } else {
@@ -12223,32 +12885,32 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Color: ' + String(thread.color));
     lines.push('  Width: ' + String(thread.width));
     lines.push('  Frame path: ' + getReadableFrameMode(thread.frameMode));
-    lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
+    lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
 
     if (thread.jumpMode === 'connect') {
       lines.push('  Rule: target = ((multiplier * source + start - 2) mod n) + 1.');
-      lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
+      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
-      lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getCurrentStitchHoleCount()), 1)));
+      lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'sequence') {
       lines.push('  Rule: repeat the provided step list from each current hole, wrapping modulo n.');
       lines.push('  Step list: ' + String(thread.jumpSequence || ''));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'formula') {
       lines.push('  Rule: evaluate expression per step, then connect current -> (current + step) mod n.');
       lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
       lines.push('  Base add value: ' + String(thread.jump));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     } else {
       lines.push('  Rule: next = ((current + add - 1) mod n) + 1.');
-      lines.push('  n is holes per frame (' + String(getCurrentStitchHoleCount()) + ').');
+      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Add value: ' + String(thread.jump));
       lines.push('  Full connections:');
-      appendConnections(lines, segments);
+      appendConnections(lines, segments, thread);
     }
 
     lines.push('');
@@ -12864,7 +13526,6 @@ function renderThreadControls() {
   var container = document.getElementById('thread-controls');
   container.innerHTML = '';
   var holeCount = getCurrentStitchHoleCount();
-  var jumpLimit = Math.max(1, holeCount - 1);
 
   if (!threads.length) {
     selectedThreadIndex = -1;
@@ -12878,12 +13539,17 @@ function renderThreadControls() {
   threads.forEach((thread, index) => {
     ensureThreadConnectConfig(thread);
     thread.frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+    if (thread.frameMode === 'bridge' || thread.frameMode === 'bridge-reverse') {
+      thread.frameMode = 'bridge-reverse-project';
+    }
     if (thread.color === 'rainbow') {
       thread.solidColor = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
     } else {
       thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
     }
-    normalizeThreadHoleDependentValues(thread, holeCount);
+    var sourceHoleCount = getThreadSourceHoleCount(thread);
+    var jumpLimit = Math.max(1, sourceHoleCount - 1);
+    normalizeThreadHoleDependentValues(thread, sourceHoleCount);
 
     var threadColorInputValue = thread.color === 'rainbow'
       ? sanitizeThreadSolidColor(thread.solidColor, '#1982c4')
@@ -12905,8 +13571,7 @@ function renderThreadControls() {
       <select id="frame-mode-${index}">
         <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
         <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
-        <option value="bridge" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge' ? 'selected' : ''}>Bridge outer→inner</option>
-        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Bridge inner→outer</option>
+        <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Inner -&gt; Outer (Projected)</option>
       </select><br>
       ` : ''}
       Stitch by:
@@ -12939,7 +13604,7 @@ function renderThreadControls() {
       Step list: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="e.g. 2,3,5,8"><br>
       <div class="jump-help">Comma-separated steps, e.g. 2, 3, 5, 8</div>
       ` : ''}
-      Start hole: <input class="advanced-inline-number" type="number" min="1" max="${holeCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>
+      Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
       <div class="jump-help">For each hole i, connect to (multiplier × i + start - 1) mod n.</div>
@@ -12987,12 +13652,14 @@ function renderThreadControls() {
     if (startHoleNumberInput) {
       startHoleNumberInput.addEventListener('input', e => {
         if (e.target.value === '') return;
-        thread.startHole = parseBoundedInt(e.target.value, 1, holeCount, thread.startHole || 1);
+        var localSourceCount = getThreadSourceHoleCount(thread);
+        thread.startHole = parseBoundedInt(e.target.value, 1, localSourceCount, thread.startHole || 1);
         e.target.value = String(thread.startHole);
         redrawForPathChange();
       });
       startHoleNumberInput.addEventListener('change', e => {
-        thread.startHole = parseBoundedInt(e.target.value, 1, holeCount, thread.startHole || 1);
+        var localSourceCount = getThreadSourceHoleCount(thread);
+        thread.startHole = parseBoundedInt(e.target.value, 1, localSourceCount, thread.startHole || 1);
         e.target.value = String(thread.startHole);
       });
     }
@@ -13748,6 +14415,34 @@ kidSongMenu.addEventListener('click', (event) => {
 });
 
 document.addEventListener('click', (event) => {
+  var eventPath = (event && typeof event.composedPath === 'function') ? event.composedPath() : [];
+  function eventPathContains(node) {
+    if (!node) return false;
+    if (eventPath && eventPath.length) {
+      for (var i = 0; i < eventPath.length; i++) {
+        if (eventPath[i] === node) return true;
+      }
+    }
+    return !!(event.target && node.contains && node.contains(event.target));
+  }
+
+  function eventPathMatchesSelector(selector) {
+    if (!selector || !eventPath || !eventPath.length) return false;
+    for (var i = 0; i < eventPath.length; i++) {
+      var entry = eventPath[i];
+      if (entry && entry.nodeType === 1 && typeof entry.matches === 'function' && entry.matches(selector)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var clickedWithinAdvanced = eventPathContains(advancedPanel);
+  var clickedAdvancedToggle = eventPathContains(gearBtn);
+  var clickedWithinDiscovery = eventPathContains(discoveryPanel);
+  var clickedDiscoveryToggle = eventPathContains(discoveryToggleBtn);
+  var clickedThreadCard = eventPathMatchesSelector('.thread-card');
+
   if (!kidThreadMenu.hasAttribute('hidden') && !kidThreadPicker.contains(event.target)) {
     kidThreadMenu.setAttribute('hidden', '');
     kidThreadToggle.setAttribute('aria-expanded', 'false');
@@ -13761,11 +14456,11 @@ document.addEventListener('click', (event) => {
   if (!experienceInfoPanel.hasAttribute('hidden') && !experienceInfoPanel.contains(event.target) && !experienceInfoToggle.contains(event.target)) {
     syncExperienceInfoPanel(false);
   }
-  if (advancedPanel.classList.contains('open') && !advancedPanel.contains(event.target) && !gearBtn.contains(event.target)) {
+  if (advancedPanel.classList.contains('open') && !clickedWithinAdvanced && !clickedAdvancedToggle && !clickedThreadCard) {
     advancedPanel.classList.remove('open');
     syncAdvancedToggleButton();
   }
-  if (discoveryPanel.classList.contains('open') && !discoveryPanel.contains(event.target) && !discoveryToggleBtn.contains(event.target)) {
+  if (discoveryPanel.classList.contains('open') && !clickedWithinDiscovery && !clickedDiscoveryToggle) {
     discoveryPanel.classList.remove('open');
     syncDiscoveryToggleButton();
   }
@@ -14019,6 +14714,7 @@ syncExportUiCopy();
 scheduleUrlStateSync(true);
 initializeOnboarding();
 window.setCurrentExperience = setCurrentExperience;
+window.exportMashrabiyaFaceSnapshot = exportMashrabiyaFaceSnapshot;
 
 </script>
 </body>
