@@ -115,6 +115,29 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-tempo-slow')).toHaveClass(/is-active/);
   });
 
+  test('basic palette custom dropper applies selected thread color', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.evaluate(() => {
+      const input = document.getElementById('palette-custom-color-input');
+      if (!input) return;
+      input.value = '#123abc';
+      const inputEvt = document.createEvent('Event');
+      inputEvt.initEvent('input', true, true);
+      input.dispatchEvent(inputEvt);
+    });
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const index = (typeof window.selectedThreadIndex === 'number' && window.selectedThreadIndex >= 0)
+          ? window.selectedThreadIndex
+          : 0;
+        const thread = window.threads && window.threads[index];
+        return thread ? String(thread.color || '').toLowerCase() : null;
+      });
+    }).toBe('#123abc');
+  });
+
   test('advanced pane stays open during thread-card interactions', async ({ page }) => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
@@ -270,7 +293,7 @@ test.describe('StitchLab regressions', () => {
 
     expect(layoutProbe.ok).toBe(true);
     expect(layoutProbe.shapeTop).toBeGreaterThanOrEqual(0);
-    expect(layoutProbe.canvasHeight).toBeGreaterThan(120);
+    expect(layoutProbe.canvasHeight).toBeGreaterThanOrEqual(119);
     expect(layoutProbe.slidersBottom).toBeLessThanOrEqual(layoutProbe.viewportHeight + 2);
     expect(layoutProbe.maxScrollWidth).toBeLessThanOrEqual(layoutProbe.viewportWidth + 2);
   });

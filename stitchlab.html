@@ -759,6 +759,30 @@
     border: 2px solid #fff;
     box-shadow: 0 0 4px rgba(0,0,0,0.2);
   }
+  .color-dot.color-dot-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 28% 28%, #f8fbff 0%, #e1e9f8 58%, #c8d3eb 100%);
+    color: #2c4369;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .color-dot.color-dot-custom svg {
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+  }
+  #palette-custom-color-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    left: -9999px;
+    top: auto;
+  }
 
   /* --- FUN BUTTONS --- */
   #playback-controls {
@@ -1823,6 +1847,12 @@
     <div class="color-dot" style="background:#1982c4" data-color="#1982c4"></div>
     <div class="color-dot" style="background:#6a4c93" data-color="#6a4c93"></div>
     <div class="color-dot" style="background:linear-gradient(45deg, red, orange, yellow, green, blue, purple)" data-color="rainbow"></div>
+    <div id="palette-custom-color-btn" class="color-dot color-dot-custom" role="button" tabindex="0" aria-label="Pick custom color" title="Pick custom color">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M14.69 3.16a2.2 2.2 0 0 1 3.11 0l3.04 3.04a2.2 2.2 0 0 1 0 3.11l-2.1 2.1-6.15-6.15 2.1-2.1Zm-3.2 3.2 6.15 6.15-7.36 7.36a1.4 1.4 0 0 1-.63.36l-4.43 1.11 1.11-4.43c.08-.24.2-.45.36-.63l4.8-4.8Zm-6.8 14.79h14.62v1.85H4.69z"/>
+      </svg>
+    </div>
+    <input id="palette-custom-color-input" type="color" value="#1982c4" aria-label="Custom palette color">
   </div>
 
   <div class="slider-block triangula-color-mode-inline" id="triangula-color-scope-block" style="display:none;">
@@ -2215,6 +2245,8 @@ var discoveryToggleBtn = document.getElementById('discovery-toggle');
 var kidSaveToggleBtn = document.getElementById('kid-save-toggle');
 var closeDiscoveryBtn = document.getElementById('close-discovery');
 var paletteContainer = document.getElementById('palette');
+var paletteCustomColorBtn = document.getElementById('palette-custom-color-btn');
+var paletteCustomColorInput = document.getElementById('palette-custom-color-input');
 var musicToggleBtn = document.getElementById('toggle-music');
 var kidThreadPicker = document.getElementById('kid-thread-picker');
 var kidThreadToggle = document.getElementById('kid-thread-toggle');
@@ -14009,11 +14041,38 @@ if (backToStitchingBtn) {
 document.querySelectorAll('.color-dot').forEach((dot) => {
   dot.addEventListener('click', () => {
     if (!threads.length) return;
+    if (dot.id === 'palette-custom-color-btn') return;
     applyExperiencePaletteColorChoice(dot.getAttribute('data-color') || '#1982c4');
     renderThreadControls();
     redrawAnimationInPlace();
   });
 });
+
+if (paletteCustomColorBtn && paletteCustomColorInput) {
+  paletteCustomColorBtn.addEventListener('click', () => {
+    if (!threads.length) return;
+    var initialColor = getActiveTrailColor();
+    if (initialColor && initialColor !== 'rainbow') {
+      paletteCustomColorInput.value = sanitizeThreadSolidColor(initialColor, paletteCustomColorInput.value || '#1982c4');
+    }
+    paletteCustomColorInput.click();
+  });
+
+  paletteCustomColorBtn.addEventListener('keydown', (event) => {
+    if (!event) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    paletteCustomColorBtn.click();
+  });
+
+  paletteCustomColorInput.addEventListener('input', (event) => {
+    if (!threads.length) return;
+    var chosenColor = sanitizeThreadSolidColor(event.target.value, '#1982c4');
+    applyExperiencePaletteColorChoice(chosenColor);
+    renderThreadControls();
+    redrawAnimationInPlace();
+  });
+}
 
 document.querySelectorAll('.shape-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
