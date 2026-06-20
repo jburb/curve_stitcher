@@ -14415,6 +14415,34 @@ kidSongMenu.addEventListener('click', (event) => {
 });
 
 document.addEventListener('click', (event) => {
+  var eventPath = (event && typeof event.composedPath === 'function') ? event.composedPath() : [];
+  function eventPathContains(node) {
+    if (!node) return false;
+    if (eventPath && eventPath.length) {
+      for (var i = 0; i < eventPath.length; i++) {
+        if (eventPath[i] === node) return true;
+      }
+    }
+    return !!(event.target && node.contains && node.contains(event.target));
+  }
+
+  function eventPathMatchesSelector(selector) {
+    if (!selector || !eventPath || !eventPath.length) return false;
+    for (var i = 0; i < eventPath.length; i++) {
+      var entry = eventPath[i];
+      if (entry && entry.nodeType === 1 && typeof entry.matches === 'function' && entry.matches(selector)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var clickedWithinAdvanced = eventPathContains(advancedPanel);
+  var clickedAdvancedToggle = eventPathContains(gearBtn);
+  var clickedWithinDiscovery = eventPathContains(discoveryPanel);
+  var clickedDiscoveryToggle = eventPathContains(discoveryToggleBtn);
+  var clickedThreadCard = eventPathMatchesSelector('.thread-card');
+
   if (!kidThreadMenu.hasAttribute('hidden') && !kidThreadPicker.contains(event.target)) {
     kidThreadMenu.setAttribute('hidden', '');
     kidThreadToggle.setAttribute('aria-expanded', 'false');
@@ -14428,11 +14456,11 @@ document.addEventListener('click', (event) => {
   if (!experienceInfoPanel.hasAttribute('hidden') && !experienceInfoPanel.contains(event.target) && !experienceInfoToggle.contains(event.target)) {
     syncExperienceInfoPanel(false);
   }
-  if (advancedPanel.classList.contains('open') && !advancedPanel.contains(event.target) && !gearBtn.contains(event.target)) {
+  if (advancedPanel.classList.contains('open') && !clickedWithinAdvanced && !clickedAdvancedToggle && !clickedThreadCard) {
     advancedPanel.classList.remove('open');
     syncAdvancedToggleButton();
   }
-  if (discoveryPanel.classList.contains('open') && !discoveryPanel.contains(event.target) && !discoveryToggleBtn.contains(event.target)) {
+  if (discoveryPanel.classList.contains('open') && !clickedWithinDiscovery && !clickedDiscoveryToggle) {
     discoveryPanel.classList.remove('open');
     syncDiscoveryToggleButton();
   }

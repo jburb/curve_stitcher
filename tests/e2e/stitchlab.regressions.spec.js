@@ -115,6 +115,27 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-tempo-slow')).toHaveClass(/is-active/);
   });
 
+  test('advanced pane stays open during thread-card interactions', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    const advancedPanel = page.locator('#advanced-panel');
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('#thread-controls .thread-card strong').first().click();
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('#start-hole-number-0').fill('2');
+    await page.locator('#start-hole-number-0').press('Tab');
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('#use-preset-0').click();
+    await expect(advancedPanel).toHaveClass(/open/);
+  });
+
   test('squarus basic and advanced squares controls stay synchronized', async ({ page }) => {
     await page.goto('/stitchlab.html?version=2&experience=squarus');
     await page.locator('#gear').click();
