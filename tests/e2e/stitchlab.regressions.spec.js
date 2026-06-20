@@ -136,6 +136,26 @@ test.describe('StitchLab regressions', () => {
     await expect(advancedPanel).toHaveClass(/open/);
   });
 
+  test('advanced pane stays open for top and lower control bars, closes on canvas click', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    const advancedPanel = page.locator('#advanced-panel');
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('.shape-btn[data-shape="square"]').click();
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('#holes').click();
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('#jump').click();
+    await expect(advancedPanel).toHaveClass(/open/);
+
+    await page.locator('#canvas-container').click();
+    await expect(advancedPanel).not.toHaveClass(/open/);
+  });
+
   test('squarus basic and advanced squares controls stay synchronized', async ({ page }) => {
     await page.goto('/stitchlab.html?version=2&experience=squarus');
     await page.locator('#gear').click();

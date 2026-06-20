@@ -14442,6 +14442,7 @@ document.addEventListener('click', (event) => {
   var clickedWithinDiscovery = eventPathContains(discoveryPanel);
   var clickedDiscoveryToggle = eventPathContains(discoveryToggleBtn);
   var clickedThreadCard = eventPathMatchesSelector('.thread-card');
+  var clickedCanvasArea = eventPathMatchesSelector('#myCanvas') || eventPathMatchesSelector('#canvas-container') || eventPathMatchesSelector('#canvas-stage');
 
   if (!kidThreadMenu.hasAttribute('hidden') && !kidThreadPicker.contains(event.target)) {
     kidThreadMenu.setAttribute('hidden', '');
@@ -14456,7 +14457,7 @@ document.addEventListener('click', (event) => {
   if (!experienceInfoPanel.hasAttribute('hidden') && !experienceInfoPanel.contains(event.target) && !experienceInfoToggle.contains(event.target)) {
     syncExperienceInfoPanel(false);
   }
-  if (advancedPanel.classList.contains('open') && !clickedWithinAdvanced && !clickedAdvancedToggle && !clickedThreadCard) {
+  if (advancedPanel.classList.contains('open') && clickedCanvasArea && !clickedWithinAdvanced && !clickedAdvancedToggle && !clickedThreadCard) {
     advancedPanel.classList.remove('open');
     syncAdvancedToggleButton();
   }
