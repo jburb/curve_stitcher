@@ -270,7 +270,7 @@
     background: #f5f8ff;
   }
   .acknowledgments-card {
-    width: min(980px, 100%);
+    width: min(1120px, 100%);
     padding: 14px 14px 12px;
   }
   .acknowledgments-header {
@@ -289,24 +289,13 @@
   .acknowledgments-title-wrap h4 {
     margin: 0;
   }
-  .acknowledgments-style-chip {
-    border-radius: 999px;
-    border: 1px solid #c5d4ea;
-    background: #eff4fb;
-    color: #2f456b;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    padding: 3px 8px;
-    white-space: nowrap;
-  }
   .acknowledgments-stage {
     position: relative;
     border: 1px solid #d8dfec;
     border-radius: 11px;
     background: linear-gradient(155deg, #f7f9fc 0%, #eef2f8 100%);
     overflow: hidden;
-    width: min(100%, var(--ack-stage-target-size, 820px));
+    width: min(100%, var(--ack-stage-target-size, 760px));
     margin: 0 auto;
     aspect-ratio: 1 / 1;
   }
@@ -1455,6 +1444,12 @@
     padding: 14px;
   }
 
+  .modal-card.acknowledgments-card {
+    width: min(1120px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+  }
+
   .modal-card h4 {
     margin: 0 0 10px;
     color: #2b3e63;
@@ -1716,21 +1711,26 @@
     color: #2f4a78;
   }
 
+  html[data-theme="dark"] .modal-card.acknowledgments-card {
+    background: #1f2936;
+    border-color: #3f4f66;
+    color: #dce7f8;
+    box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] .modal-card.acknowledgments-card h4 {
+    color: #e7f0ff;
+  }
+
   html[data-theme="dark"] .acknowledgments-stage {
     border-color: #d8dfec;
     background: linear-gradient(155deg, #f7f9fc 0%, #eef2f8 100%);
   }
 
-  html[data-theme="dark"] .acknowledgments-style-chip {
-    border-color: #c5d4ea;
-    background: #eff4fb;
-    color: #2f456b;
-  }
-
   html[data-theme="dark"] .acknowledgments-btn {
-    border-color: #cfdaee;
-    background: #ffffff;
-    color: #2f476f;
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
   }
 
   html[data-theme="dark"] .acknowledgments-btn.primary,
@@ -1741,7 +1741,7 @@
   }
 
   html[data-theme="dark"] .acknowledgments-progress {
-    color: #516585;
+    color: #b8c9e4;
   }
 
   html[data-theme="dark"] #myCanvas {
@@ -2336,7 +2336,6 @@
     <div class="acknowledgments-header">
       <div class="acknowledgments-title-wrap">
         <h4 id="acknowledgments-title">Acknowledgments</h4>
-        <span id="acknowledgments-style-chip" class="acknowledgments-style-chip">Stitching</span>
       </div>
       <button id="acknowledgments-close-btn" type="button" class="acknowledgments-btn">Close</button>
     </div>
@@ -2506,7 +2505,6 @@ var acknowledgmentsStage = document.getElementById('acknowledgments-stage');
 var acknowledgmentsLineText = document.getElementById('acknowledgments-line-text');
 var acknowledgmentsPattern = document.getElementById('acknowledgments-pattern');
 var acknowledgmentsProgress = document.getElementById('acknowledgments-progress');
-var acknowledgmentsStyleChip = document.getElementById('acknowledgments-style-chip');
 var acknowledgmentsPrevBtn = document.getElementById('acknowledgments-prev-btn');
 var acknowledgmentsNextBtn = document.getElementById('acknowledgments-next-btn');
 var acknowledgmentsAutoplayBtn = document.getElementById('acknowledgments-autoplay-btn');
@@ -2566,6 +2564,8 @@ var acknowledgmentsViewerState = {
   rafId: null,
   lineStartMs: 0,
   currentLineDurationMs: 0,
+  seriesLineDurationMs: 0,
+  lineDurationsMsByIndex: [],
   currentStyleId: '',
   currentVisual: null,
   currentLineText: '',
@@ -2588,18 +2588,24 @@ var ACKNOWLEDGMENTS_GRAY_PALETTE = ['#111820', '#2b3440', '#46525f', '#65717f', 
 var ACKNOWLEDGMENTS_STAGE_SIZE = 720;
 var ACKNOWLEDGMENTS_STAGE_CENTER = ACKNOWLEDGMENTS_STAGE_SIZE * 0.5;
 var ACKNOWLEDGMENTS_LINE_BEATS = 14;
+var ACKNOWLEDGMENTS_TEXT_FADE_START = 0.05;
+var ACKNOWLEDGMENTS_TEXT_FADE_END = 0.27;
+var ACKNOWLEDGMENTS_MS_PER_WORD = 260;
+var ACKNOWLEDGMENTS_LINE_BASE_MS = 900;
+var ACKNOWLEDGMENTS_LINE_MIN_MS = 1800;
+var ACKNOWLEDGMENTS_LINE_MAX_MS = 12000;
 var ACKNOWLEDGMENTS_SONG_PATH = 'assets/audio/SonatainCmajor,Hob.XVI_50-I.Allegro.mp3';
 var ACKNOWLEDGMENTS_BPM = 110;
 var ACKNOWLEDGMENTS_INLINE_LINES = [
-  'To My kids who ensured I visited the math museum.',
-  'To Jenny Quinn whose curve stitching reawakened my sense of mathematical wonder.',
-  'To Kim Kotovic whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
-  'To Mary Everest Boole whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her gently persistent appeals to and for children, and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
-  'To Charles Babbage for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individuals free time might never have otherwise created.',
-  'To Alexey Pajitnov whose legendary Tetris beat all odds of his place and time to not only popularize polyonimoes throughout the human population, but to finally reward his own spirited work as well.',
+  'To my kids, who ensured I visited the math museum.',
+  'To Jenny Quinn, whose curve stitching reawakened my sense of mathematical wonder.',
+  'To Kim Kotovic, whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
+  'To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her gently persistent appeals to and for children, and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
+  'To Charles Babbage, for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individual\'s free time might never have otherwise allowed for.',
+  'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to not only popularize polyonimoes throughout the human population, but to finally reward his own spirited work as well.',
   'To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
   'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
-  'To my wife Rabiya, without whose nurturing, systematizing, and sometimes severe support I could hardly function as a decent huma being, and certainly not sufficiently to create such a lovely experience as this app.',
+  'To my wife Rabiya, without whose nurturing, systematizing, and firm support I could hardly function as a decent human being, and certainly not sufficiently to create such a lovely experience as this app.',
   'And finally to the divine being from whom all mathematical law originates, and to whom all thanks is ultimately due.'
 ];
 var ACKNOWLEDGMENTS_FALLBACK_LINES = [
@@ -13662,6 +13668,7 @@ function configureAcknowledgmentsPatternViewport() {
       canvasSizePx = Math.round(stageSize);
     }
     if (isFinite(canvasSizePx) && canvasSizePx > 0) {
+      canvasSizePx = Math.max(520, canvasSizePx);
       acknowledgmentsStage.style.setProperty('--ack-stage-target-size', String(canvasSizePx) + 'px');
     }
   }
@@ -13690,6 +13697,14 @@ function buildAcknowledgmentsEquilateralTriangle(size, sideScale, baseYRatio) {
     side: side,
     height: triHeight
   };
+}
+
+function getAcknowledgmentsTriangulaSideScale(size) {
+  var safeSize = Math.max(220, Number(size) || ACKNOWLEDGMENTS_STAGE_SIZE);
+  // Keep a fixed-like footprint (closer to Triangula's base frame) while preserving edge margins.
+  var side = Math.max(safeSize * 0.78, safeSize - 64);
+  side = Math.min(side, safeSize - 34);
+  return Math.max(0.68, Math.min(0.94, side / safeSize));
 }
 
 function getAcknowledgmentsPaletteColors() {
@@ -13725,23 +13740,37 @@ function getAcknowledgmentsPaletteColors() {
   return palette.length ? palette : ['#1982c4', '#8ac926', '#6a4c93'];
 }
 
+function getAcknowledgmentsSoftenedColor(color, amount) {
+  var base = sanitizeHexColor(color, '#6f7f95');
+  return squarusApplyShade(base, Math.max(0, Math.min(1, Number(amount) || 0.75)));
+}
+
 function getAcknowledgmentsTextFrameSpec(styleId) {
   var size = getAcknowledgmentsStageLogicalSize();
   if (styleId === 'triangula') {
-    var tri = buildAcknowledgmentsEquilateralTriangle(size, 0.64, 0.86);
+    var triScale = getAcknowledgmentsTriangulaSideScale(size);
+    var tri = buildAcknowledgmentsEquilateralTriangle(size, triScale, 0.86);
+    var triPad = size * 0.055;
     return {
       shapeType: 'path',
       shapePath: 'M ' + tri.apex.x + ' ' + tri.apex.y + ' L ' + tri.left.x + ' ' + tri.left.y + ' L ' + tri.right.x + ' ' + tri.right.y + ' Z',
       textX: size * 0.5,
-      textY: tri.apex.y + (tri.height * 0.56),
-      maxChars: 23,
-      maxCharsMax: 30,
-      minFontSize: 15,
-      maxFontSize: 27,
-      textAreaHeight: tri.height * 0.62
+      textY: tri.apex.y + (tri.height * 0.62),
+      maxChars: 18,
+      maxCharsMax: 26,
+      minFontSize: 10,
+      maxFontSize: 22,
+      textAreaHeight: tri.height * 0.44,
+      triangleApexY: tri.apex.y,
+      triangleHeight: tri.height,
+      triangleSide: tri.side,
+      textPadding: size * 0.045,
+      textTop: tri.apex.y + triPad,
+      textBottom: tri.left.y - triPad
     };
   }
   if (styleId === 'squarus') {
+    var rectPad = size * 0.055;
     return {
       shapeType: 'rect',
       shapeRect: {
@@ -13755,12 +13784,16 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
       textY: size * 0.56,
       maxChars: 34,
       maxCharsMax: 44,
-      minFontSize: 16,
+      minFontSize: 11,
       maxFontSize: 28,
-      textAreaHeight: size * 0.56
+      textAreaHeight: size * 0.56,
+      textPadding: size * 0.05,
+      textTop: size * 0.14 + rectPad,
+      textBottom: size * 0.86 - rectPad
     };
   }
 
+  var circlePad = size * 0.055;
   return {
     shapeType: 'circle',
     shapeCircle: {
@@ -13772,10 +13805,55 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
     textY: size * 0.58,
     maxChars: 30,
     maxCharsMax: 40,
-    minFontSize: 15,
+    minFontSize: 11,
     maxFontSize: 27,
-    textAreaHeight: size * 0.55
+    textAreaHeight: size * 0.55,
+    textPadding: size * 0.05,
+    textTop: (size * 0.5 - size * 0.35) + circlePad,
+    textBottom: (size * 0.5 + size * 0.35) - circlePad
   };
+}
+
+var acknowledgmentsTextMeasureCanvas = null;
+
+function getAcknowledgmentsTextMeasureContext() {
+  if (!acknowledgmentsTextMeasureCanvas) {
+    acknowledgmentsTextMeasureCanvas = document.createElement('canvas');
+  }
+  return acknowledgmentsTextMeasureCanvas.getContext('2d');
+}
+
+function measureAcknowledgmentsTextWidth(text, fontSize, fontFamily, fontWeight) {
+  var ctx = getAcknowledgmentsTextMeasureContext();
+  if (!ctx) return (String(text || '').length * fontSize * 0.62);
+  ctx.font = String(fontWeight || 700) + ' ' + String(Math.max(8, fontSize || 12)) + 'px ' + String(fontFamily || 'sans-serif');
+  return ctx.measureText(String(text || '')).width;
+}
+
+function getAcknowledgmentsLineMaxWidthForY(spec, lineY, stageSize) {
+  var safePad = Math.max(6, Number(spec && spec.textPadding) || (stageSize * 0.03));
+  var sideGuard = Math.max(8, safePad * 0.5);
+  if (!spec) return stageSize - (safePad * 2);
+
+  if (spec.shapeType === 'rect' && spec.shapeRect) {
+    return Math.max(20, spec.shapeRect.width - (safePad * 2) - sideGuard);
+  }
+
+  if (spec.shapeType === 'circle' && spec.shapeCircle) {
+    var dy = lineY - spec.shapeCircle.cy;
+    var r = Math.max(1, spec.shapeCircle.r - safePad);
+    var inside = (r * r) - (dy * dy);
+    if (inside <= 0) return 20;
+    return Math.max(20, Math.sqrt(inside) * 2 - sideGuard);
+  }
+
+  if (spec.shapeType === 'path' && isFinite(spec.triangleApexY) && isFinite(spec.triangleHeight) && isFinite(spec.triangleSide)) {
+    var t = (lineY - spec.triangleApexY) / Math.max(1e-6, spec.triangleHeight);
+    t = clamp01(t);
+    return Math.max(20, (spec.triangleSide * t) - (safePad * 2) - sideGuard);
+  }
+
+  return Math.max(20, stageSize - (safePad * 2) - sideGuard);
 }
 
 function buildAcknowledgmentsWrappedLines(text, maxChars, maxLines) {
@@ -13813,7 +13891,51 @@ function createAcknowledgmentsTextLayer(styleId) {
   var defs = createSvgNode('defs');
   var clipPath = createSvgNode('clipPath');
   var clipId = 'acknowledgments-text-clip-' + styleId;
+  var textFilterId = 'acknowledgments-text-edge-' + styleId;
   clipPath.setAttribute('id', clipId);
+
+  var textFilter = createSvgNode('filter');
+  textFilter.setAttribute('id', textFilterId);
+  textFilter.setAttribute('x', '-12%');
+  textFilter.setAttribute('y', '-12%');
+  textFilter.setAttribute('width', '124%');
+  textFilter.setAttribute('height', '124%');
+  textFilter.setAttribute('color-interpolation-filters', 'sRGB');
+
+  var edgeDilate = createSvgNode('feMorphology');
+  edgeDilate.setAttribute('in', 'SourceAlpha');
+  edgeDilate.setAttribute('operator', 'dilate');
+  edgeDilate.setAttribute('radius', '0.85');
+  edgeDilate.setAttribute('result', 'edgeBase');
+  textFilter.appendChild(edgeDilate);
+
+  var edgeBlur = createSvgNode('feGaussianBlur');
+  edgeBlur.setAttribute('in', 'edgeBase');
+  edgeBlur.setAttribute('stdDeviation', '1.15');
+  edgeBlur.setAttribute('result', 'edgeBlur');
+  textFilter.appendChild(edgeBlur);
+
+  var edgeFlood = createSvgNode('feFlood');
+  edgeFlood.setAttribute('flood-color', '#f8fbff');
+  edgeFlood.setAttribute('flood-opacity', '0.95');
+  edgeFlood.setAttribute('result', 'edgeColor');
+  textFilter.appendChild(edgeFlood);
+
+  var edgeComposite = createSvgNode('feComposite');
+  edgeComposite.setAttribute('in', 'edgeColor');
+  edgeComposite.setAttribute('in2', 'edgeBlur');
+  edgeComposite.setAttribute('operator', 'in');
+  edgeComposite.setAttribute('result', 'edgeGlow');
+  textFilter.appendChild(edgeComposite);
+
+  var textMerge = createSvgNode('feMerge');
+  var textMergeEdge = createSvgNode('feMergeNode');
+  textMergeEdge.setAttribute('in', 'edgeGlow');
+  var textMergeSource = createSvgNode('feMergeNode');
+  textMergeSource.setAttribute('in', 'SourceGraphic');
+  textMerge.appendChild(textMergeEdge);
+  textMerge.appendChild(textMergeSource);
+  textFilter.appendChild(textMerge);
 
   var clipShape = null;
   var frameOutline = null;
@@ -13851,29 +13973,37 @@ function createAcknowledgmentsTextLayer(styleId) {
 
   clipPath.appendChild(clipShape);
   defs.appendChild(clipPath);
+  defs.appendChild(textFilter);
   acknowledgmentsPattern.appendChild(defs);
 
   frameOutline.setAttribute('fill', 'none');
-  frameOutline.setAttribute('stroke', '#748292');
-  frameOutline.setAttribute('stroke-width', '2');
-  frameOutline.setAttribute('opacity', '0.32');
+  if (spec.shapeType === 'rect') {
+    // Squarus uses an internal square clip frame; keep it invisible.
+    frameOutline.setAttribute('stroke', 'none');
+    frameOutline.setAttribute('opacity', '0');
+  } else {
+    frameOutline.setAttribute('stroke', '#748292');
+    frameOutline.setAttribute('stroke-width', '2');
+    frameOutline.setAttribute('opacity', '0.32');
+  }
   acknowledgmentsPattern.appendChild(frameOutline);
 
   var textGroup = createSvgNode('g');
   textGroup.setAttribute('clip-path', 'url(#' + clipId + ')');
-  textGroup.setAttribute('opacity', '0.9');
+  textGroup.setAttribute('filter', 'url(#' + textFilterId + ')');
+  textGroup.setAttribute('opacity', '0');
 
   var textNode = createSvgNode('text');
   textNode.setAttribute('x', String(spec.textX));
   textNode.setAttribute('y', String(spec.textY));
-  textNode.setAttribute('fill', 'rgba(20, 30, 46, 0.78)');
+  textNode.setAttribute('fill', 'rgba(16, 23, 35, 0.9)');
   textNode.setAttribute('text-anchor', 'middle');
   textNode.setAttribute('font-size', '29');
-  textNode.setAttribute('font-family', '"Georgia", "Times New Roman", serif');
-  textNode.setAttribute('font-weight', '600');
+  textNode.setAttribute('font-family', '"Nunito", sans-serif');
+  textNode.setAttribute('font-weight', '700');
   textNode.setAttribute('paint-order', 'stroke');
-  textNode.setAttribute('stroke', 'rgba(255, 255, 255, 0.42)');
-  textNode.setAttribute('stroke-width', '0.9');
+  textNode.setAttribute('stroke', 'rgba(248, 252, 255, 0.88)');
+  textNode.setAttribute('stroke-width', '1.18');
   textNode.setAttribute('stroke-linejoin', 'round');
 
   textGroup.appendChild(textNode);
@@ -13912,6 +14042,8 @@ function updateAcknowledgmentsSvgText(text) {
   var lines = [];
   var fontSize = minFontSize;
   var charLimit = maxChars;
+  var fontFamily = svgTextNode.getAttribute('font-family') || 'sans-serif';
+  var fontWeight = svgTextNode.getAttribute('font-weight') || '400';
 
   while (true) {
     lines = buildAcknowledgmentsWrappedLines(safeText, charLimit, maxLines);
@@ -13924,14 +14056,67 @@ function updateAcknowledgmentsSvgText(text) {
   if (!lines.length) return;
 
   var lineHeight = Math.max(18, Math.round(fontSize * 1.22));
+  var textTop = isFinite(spec.textTop) ? spec.textTop : 80;
+  var textBottom = isFinite(spec.textBottom) ? spec.textBottom : (stageSize - 80);
+  var availableHeight = Math.max(40, textBottom - textTop);
+  var ascentRatio = 0.78;
+  var descentRatio = 0.22;
+  var topPad = Math.max(2, fontSize * 0.08);
+  var bottomPad = Math.max(2, fontSize * 0.06);
+  var ascent = fontSize * ascentRatio;
+  var descent = fontSize * descentRatio;
+  var totalHeight = ascent + descent + ((lines.length - 1) * lineHeight) + topPad + bottomPad;
+  while (totalHeight > availableHeight && fontSize > minFontSize) {
+    fontSize -= 1;
+    lineHeight = Math.max(16, Math.round(fontSize * 1.2));
+    topPad = Math.max(2, fontSize * 0.08);
+    bottomPad = Math.max(2, fontSize * 0.06);
+    ascent = fontSize * ascentRatio;
+    descent = fontSize * descentRatio;
+    totalHeight = ascent + descent + ((lines.length - 1) * lineHeight) + topPad + bottomPad;
+  }
+
+  function fitsAllLineWidths() {
+    var baselineStartProbe = textTop + ((availableHeight - totalHeight) * 0.5) + topPad + ascent;
+    for (var li = 0; li < lines.length; li++) {
+      var ly = baselineStartProbe + li * lineHeight;
+      var allowed = getAcknowledgmentsLineMaxWidthForY(spec, ly, stageSize);
+      var measured = measureAcknowledgmentsTextWidth(lines[li], fontSize, fontFamily, fontWeight);
+      if (measured > allowed) return false;
+    }
+    return true;
+  }
+
+  while (!fitsAllLineWidths() && fontSize > minFontSize) {
+    fontSize -= 1;
+    lineHeight = Math.max(16, Math.round(fontSize * 1.2));
+    topPad = Math.max(2, fontSize * 0.08);
+    bottomPad = Math.max(2, fontSize * 0.06);
+    ascent = fontSize * ascentRatio;
+    descent = fontSize * descentRatio;
+    totalHeight = ascent + descent + ((lines.length - 1) * lineHeight) + topPad + bottomPad;
+    if (totalHeight > availableHeight) {
+      continue;
+    }
+  }
+
   svgTextNode.setAttribute('font-size', String(fontSize));
   svgTextNode.setAttribute('stroke-width', String(Math.max(0.45, fontSize * 0.03)));
-  var anchorY = parseBoundedInt(acknowledgmentsViewerState.svgTextAnchorY, 80, stageSize - 80, Math.floor(stageSize * 0.56));
-  var startY = anchorY - ((lines.length - 1) * lineHeight * 0.5);
+
+  var baselineStart = textTop + ((availableHeight - totalHeight) * 0.5) + topPad + ascent;
+  if (!isFinite(baselineStart)) baselineStart = textTop + topPad + ascent;
   for (var i = 0; i < lines.length; i++) {
+    var lineY = baselineStart + i * lineHeight;
+    var maxWidth = getAcknowledgmentsLineMaxWidthForY(spec, lineY, stageSize);
+    var measuredWidth = measureAcknowledgmentsTextWidth(lines[i], fontSize, fontFamily, fontWeight);
     var tspan = createSvgNode('tspan');
     tspan.setAttribute('x', svgTextNode.getAttribute('x') || String(stageSize * 0.5));
-    tspan.setAttribute('y', String(startY + i * lineHeight));
+    tspan.setAttribute('y', String(lineY));
+    if (measuredWidth > maxWidth) {
+      // Last-resort clamp for edge cases (e.g., very long single tokens).
+      tspan.setAttribute('textLength', String(Math.max(18, maxWidth - 2)));
+      tspan.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    }
     tspan.textContent = lines[i];
     svgTextNode.appendChild(tspan);
   }
@@ -13942,21 +14127,99 @@ function updateAcknowledgmentsSvgText(text) {
 function setAcknowledgmentsLineReveal(text, progress) {
   var safeText = String(text || '');
   var p = clamp01(progress);
-  var count = Math.max(0, Math.min(safeText.length, Math.floor(safeText.length * p)));
-  var revealText = safeText.slice(0, count);
+  var revealText = safeText;
   if (acknowledgmentsLineText) {
     acknowledgmentsLineText.textContent = revealText;
   }
   updateAcknowledgmentsSvgText(revealText);
+
+  if (acknowledgmentsViewerState.svgTextGroup) {
+    var fadeStart = ACKNOWLEDGMENTS_TEXT_FADE_START;
+    var fadeEnd = Math.max(fadeStart + 0.04, ACKNOWLEDGMENTS_TEXT_FADE_END);
+    var alpha = 0;
+    if (p >= fadeEnd) {
+      alpha = 0.95;
+    } else if (p > fadeStart) {
+      var local = (p - fadeStart) / (fadeEnd - fadeStart);
+      alpha = 0.95 * easeInOutCubic(clamp01(local));
+    }
+    acknowledgmentsViewerState.svgTextGroup.setAttribute('opacity', String(alpha));
+  }
 }
 
 function getAcknowledgmentsSecondsPerBeat() {
   return 60 / ACKNOWLEDGMENTS_BPM;
 }
 
-function getAcknowledgmentsLineDurationMs(styleId, visual, animatorData) {
+function getAcknowledgmentsBaseLineDurationMs() {
   var spb = getAcknowledgmentsSecondsPerBeat();
   return Math.round(ACKNOWLEDGMENTS_LINE_BEATS * spb * 1000);
+}
+
+function countAcknowledgmentsWords(text) {
+  var safeText = String(text || '').trim();
+  if (!safeText) return 0;
+  var matches = safeText.match(/\S+/g);
+  return matches ? matches.length : 0;
+}
+
+function buildAcknowledgmentsLineDurations(lines) {
+  var safeLines = Array.isArray(lines) && lines.length ? lines : ACKNOWLEDGMENTS_FALLBACK_LINES;
+  var raw = [];
+  var totalRaw = 0;
+  for (var i = 0; i < safeLines.length; i++) {
+    var words = countAcknowledgmentsWords(safeLines[i]);
+    var ms = ACKNOWLEDGMENTS_LINE_BASE_MS + (words * ACKNOWLEDGMENTS_MS_PER_WORD);
+    ms = Math.max(ACKNOWLEDGMENTS_LINE_MIN_MS, Math.min(ACKNOWLEDGMENTS_LINE_MAX_MS, Math.round(ms)));
+    raw.push(ms);
+    totalRaw += ms;
+  }
+
+  if (!raw.length) return [getAcknowledgmentsBaseLineDurationMs()];
+
+  var trackDurationSec = (acknowledgmentsAudio && isFinite(acknowledgmentsAudio.duration))
+    ? acknowledgmentsAudio.duration
+    : 0;
+  if (!(trackDurationSec > 0) || !(totalRaw > 0)) {
+    return raw;
+  }
+
+  var trackMs = Math.round(trackDurationSec * 1000);
+  var scale = trackMs / totalRaw;
+  scale = Math.max(0.72, Math.min(1.4, scale));
+
+  var scaled = [];
+  for (var s = 0; s < raw.length; s++) {
+    var scaledMs = Math.round(raw[s] * scale);
+    scaled.push(Math.max(ACKNOWLEDGMENTS_LINE_MIN_MS, Math.min(ACKNOWLEDGMENTS_LINE_MAX_MS, scaledMs)));
+  }
+  return scaled;
+}
+
+function getAcknowledgmentsSeriesLineDurationMs(lineCount) {
+  var count = Math.max(1, parseBoundedInt(lineCount, 1, 9999, 1));
+  var trackDurationSec = (acknowledgmentsAudio && isFinite(acknowledgmentsAudio.duration))
+    ? acknowledgmentsAudio.duration
+    : 0;
+  if (trackDurationSec > 0) {
+    var perLineMs = Math.round((trackDurationSec * 1000) / count);
+    return Math.max(2500, Math.min(14000, perLineMs));
+  }
+  return getAcknowledgmentsBaseLineDurationMs();
+}
+
+function getAcknowledgmentsLineDurationMs(styleId, visual, animatorData) {
+  if (Array.isArray(acknowledgmentsViewerState.lineDurationsMsByIndex) && acknowledgmentsViewerState.lineDurationsMsByIndex.length) {
+    var index = parseBoundedInt(acknowledgmentsViewerState.lineIndex, 0, acknowledgmentsViewerState.lineDurationsMsByIndex.length - 1, 0);
+    var perLine = acknowledgmentsViewerState.lineDurationsMsByIndex[index];
+    if (isFinite(perLine) && perLine > 0) {
+      return perLine;
+    }
+  }
+  if (isFinite(acknowledgmentsViewerState.seriesLineDurationMs) && acknowledgmentsViewerState.seriesLineDurationMs > 0) {
+    return acknowledgmentsViewerState.seriesLineDurationMs;
+  }
+  return getAcknowledgmentsBaseLineDurationMs();
 }
 
 function buildAcknowledgmentsStitchingAnimator(visual) {
@@ -13986,9 +14249,9 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
   circle.setAttribute('cy', String(centerY));
   circle.setAttribute('r', String(radius));
   circle.setAttribute('fill', 'none');
-  circle.setAttribute('stroke', palette[0] || '#b5bdc8');
+  circle.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[0] || '#b5bdc8', 0.72));
   circle.setAttribute('stroke-width', '1');
-  circle.setAttribute('stroke-opacity', '0.42');
+  circle.setAttribute('stroke-opacity', '0.28');
   acknowledgmentsPattern.appendChild(circle);
 
   for (var h = 0; h < holeCount; h++) {
@@ -13996,8 +14259,8 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
     hole.setAttribute('cx', String(pointsList[h].x));
     hole.setAttribute('cy', String(pointsList[h].y));
     hole.setAttribute('r', '1.8');
-    hole.setAttribute('fill', palette[h % palette.length] || '#8e98a8');
-    hole.setAttribute('opacity', '0.5');
+    hole.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[h % palette.length] || '#8e98a8', 0.76));
+    hole.setAttribute('opacity', '0.34');
     acknowledgmentsPattern.appendChild(hole);
   }
 
@@ -14020,10 +14283,10 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
     line.setAttribute('y1', String(from.y));
     line.setAttribute('x2', String(from.x));
     line.setAttribute('y2', String(from.y));
-    line.setAttribute('stroke', palette[si % palette.length] || '#2c323a');
+    line.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[si % palette.length] || '#2c323a', 0.56));
     line.setAttribute('stroke-width', String(lineWidth));
     line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('opacity', '0.72');
+    line.setAttribute('opacity', '0.5');
     acknowledgmentsPattern.appendChild(line);
     segments.push({ line: line, from: from, to: to });
   }
@@ -14104,15 +14367,16 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
   var depth = Math.max(2, parseBoundedInt(visual && visual.depth, 2, 5, 3));
   var mode = visual && visual.mode === 'cut' ? 'cut' : 'shrink';
   var palette = getAcknowledgmentsPaletteColors();
-  var tri = buildAcknowledgmentsEquilateralTriangle(width, 0.68, 0.86);
+  var triScale = getAcknowledgmentsTriangulaSideScale(width);
+  var tri = buildAcknowledgmentsEquilateralTriangle(width, triScale, 0.86);
   var base = [tri.apex, tri.left, tri.right];
 
   var basePath = createSvgNode('path');
   basePath.setAttribute('d', toAcknowledgmentsPath(base));
   basePath.setAttribute('fill', 'none');
-  basePath.setAttribute('stroke', palette[0] || '#3d4652');
+  basePath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[0] || '#3d4652', 0.68));
   basePath.setAttribute('stroke-width', '2');
-  basePath.setAttribute('opacity', '0.62');
+  basePath.setAttribute('opacity', '0.44');
   acknowledgmentsPattern.appendChild(basePath);
 
   var elements = [];
@@ -14130,10 +14394,10 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
       for (var c = 0; c < cuts.length; c++) {
         var cutPath = createSvgNode('path');
         cutPath.setAttribute('d', toAcknowledgmentsPath(cuts[c]));
-        cutPath.setAttribute('fill', palette[(c + d) % palette.length] || '#6f7b8a');
-        cutPath.setAttribute('fill-opacity', '0.54');
-        cutPath.setAttribute('stroke', palette[(c + d + 1) % palette.length] || '#353f4b');
-        cutPath.setAttribute('stroke-opacity', '0.7');
+        cutPath.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[(c + d) % palette.length] || '#6f7b8a', 0.72));
+        cutPath.setAttribute('fill-opacity', '0.34');
+        cutPath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[(c + d + 1) % palette.length] || '#353f4b', 0.56));
+        cutPath.setAttribute('stroke-opacity', '0.46');
         cutPath.setAttribute('stroke-width', '1.2');
         cutPath.setAttribute('opacity', '0');
         acknowledgmentsPattern.appendChild(cutPath);
@@ -14148,10 +14412,10 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
       for (var t = 0; t < triangles.length; t++) {
         var trianglePath = createSvgNode('path');
         trianglePath.setAttribute('d', toAcknowledgmentsPath(triangles[t].vertices));
-        trianglePath.setAttribute('fill', slotPalette[triangles[t].slot] || palette[t % palette.length]);
-        trianglePath.setAttribute('fill-opacity', '0.58');
-        trianglePath.setAttribute('stroke', palette[(t + level) % palette.length] || '#2f3946');
-        trianglePath.setAttribute('stroke-opacity', '0.78');
+        trianglePath.setAttribute('fill', getAcknowledgmentsSoftenedColor(slotPalette[triangles[t].slot] || palette[t % palette.length], 0.72));
+        trianglePath.setAttribute('fill-opacity', '0.36');
+        trianglePath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[(t + level) % palette.length] || '#2f3946', 0.56));
+        trianglePath.setAttribute('stroke-opacity', '0.48');
         trianglePath.setAttribute('stroke-width', String(Math.max(0.6, 1.2 - level * 0.1)));
         trianglePath.setAttribute('opacity', '0');
         acknowledgmentsPattern.appendChild(trianglePath);
@@ -14169,9 +14433,9 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
     var partial = scaled - fullCount;
     for (var i = 0; i < elements.length; i++) {
       if (i < fullCount) {
-        elements[i].setAttribute('opacity', mode === 'cut' ? '0.9' : '0.82');
+        elements[i].setAttribute('opacity', mode === 'cut' ? '0.72' : '0.66');
       } else if (i === fullCount) {
-        elements[i].setAttribute('opacity', String(mode === 'cut' ? (partial * 0.9) : (partial * 0.82)));
+        elements[i].setAttribute('opacity', String(mode === 'cut' ? (partial * 0.72) : (partial * 0.66)));
       } else {
         elements[i].setAttribute('opacity', '0');
       }
@@ -14278,7 +14542,7 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
     var mappedTarget = mapPoint({ x: targetMeta.x, y: targetMeta.y });
     var targetScale = targetMeta.scale * mappedTarget.scale;
     var group = createSvgNode('g');
-    group.setAttribute('opacity', '0.15');
+    group.setAttribute('opacity', '0.12');
     acknowledgmentsPattern.appendChild(group);
 
     for (var rc = 0; rc < pieceMeta.cells.length; rc++) {
@@ -14287,11 +14551,11 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
       rect.setAttribute('y', String((pieceMeta.cells[rc][1] - pieceMeta.centroidY) * targetScale));
       rect.setAttribute('width', String(targetScale));
       rect.setAttribute('height', String(targetScale));
-      rect.setAttribute('fill', palette[p % palette.length]);
-      rect.setAttribute('fill-opacity', '0.6');
-      rect.setAttribute('stroke', '#1b232e');
-      rect.setAttribute('stroke-opacity', '0.72');
-      rect.setAttribute('stroke-width', String(Math.max(0.7, targetScale * 0.06)));
+      rect.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[p % palette.length], 0.74));
+      rect.setAttribute('fill-opacity', '0.34');
+      rect.setAttribute('stroke', '#6a7a90');
+      rect.setAttribute('stroke-opacity', '0.44');
+      rect.setAttribute('stroke-width', String(Math.max(0.55, targetScale * 0.045)));
       group.appendChild(rect);
     }
 
@@ -14330,21 +14594,21 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
         var x = groups[i].scatterX;
         var y = groups[i].scatterY;
         var rot = groups[i].scatterR;
-        var localOpacity = 0.2;
+        var localOpacity = 0.16;
 
         if (localT > 0 && localT < d.scatter) {
-          localOpacity = 0.35;
+          localOpacity = 0.28;
         } else if (localT >= d.scatter && localT < (d.scatter + d.reveal + d.travel)) {
           var travelP = easeInOutCubic(clamp01((localT - d.scatter - d.reveal) / Math.max(1e-4, d.travel)));
           x = groups[i].scatterX + (groups[i].targetX - groups[i].scatterX) * travelP;
           y = groups[i].scatterY + (groups[i].targetY - groups[i].scatterY) * travelP;
           rot = groups[i].scatterR + (groups[i].targetR - groups[i].scatterR) * travelP;
-          localOpacity = 0.25 + 0.7 * travelP;
+          localOpacity = 0.2 + 0.52 * travelP;
         } else if (localT >= (d.scatter + d.reveal + d.travel)) {
           x = groups[i].targetX;
           y = groups[i].targetY;
           rot = groups[i].targetR;
-          localOpacity = 0.92;
+          localOpacity = 0.74;
         }
 
         groups[i].group.setAttribute('transform', 'translate(' + x + ' ' + y + ') rotate(' + rot + ')');
@@ -14418,7 +14682,6 @@ function renderAcknowledgmentsLine(lines) {
   acknowledgmentsViewerState.lineIndex = Math.max(0, Math.min(acknowledgmentsViewerState.lineIndex, safeLines.length - 1));
   var lineIndex = acknowledgmentsViewerState.lineIndex;
   var styleId = getAcknowledgmentsStyleForIndex(lineIndex);
-  var styleLabel = getAcknowledgmentsStyleLabel(styleId);
   var visual = getAcknowledgmentsVisualForIndex(lineIndex, styleId);
   var activeLine = safeLines[lineIndex];
 
@@ -14427,9 +14690,6 @@ function renderAcknowledgmentsLine(lines) {
   }
   if (acknowledgmentsProgress) {
     acknowledgmentsProgress.textContent = String(lineIndex + 1) + ' / ' + String(safeLines.length);
-  }
-  if (acknowledgmentsStyleChip) {
-    acknowledgmentsStyleChip.textContent = styleLabel;
   }
 
   renderAcknowledgmentsPattern(styleId, visual, activeLine);
@@ -14468,6 +14728,8 @@ function openAcknowledgmentsViewer(options) {
   if (!acknowledgmentsModal) return;
   loadAcknowledgmentsLines().then(function(lines) {
     var safeLines = Array.isArray(lines) && lines.length ? lines : ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+    acknowledgmentsViewerState.lineDurationsMsByIndex = buildAcknowledgmentsLineDurations(safeLines);
+    acknowledgmentsViewerState.seriesLineDurationMs = getAcknowledgmentsSeriesLineDurationMs(safeLines.length);
     var requestedIndex = parseBoundedInt(options.lineIndex, 0, Math.max(0, safeLines.length - 1), 0);
     acknowledgmentsViewerState.lineIndex = requestedIndex;
     acknowledgmentsViewerState.autoPlay = (typeof options.autoPlay === 'boolean') ? options.autoPlay : true;
@@ -14488,6 +14750,8 @@ function closeAcknowledgmentsViewer() {
   stopAcknowledgmentsAutoplay();
   stopAcknowledgmentsStageAnimation();
   acknowledgmentsViewerState.autoPlay = false;
+  acknowledgmentsViewerState.lineDurationsMsByIndex = [];
+  acknowledgmentsViewerState.seriesLineDurationMs = 0;
   acknowledgmentsModal.classList.remove('open');
   updateMusicPlaybackState();
 }

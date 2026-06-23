@@ -148,15 +148,13 @@ test.describe('StitchLab regressions', () => {
     await expect(modal).toHaveClass(/open/);
 
     await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
-    await expect(page.locator('#acknowledgments-style-chip')).toHaveText('Stitching');
+    await expect(page.locator('#acknowledgments-style-chip')).toHaveCount(0);
 
     await page.locator('#acknowledgments-next-btn').click();
     await expect(page.locator('#acknowledgments-progress')).toContainText('2 /');
-    await expect(page.locator('#acknowledgments-style-chip')).toHaveText('Triangula');
 
     await page.locator('#acknowledgments-next-btn').click();
     await expect(page.locator('#acknowledgments-progress')).toContainText('3 /');
-    await expect(page.locator('#acknowledgments-style-chip')).toHaveText('Squarus');
   });
 
   test('acknowledgments viewer opens from About document action', async ({ page }) => {
