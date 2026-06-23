@@ -68,6 +68,14 @@
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'Clacon2';
+    src: url('assets/fonts/Classic-Console-Neue/clacon2.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
   html {
     height: 100%;
     overflow: hidden;
@@ -2600,9 +2608,9 @@ var ACKNOWLEDGMENTS_INLINE_LINES = [
   'To my kids, who ensured I visited the math museum.',
   'To Jenny Quinn, whose curve stitching reawakened my sense of mathematical wonder.',
   'To Kim Kotovic, whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
-  'To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her gently persistent appeals to and for children, and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
+  'To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her appeal to children -- and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
   'To Charles Babbage, for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individual\'s free time might never have otherwise allowed for.',
-  'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to not only popularize polyonimoes throughout the human population, but to finally reward his own spirited work as well.',
+  'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to not only popularize polyominoes throughout the human population, but to finally reward his own spirited work as well.',
   'To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
   'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
   'To my wife Rabiya, without whose nurturing, systematizing, and firm support I could hardly function as a decent human being, and certainly not sufficiently to create such a lovely experience as this app.',
@@ -13742,7 +13750,7 @@ function getAcknowledgmentsPaletteColors() {
 
 function getAcknowledgmentsSoftenedColor(color, amount) {
   var base = sanitizeHexColor(color, '#6f7f95');
-  return squarusApplyShade(base, Math.max(0, Math.min(1, Number(amount) || 0.75)));
+  return squarusApplyShade(base, Math.max(0, Math.min(1, Number(amount) || 0.55)));
 }
 
 function getAcknowledgmentsTextFrameSpec(styleId) {
@@ -13750,23 +13758,24 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
   if (styleId === 'triangula') {
     var triScale = getAcknowledgmentsTriangulaSideScale(size);
     var tri = buildAcknowledgmentsEquilateralTriangle(size, triScale, 0.86);
-    var triPad = size * 0.055;
+    var triTopPad = size * 0.118;
+    var triBottomPad = size * 0.044;
     return {
       shapeType: 'path',
       shapePath: 'M ' + tri.apex.x + ' ' + tri.apex.y + ' L ' + tri.left.x + ' ' + tri.left.y + ' L ' + tri.right.x + ' ' + tri.right.y + ' Z',
       textX: size * 0.5,
-      textY: tri.apex.y + (tri.height * 0.62),
+      textY: tri.apex.y + (tri.height * 0.8),
       maxChars: 18,
       maxCharsMax: 26,
-      minFontSize: 10,
-      maxFontSize: 22,
-      textAreaHeight: tri.height * 0.44,
+      minFontSize: 20,
+      maxFontSize: 24,
+      textAreaHeight: tri.height * 0.48,
       triangleApexY: tri.apex.y,
       triangleHeight: tri.height,
       triangleSide: tri.side,
       textPadding: size * 0.045,
-      textTop: tri.apex.y + triPad,
-      textBottom: tri.left.y - triPad
+      textTop: tri.apex.y + triTopPad,
+      textBottom: tri.left.y - triBottomPad
     };
   }
   if (styleId === 'squarus') {
@@ -13784,7 +13793,7 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
       textY: size * 0.56,
       maxChars: 34,
       maxCharsMax: 44,
-      minFontSize: 11,
+      minFontSize: 20,
       maxFontSize: 28,
       textAreaHeight: size * 0.56,
       textPadding: size * 0.05,
@@ -13805,7 +13814,7 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
     textY: size * 0.58,
     maxChars: 30,
     maxCharsMax: 40,
-    minFontSize: 11,
+    minFontSize: 20,
     maxFontSize: 27,
     textAreaHeight: size * 0.55,
     textPadding: size * 0.05,
@@ -13999,7 +14008,7 @@ function createAcknowledgmentsTextLayer(styleId) {
   textNode.setAttribute('fill', 'rgba(16, 23, 35, 0.9)');
   textNode.setAttribute('text-anchor', 'middle');
   textNode.setAttribute('font-size', '29');
-  textNode.setAttribute('font-family', '"Nunito", sans-serif');
+  textNode.setAttribute('font-family', '"Clacon2", "Nunito", sans-serif');
   textNode.setAttribute('font-weight', '700');
   textNode.setAttribute('paint-order', 'stroke');
   textNode.setAttribute('stroke', 'rgba(248, 252, 255, 0.88)');
@@ -14249,7 +14258,7 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
   circle.setAttribute('cy', String(centerY));
   circle.setAttribute('r', String(radius));
   circle.setAttribute('fill', 'none');
-  circle.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[0] || '#b5bdc8', 0.72));
+  circle.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[0] || '#b5bdc8', 0.5));
   circle.setAttribute('stroke-width', '1');
   circle.setAttribute('stroke-opacity', '0.28');
   acknowledgmentsPattern.appendChild(circle);
@@ -14259,8 +14268,8 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
     hole.setAttribute('cx', String(pointsList[h].x));
     hole.setAttribute('cy', String(pointsList[h].y));
     hole.setAttribute('r', '1.8');
-    hole.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[h % palette.length] || '#8e98a8', 0.76));
-    hole.setAttribute('opacity', '0.34');
+    hole.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[h % palette.length] || '#8e98a8', 0.56));
+    hole.setAttribute('opacity', '0.44');
     acknowledgmentsPattern.appendChild(hole);
   }
 
@@ -14283,10 +14292,10 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
     line.setAttribute('y1', String(from.y));
     line.setAttribute('x2', String(from.x));
     line.setAttribute('y2', String(from.y));
-    line.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[si % palette.length] || '#2c323a', 0.56));
+    line.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[si % palette.length] || '#2c323a', 0.4));
     line.setAttribute('stroke-width', String(lineWidth));
     line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('opacity', '0.5');
+    line.setAttribute('opacity', '0.6');
     acknowledgmentsPattern.appendChild(line);
     segments.push({ line: line, from: from, to: to });
   }
@@ -14374,9 +14383,9 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
   var basePath = createSvgNode('path');
   basePath.setAttribute('d', toAcknowledgmentsPath(base));
   basePath.setAttribute('fill', 'none');
-  basePath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[0] || '#3d4652', 0.68));
+  basePath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[0] || '#3d4652', 0.48));
   basePath.setAttribute('stroke-width', '2');
-  basePath.setAttribute('opacity', '0.44');
+  basePath.setAttribute('opacity', '0.54');
   acknowledgmentsPattern.appendChild(basePath);
 
   var elements = [];
@@ -14394,10 +14403,10 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
       for (var c = 0; c < cuts.length; c++) {
         var cutPath = createSvgNode('path');
         cutPath.setAttribute('d', toAcknowledgmentsPath(cuts[c]));
-        cutPath.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[(c + d) % palette.length] || '#6f7b8a', 0.72));
-        cutPath.setAttribute('fill-opacity', '0.34');
-        cutPath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[(c + d + 1) % palette.length] || '#353f4b', 0.56));
-        cutPath.setAttribute('stroke-opacity', '0.46');
+        cutPath.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[(c + d) % palette.length] || '#6f7b8a', 0.48));
+        cutPath.setAttribute('fill-opacity', '0.46');
+        cutPath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[(c + d + 1) % palette.length] || '#353f4b', 0.38));
+        cutPath.setAttribute('stroke-opacity', '0.56');
         cutPath.setAttribute('stroke-width', '1.2');
         cutPath.setAttribute('opacity', '0');
         acknowledgmentsPattern.appendChild(cutPath);
@@ -14412,10 +14421,10 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
       for (var t = 0; t < triangles.length; t++) {
         var trianglePath = createSvgNode('path');
         trianglePath.setAttribute('d', toAcknowledgmentsPath(triangles[t].vertices));
-        trianglePath.setAttribute('fill', getAcknowledgmentsSoftenedColor(slotPalette[triangles[t].slot] || palette[t % palette.length], 0.72));
-        trianglePath.setAttribute('fill-opacity', '0.36');
-        trianglePath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[(t + level) % palette.length] || '#2f3946', 0.56));
-        trianglePath.setAttribute('stroke-opacity', '0.48');
+        trianglePath.setAttribute('fill', getAcknowledgmentsSoftenedColor(slotPalette[triangles[t].slot] || palette[t % palette.length], 0.5));
+        trianglePath.setAttribute('fill-opacity', '0.48');
+        trianglePath.setAttribute('stroke', getAcknowledgmentsSoftenedColor(palette[(t + level) % palette.length] || '#2f3946', 0.4));
+        trianglePath.setAttribute('stroke-opacity', '0.58');
         trianglePath.setAttribute('stroke-width', String(Math.max(0.6, 1.2 - level * 0.1)));
         trianglePath.setAttribute('opacity', '0');
         acknowledgmentsPattern.appendChild(trianglePath);
@@ -14551,8 +14560,8 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
       rect.setAttribute('y', String((pieceMeta.cells[rc][1] - pieceMeta.centroidY) * targetScale));
       rect.setAttribute('width', String(targetScale));
       rect.setAttribute('height', String(targetScale));
-      rect.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[p % palette.length], 0.74));
-      rect.setAttribute('fill-opacity', '0.34');
+      rect.setAttribute('fill', getAcknowledgmentsSoftenedColor(palette[p % palette.length], 0.52));
+      rect.setAttribute('fill-opacity', '0.46');
       rect.setAttribute('stroke', '#6a7a90');
       rect.setAttribute('stroke-opacity', '0.44');
       rect.setAttribute('stroke-width', String(Math.max(0.55, targetScale * 0.045)));
