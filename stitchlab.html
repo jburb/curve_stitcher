@@ -1711,37 +1711,37 @@
   }
 
   html[data-theme="dark"] #experience-acknowledgments-toggle {
-    border-color: #4a6285;
-    background: #2d3a4e;
-    color: #d9e5fb;
+    border-color: #cbd8ef;
+    background: #ffffff;
+    color: #2f4a78;
   }
 
   html[data-theme="dark"] .acknowledgments-stage {
-    border-color: #45566d;
-    background: linear-gradient(160deg, #253242 0%, #1d2733 100%);
+    border-color: #d8dfec;
+    background: linear-gradient(155deg, #f7f9fc 0%, #eef2f8 100%);
   }
 
   html[data-theme="dark"] .acknowledgments-style-chip {
-    border-color: #58739d;
-    background: #344965;
-    color: #e9f1ff;
+    border-color: #c5d4ea;
+    background: #eff4fb;
+    color: #2f456b;
   }
 
   html[data-theme="dark"] .acknowledgments-btn {
-    border-color: #526586;
-    background: #2a3a50;
-    color: #deebff;
+    border-color: #cfdaee;
+    background: #ffffff;
+    color: #2f476f;
   }
 
   html[data-theme="dark"] .acknowledgments-btn.primary,
   html[data-theme="dark"] .acknowledgments-btn[aria-pressed="true"] {
-    border-color: #6f8fbb;
-    background: #456087;
-    color: #f7fbff;
+    border-color: #324968;
+    background: #324968;
+    color: #f8fbff;
   }
 
   html[data-theme="dark"] .acknowledgments-progress {
-    color: #c6d6ef;
+    color: #516585;
   }
 
   html[data-theme="dark"] #myCanvas {
@@ -2571,6 +2571,7 @@ var acknowledgmentsViewerState = {
   currentLineText: '',
   svgTextGroup: null,
   svgTextNode: null,
+  svgTextSpec: null,
   svgTextMaxChars: 34,
   svgTextMaxLines: 6,
   lastRevealText: '',
@@ -13622,6 +13623,7 @@ function clearAcknowledgmentsPattern() {
   }
   acknowledgmentsViewerState.svgTextGroup = null;
   acknowledgmentsViewerState.svgTextNode = null;
+  acknowledgmentsViewerState.svgTextSpec = null;
   acknowledgmentsViewerState.lastRevealText = '';
 }
 
@@ -13674,17 +13676,69 @@ function ensureAcknowledgmentsTextLayerInFront() {
   }
 }
 
+function buildAcknowledgmentsEquilateralTriangle(size, sideScale, baseYRatio) {
+  var side = size * sideScale;
+  var half = side * 0.5;
+  var centerX = size * 0.5;
+  var baseY = size * baseYRatio;
+  var triHeight = side * (Math.sqrt(3) * 0.5);
+  var apexY = baseY - triHeight;
+  return {
+    apex: { x: centerX, y: apexY },
+    left: { x: centerX - half, y: baseY },
+    right: { x: centerX + half, y: baseY },
+    side: side,
+    height: triHeight
+  };
+}
+
+function getAcknowledgmentsPaletteColors() {
+  var palette = [];
+  function pushColor(value, fallback) {
+    var normalized = sanitizeHexColor(value, fallback || '#1982c4');
+    var key = String(normalized || '').toLowerCase();
+    if (!key || palette.indexOf(normalized) >= 0) return;
+    palette.push(normalized);
+  }
+
+  if (Array.isArray(threads) && threads.length) {
+    for (var i = 0; i < threads.length; i++) {
+      pushColor(threads[i] && threads[i].color, '#1982c4');
+    }
+  }
+
+  pushColor(triangulaBandColors && triangulaBandColors.band1, '#8ac926');
+  pushColor(triangulaBandColors && triangulaBandColors.band2, '#6a4c93');
+  pushColor(triangulaBandColors && triangulaBandColors.band4, '#1982c4');
+
+  var source = normalizeTriangulaFillColor(triangulaSourceColor, '#8ac926');
+  if (source !== 'rainbow') {
+    pushColor(source, '#8ac926');
+  }
+
+  if (!palette.length) {
+    for (var m = 0; m < magicThreadColors.length; m++) {
+      pushColor(magicThreadColors[m], '#1982c4');
+    }
+  }
+
+  return palette.length ? palette : ['#1982c4', '#8ac926', '#6a4c93'];
+}
+
 function getAcknowledgmentsTextFrameSpec(styleId) {
   var size = getAcknowledgmentsStageLogicalSize();
   if (styleId === 'triangula') {
+    var tri = buildAcknowledgmentsEquilateralTriangle(size, 0.64, 0.86);
     return {
       shapeType: 'path',
-      shapePath: 'M ' + (size * 0.5) + ' ' + (size * 0.08) + ' L ' + (size * 0.14) + ' ' + (size * 0.92) + ' L ' + (size * 0.86) + ' ' + (size * 0.92) + ' Z',
+      shapePath: 'M ' + tri.apex.x + ' ' + tri.apex.y + ' L ' + tri.left.x + ' ' + tri.left.y + ' L ' + tri.right.x + ' ' + tri.right.y + ' Z',
       textX: size * 0.5,
-      textY: size * 0.57,
-      maxChars: 28,
-      maxLines: 8,
-      lineHeight: 34
+      textY: tri.apex.y + (tri.height * 0.56),
+      maxChars: 23,
+      maxCharsMax: 30,
+      minFontSize: 15,
+      maxFontSize: 27,
+      textAreaHeight: tri.height * 0.62
     };
   }
   if (styleId === 'squarus') {
@@ -13700,8 +13754,10 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
       textX: size * 0.5,
       textY: size * 0.56,
       maxChars: 34,
-      maxLines: 7,
-      lineHeight: 32
+      maxCharsMax: 44,
+      minFontSize: 16,
+      maxFontSize: 28,
+      textAreaHeight: size * 0.56
     };
   }
 
@@ -13715,8 +13771,10 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
     textX: size * 0.5,
     textY: size * 0.58,
     maxChars: 30,
-    maxLines: 7,
-    lineHeight: 32
+    maxCharsMax: 40,
+    minFontSize: 15,
+    maxFontSize: 27,
+    textAreaHeight: size * 0.55
   };
 }
 
@@ -13735,12 +13793,12 @@ function buildAcknowledgmentsWrappedLines(text, maxChars, maxLines) {
     }
     lines.push(current);
     current = words[i];
-    if (lines.length >= maxLines) break;
+    if (maxLines > 0 && lines.length >= maxLines) break;
   }
-  if (lines.length < maxLines && current) {
+  if ((maxLines <= 0 || lines.length < maxLines) && current) {
     lines.push(current);
   }
-  if (lines.length > maxLines) {
+  if (maxLines > 0 && lines.length > maxLines) {
     lines = lines.slice(0, maxLines);
   }
   return lines;
@@ -13823,9 +13881,10 @@ function createAcknowledgmentsTextLayer(styleId) {
 
   acknowledgmentsViewerState.svgTextGroup = textGroup;
   acknowledgmentsViewerState.svgTextNode = textNode;
+  acknowledgmentsViewerState.svgTextSpec = spec;
   acknowledgmentsViewerState.svgTextMaxChars = spec.maxChars;
-  acknowledgmentsViewerState.svgTextMaxLines = spec.maxLines;
-  acknowledgmentsViewerState.svgTextLineHeight = spec.lineHeight;
+  acknowledgmentsViewerState.svgTextMaxLines = spec.maxLines || 0;
+  acknowledgmentsViewerState.svgTextLineHeight = spec.lineHeight || 32;
   acknowledgmentsViewerState.svgTextAnchorY = spec.textY;
 }
 
@@ -13843,12 +13902,30 @@ function updateAcknowledgmentsSvgText(text) {
   }
 
   if (!safeText) return;
-  var maxChars = Math.max(16, parseBoundedInt(acknowledgmentsViewerState.svgTextMaxChars, 16, 64, 34));
-  var maxLines = Math.max(1, parseBoundedInt(acknowledgmentsViewerState.svgTextMaxLines, 1, 12, 6));
-  var lines = buildAcknowledgmentsWrappedLines(safeText, maxChars, maxLines);
+  var spec = acknowledgmentsViewerState.svgTextSpec || {};
+  var maxChars = Math.max(14, parseBoundedInt(acknowledgmentsViewerState.svgTextMaxChars, 14, 64, 32));
+  var maxCharsCap = Math.max(maxChars, parseBoundedInt(spec.maxCharsMax, maxChars, 72, maxChars + 10));
+  var maxLines = Math.max(0, parseBoundedInt(acknowledgmentsViewerState.svgTextMaxLines, 0, 24, 0));
+  var textAreaHeight = Math.max(140, parseBoundedInt(spec.textAreaHeight, 140, stageSize - 40, Math.floor(stageSize * 0.56)));
+  var minFontSize = Math.max(12, parseBoundedInt(spec.minFontSize, 12, 26, 15));
+  var maxFontSize = Math.max(minFontSize, parseBoundedInt(spec.maxFontSize, minFontSize, 38, 27));
+  var lines = [];
+  var fontSize = minFontSize;
+  var charLimit = maxChars;
+
+  while (true) {
+    lines = buildAcknowledgmentsWrappedLines(safeText, charLimit, maxLines);
+    if (!lines.length) break;
+    var candidate = Math.floor(textAreaHeight / Math.max(1, lines.length * 1.24));
+    fontSize = Math.max(minFontSize, Math.min(maxFontSize, candidate));
+    if (fontSize > minFontSize || charLimit >= maxCharsCap) break;
+    charLimit = Math.min(maxCharsCap, charLimit + 2);
+  }
   if (!lines.length) return;
 
-  var lineHeight = Math.max(22, parseBoundedInt(acknowledgmentsViewerState.svgTextLineHeight, 22, 48, 32));
+  var lineHeight = Math.max(18, Math.round(fontSize * 1.22));
+  svgTextNode.setAttribute('font-size', String(fontSize));
+  svgTextNode.setAttribute('stroke-width', String(Math.max(0.45, fontSize * 0.03)));
   var anchorY = parseBoundedInt(acknowledgmentsViewerState.svgTextAnchorY, 80, stageSize - 80, Math.floor(stageSize * 0.56));
   var startY = anchorY - ((lines.length - 1) * lineHeight * 0.5);
   for (var i = 0; i < lines.length; i++) {
@@ -13893,7 +13970,7 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
   var holeCount = Math.max(16, parseBoundedInt(visual && visual.holes, 16, 120, 42));
   var jump = Math.max(2, parseBoundedInt(visual && visual.jump, 2, holeCount - 1, 5));
   var lineWidth = Math.max(1, parseBoundedInt(visual && visual.width, 1, 3, 2));
-  var stroke = '#2c323a';
+  var palette = getAcknowledgmentsPaletteColors();
 
   var pointsList = [];
   for (var i = 0; i < holeCount; i++) {
@@ -13909,8 +13986,9 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
   circle.setAttribute('cy', String(centerY));
   circle.setAttribute('r', String(radius));
   circle.setAttribute('fill', 'none');
-  circle.setAttribute('stroke', '#b5bdc8');
+  circle.setAttribute('stroke', palette[0] || '#b5bdc8');
   circle.setAttribute('stroke-width', '1');
+  circle.setAttribute('stroke-opacity', '0.42');
   acknowledgmentsPattern.appendChild(circle);
 
   for (var h = 0; h < holeCount; h++) {
@@ -13918,8 +13996,8 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
     hole.setAttribute('cx', String(pointsList[h].x));
     hole.setAttribute('cy', String(pointsList[h].y));
     hole.setAttribute('r', '1.8');
-    hole.setAttribute('fill', '#8e98a8');
-    hole.setAttribute('opacity', '0.65');
+    hole.setAttribute('fill', palette[h % palette.length] || '#8e98a8');
+    hole.setAttribute('opacity', '0.5');
     acknowledgmentsPattern.appendChild(hole);
   }
 
@@ -13942,10 +14020,10 @@ function buildAcknowledgmentsStitchingAnimator(visual) {
     line.setAttribute('y1', String(from.y));
     line.setAttribute('x2', String(from.x));
     line.setAttribute('y2', String(from.y));
-    line.setAttribute('stroke', stroke);
+    line.setAttribute('stroke', palette[si % palette.length] || '#2c323a');
     line.setAttribute('stroke-width', String(lineWidth));
     line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('opacity', '0.92');
+    line.setAttribute('opacity', '0.72');
     acknowledgmentsPattern.appendChild(line);
     segments.push({ line: line, from: from, to: to });
   }
@@ -14025,23 +14103,25 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
   var height = width;
   var depth = Math.max(2, parseBoundedInt(visual && visual.depth, 2, 5, 3));
   var mode = visual && visual.mode === 'cut' ? 'cut' : 'shrink';
-  var base = [
-    { x: width * 0.5, y: height * 0.08 },
-    { x: width * 0.14, y: height * 0.92 },
-    { x: width * 0.86, y: height * 0.92 }
-  ];
+  var palette = getAcknowledgmentsPaletteColors();
+  var tri = buildAcknowledgmentsEquilateralTriangle(width, 0.68, 0.86);
+  var base = [tri.apex, tri.left, tri.right];
 
   var basePath = createSvgNode('path');
   basePath.setAttribute('d', toAcknowledgmentsPath(base));
   basePath.setAttribute('fill', 'none');
-  basePath.setAttribute('stroke', '#3d4652');
+  basePath.setAttribute('stroke', palette[0] || '#3d4652');
   basePath.setAttribute('stroke-width', '2');
-  basePath.setAttribute('opacity', '0.86');
+  basePath.setAttribute('opacity', '0.62');
   acknowledgmentsPattern.appendChild(basePath);
 
   var elements = [];
   var timelineBeats = 0;
-  var grayBySlot = { 1: '#9da7b5', 2: '#737f8f', 4: '#4f5967' };
+  var slotPalette = {
+    1: getTriangulaFillColorForSlot(1, 0),
+    2: getTriangulaFillColorForSlot(2, 1),
+    4: getTriangulaFillColorForSlot(4, 2)
+  };
   if (mode === 'cut') {
     for (var d = 1; d <= depth; d++) {
       var cuts = [];
@@ -14050,8 +14130,10 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
       for (var c = 0; c < cuts.length; c++) {
         var cutPath = createSvgNode('path');
         cutPath.setAttribute('d', toAcknowledgmentsPath(cuts[c]));
-        cutPath.setAttribute('fill', '#6f7b8a');
-        cutPath.setAttribute('stroke', '#353f4b');
+        cutPath.setAttribute('fill', palette[(c + d) % palette.length] || '#6f7b8a');
+        cutPath.setAttribute('fill-opacity', '0.54');
+        cutPath.setAttribute('stroke', palette[(c + d + 1) % palette.length] || '#353f4b');
+        cutPath.setAttribute('stroke-opacity', '0.7');
         cutPath.setAttribute('stroke-width', '1.2');
         cutPath.setAttribute('opacity', '0');
         acknowledgmentsPattern.appendChild(cutPath);
@@ -14066,8 +14148,10 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
       for (var t = 0; t < triangles.length; t++) {
         var trianglePath = createSvgNode('path');
         trianglePath.setAttribute('d', toAcknowledgmentsPath(triangles[t].vertices));
-        trianglePath.setAttribute('fill', grayBySlot[triangles[t].slot] || '#8a95a5');
-        trianglePath.setAttribute('stroke', '#2f3946');
+        trianglePath.setAttribute('fill', slotPalette[triangles[t].slot] || palette[t % palette.length]);
+        trianglePath.setAttribute('fill-opacity', '0.58');
+        trianglePath.setAttribute('stroke', palette[(t + level) % palette.length] || '#2f3946');
+        trianglePath.setAttribute('stroke-opacity', '0.78');
         trianglePath.setAttribute('stroke-width', String(Math.max(0.6, 1.2 - level * 0.1)));
         trianglePath.setAttribute('opacity', '0');
         acknowledgmentsPattern.appendChild(trianglePath);
@@ -14085,9 +14169,9 @@ function buildAcknowledgmentsTriangulaAnimator(visual) {
     var partial = scaled - fullCount;
     for (var i = 0; i < elements.length; i++) {
       if (i < fullCount) {
-        elements[i].setAttribute('opacity', mode === 'cut' ? '1' : '0.9');
+        elements[i].setAttribute('opacity', mode === 'cut' ? '0.9' : '0.82');
       } else if (i === fullCount) {
-        elements[i].setAttribute('opacity', String(mode === 'cut' ? partial : (partial * 0.9)));
+        elements[i].setAttribute('opacity', String(mode === 'cut' ? (partial * 0.9) : (partial * 0.82)));
       } else {
         elements[i].setAttribute('opacity', '0');
       }
@@ -14185,7 +14269,7 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
     }
   }
   var mapPoint = buildAcknowledgmentsViewportMapper(allPoints);
-  var palette = ACKNOWLEDGMENTS_GRAY_PALETTE;
+  var palette = getAcknowledgmentsPaletteColors();
   var groups = [];
 
   for (var p = 0; p < pieceCount; p++) {
@@ -14204,7 +14288,9 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
       rect.setAttribute('width', String(targetScale));
       rect.setAttribute('height', String(targetScale));
       rect.setAttribute('fill', palette[p % palette.length]);
+      rect.setAttribute('fill-opacity', '0.6');
       rect.setAttribute('stroke', '#1b232e');
+      rect.setAttribute('stroke-opacity', '0.72');
       rect.setAttribute('stroke-width', String(Math.max(0.7, targetScale * 0.06)));
       group.appendChild(rect);
     }
