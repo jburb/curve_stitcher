@@ -138,6 +138,40 @@ test.describe('StitchLab regressions', () => {
     }).toBe('#123abc');
   });
 
+  test('acknowledgments viewer opens from about controls and cycles styles by line', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-acknowledgments-toggle').click();
+
+    const modal = page.locator('#acknowledgments-modal');
+    await expect(modal).toHaveClass(/open/);
+
+    await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
+    await expect(page.locator('#acknowledgments-style-chip')).toHaveText('Stitching');
+
+    await page.locator('#acknowledgments-next-btn').click();
+    await expect(page.locator('#acknowledgments-progress')).toContainText('2 /');
+    await expect(page.locator('#acknowledgments-style-chip')).toHaveText('Triangula');
+
+    await page.locator('#acknowledgments-next-btn').click();
+    await expect(page.locator('#acknowledgments-progress')).toContainText('3 /');
+    await expect(page.locator('#acknowledgments-style-chip')).toHaveText('Squarus');
+  });
+
+  test('acknowledgments viewer opens from About document action', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    const aboutFrame = page.frameLocator('#experience-info-html');
+
+    await expect(aboutFrame.locator('[data-open-acknowledgments]')).toBeVisible();
+    await aboutFrame.locator('[data-open-acknowledgments]').click();
+
+    await expect(page.locator('#acknowledgments-modal')).toHaveClass(/open/);
+    await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
+  });
+
   test('advanced pane stays open during thread-card interactions', async ({ page }) => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();

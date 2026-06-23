@@ -236,6 +236,7 @@
     margin-top: 8px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
   }
   #experience-narrate-toggle {
@@ -255,6 +256,142 @@
   #experience-narration-status {
     font-size: 12px;
     color: #5b7298;
+  }
+  #experience-acknowledgments-toggle {
+    border: 1px solid #cbd8ef;
+    background: #ffffff;
+    color: #2f4a78;
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #experience-acknowledgments-toggle:hover {
+    background: #f5f8ff;
+  }
+  .acknowledgments-card {
+    width: min(980px, 100%);
+    padding: 14px 14px 12px;
+  }
+  .acknowledgments-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .acknowledgments-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .acknowledgments-title-wrap h4 {
+    margin: 0;
+  }
+  .acknowledgments-style-chip {
+    border-radius: 999px;
+    border: 1px solid #c5d4ea;
+    background: #eff4fb;
+    color: #2f456b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+  .acknowledgments-stage {
+    position: relative;
+    border: 1px solid #d8dfec;
+    border-radius: 11px;
+    background: linear-gradient(155deg, #f7f9fc 0%, #eef2f8 100%);
+    overflow: hidden;
+    width: min(100%, var(--ack-stage-target-size, 820px));
+    margin: 0 auto;
+    aspect-ratio: 1 / 1;
+  }
+  .acknowledgments-pattern {
+    position: relative;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  }
+  .acknowledgments-line {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .acknowledgments-pattern-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 12 12;
+    animation: acknowledgments-pattern-draw 2600ms linear infinite;
+    opacity: 0.86;
+  }
+  .acknowledgments-footer {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .acknowledgments-progress {
+    font-size: 12px;
+    color: #516585;
+    font-weight: 600;
+  }
+  .acknowledgments-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .acknowledgments-btn {
+    border: 1px solid #cfdaee;
+    background: #ffffff;
+    color: #2f476f;
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .acknowledgments-btn.primary {
+    background: #324968;
+    border-color: #324968;
+    color: #f8fbff;
+  }
+  .acknowledgments-btn[aria-pressed="true"] {
+    background: #3a5578;
+    border-color: #3a5578;
+    color: #f4f8ff;
+  }
+  @keyframes acknowledgments-pattern-draw {
+    from {
+      stroke-dashoffset: 0;
+    }
+    to {
+      stroke-dashoffset: -240;
+    }
+  }
+  @keyframes acknowledgments-line-fade {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   /* --- TOP SHAPE PICKER --- */
   #shape-bar {
@@ -1573,6 +1710,40 @@
     background: rgba(93, 121, 166, 0.82);
   }
 
+  html[data-theme="dark"] #experience-acknowledgments-toggle {
+    border-color: #4a6285;
+    background: #2d3a4e;
+    color: #d9e5fb;
+  }
+
+  html[data-theme="dark"] .acknowledgments-stage {
+    border-color: #45566d;
+    background: linear-gradient(160deg, #253242 0%, #1d2733 100%);
+  }
+
+  html[data-theme="dark"] .acknowledgments-style-chip {
+    border-color: #58739d;
+    background: #344965;
+    color: #e9f1ff;
+  }
+
+  html[data-theme="dark"] .acknowledgments-btn {
+    border-color: #526586;
+    background: #2a3a50;
+    color: #deebff;
+  }
+
+  html[data-theme="dark"] .acknowledgments-btn.primary,
+  html[data-theme="dark"] .acknowledgments-btn[aria-pressed="true"] {
+    border-color: #6f8fbb;
+    background: #456087;
+    color: #f7fbff;
+  }
+
+  html[data-theme="dark"] .acknowledgments-progress {
+    color: #c6d6ef;
+  }
+
   html[data-theme="dark"] #myCanvas {
     border-color: #3a3f46;
   }
@@ -1670,6 +1841,18 @@
     #experience-info-panel {
       top: 56px;
       width: min(440px, calc(100vw - 16px));
+    }
+    .acknowledgments-card {
+      padding: 10px;
+    }
+    .acknowledgments-header {
+      align-items: flex-start;
+    }
+    .acknowledgments-title-wrap {
+      flex-wrap: wrap;
+    }
+    .acknowledgments-stage {
+      width: 100%;
     }
     #shape-bar {
       grid-template-columns: auto 1fr auto;
@@ -1784,6 +1967,7 @@
   <iframe id="experience-info-html" title="Experience details" hidden loading="lazy" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
   <div class="experience-info-actions">
     <button id="experience-narrate-toggle" type="button" aria-pressed="false">Hear this</button>
+    <button id="experience-acknowledgments-toggle" type="button">Acknowledgments</button>
     <span id="experience-narration-status" role="status" aria-live="polite"></span>
   </div>
 </div>
@@ -2147,6 +2331,31 @@
   </div>
 </div>
 
+<div id="acknowledgments-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="acknowledgments-title" aria-describedby="acknowledgments-line-text">
+  <div class="modal-card acknowledgments-card">
+    <div class="acknowledgments-header">
+      <div class="acknowledgments-title-wrap">
+        <h4 id="acknowledgments-title">Acknowledgments</h4>
+        <span id="acknowledgments-style-chip" class="acknowledgments-style-chip">Stitching</span>
+      </div>
+      <button id="acknowledgments-close-btn" type="button" class="acknowledgments-btn">Close</button>
+    </div>
+    <div id="acknowledgments-stage" class="acknowledgments-stage">
+      <p id="acknowledgments-line-text" class="acknowledgments-line"></p>
+      <svg id="acknowledgments-pattern" class="acknowledgments-pattern" viewBox="0 0 720 720" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false"></svg>
+    </div>
+    <div class="acknowledgments-footer">
+      <span id="acknowledgments-progress" class="acknowledgments-progress" role="status" aria-live="polite"></span>
+      <div class="acknowledgments-controls">
+        <button id="acknowledgments-prev-btn" type="button" class="acknowledgments-btn">Prev</button>
+        <button id="acknowledgments-autoplay-btn" type="button" class="acknowledgments-btn" aria-pressed="false">Auto play</button>
+        <button id="acknowledgments-next-btn" type="button" class="acknowledgments-btn primary">Next</button>
+        <button id="acknowledgments-restart-btn" type="button" class="acknowledgments-btn">Restart</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 paper.install(window);
 paper.setup('myCanvas');
@@ -2290,7 +2499,19 @@ var experienceInfoText = document.getElementById('experience-info-text');
 var experienceInfoHtmlFrame = document.getElementById('experience-info-html');
 var experienceInfoClose = document.getElementById('experience-info-close');
 var experienceNarrateToggle = document.getElementById('experience-narrate-toggle');
+var experienceAcknowledgmentsToggle = document.getElementById('experience-acknowledgments-toggle');
 var experienceNarrationStatus = document.getElementById('experience-narration-status');
+var acknowledgmentsModal = document.getElementById('acknowledgments-modal');
+var acknowledgmentsStage = document.getElementById('acknowledgments-stage');
+var acknowledgmentsLineText = document.getElementById('acknowledgments-line-text');
+var acknowledgmentsPattern = document.getElementById('acknowledgments-pattern');
+var acknowledgmentsProgress = document.getElementById('acknowledgments-progress');
+var acknowledgmentsStyleChip = document.getElementById('acknowledgments-style-chip');
+var acknowledgmentsPrevBtn = document.getElementById('acknowledgments-prev-btn');
+var acknowledgmentsNextBtn = document.getElementById('acknowledgments-next-btn');
+var acknowledgmentsAutoplayBtn = document.getElementById('acknowledgments-autoplay-btn');
+var acknowledgmentsRestartBtn = document.getElementById('acknowledgments-restart-btn');
+var acknowledgmentsCloseBtn = document.getElementById('acknowledgments-close-btn');
 var onboardingHelpBtn = document.getElementById('onboarding-help');
 var onboardingQuickStart = document.getElementById('onboarding-quickstart');
 var onboardingQuickStartTitle = document.getElementById('onboarding-quickstart-title');
@@ -2337,10 +2558,53 @@ var canvasResizeObserver = null;
 var showHoleNumbers = true;
 var holeNumberLabelsByIndex = Object.create(null);
 var highlightedHoleNumbers = [];
+var acknowledgmentsLinesCache = null;
+var acknowledgmentsViewerState = {
+  lineIndex: 0,
+  autoPlay: false,
+  timerId: null,
+  rafId: null,
+  lineStartMs: 0,
+  currentLineDurationMs: 0,
+  currentStyleId: '',
+  currentVisual: null,
+  currentLineText: '',
+  svgTextGroup: null,
+  svgTextNode: null,
+  svgTextMaxChars: 34,
+  svgTextMaxLines: 6,
+  lastRevealText: '',
+  visualByIndex: Object.create(null)
+};
 
 var DEFAULT_HOLES = 35;
 var DEFAULT_SKIP = 22;
 var DEFAULT_THREAD_SIZE = 2;
+var ACKNOWLEDGMENTS_SOURCE_PATH = 'docs/acknowledgments.txt';
+var ACKNOWLEDGMENTS_STYLE_SEQUENCE = ['stitching', 'triangula', 'squarus'];
+var ACKNOWLEDGMENTS_AUTOPLAY_DELAY_MS = 5200;
+var ACKNOWLEDGMENTS_GRAY_PALETTE = ['#111820', '#2b3440', '#46525f', '#65717f', '#8a95a2'];
+var ACKNOWLEDGMENTS_STAGE_SIZE = 720;
+var ACKNOWLEDGMENTS_STAGE_CENTER = ACKNOWLEDGMENTS_STAGE_SIZE * 0.5;
+var ACKNOWLEDGMENTS_LINE_BEATS = 14;
+var ACKNOWLEDGMENTS_SONG_PATH = 'assets/audio/SonatainCmajor,Hob.XVI_50-I.Allegro.mp3';
+var ACKNOWLEDGMENTS_BPM = 110;
+var ACKNOWLEDGMENTS_INLINE_LINES = [
+  'To My kids who ensured I visited the math museum.',
+  'To Jenny Quinn whose curve stitching reawakened my sense of mathematical wonder.',
+  'To Kim Kotovic whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
+  'To Mary Everest Boole whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her gently persistent appeals to and for children, and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
+  'To Charles Babbage for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individuals free time might never have otherwise created.',
+  'To Alexey Pajitnov whose legendary Tetris beat all odds of his place and time to not only popularize polyonimoes throughout the human population, but to finally reward his own spirited work as well.',
+  'To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
+  'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
+  'To my wife Rabiya, without whose nurturing, systematizing, and sometimes severe support I could hardly function as a decent huma being, and certainly not sufficiently to create such a lovely experience as this app.',
+  'And finally to the divine being from whom all mathematical law originates, and to whom all thanks is ultimately due.'
+];
+var ACKNOWLEDGMENTS_FALLBACK_LINES = [
+  'To everyone who helped StitchLab come to life.',
+  'To every learner exploring math through making.'
+];
 var NESTED_FRAME_RATIO_OPTIONS = [0.5, 0.75];
 var DEFAULT_NESTED_FRAME_RATIO = 0.5;
 var nestedFrameEnabled = false;
@@ -4889,6 +5153,8 @@ function hasUrlStateParams() {
 var magicThreadColors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#f15bb5'];
 var joyAudio = new Audio(MUSIC_LIBRARY[currentSongId].path);
 joyAudio.preload = 'auto';
+var acknowledgmentsAudio = new Audio(ACKNOWLEDGMENTS_SONG_PATH);
+acknowledgmentsAudio.preload = 'auto';
 var isMusicMuted = false;
 var hasMusicStartedSinceLoad = false;
 var sliderMotionKeys = Object.create(null);
@@ -4913,6 +5179,10 @@ function hasActiveSliderMotion() {
 
 function shouldMusicBePlaying() {
   return animationActive || hasActiveSliderMotion();
+}
+
+function shouldAcknowledgmentsMusicBePlaying() {
+  return !!(acknowledgmentsModal && acknowledgmentsModal.classList.contains('open'));
 }
 
 function syncMusicToggleButton() {
@@ -5691,6 +5961,30 @@ function playMusicFromCurrentState() {
 }
 
 function updateMusicPlaybackState() {
+  if (shouldAcknowledgmentsMusicBePlaying()) {
+    if (!joyAudio.paused) {
+      joyAudio.pause();
+    }
+    if (isMusicMuted) {
+      if (!acknowledgmentsAudio.paused) {
+        acknowledgmentsAudio.pause();
+      }
+      return;
+    }
+    var ackPlay = acknowledgmentsAudio.play();
+    if (ackPlay && typeof ackPlay.catch === 'function') {
+      ackPlay.catch(function() {
+        // Ignore autoplay-policy rejections; the next user gesture will retry.
+      });
+    }
+    return;
+  }
+
+  if (!acknowledgmentsAudio.paused) {
+    acknowledgmentsAudio.pause();
+    acknowledgmentsAudio.currentTime = 0;
+  }
+
   if (isMusicMuted) {
     if (!joyAudio.paused) {
       joyAudio.pause();
@@ -13208,6 +13502,939 @@ function closeKidSaveModal() {
   syncKidSaveToggleButton();
 }
 
+function stopAcknowledgmentsAutoplay() {
+  if (acknowledgmentsViewerState.timerId) {
+    clearTimeout(acknowledgmentsViewerState.timerId);
+    acknowledgmentsViewerState.timerId = null;
+  }
+}
+
+function parseAcknowledgmentsLinesFromText(text) {
+  if (typeof text !== 'string') return [];
+  var rawLines = text.split(/\r?\n/);
+  var lines = [];
+  for (var i = 0; i < rawLines.length; i++) {
+    var cleaned = String(rawLines[i] || '').trim();
+    if (cleaned) {
+      lines.push(cleaned);
+    }
+  }
+  return lines;
+}
+
+function loadAcknowledgmentsLines() {
+  if (acknowledgmentsLinesCache && acknowledgmentsLinesCache.length) {
+    return Promise.resolve(acknowledgmentsLinesCache.slice());
+  }
+
+  var isFileProtocol = !!(window && window.location && window.location.protocol === 'file:');
+  if (isFileProtocol) {
+    acknowledgmentsLinesCache = ACKNOWLEDGMENTS_INLINE_LINES.length
+      ? ACKNOWLEDGMENTS_INLINE_LINES.slice()
+      : ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+    return Promise.resolve(acknowledgmentsLinesCache.slice());
+  }
+
+  return fetch(ACKNOWLEDGMENTS_SOURCE_PATH, { cache: 'no-store' })
+    .then(function(response) {
+      if (!response || !response.ok) {
+        throw new Error('Acknowledgments file not available');
+      }
+      return response.text();
+    })
+    .then(function(text) {
+      var parsed = parseAcknowledgmentsLinesFromText(text);
+      acknowledgmentsLinesCache = parsed.length ? parsed : ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+      return acknowledgmentsLinesCache.slice();
+    })
+    .catch(function() {
+      acknowledgmentsLinesCache = ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+      return acknowledgmentsLinesCache.slice();
+    });
+}
+
+function getAcknowledgmentsStyleForIndex(index) {
+  if (!ACKNOWLEDGMENTS_STYLE_SEQUENCE.length) return 'stitching';
+  var normalized = Math.max(0, parseBoundedInt(index, 0, 100000, 0));
+  return ACKNOWLEDGMENTS_STYLE_SEQUENCE[normalized % ACKNOWLEDGMENTS_STYLE_SEQUENCE.length] || 'stitching';
+}
+
+function getAcknowledgmentsStyleLabel(styleId) {
+  if (styleId === 'triangula') return 'Triangula';
+  if (styleId === 'squarus') return 'Squarus';
+  return 'Stitching';
+}
+
+function createSvgNode(name) {
+  return document.createElementNS('http://www.w3.org/2000/svg', name);
+}
+
+function createAcknowledgmentsSeededRng(seed) {
+  var state = ((seed >>> 0) || 1) >>> 0;
+  return function() {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function createAcknowledgmentsVisual(styleId, index) {
+  var rng = createAcknowledgmentsSeededRng(((index + 1) * 2654435761) ^ (styleId === 'triangula' ? 73 : (styleId === 'squarus' ? 137 : 211)));
+  if (styleId === 'triangula') {
+    return {
+      depth: 3 + Math.floor(rng() * 2),
+      mode: rng() > 0.5 ? 'shrink' : 'cut',
+      fractalMode: rng() > 0.5 ? 'parallel' : 'series'
+    };
+  }
+  if (styleId === 'squarus') {
+    return {
+      order: 4 + Math.floor(rng() * 2),
+      pieceCount: 8 + Math.floor(rng() * 8),
+      sequenceSeed: 1 + Math.floor(rng() * 32),
+      layout: rng() > 0.5 ? 'force-directed' : 'grid-packing'
+    };
+  }
+  return {
+    holes: 36 + Math.floor(rng() * 24),
+    jump: 3 + Math.floor(rng() * 9),
+    width: 1 + Math.floor(rng() * 2)
+  };
+}
+
+function getAcknowledgmentsVisualForIndex(index, styleId) {
+  var cacheKey = String(index);
+  var cached = acknowledgmentsViewerState.visualByIndex[cacheKey];
+  if (cached && cached.styleId === styleId && cached.visual) {
+    return cached.visual;
+  }
+  var visual = createAcknowledgmentsVisual(styleId, index);
+  acknowledgmentsViewerState.visualByIndex[cacheKey] = {
+    styleId: styleId,
+    visual: visual
+  };
+  return visual;
+}
+
+function clearAcknowledgmentsPattern() {
+  if (!acknowledgmentsPattern) return;
+  while (acknowledgmentsPattern.firstChild) {
+    acknowledgmentsPattern.removeChild(acknowledgmentsPattern.firstChild);
+  }
+  acknowledgmentsViewerState.svgTextGroup = null;
+  acknowledgmentsViewerState.svgTextNode = null;
+  acknowledgmentsViewerState.lastRevealText = '';
+}
+
+function stopAcknowledgmentsStageAnimation() {
+  if (acknowledgmentsViewerState.rafId) {
+    cancelAnimationFrame(acknowledgmentsViewerState.rafId);
+    acknowledgmentsViewerState.rafId = null;
+  }
+}
+
+function getAcknowledgmentsStageLogicalSize() {
+  var canvasSize = null;
+  if (view && view.viewSize && isFinite(view.viewSize.width) && isFinite(view.viewSize.height)) {
+    canvasSize = Math.floor(Math.min(view.viewSize.width, view.viewSize.height));
+  }
+  if (!isFinite(canvasSize) || canvasSize <= 0) {
+    canvasSize = ACKNOWLEDGMENTS_STAGE_SIZE;
+  }
+  return Math.max(240, canvasSize);
+}
+
+function configureAcknowledgmentsPatternViewport() {
+  var stageSize = getAcknowledgmentsStageLogicalSize();
+  if (acknowledgmentsPattern) {
+    acknowledgmentsPattern.setAttribute('viewBox', '0 0 ' + stageSize + ' ' + stageSize);
+    acknowledgmentsPattern.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  }
+
+  if (acknowledgmentsStage) {
+    var canvasSizePx = null;
+    var canvasEl = document.getElementById('myCanvas');
+    if (canvasEl && isFinite(canvasEl.clientWidth) && canvasEl.clientWidth > 0) {
+      canvasSizePx = Math.round(canvasEl.clientWidth);
+    }
+    if ((!isFinite(canvasSizePx) || canvasSizePx <= 0) && isFinite(stageSize)) {
+      canvasSizePx = Math.round(stageSize);
+    }
+    if (isFinite(canvasSizePx) && canvasSizePx > 0) {
+      acknowledgmentsStage.style.setProperty('--ack-stage-target-size', String(canvasSizePx) + 'px');
+    }
+  }
+
+  return stageSize;
+}
+
+function ensureAcknowledgmentsTextLayerInFront() {
+  if (!acknowledgmentsPattern || !acknowledgmentsViewerState.svgTextGroup) return;
+  if (acknowledgmentsViewerState.svgTextGroup.parentNode === acknowledgmentsPattern) {
+    acknowledgmentsPattern.appendChild(acknowledgmentsViewerState.svgTextGroup);
+  }
+}
+
+function getAcknowledgmentsTextFrameSpec(styleId) {
+  var size = getAcknowledgmentsStageLogicalSize();
+  if (styleId === 'triangula') {
+    return {
+      shapeType: 'path',
+      shapePath: 'M ' + (size * 0.5) + ' ' + (size * 0.08) + ' L ' + (size * 0.14) + ' ' + (size * 0.92) + ' L ' + (size * 0.86) + ' ' + (size * 0.92) + ' Z',
+      textX: size * 0.5,
+      textY: size * 0.57,
+      maxChars: 28,
+      maxLines: 8,
+      lineHeight: 34
+    };
+  }
+  if (styleId === 'squarus') {
+    return {
+      shapeType: 'rect',
+      shapeRect: {
+        x: size * 0.14,
+        y: size * 0.14,
+        width: size * 0.72,
+        height: size * 0.72,
+        rx: 18
+      },
+      textX: size * 0.5,
+      textY: size * 0.56,
+      maxChars: 34,
+      maxLines: 7,
+      lineHeight: 32
+    };
+  }
+
+  return {
+    shapeType: 'circle',
+    shapeCircle: {
+      cx: size * 0.5,
+      cy: size * 0.5,
+      r: size * 0.35
+    },
+    textX: size * 0.5,
+    textY: size * 0.58,
+    maxChars: 30,
+    maxLines: 7,
+    lineHeight: 32
+  };
+}
+
+function buildAcknowledgmentsWrappedLines(text, maxChars, maxLines) {
+  var safeText = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!safeText) return [];
+
+  var words = safeText.split(' ');
+  var lines = [];
+  var current = '';
+  for (var i = 0; i < words.length; i++) {
+    var probe = current ? (current + ' ' + words[i]) : words[i];
+    if (probe.length <= maxChars || !current) {
+      current = probe;
+      continue;
+    }
+    lines.push(current);
+    current = words[i];
+    if (lines.length >= maxLines) break;
+  }
+  if (lines.length < maxLines && current) {
+    lines.push(current);
+  }
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+  }
+  return lines;
+}
+
+function createAcknowledgmentsTextLayer(styleId) {
+  if (!acknowledgmentsPattern) return;
+
+  configureAcknowledgmentsPatternViewport();
+
+  var spec = getAcknowledgmentsTextFrameSpec(styleId);
+  var defs = createSvgNode('defs');
+  var clipPath = createSvgNode('clipPath');
+  var clipId = 'acknowledgments-text-clip-' + styleId;
+  clipPath.setAttribute('id', clipId);
+
+  var clipShape = null;
+  var frameOutline = null;
+  if (spec.shapeType === 'rect') {
+    clipShape = createSvgNode('rect');
+    clipShape.setAttribute('x', String(spec.shapeRect.x));
+    clipShape.setAttribute('y', String(spec.shapeRect.y));
+    clipShape.setAttribute('width', String(spec.shapeRect.width));
+    clipShape.setAttribute('height', String(spec.shapeRect.height));
+    clipShape.setAttribute('rx', String(spec.shapeRect.rx));
+
+    frameOutline = createSvgNode('rect');
+    frameOutline.setAttribute('x', String(spec.shapeRect.x));
+    frameOutline.setAttribute('y', String(spec.shapeRect.y));
+    frameOutline.setAttribute('width', String(spec.shapeRect.width));
+    frameOutline.setAttribute('height', String(spec.shapeRect.height));
+    frameOutline.setAttribute('rx', String(spec.shapeRect.rx));
+  } else if (spec.shapeType === 'circle') {
+    clipShape = createSvgNode('circle');
+    clipShape.setAttribute('cx', String(spec.shapeCircle.cx));
+    clipShape.setAttribute('cy', String(spec.shapeCircle.cy));
+    clipShape.setAttribute('r', String(spec.shapeCircle.r));
+
+    frameOutline = createSvgNode('circle');
+    frameOutline.setAttribute('cx', String(spec.shapeCircle.cx));
+    frameOutline.setAttribute('cy', String(spec.shapeCircle.cy));
+    frameOutline.setAttribute('r', String(spec.shapeCircle.r));
+  } else {
+    clipShape = createSvgNode('path');
+    clipShape.setAttribute('d', spec.shapePath);
+
+    frameOutline = createSvgNode('path');
+    frameOutline.setAttribute('d', spec.shapePath);
+  }
+
+  clipPath.appendChild(clipShape);
+  defs.appendChild(clipPath);
+  acknowledgmentsPattern.appendChild(defs);
+
+  frameOutline.setAttribute('fill', 'none');
+  frameOutline.setAttribute('stroke', '#748292');
+  frameOutline.setAttribute('stroke-width', '2');
+  frameOutline.setAttribute('opacity', '0.32');
+  acknowledgmentsPattern.appendChild(frameOutline);
+
+  var textGroup = createSvgNode('g');
+  textGroup.setAttribute('clip-path', 'url(#' + clipId + ')');
+  textGroup.setAttribute('opacity', '0.9');
+
+  var textNode = createSvgNode('text');
+  textNode.setAttribute('x', String(spec.textX));
+  textNode.setAttribute('y', String(spec.textY));
+  textNode.setAttribute('fill', 'rgba(20, 30, 46, 0.78)');
+  textNode.setAttribute('text-anchor', 'middle');
+  textNode.setAttribute('font-size', '29');
+  textNode.setAttribute('font-family', '"Georgia", "Times New Roman", serif');
+  textNode.setAttribute('font-weight', '600');
+  textNode.setAttribute('paint-order', 'stroke');
+  textNode.setAttribute('stroke', 'rgba(255, 255, 255, 0.42)');
+  textNode.setAttribute('stroke-width', '0.9');
+  textNode.setAttribute('stroke-linejoin', 'round');
+
+  textGroup.appendChild(textNode);
+  acknowledgmentsPattern.appendChild(textGroup);
+
+  acknowledgmentsViewerState.svgTextGroup = textGroup;
+  acknowledgmentsViewerState.svgTextNode = textNode;
+  acknowledgmentsViewerState.svgTextMaxChars = spec.maxChars;
+  acknowledgmentsViewerState.svgTextMaxLines = spec.maxLines;
+  acknowledgmentsViewerState.svgTextLineHeight = spec.lineHeight;
+  acknowledgmentsViewerState.svgTextAnchorY = spec.textY;
+}
+
+function updateAcknowledgmentsSvgText(text) {
+  var svgTextNode = acknowledgmentsViewerState.svgTextNode;
+  if (!svgTextNode) return;
+  var stageSize = getAcknowledgmentsStageLogicalSize();
+
+  var safeText = String(text || '');
+  if (acknowledgmentsViewerState.lastRevealText === safeText) return;
+  acknowledgmentsViewerState.lastRevealText = safeText;
+
+  while (svgTextNode.firstChild) {
+    svgTextNode.removeChild(svgTextNode.firstChild);
+  }
+
+  if (!safeText) return;
+  var maxChars = Math.max(16, parseBoundedInt(acknowledgmentsViewerState.svgTextMaxChars, 16, 64, 34));
+  var maxLines = Math.max(1, parseBoundedInt(acknowledgmentsViewerState.svgTextMaxLines, 1, 12, 6));
+  var lines = buildAcknowledgmentsWrappedLines(safeText, maxChars, maxLines);
+  if (!lines.length) return;
+
+  var lineHeight = Math.max(22, parseBoundedInt(acknowledgmentsViewerState.svgTextLineHeight, 22, 48, 32));
+  var anchorY = parseBoundedInt(acknowledgmentsViewerState.svgTextAnchorY, 80, stageSize - 80, Math.floor(stageSize * 0.56));
+  var startY = anchorY - ((lines.length - 1) * lineHeight * 0.5);
+  for (var i = 0; i < lines.length; i++) {
+    var tspan = createSvgNode('tspan');
+    tspan.setAttribute('x', svgTextNode.getAttribute('x') || String(stageSize * 0.5));
+    tspan.setAttribute('y', String(startY + i * lineHeight));
+    tspan.textContent = lines[i];
+    svgTextNode.appendChild(tspan);
+  }
+
+  ensureAcknowledgmentsTextLayerInFront();
+}
+
+function setAcknowledgmentsLineReveal(text, progress) {
+  var safeText = String(text || '');
+  var p = clamp01(progress);
+  var count = Math.max(0, Math.min(safeText.length, Math.floor(safeText.length * p)));
+  var revealText = safeText.slice(0, count);
+  if (acknowledgmentsLineText) {
+    acknowledgmentsLineText.textContent = revealText;
+  }
+  updateAcknowledgmentsSvgText(revealText);
+}
+
+function getAcknowledgmentsSecondsPerBeat() {
+  return 60 / ACKNOWLEDGMENTS_BPM;
+}
+
+function getAcknowledgmentsLineDurationMs(styleId, visual, animatorData) {
+  var spb = getAcknowledgmentsSecondsPerBeat();
+  return Math.round(ACKNOWLEDGMENTS_LINE_BEATS * spb * 1000);
+}
+
+function buildAcknowledgmentsStitchingAnimator(visual) {
+  clearAcknowledgmentsPattern();
+  createAcknowledgmentsTextLayer('stitching');
+  var width = configureAcknowledgmentsPatternViewport();
+  var height = width;
+  var centerX = width * 0.5;
+  var centerY = height * 0.5;
+  var radius = Math.min(width, height) * 0.35;
+  var holeCount = Math.max(16, parseBoundedInt(visual && visual.holes, 16, 120, 42));
+  var jump = Math.max(2, parseBoundedInt(visual && visual.jump, 2, holeCount - 1, 5));
+  var lineWidth = Math.max(1, parseBoundedInt(visual && visual.width, 1, 3, 2));
+  var stroke = '#2c323a';
+
+  var pointsList = [];
+  for (var i = 0; i < holeCount; i++) {
+    var theta = -Math.PI / 2 + (Math.PI * 2 * i / holeCount);
+    pointsList.push({
+      x: centerX + Math.cos(theta) * radius,
+      y: centerY + Math.sin(theta) * radius
+    });
+  }
+
+  var circle = createSvgNode('circle');
+  circle.setAttribute('cx', String(centerX));
+  circle.setAttribute('cy', String(centerY));
+  circle.setAttribute('r', String(radius));
+  circle.setAttribute('fill', 'none');
+  circle.setAttribute('stroke', '#b5bdc8');
+  circle.setAttribute('stroke-width', '1');
+  acknowledgmentsPattern.appendChild(circle);
+
+  for (var h = 0; h < holeCount; h++) {
+    var hole = createSvgNode('circle');
+    hole.setAttribute('cx', String(pointsList[h].x));
+    hole.setAttribute('cy', String(pointsList[h].y));
+    hole.setAttribute('r', '1.8');
+    hole.setAttribute('fill', '#8e98a8');
+    hole.setAttribute('opacity', '0.65');
+    acknowledgmentsPattern.appendChild(hole);
+  }
+
+  var sequence = [];
+  var visited = new Array(holeCount).fill(false);
+  var current = 0;
+  for (var s = 0; s < holeCount; s++) {
+    if (visited[current]) break;
+    visited[current] = true;
+    sequence.push(current);
+    current = (current + jump) % holeCount;
+  }
+
+  var segments = [];
+  for (var si = 0; si < sequence.length; si++) {
+    var from = pointsList[sequence[si]];
+    var to = pointsList[sequence[(si + 1) % sequence.length]];
+    var line = createSvgNode('line');
+    line.setAttribute('x1', String(from.x));
+    line.setAttribute('y1', String(from.y));
+    line.setAttribute('x2', String(from.x));
+    line.setAttribute('y2', String(from.y));
+    line.setAttribute('stroke', stroke);
+    line.setAttribute('stroke-width', String(lineWidth));
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('opacity', '0.92');
+    acknowledgmentsPattern.appendChild(line);
+    segments.push({ line: line, from: from, to: to });
+  }
+
+  return {
+    segmentCount: segments.length,
+    render: function(progress) {
+    var p = clamp01(progress);
+    var scaled = p * segments.length;
+    var fullCount = Math.floor(scaled);
+    var partial = scaled - fullCount;
+
+    for (var i = 0; i < segments.length; i++) {
+      var seg = segments[i];
+      if (i < fullCount) {
+        seg.line.setAttribute('x2', String(seg.to.x));
+        seg.line.setAttribute('y2', String(seg.to.y));
+      } else if (i === fullCount) {
+        var px = seg.from.x + (seg.to.x - seg.from.x) * partial;
+        var py = seg.from.y + (seg.to.y - seg.from.y) * partial;
+        seg.line.setAttribute('x2', String(px));
+        seg.line.setAttribute('y2', String(py));
+      } else {
+        seg.line.setAttribute('x2', String(seg.from.x));
+        seg.line.setAttribute('y2', String(seg.from.y));
+      }
+    }
+    }
+  };
+}
+
+function splitAcknowledgmentsTriangle(vertices) {
+  var m01 = { x: (vertices[0].x + vertices[1].x) / 2, y: (vertices[0].y + vertices[1].y) / 2 };
+  var m12 = { x: (vertices[1].x + vertices[2].x) / 2, y: (vertices[1].y + vertices[2].y) / 2 };
+  var m20 = { x: (vertices[2].x + vertices[0].x) / 2, y: (vertices[2].y + vertices[0].y) / 2 };
+  return {
+    central: [m01, m12, m20],
+    children: [
+      { vertices: [vertices[0], m01, m20], slot: 1 },
+      { vertices: [m01, vertices[1], m12], slot: 2 },
+      { vertices: [m20, m12, vertices[2]], slot: 4 }
+    ]
+  };
+}
+
+function collectAcknowledgmentsTriangles(vertices, depth, slot, collector) {
+  if (depth <= 0) {
+    collector.push({ vertices: vertices, slot: slot || 1 });
+    return;
+  }
+  var split = splitAcknowledgmentsTriangle(vertices);
+  for (var i = 0; i < split.children.length; i++) {
+    collectAcknowledgmentsTriangles(split.children[i].vertices, depth - 1, split.children[i].slot, collector);
+  }
+}
+
+function collectAcknowledgmentsCutCenters(vertices, depth, collector) {
+  if (depth <= 0) return;
+  var split = splitAcknowledgmentsTriangle(vertices);
+  if (depth === 1) {
+    collector.push(split.central);
+    return;
+  }
+  for (var i = 0; i < split.children.length; i++) {
+    collectAcknowledgmentsCutCenters(split.children[i].vertices, depth - 1, collector);
+  }
+}
+
+function toAcknowledgmentsPath(vertices) {
+  return 'M ' + vertices[0].x + ' ' + vertices[0].y + ' L ' + vertices[1].x + ' ' + vertices[1].y + ' L ' + vertices[2].x + ' ' + vertices[2].y + ' Z';
+}
+
+function buildAcknowledgmentsTriangulaAnimator(visual) {
+  clearAcknowledgmentsPattern();
+  createAcknowledgmentsTextLayer('triangula');
+  var width = configureAcknowledgmentsPatternViewport();
+  var height = width;
+  var depth = Math.max(2, parseBoundedInt(visual && visual.depth, 2, 5, 3));
+  var mode = visual && visual.mode === 'cut' ? 'cut' : 'shrink';
+  var base = [
+    { x: width * 0.5, y: height * 0.08 },
+    { x: width * 0.14, y: height * 0.92 },
+    { x: width * 0.86, y: height * 0.92 }
+  ];
+
+  var basePath = createSvgNode('path');
+  basePath.setAttribute('d', toAcknowledgmentsPath(base));
+  basePath.setAttribute('fill', 'none');
+  basePath.setAttribute('stroke', '#3d4652');
+  basePath.setAttribute('stroke-width', '2');
+  basePath.setAttribute('opacity', '0.86');
+  acknowledgmentsPattern.appendChild(basePath);
+
+  var elements = [];
+  var timelineBeats = 0;
+  var grayBySlot = { 1: '#9da7b5', 2: '#737f8f', 4: '#4f5967' };
+  if (mode === 'cut') {
+    for (var d = 1; d <= depth; d++) {
+      var cuts = [];
+      collectAcknowledgmentsCutCenters(base, d, cuts);
+      timelineBeats += (visual && visual.fractalMode === 'parallel') ? 1.85 : (cuts.length * 0.95);
+      for (var c = 0; c < cuts.length; c++) {
+        var cutPath = createSvgNode('path');
+        cutPath.setAttribute('d', toAcknowledgmentsPath(cuts[c]));
+        cutPath.setAttribute('fill', '#6f7b8a');
+        cutPath.setAttribute('stroke', '#353f4b');
+        cutPath.setAttribute('stroke-width', '1.2');
+        cutPath.setAttribute('opacity', '0');
+        acknowledgmentsPattern.appendChild(cutPath);
+        elements.push(cutPath);
+      }
+    }
+  } else {
+    for (var level = 1; level <= depth; level++) {
+      var triangles = [];
+      collectAcknowledgmentsTriangles(base, level, 1, triangles);
+      timelineBeats += (visual && visual.fractalMode === 'parallel') ? 1.75 : (triangles.length * 0.92);
+      for (var t = 0; t < triangles.length; t++) {
+        var trianglePath = createSvgNode('path');
+        trianglePath.setAttribute('d', toAcknowledgmentsPath(triangles[t].vertices));
+        trianglePath.setAttribute('fill', grayBySlot[triangles[t].slot] || '#8a95a5');
+        trianglePath.setAttribute('stroke', '#2f3946');
+        trianglePath.setAttribute('stroke-width', String(Math.max(0.6, 1.2 - level * 0.1)));
+        trianglePath.setAttribute('opacity', '0');
+        acknowledgmentsPattern.appendChild(trianglePath);
+        elements.push(trianglePath);
+      }
+    }
+  }
+
+  return {
+    timelineBeats: timelineBeats,
+    render: function(progress) {
+    var p = clamp01(progress);
+    var scaled = p * elements.length;
+    var fullCount = Math.floor(scaled);
+    var partial = scaled - fullCount;
+    for (var i = 0; i < elements.length; i++) {
+      if (i < fullCount) {
+        elements[i].setAttribute('opacity', mode === 'cut' ? '1' : '0.9');
+      } else if (i === fullCount) {
+        elements[i].setAttribute('opacity', String(mode === 'cut' ? partial : (partial * 0.9)));
+      } else {
+        elements[i].setAttribute('opacity', '0');
+      }
+    }
+    }
+  };
+}
+
+function getAcknowledgmentsPieceWorldPoint(piece, target, cellX, cellY) {
+  var cosR = Math.cos(target.rotation);
+  var sinR = Math.sin(target.rotation);
+  var localX = (cellX - piece.centroidX) * target.scale;
+  var localY = (cellY - piece.centroidY) * target.scale;
+  return {
+    x: target.x + (localX * cosR - localY * sinR),
+    y: target.y + (localX * sinR + localY * cosR)
+  };
+}
+
+function buildAcknowledgmentsViewportMapper(points) {
+  var width = getAcknowledgmentsStageLogicalSize();
+  var height = width;
+  var minX = Infinity;
+  var minY = Infinity;
+  var maxX = -Infinity;
+  var maxY = -Infinity;
+  for (var i = 0; i < points.length; i++) {
+    minX = Math.min(minX, points[i].x);
+    minY = Math.min(minY, points[i].y);
+    maxX = Math.max(maxX, points[i].x);
+    maxY = Math.max(maxY, points[i].y);
+  }
+  if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) {
+    minX = 0; minY = 0; maxX = 1; maxY = 1;
+  }
+  var pad = 16;
+  var sx = (width - pad * 2) / Math.max(1e-3, maxX - minX);
+  var sy = (height - pad * 2) / Math.max(1e-3, maxY - minY);
+  var scale = Math.min(sx, sy);
+  var offsetX = pad + (width - pad * 2 - ((maxX - minX) * scale)) * 0.5;
+  var offsetY = pad + (height - pad * 2 - ((maxY - minY) * scale)) * 0.5;
+  return function(point) {
+    return {
+      x: offsetX + (point.x - minX) * scale,
+      y: offsetY + (point.y - minY) * scale,
+      scale: scale
+    };
+  };
+}
+
+function buildAcknowledgmentsSquarusAnimator(visual) {
+  clearAcknowledgmentsPattern();
+  createAcknowledgmentsTextLayer('squarus');
+  var stageSize = configureAcknowledgmentsPatternViewport();
+  var previousOrder = squarusOrder;
+  var previousLayout = squarusLayout;
+  var previousPieceCount = squarusPieceCount;
+  var previousSequenceSeed = squarusSequenceSeed;
+  var previousContactMode = squarusContactMode;
+  var previousAnimationMode = squarusAnimationMode;
+
+  var order = Math.max(2, parseBoundedInt(visual && visual.order, 2, 6, 4));
+  var requestedLayout = (visual && visual.layout) ? String(visual.layout) : 'force-directed';
+  var sequenceSeed = Math.max(1, parseBoundedInt(visual && visual.sequenceSeed, 1, 999, 7));
+
+  squarusOrder = order;
+  squarusLayout = requestedLayout;
+  squarusContactMode = 'formula-only';
+  squarusAnimationMode = 'sequential';
+  squarusSequenceSeed = sequenceSeed;
+
+  var orderedPieces = getSquarusSequencedPieces(squarusOrder, squarusSequenceSeed);
+  var pieceCount = Math.max(1, Math.min(orderedPieces.length, parseBoundedInt(visual && visual.pieceCount, 1, orderedPieces.length || 1, 10)));
+  squarusPieceCount = pieceCount;
+  var pieces = orderedPieces.slice(0, pieceCount);
+  var targets = buildSquarusTargets(pieces, squarusLayout).slice(0, pieceCount);
+
+  squarusOrder = previousOrder;
+  squarusLayout = previousLayout;
+  squarusPieceCount = previousPieceCount;
+  squarusSequenceSeed = previousSequenceSeed;
+  squarusContactMode = previousContactMode;
+  squarusAnimationMode = previousAnimationMode;
+
+  var allPoints = [];
+  for (var i = 0; i < pieceCount; i++) {
+    var target = targets[i];
+    var piece = pieces[i];
+    allPoints.push({ x: target.x, y: target.y });
+    for (var c = 0; c < piece.cells.length; c++) {
+      var p1 = getAcknowledgmentsPieceWorldPoint(piece, target, piece.cells[c][0], piece.cells[c][1]);
+      var p2 = getAcknowledgmentsPieceWorldPoint(piece, target, piece.cells[c][0] + 1, piece.cells[c][1] + 1);
+      allPoints.push(p1);
+      allPoints.push(p2);
+    }
+  }
+  var mapPoint = buildAcknowledgmentsViewportMapper(allPoints);
+  var palette = ACKNOWLEDGMENTS_GRAY_PALETTE;
+  var groups = [];
+
+  for (var p = 0; p < pieceCount; p++) {
+    var pieceMeta = pieces[p];
+    var targetMeta = targets[p];
+    var mappedTarget = mapPoint({ x: targetMeta.x, y: targetMeta.y });
+    var targetScale = targetMeta.scale * mappedTarget.scale;
+    var group = createSvgNode('g');
+    group.setAttribute('opacity', '0.15');
+    acknowledgmentsPattern.appendChild(group);
+
+    for (var rc = 0; rc < pieceMeta.cells.length; rc++) {
+      var rect = createSvgNode('rect');
+      rect.setAttribute('x', String((pieceMeta.cells[rc][0] - pieceMeta.centroidX) * targetScale));
+      rect.setAttribute('y', String((pieceMeta.cells[rc][1] - pieceMeta.centroidY) * targetScale));
+      rect.setAttribute('width', String(targetScale));
+      rect.setAttribute('height', String(targetScale));
+      rect.setAttribute('fill', palette[p % palette.length]);
+      rect.setAttribute('stroke', '#1b232e');
+      rect.setAttribute('stroke-width', String(Math.max(0.7, targetScale * 0.06)));
+      group.appendChild(rect);
+    }
+
+    var seedAngle = p * (Math.PI * (3 - Math.sqrt(5)));
+    var scatterRadius = 130 * mappedTarget.scale;
+    groups.push({
+      group: group,
+      targetX: mappedTarget.x,
+      targetY: mappedTarget.y,
+      targetR: (targetMeta.rotation * 180 / Math.PI),
+      scatterX: (stageSize * 0.5) + Math.cos(seedAngle) * scatterRadius,
+      scatterY: (stageSize * 0.5) + Math.sin(seedAngle) * scatterRadius,
+      scatterR: (seedAngle * 180 / Math.PI) + 90
+    });
+  }
+
+  var defaultBpm = DEFAULT_ANIMATION_BPM;
+  var scale = defaultBpm / ACKNOWLEDGMENTS_BPM;
+  var d = {
+    scatter: 0.7 * scale,
+    reveal: 0,
+    travel: 2.0 * scale,
+    snap: 0.5 * scale,
+    fade: 0.5 * scale
+  };
+  var pieceMotion = d.scatter + d.reveal + d.travel + d.snap;
+  var totalSeconds = pieceCount > 0 ? (pieceMotion * pieceCount + d.fade) : d.scatter;
+
+  return {
+    pieceCount: pieceCount,
+    durationMs: Math.round(totalSeconds * 1000),
+    render: function(progress) {
+      var elapsedSeconds = clamp01(progress) * totalSeconds;
+      for (var i = 0; i < groups.length; i++) {
+        var localT = elapsedSeconds - (i * pieceMotion);
+        var x = groups[i].scatterX;
+        var y = groups[i].scatterY;
+        var rot = groups[i].scatterR;
+        var localOpacity = 0.2;
+
+        if (localT > 0 && localT < d.scatter) {
+          localOpacity = 0.35;
+        } else if (localT >= d.scatter && localT < (d.scatter + d.reveal + d.travel)) {
+          var travelP = easeInOutCubic(clamp01((localT - d.scatter - d.reveal) / Math.max(1e-4, d.travel)));
+          x = groups[i].scatterX + (groups[i].targetX - groups[i].scatterX) * travelP;
+          y = groups[i].scatterY + (groups[i].targetY - groups[i].scatterY) * travelP;
+          rot = groups[i].scatterR + (groups[i].targetR - groups[i].scatterR) * travelP;
+          localOpacity = 0.25 + 0.7 * travelP;
+        } else if (localT >= (d.scatter + d.reveal + d.travel)) {
+          x = groups[i].targetX;
+          y = groups[i].targetY;
+          rot = groups[i].targetR;
+          localOpacity = 0.92;
+        }
+
+        groups[i].group.setAttribute('transform', 'translate(' + x + ' ' + y + ') rotate(' + rot + ')');
+        groups[i].group.setAttribute('opacity', String(localOpacity));
+      }
+    }
+  };
+}
+
+function buildAcknowledgmentsStageAnimator(styleId, visual) {
+  if (styleId === 'triangula') {
+    return buildAcknowledgmentsTriangulaAnimator(visual);
+  }
+  if (styleId === 'squarus') {
+    return buildAcknowledgmentsSquarusAnimator(visual);
+  }
+  return buildAcknowledgmentsStitchingAnimator(visual);
+}
+
+function playAcknowledgmentsStage(styleId, visual, lineText) {
+  stopAcknowledgmentsStageAnimation();
+  configureAcknowledgmentsPatternViewport();
+  var animatorBundle = buildAcknowledgmentsStageAnimator(styleId, visual);
+  var animator = (typeof animatorBundle === 'function') ? { render: animatorBundle } : animatorBundle;
+  var start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  var durationMs = getAcknowledgmentsLineDurationMs(styleId, visual, animator);
+  acknowledgmentsViewerState.currentLineDurationMs = durationMs;
+
+  function tick(nowMs) {
+    var now = isFinite(nowMs) ? nowMs : ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+    var progress = clamp01((now - start) / durationMs);
+    if (animator && typeof animator.render === 'function') {
+      animator.render(progress);
+    }
+    setAcknowledgmentsLineReveal(lineText, clamp01((progress - 0.06) / 0.9));
+    if (progress >= 1) {
+      setAcknowledgmentsLineReveal(lineText, 1);
+      acknowledgmentsViewerState.rafId = null;
+      return;
+    }
+    acknowledgmentsViewerState.rafId = requestAnimationFrame(tick);
+  }
+
+  acknowledgmentsViewerState.rafId = requestAnimationFrame(tick);
+}
+
+function renderAcknowledgmentsPattern(styleId, visual, lineText) {
+  playAcknowledgmentsStage(styleId, visual, lineText);
+}
+
+function syncAcknowledgmentsControls(linesLength) {
+  var total = Math.max(0, parseBoundedInt(linesLength, 0, 9999, 0));
+  var index = Math.max(0, parseBoundedInt(acknowledgmentsViewerState.lineIndex, 0, Math.max(0, total - 1), 0));
+  if (acknowledgmentsPrevBtn) {
+    acknowledgmentsPrevBtn.disabled = index <= 0;
+  }
+  if (acknowledgmentsNextBtn) {
+    acknowledgmentsNextBtn.disabled = index >= (total - 1);
+  }
+  if (acknowledgmentsAutoplayBtn) {
+    acknowledgmentsAutoplayBtn.setAttribute('aria-pressed', acknowledgmentsViewerState.autoPlay ? 'true' : 'false');
+    acknowledgmentsAutoplayBtn.textContent = acknowledgmentsViewerState.autoPlay ? 'Pause' : 'Auto play';
+  }
+}
+
+function renderAcknowledgmentsLine(lines) {
+  var safeLines = Array.isArray(lines) && lines.length ? lines : ACKNOWLEDGMENTS_FALLBACK_LINES;
+  if (!safeLines.length) {
+    safeLines = ['Acknowledgments unavailable.'];
+  }
+  acknowledgmentsViewerState.lineIndex = Math.max(0, Math.min(acknowledgmentsViewerState.lineIndex, safeLines.length - 1));
+  var lineIndex = acknowledgmentsViewerState.lineIndex;
+  var styleId = getAcknowledgmentsStyleForIndex(lineIndex);
+  var styleLabel = getAcknowledgmentsStyleLabel(styleId);
+  var visual = getAcknowledgmentsVisualForIndex(lineIndex, styleId);
+  var activeLine = safeLines[lineIndex];
+
+  if (acknowledgmentsLineText) {
+    acknowledgmentsLineText.textContent = '';
+  }
+  if (acknowledgmentsProgress) {
+    acknowledgmentsProgress.textContent = String(lineIndex + 1) + ' / ' + String(safeLines.length);
+  }
+  if (acknowledgmentsStyleChip) {
+    acknowledgmentsStyleChip.textContent = styleLabel;
+  }
+
+  renderAcknowledgmentsPattern(styleId, visual, activeLine);
+  syncAcknowledgmentsControls(safeLines.length);
+}
+
+function scheduleAcknowledgmentsAutoplayTick(lines) {
+  stopAcknowledgmentsAutoplay();
+  if (!acknowledgmentsViewerState.autoPlay) return;
+  var safeLines = Array.isArray(lines) ? lines : [];
+  if (!safeLines.length) return;
+  if (acknowledgmentsViewerState.lineIndex >= safeLines.length - 1) {
+    acknowledgmentsViewerState.autoPlay = false;
+    syncAcknowledgmentsControls(safeLines.length);
+    return;
+  }
+
+  var delayMs = Math.max(1200, parseBoundedInt(
+    acknowledgmentsViewerState.currentLineDurationMs,
+    1200,
+    30000,
+    ACKNOWLEDGMENTS_AUTOPLAY_DELAY_MS
+  ));
+
+  acknowledgmentsViewerState.timerId = window.setTimeout(function() {
+    if (!acknowledgmentsModal || !acknowledgmentsModal.classList.contains('open')) return;
+    if (!acknowledgmentsViewerState.autoPlay) return;
+    acknowledgmentsViewerState.lineIndex = Math.min(acknowledgmentsViewerState.lineIndex + 1, safeLines.length - 1);
+    renderAcknowledgmentsLine(safeLines);
+    scheduleAcknowledgmentsAutoplayTick(safeLines);
+  }, delayMs);
+}
+
+function openAcknowledgmentsViewer(options) {
+  options = options || {};
+  if (!acknowledgmentsModal) return;
+  loadAcknowledgmentsLines().then(function(lines) {
+    var safeLines = Array.isArray(lines) && lines.length ? lines : ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+    var requestedIndex = parseBoundedInt(options.lineIndex, 0, Math.max(0, safeLines.length - 1), 0);
+    acknowledgmentsViewerState.lineIndex = requestedIndex;
+    acknowledgmentsViewerState.autoPlay = (typeof options.autoPlay === 'boolean') ? options.autoPlay : true;
+    stopAcknowledgmentsAutoplay();
+    acknowledgmentsModal.classList.add('open');
+    acknowledgmentsAudio.currentTime = 0;
+    updateMusicPlaybackState();
+    renderAcknowledgmentsLine(safeLines);
+    scheduleAcknowledgmentsAutoplayTick(safeLines);
+    if (acknowledgmentsCloseBtn) {
+      acknowledgmentsCloseBtn.focus();
+    }
+  });
+}
+
+function closeAcknowledgmentsViewer() {
+  if (!acknowledgmentsModal) return;
+  stopAcknowledgmentsAutoplay();
+  stopAcknowledgmentsStageAnimation();
+  acknowledgmentsViewerState.autoPlay = false;
+  acknowledgmentsModal.classList.remove('open');
+  updateMusicPlaybackState();
+}
+
+function triggerAcknowledgmentsViewerOpen(autoPlay) {
+  syncExperienceInfoPanel(false);
+  if (typeof autoPlay === 'boolean') {
+    openAcknowledgmentsViewer({ lineIndex: 0, autoPlay: autoPlay });
+    return;
+  }
+  openAcknowledgmentsViewer({ lineIndex: 0 });
+}
+
+function attachExperienceInfoAcknowledgmentsBridge() {
+  if (!experienceInfoHtmlFrame) return;
+  var frameDoc = null;
+  try {
+    frameDoc = experienceInfoHtmlFrame.contentDocument || (experienceInfoHtmlFrame.contentWindow && experienceInfoHtmlFrame.contentWindow.document) || null;
+  } catch (error) {
+    frameDoc = null;
+  }
+  if (!frameDoc || frameDoc.__ackBridgeAttached) return;
+
+  frameDoc.addEventListener('click', function(event) {
+    if (!event || !event.target || typeof event.target.closest !== 'function') return;
+    var trigger = event.target.closest('[data-open-acknowledgments]');
+    if (!trigger) return;
+    event.preventDefault();
+    triggerAcknowledgmentsViewerOpen();
+  });
+  frameDoc.__ackBridgeAttached = true;
+}
+
 async function runExportFromModalSelection() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
@@ -14172,8 +15399,105 @@ if (kidSaveModal) {
   });
 }
 
+if (experienceAcknowledgmentsToggle) {
+  experienceAcknowledgmentsToggle.addEventListener('click', () => {
+    triggerAcknowledgmentsViewerOpen();
+  });
+}
+
+if (acknowledgmentsCloseBtn) {
+  acknowledgmentsCloseBtn.addEventListener('click', () => {
+    closeAcknowledgmentsViewer();
+    if (experienceAcknowledgmentsToggle) {
+      experienceAcknowledgmentsToggle.focus();
+    }
+  });
+}
+
+if (acknowledgmentsModal) {
+  acknowledgmentsModal.addEventListener('click', (event) => {
+    if (event.target === acknowledgmentsModal) {
+      closeAcknowledgmentsViewer();
+    }
+  });
+}
+
+if (acknowledgmentsPrevBtn) {
+  acknowledgmentsPrevBtn.addEventListener('click', () => {
+    var lines = acknowledgmentsLinesCache && acknowledgmentsLinesCache.length
+      ? acknowledgmentsLinesCache
+      : ACKNOWLEDGMENTS_FALLBACK_LINES;
+    if (!lines.length) return;
+    acknowledgmentsViewerState.lineIndex = Math.max(0, acknowledgmentsViewerState.lineIndex - 1);
+    renderAcknowledgmentsLine(lines);
+    if (acknowledgmentsViewerState.autoPlay) {
+      scheduleAcknowledgmentsAutoplayTick(lines);
+    }
+  });
+}
+
+if (acknowledgmentsNextBtn) {
+  acknowledgmentsNextBtn.addEventListener('click', () => {
+    var lines = acknowledgmentsLinesCache && acknowledgmentsLinesCache.length
+      ? acknowledgmentsLinesCache
+      : ACKNOWLEDGMENTS_FALLBACK_LINES;
+    if (!lines.length) return;
+    acknowledgmentsViewerState.lineIndex = Math.min(lines.length - 1, acknowledgmentsViewerState.lineIndex + 1);
+    renderAcknowledgmentsLine(lines);
+    if (acknowledgmentsViewerState.autoPlay) {
+      scheduleAcknowledgmentsAutoplayTick(lines);
+    }
+  });
+}
+
+if (acknowledgmentsRestartBtn) {
+  acknowledgmentsRestartBtn.addEventListener('click', () => {
+    var lines = acknowledgmentsLinesCache && acknowledgmentsLinesCache.length
+      ? acknowledgmentsLinesCache
+      : ACKNOWLEDGMENTS_FALLBACK_LINES;
+    acknowledgmentsViewerState.lineIndex = 0;
+    renderAcknowledgmentsLine(lines);
+    if (acknowledgmentsViewerState.autoPlay) {
+      scheduleAcknowledgmentsAutoplayTick(lines);
+    }
+  });
+}
+
+if (acknowledgmentsAutoplayBtn) {
+  acknowledgmentsAutoplayBtn.addEventListener('click', () => {
+    var lines = acknowledgmentsLinesCache && acknowledgmentsLinesCache.length
+      ? acknowledgmentsLinesCache
+      : ACKNOWLEDGMENTS_FALLBACK_LINES;
+    acknowledgmentsViewerState.autoPlay = !acknowledgmentsViewerState.autoPlay;
+    syncAcknowledgmentsControls(lines.length);
+    scheduleAcknowledgmentsAutoplayTick(lines);
+  });
+}
+
+window.addEventListener('message', function(event) {
+  if (!event || !event.data) return;
+  if (event.source && experienceInfoHtmlFrame && event.source !== experienceInfoHtmlFrame.contentWindow) {
+    return;
+  }
+  var data = event.data;
+  if (typeof data === 'string') {
+    if (data === 'stitchlab-open-acknowledgments') {
+      triggerAcknowledgmentsViewerOpen();
+    }
+    return;
+  }
+  if (typeof data !== 'object' || data === null) return;
+  if (data.type === 'stitchlab-open-acknowledgments') {
+    triggerAcknowledgmentsViewerOpen(!!data.autoPlay);
+  }
+});
+
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
+  if (acknowledgmentsModal && acknowledgmentsModal.classList.contains('open')) {
+    closeAcknowledgmentsViewer();
+    return;
+  }
   if (kidSaveModal.classList.contains('open')) {
     closeKidSaveModal();
     return;
@@ -14554,6 +15878,7 @@ experienceInfoClose.addEventListener('click', () => {
 if (experienceInfoHtmlFrame) {
   experienceInfoHtmlFrame.addEventListener('load', () => {
     enforceExperienceInfoFrameAllowlist();
+    attachExperienceInfoAcknowledgmentsBridge();
   });
 }
 
