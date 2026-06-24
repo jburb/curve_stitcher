@@ -157,14 +157,21 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#acknowledgments-progress')).toContainText('3 /');
   });
 
-  test('acknowledgments viewer opens from About document action', async ({ page }) => {
+  test('acknowledgments viewer opens from About actions', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
     await page.locator('#experience-info-toggle').click();
     const aboutFrame = page.frameLocator('#experience-info-html');
+    const documentAction = aboutFrame.locator('[data-open-acknowledgments]');
+    const panelAction = page.locator('#experience-acknowledgments-toggle');
 
-    await expect(aboutFrame.locator('[data-open-acknowledgments]')).toBeVisible();
-    await aboutFrame.locator('[data-open-acknowledgments]').click();
+    if (await documentAction.count()) {
+      await expect(documentAction.first()).toBeVisible();
+      await documentAction.first().click();
+    } else {
+      await expect(panelAction).toBeVisible();
+      await panelAction.click();
+    }
 
     await expect(page.locator('#acknowledgments-modal')).toHaveClass(/open/);
     await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');

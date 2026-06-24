@@ -234,7 +234,7 @@
     height: min(60vh, 520px);
     border: 1px solid #d8e3f7;
     border-radius: 10px;
-    background: #fff;
+    background: #ffffff;
     box-sizing: border-box;
   }
   #experience-info-html[hidden] {
@@ -266,9 +266,9 @@
     color: #5b7298;
   }
   #experience-acknowledgments-toggle {
-    border: 1px solid #cbd8ef;
-    background: #ffffff;
-    color: #2f4a78;
+    border: 1px solid #b9cef2;
+    background: #f0f5ff;
+    color: #2f5fb3;
     border-radius: 999px;
     padding: 5px 11px;
     font-size: 12px;
@@ -363,14 +363,14 @@
     cursor: pointer;
   }
   .acknowledgments-btn.primary {
-    background: #324968;
-    border-color: #324968;
-    color: #f8fbff;
+    border-color: #cfdaee;
+    background: #ffffff;
+    color: #2f476f;
   }
   .acknowledgments-btn[aria-pressed="true"] {
-    background: #3a5578;
-    border-color: #3a5578;
-    color: #f4f8ff;
+    border-color: #cfdaee;
+    background: #ffffff;
+    color: #2f476f;
   }
   @keyframes acknowledgments-pattern-draw {
     from {
@@ -1713,10 +1713,48 @@
     background: rgba(93, 121, 166, 0.82);
   }
 
-  html[data-theme="dark"] #experience-acknowledgments-toggle {
-    border-color: #cbd8ef;
+  html[data-theme="dark"] #experience-info-panel {
+    background: #1f2936;
+    border-color: #3f4f66;
+    color: #dce7f8;
+    box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] #experience-info-title {
+    color: #e7f0ff;
+  }
+
+  html[data-theme="dark"] #experience-info-text {
+    color: #c3d4ef;
+  }
+
+  html[data-theme="dark"] #experience-info-close {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
+  }
+
+  html[data-theme="dark"] #experience-info-html {
+    border-color: #5a6f8f;
     background: #ffffff;
-    color: #2f4a78;
+  }
+
+  html[data-theme="dark"] #experience-narrate-toggle {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
+  }
+
+  html[data-theme="dark"] #experience-narrate-toggle.is-active {
+    border-color: #324968;
+    background: #324968;
+    color: #f8fbff;
+  }
+
+  html[data-theme="dark"] #experience-acknowledgments-toggle {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
   }
 
   html[data-theme="dark"] .modal-card.acknowledgments-card {
@@ -1743,9 +1781,9 @@
 
   html[data-theme="dark"] .acknowledgments-btn.primary,
   html[data-theme="dark"] .acknowledgments-btn[aria-pressed="true"] {
-    border-color: #324968;
-    background: #324968;
-    color: #f8fbff;
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
   }
 
   html[data-theme="dark"] .acknowledgments-progress {
@@ -2607,10 +2645,10 @@ var ACKNOWLEDGMENTS_BPM = 110;
 var ACKNOWLEDGMENTS_INLINE_LINES = [
   'To my kids, who ensured I visited the math museum.',
   'To Jenny Quinn, whose curve stitching reawakened my sense of mathematical wonder.',
-  'To Kim Kotovic, whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
+  '//To Kim Kotovic, whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
   'To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her appeal to children -- and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
   'To Charles Babbage, for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individual\'s free time might never have otherwise allowed for.',
-  'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to both popularize polyominoes throughout the human population, and to finally reward his own spirited work as well.',
+  'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to not only popularize polyominoes throughout the human population, but to finally reward his own spirited work as well.',
   'To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
   'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
   'To my wife Rabiya, without whose nurturing, systematizing, and firm support I could hardly function as a decent human being, and certainly not sufficiently to create such a lovely experience as this app.',
@@ -13526,10 +13564,15 @@ function stopAcknowledgmentsAutoplay() {
 
 function parseAcknowledgmentsLinesFromText(text) {
   if (typeof text !== 'string') return [];
-  var rawLines = text.split(/\r?\n/);
+  return filterAcknowledgmentsLines(text.split(/\r?\n/));
+}
+
+function filterAcknowledgmentsLines(sourceLines) {
+  if (!Array.isArray(sourceLines)) return [];
   var lines = [];
-  for (var i = 0; i < rawLines.length; i++) {
-    var cleaned = String(rawLines[i] || '').trim();
+  for (var i = 0; i < sourceLines.length; i++) {
+    var cleaned = String(sourceLines[i] || '').trim();
+    if (cleaned.indexOf('//') === 0) continue;
     if (cleaned) {
       lines.push(cleaned);
     }
@@ -13544,9 +13587,14 @@ function loadAcknowledgmentsLines() {
 
   var isFileProtocol = !!(window && window.location && window.location.protocol === 'file:');
   if (isFileProtocol) {
-    acknowledgmentsLinesCache = ACKNOWLEDGMENTS_INLINE_LINES.length
-      ? ACKNOWLEDGMENTS_INLINE_LINES.slice()
-      : ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+    acknowledgmentsLinesCache = filterAcknowledgmentsLines(
+      ACKNOWLEDGMENTS_INLINE_LINES.length
+        ? ACKNOWLEDGMENTS_INLINE_LINES
+        : ACKNOWLEDGMENTS_FALLBACK_LINES
+    );
+    if (!acknowledgmentsLinesCache.length) {
+      acknowledgmentsLinesCache = filterAcknowledgmentsLines(ACKNOWLEDGMENTS_FALLBACK_LINES);
+    }
     return Promise.resolve(acknowledgmentsLinesCache.slice());
   }
 
@@ -13559,11 +13607,11 @@ function loadAcknowledgmentsLines() {
     })
     .then(function(text) {
       var parsed = parseAcknowledgmentsLinesFromText(text);
-      acknowledgmentsLinesCache = parsed.length ? parsed : ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+      acknowledgmentsLinesCache = parsed.length ? parsed : filterAcknowledgmentsLines(ACKNOWLEDGMENTS_FALLBACK_LINES);
       return acknowledgmentsLinesCache.slice();
     })
     .catch(function() {
-      acknowledgmentsLinesCache = ACKNOWLEDGMENTS_FALLBACK_LINES.slice();
+      acknowledgmentsLinesCache = filterAcknowledgmentsLines(ACKNOWLEDGMENTS_FALLBACK_LINES);
       return acknowledgmentsLinesCache.slice();
     });
 }
