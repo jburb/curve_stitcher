@@ -1,11 +1,10 @@
-Acknowledgments to note in app:
-To My kids who ensured I visited the math museum.
-To Jenny Quinn whose curve stitching reawakened my sense of mathematical wonder.
-To Kim Kotovic whose persistent engagement to partner SUMM with my elder son’s kindergarten fixed my resolve to volunteer something in return.
-To Mary Everest Boole whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her gently persistent appeals to and for children, and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.
-To Charles Babbage for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individuals free time might never have otherwise created.
-To Alexey Pajitnov whose legendary Tetris beat all odds of his place and time to not only popularize polyonimoes throughout the human population, but to finally reward his own spirited work as well.
-To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.
+To my kids, who ensured I visited the Seattle Universal Math Museum.
+To Jenny Quinn, whose curve stitching reawakened my sense of mathematical wonder.
+To Kim Kotovic, whose persistent engagement to partner SUMM with my son’s kindergarten fixed my resolve to volunteer something in return.
+To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her appeal to children, and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.
+To Charles Babbage, for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individual's free time might never have otherwise created.
+To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to both popularize polyominoes throughout the human population, and to finally reward his own spirited work as well.
+//To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.
 To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.
-To my wife Rabiya, without whose nurturing, systematizing, and sometimes severe support I could hardly function as a decent huma being, and certainly not sufficiently to create such a lovely experience as this app.
+To my wife Rabiya, without whose nurturing, systematizing, and firm support I could hardly function as a decent human being, and certainly not sufficiently to create such a lovely experience as this app.
 And finally to the divine being from whom all mathematical law originates, and to whom all thanks is ultimately due. 
