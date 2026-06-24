@@ -2643,13 +2643,13 @@ var ACKNOWLEDGMENTS_LINE_MAX_MS = 12000;
 var ACKNOWLEDGMENTS_SONG_PATH = 'assets/audio/SonatainCmajor,Hob.XVI_50-I.Allegro.mp3';
 var ACKNOWLEDGMENTS_BPM = 110;
 var ACKNOWLEDGMENTS_INLINE_LINES = [
-  'To my kids, who ensured I visited the math museum.',
+  'To my kids, who ensured I visited the Seattle Universal Math Museum.',
   'To Jenny Quinn, whose curve stitching reawakened my sense of mathematical wonder.',
-  '//To Kim Kotovic, whose persistent engagement to partner SUMM with my elder son\'s kindergarten fixed my resolve to volunteer something in return.',
+  'To Kim Kotovic, whose persistent engagement to partner SUMM with my son\'s kindergarten fixed my resolve to volunteer something in return.',
   'To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her appeal to children -- and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
   'To Charles Babbage, for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individual\'s free time might never have otherwise allowed for.',
   'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to not only popularize polyominoes throughout the human population, but to finally reward his own spirited work as well.',
-  'To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
+  '//To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
   'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
   'To my wife Rabiya, without whose nurturing, systematizing, and firm support I could hardly function as a decent human being, and certainly not sufficiently to create such a lovely experience as this app.',
   'And finally to the divine being from whom all mathematical law originates, and to whom all thanks is ultimately due.'
@@ -13806,13 +13806,13 @@ function getAcknowledgmentsTextFrameSpec(styleId) {
   if (styleId === 'triangula') {
     var triScale = getAcknowledgmentsTriangulaSideScale(size);
     var tri = buildAcknowledgmentsEquilateralTriangle(size, triScale, 0.86);
-    var triTopPad = size * 0.118;
-    var triBottomPad = size * 0.044;
+    var triTopPad = size * 0.136;
+    var triBottomPad = size * 0.03;
     return {
       shapeType: 'path',
       shapePath: 'M ' + tri.apex.x + ' ' + tri.apex.y + ' L ' + tri.left.x + ' ' + tri.left.y + ' L ' + tri.right.x + ' ' + tri.right.y + ' Z',
       textX: size * 0.5,
-      textY: tri.apex.y + (tri.height * 0.8),
+      textY: tri.apex.y + (tri.height * 0.84),
       maxChars: 18,
       maxCharsMax: 26,
       minFontSize: 20,
