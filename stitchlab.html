@@ -2335,6 +2335,10 @@
       <label><input id="export-include-preview" type="checkbox" checked> Include preview image (.png)</label>
       <div class="modal-help">Adds a snapshot image reference from the current canvas.</div>
     </div>
+    <div class="modal-row" id="export-mashrabiya-debug-row" style="display:none;">
+      <label><input id="export-mashrabiya-debug-labels" type="checkbox"> Enable Rosette Debug Labels</label>
+      <div class="modal-help">Mashrabiya only: exports stitch lines and face labels (no fills) for debug analysis.</div>
+    </div>
     <div class="modal-actions">
       <button id="export-cancel-btn" type="button" class="modal-btn">Cancel</button>
       <button id="export-confirm-btn" type="button" class="modal-btn primary">Export</button>
@@ -2435,6 +2439,8 @@ var exportNameInput = document.getElementById('export-name-input');
 var exportIncludeThreadsInput = document.getElementById('export-include-threads');
 var exportIncludeGuideInput = document.getElementById('export-include-guide');
 var exportIncludePreviewInput = document.getElementById('export-include-preview');
+var exportMashrabiyaDebugLabelsInput = document.getElementById('export-mashrabiya-debug-labels');
+var exportMashrabiyaDebugRow = document.getElementById('export-mashrabiya-debug-row');
 var exportConfirmBtn = document.getElementById('export-confirm-btn');
 var exportCancelBtn = document.getElementById('export-cancel-btn');
 var kidSaveModal = document.getElementById('kid-save-modal');
@@ -12980,7 +12986,9 @@ function buildSquarusCutSheetSvgString() {
   return lines.join('\n');
 }
 
-function buildMashrabiyaDesignSvgString() {
+function buildMashrabiyaDesignSvgString(options) {
+  options = options || {};
+  var includeDebugLabels = options.mashrabiyaIncludeDebugLabels === true;
   var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
   var width = Math.max(120, Math.round(view.viewSize.width || 900));
   var height = Math.max(120, Math.round(view.viewSize.height || 900));
@@ -12997,6 +13005,90 @@ function buildMashrabiyaDesignSvgString() {
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
   lines.push('<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="#ffffff"/>');
+
+  if (includeDebugLabels) {
+    function appendPolyline(vertices, strokeColor, strokeWidth, opacity, closePath) {
+      if (!vertices || vertices.length < 2) return;
+      var path = ['M ' + formatSvgNumber(vertices[0].x) + ' ' + formatSvgNumber(vertices[0].y)];
+      for (var i = 1; i < vertices.length; i++) {
+        path.push('L ' + formatSvgNumber(vertices[i].x) + ' ' + formatSvgNumber(vertices[i].y));
+      }
+      if (closePath) {
+        path.push('Z');
+      }
+      lines.push(
+        '<path d="' + path.join(' ') + '" fill="none" stroke="' + strokeColor +
+        '" stroke-width="' + formatSvgNumber(strokeWidth) +
+        '" stroke-linecap="round" stroke-linejoin="round" opacity="' + formatSvgNumber(opacity) + '"/>'
+      );
+    }
+
+    function appendSequence(pointsList, sequence, strokeColor, strokeWidth, opacity) {
+      if (!pointsList || !pointsList.length || !sequence || sequence.length < 2) return;
+      var firstPoint = pointsList[sequence[0]];
+      if (!firstPoint) return;
+      var path = ['M ' + formatSvgNumber(firstPoint.x) + ' ' + formatSvgNumber(firstPoint.y)];
+      for (var i = 1; i < sequence.length; i++) {
+        var point = pointsList[sequence[i]];
+        if (!point) continue;
+        path.push('L ' + formatSvgNumber(point.x) + ' ' + formatSvgNumber(point.y));
+      }
+      lines.push(
+        '<path d="' + path.join(' ') + '" fill="none" stroke="' + strokeColor +
+        '" stroke-width="' + formatSvgNumber(strokeWidth) +
+        '" stroke-linecap="round" stroke-linejoin="round" opacity="' + formatSvgNumber(opacity) + '"/>'
+      );
+    }
+
+    function appendSegments(segments, strokeColor, strokeWidth, opacity) {
+      if (!segments || !segments.length) return;
+      for (var i = 0; i < segments.length; i++) {
+        var seg = segments[i];
+        if (!seg || !seg.from || !seg.to) continue;
+        lines.push(
+          '<line x1="' + formatSvgNumber(seg.from.x) + '" y1="' + formatSvgNumber(seg.from.y) +
+          '" x2="' + formatSvgNumber(seg.to.x) + '" y2="' + formatSvgNumber(seg.to.y) +
+          '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(strokeWidth) +
+          '" stroke-linecap="round" stroke-linejoin="round" opacity="' + formatSvgNumber(opacity) + '"/>'
+        );
+      }
+    }
+
+    appendPolyline(geometry.guideCircleVertices, '#82511f', 2, 0.9, true);
+    appendSequence(geometry.scaffoldPoints || geometry.holePoints, geometry.firstPolygonSequence, '#82511f', 2, 0.9);
+    appendSequence(geometry.scaffoldPoints || geometry.holePoints, geometry.offsetPolygonSequence, '#82511f', 2, 0.9);
+    appendPolyline(geometry.innerGuideCircleVertices, '#82511f', 2, 0.9, true);
+    appendSegments(geometry.starThreadSegments, '#82511f', 2, 0.9);
+
+    var faces = geometry.faceDiagnostics && geometry.faceDiagnostics.faces
+      ? geometry.faceDiagnostics.faces
+      : [];
+    for (var f = 0; f < faces.length; f++) {
+      var face = faces[f];
+      if (!face || !face.centroid) continue;
+      var classToken = 'O';
+      var classColor = '#666666';
+      if (face.classification === 'star') {
+        classToken = 'S';
+        classColor = '#9c6f1d';
+      } else if (face.classification === 'petal') {
+        classToken = 'P';
+        classColor = '#a9491e';
+      } else if (face.classification === 'point') {
+        classToken = 'T';
+        classColor = '#a73631';
+      }
+      lines.push(
+        '<text x="' + formatSvgNumber(face.centroid.x) + '" y="' + formatSvgNumber(face.centroid.y + 3) +
+        '" fill="' + classColor + '" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">' +
+        'F' + String(face.id) + ' ' + classToken + ' b' + String(face.bin) +
+        '</text>'
+      );
+    }
+
+    lines.push('</svg>');
+    return lines.join('\n');
+  }
 
   for (var p = 0; p < geometry.petals.length; p++) {
     lines.push('<polygon points="' + toSvgPoints(geometry.petals[p]) + '" fill="' + mashrabiyaPetalColor + '"/>');
@@ -13026,7 +13118,7 @@ function buildCurrentDesignSvgString(options) {
     return buildSquarusCutSheetSvgString();
   }
   if (currentExperienceId === 'mashrabiya') {
-    return buildMashrabiyaDesignSvgString();
+    return buildMashrabiyaDesignSvgString(options);
   }
 
   var includeThreads = options.includeThreads !== false;
@@ -13517,6 +13609,7 @@ async function downloadExportZipBundle(fileBaseName, options) {
 function openExportOptionsModal() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
+  var isMashrabiyaExport = currentExperienceId === 'mashrabiya';
   var hideThreadsControl = isTriangulaExport || isSquarusExport;
   var threadsRow = exportIncludeThreadsInput ? exportIncludeThreadsInput.closest('.modal-row') : null;
   var previewRow = exportIncludePreviewInput ? exportIncludePreviewInput.closest('.modal-row') : null;
@@ -13528,11 +13621,17 @@ function openExportOptionsModal() {
   exportIncludeGuideInput.checked = true;
   exportIncludePreviewInput.checked = isTriangulaExport ? false : true;
   exportIncludePreviewInput.disabled = isTriangulaExport;
+  if (exportMashrabiyaDebugLabelsInput) {
+    exportMashrabiyaDebugLabelsInput.checked = false;
+  }
   if (threadsRow) {
     threadsRow.style.display = hideThreadsControl ? 'none' : '';
   }
   if (previewRow) {
     previewRow.style.display = isTriangulaExport ? 'none' : '';
+  }
+  if (exportMashrabiyaDebugRow) {
+    exportMashrabiyaDebugRow.style.display = isMashrabiyaExport ? '' : 'none';
   }
   exportOptionsModal.classList.add('open');
   exportNameInput.focus();
@@ -14845,12 +14944,14 @@ function attachExperienceInfoAcknowledgmentsBridge() {
 async function runExportFromModalSelection() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
+  var isMashrabiyaExport = currentExperienceId === 'mashrabiya';
   var includeThreadsAllowed = !isTriangulaExport && !isSquarusExport;
   var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(exportNameInput.value));
   var options = {
     includeThreads: includeThreadsAllowed ? exportIncludeThreadsInput.checked : false,
     includeGuide: exportIncludeGuideInput.checked,
-    includePreview: isTriangulaExport ? false : exportIncludePreviewInput.checked
+    includePreview: isTriangulaExport ? false : exportIncludePreviewInput.checked,
+    mashrabiyaIncludeDebugLabels: !!(isMashrabiyaExport && exportMashrabiyaDebugLabelsInput && exportMashrabiyaDebugLabelsInput.checked)
   };
 
   try {
