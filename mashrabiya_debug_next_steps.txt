@@ -24,6 +24,15 @@ Suggested Workflow
 3) Capture diagnostic snapshot
    - In DevTools console, run:
      window.exportMashrabiyaFaceSnapshot()
+   - IMPORTANT: As of 20260629, this function call when run as is returned a null view.center, so the following workaround was used to call it successfully:
+      paper.setup(document.getElementById('myCanvas'));
+      ({
+         projectsCount: paper.projects.length,
+         hasProject: !!paper.project,
+         hasView: !!paper.view
+      });
+      window.exportMashrabiyaFaceSnapshot();
+
    - The snapshot includes, per face:
      id, bin, classification, radius, angle, hasScaffold, hasStarThread,
      hasCircleEdge, starEdgeCount, areaAbs, centroid, vertexCount.

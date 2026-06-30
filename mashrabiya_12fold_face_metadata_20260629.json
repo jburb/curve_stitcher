@@ -1,0 +1,1870 @@
+{
+  "version": 1,
+  "timestamp": "2026-06-30T07:37:23.323Z",
+  "experience": "mashrabiya",
+  "fold": 12,
+  "geometryMode": "stitch-vertex",
+  "summary": {
+    "fold": 12,
+    "geometryMode": "stitch-vertex",
+    "extractedFaceCount": 109,
+    "selectedStarFaceCount": 80,
+    "selectedPetalFaceCount": 60,
+    "selectedPointFaceCount": 0
+  },
+  "faces": [
+    {
+      "id": 68,
+      "bin": 1,
+      "classification": "star",
+      "radius": 0,
+      "angle": 0.726642,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 2594.796,
+      "centroid": {
+        "x": 293,
+        "y": 281
+      },
+      "vertexCount": 12
+    },
+    {
+      "id": 70,
+      "bin": 1,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": 0.523599,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 318.87,
+        "y": 295.936
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 69,
+      "bin": 0,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": 0,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 322.873,
+        "y": 281
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 81,
+      "bin": 4,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": 2.094395,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 278.064,
+        "y": 306.87
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 107,
+      "bin": 7,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": -2.617994,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 267.13,
+        "y": 266.064
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 95,
+      "bin": 9,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": -1.570796,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 293,
+        "y": 251.127
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 84,
+      "bin": 6,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": -3.141593,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 263.127,
+        "y": 281
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 83,
+      "bin": 5,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": 2.617994,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 267.13,
+        "y": 295.936
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 97,
+      "bin": 10,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": -1.047198,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 307.936,
+        "y": 255.13
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 66,
+      "bin": 11,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": -0.523599,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 318.87,
+        "y": 266.064
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 103,
+      "bin": 3,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": 1.570796,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 293,
+        "y": 310.873
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 101,
+      "bin": 2,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": 1.047198,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 307.936,
+        "y": 306.87
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 109,
+      "bin": 8,
+      "classification": "star",
+      "radius": 29.873,
+      "angle": -2.094395,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 33.451,
+      "centroid": {
+        "x": 278.064,
+        "y": 255.13
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 108,
+      "bin": 7,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": -2.356194,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 269.131,
+        "y": 257.131
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 79,
+      "bin": 4,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": 1.832596,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 284.263,
+        "y": 313.606
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 85,
+      "bin": 5,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": 2.879793,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 260.394,
+        "y": 289.737
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 96,
+      "bin": 10,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": -1.308997,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 301.737,
+        "y": 248.394
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 64,
+      "bin": 10,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": -0.785398,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 316.869,
+        "y": 257.131
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 82,
+      "bin": 4,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": 2.356194,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 269.131,
+        "y": 304.869
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 71,
+      "bin": 1,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": 0.261799,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 325.606,
+        "y": 289.737
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 93,
+      "bin": 8,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": -1.832596,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 284.263,
+        "y": 248.394
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 102,
+      "bin": 2,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": 1.308997,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 301.737,
+        "y": 313.606
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 67,
+      "bin": 0,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": -0.261799,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 325.606,
+        "y": 272.263
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 72,
+      "bin": 1,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": 0.785398,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 316.869,
+        "y": 304.869
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 86,
+      "bin": 7,
+      "classification": "star",
+      "radius": 33.756,
+      "angle": -2.879793,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 91.391,
+      "centroid": {
+        "x": 260.394,
+        "y": 272.263
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 74,
+      "bin": 2,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": 1.047198,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 314.404,
+        "y": 318.073
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 98,
+      "bin": 0,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": 0,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 335.808,
+        "y": 281
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 94,
+      "bin": 9,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": -1.570796,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 293,
+        "y": 238.192
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 88,
+      "bin": 7,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": -2.617994,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 255.927,
+        "y": 259.596
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 80,
+      "bin": 4,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": 2.094395,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 271.596,
+        "y": 318.073
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 62,
+      "bin": 10,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": -1.047198,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 314.404,
+        "y": 243.927
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 65,
+      "bin": 11,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": -0.523599,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 330.073,
+        "y": 259.596
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 73,
+      "bin": 1,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": 0.523599,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 330.073,
+        "y": 302.404
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 104,
+      "bin": 5,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": 2.617994,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 255.927,
+        "y": 302.404
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 87,
+      "bin": 6,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": -3.141593,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 250.192,
+        "y": 281
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 77,
+      "bin": 3,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": 1.570796,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 293,
+        "y": 323.808
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 91,
+      "bin": 8,
+      "classification": "star",
+      "radius": 42.808,
+      "angle": -2.094395,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 249.684,
+      "centroid": {
+        "x": 271.596,
+        "y": 243.927
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 78,
+      "bin": 4,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": 1.832596,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 275.33,
+        "y": 346.945
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 90,
+      "bin": 8,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": -2.356194,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 244.725,
+        "y": 232.725
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 99,
+      "bin": 11,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": -0.261799,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 358.945,
+        "y": 263.33
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 63,
+      "bin": 11,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": -0.785398,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 341.275,
+        "y": 232.725
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 106,
+      "bin": 5,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": 2.879793,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 227.055,
+        "y": 298.67
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 89,
+      "bin": 6,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": -2.879793,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 227.055,
+        "y": 263.33
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 92,
+      "bin": 8,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": -1.832596,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 275.33,
+        "y": 215.055
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 75,
+      "bin": 2,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": 0.785398,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 341.275,
+        "y": 329.275
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 61,
+      "bin": 9,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": -1.308997,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 310.67,
+        "y": 215.055
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 105,
+      "bin": 4,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": 2.356194,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 244.725,
+        "y": 329.275
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 100,
+      "bin": 1,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": 0.261799,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 358.945,
+        "y": 298.67
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 76,
+      "bin": 2,
+      "classification": "star",
+      "radius": 68.271,
+      "angle": 1.308997,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1023.226,
+      "centroid": {
+        "x": 310.67,
+        "y": 346.945
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 56,
+      "bin": 1,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": 0.523599,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 409.77,
+        "y": 348.417
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 50,
+      "bin": 8,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": -2.094395,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 225.583,
+        "y": 164.23
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 55,
+      "bin": 11,
+      "classification": "petal",
+      "radius": 134.834,
+      "angle": -0.523599,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 409.77,
+        "y": 213.583
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 32,
+      "bin": 4,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": 2.094395,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 225.583,
+        "y": 397.77
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 59,
+      "bin": 7,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": -2.617994,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 176.23,
+        "y": 213.583
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 41,
+      "bin": 6,
+      "classification": "petal",
+      "radius": 134.834,
+      "angle": 3.141593,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 158.166,
+        "y": 281
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 58,
+      "bin": 5,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": 2.617994,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 176.23,
+        "y": 348.417
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 5,
+      "bin": 10,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": -1.047198,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 360.417,
+        "y": 164.23
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 60,
+      "bin": 9,
+      "classification": "petal",
+      "radius": 134.834,
+      "angle": -1.570796,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 293,
+        "y": 146.166
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 23,
+      "bin": 2,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": 1.047198,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 360.417,
+        "y": 397.77
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 14,
+      "bin": 0,
+      "classification": "star",
+      "radius": 134.834,
+      "angle": 0,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 427.834,
+        "y": 281
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 57,
+      "bin": 3,
+      "classification": "petal",
+      "radius": 134.834,
+      "angle": 1.570796,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 6175.277,
+      "centroid": {
+        "x": 293,
+        "y": 415.834
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 25,
+      "bin": 3,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": 1.308997,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 335.926,
+        "y": 441.2
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 16,
+      "bin": 0,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": 0.261799,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 453.2,
+        "y": 323.926
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 12,
+      "bin": 11,
+      "classification": "petal",
+      "radius": 165.851,
+      "angle": -0.261799,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 453.2,
+        "y": 238.074
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 30,
+      "bin": 4,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": 1.832596,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 250.074,
+        "y": 441.2
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 3,
+      "bin": 9,
+      "classification": "petal",
+      "radius": 165.851,
+      "angle": -1.308997,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 335.926,
+        "y": 120.8
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 39,
+      "bin": 5,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": 2.879793,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 132.8,
+        "y": 323.926
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 52,
+      "bin": 8,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": -1.832596,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 250.074,
+        "y": 120.8
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 48,
+      "bin": 7,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": -2.356194,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 175.725,
+        "y": 163.725
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 43,
+      "bin": 7,
+      "classification": "petal",
+      "radius": 165.851,
+      "angle": -2.879793,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 132.8,
+        "y": 238.074
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 7,
+      "bin": 11,
+      "classification": "petal",
+      "radius": 165.851,
+      "angle": -0.785398,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 410.275,
+        "y": 163.725
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 34,
+      "bin": 4,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": 2.356194,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 175.725,
+        "y": 398.275
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 21,
+      "bin": 1,
+      "classification": "star",
+      "radius": 165.851,
+      "angle": 0.785398,
+      "hasScaffold": false,
+      "hasStarThread": true,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1894.649,
+      "centroid": {
+        "x": 410.275,
+        "y": 398.275
+      },
+      "vertexCount": 4
+    },
+    {
+      "id": 20,
+      "bin": 1,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 0.706262,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 443.434,
+        "y": 409.328
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 22,
+      "bin": 2,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 0.864534,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 421.328,
+        "y": 431.434
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 18,
+      "bin": 1,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 0.340935,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 479.352,
+        "y": 347.116
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 9,
+      "bin": 11,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -0.706262,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 443.434,
+        "y": 152.672
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 17,
+      "bin": 0,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 0.182663,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 487.444,
+        "y": 316.918
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 35,
+      "bin": 4,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 2.277059,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 164.672,
+        "y": 431.434
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 31,
+      "bin": 4,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 1.911732,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 226.884,
+        "y": 467.352
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 29,
+      "bin": 3,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 1.75346,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 257.082,
+        "y": 475.444
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 8,
+      "bin": 10,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -0.864534,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 421.328,
+        "y": 130.566
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 47,
+      "bin": 7,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -2.43533,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 142.566,
+        "y": 152.672
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 4,
+      "bin": 10,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -1.229861,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 359.116,
+        "y": 94.648
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 38,
+      "bin": 5,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 2.800657,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 106.648,
+        "y": 347.116
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 44,
+      "bin": 6,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -2.958929,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 98.556,
+        "y": 245.082
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 54,
+      "bin": 9,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": -1.75346,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 257.082,
+        "y": 86.556
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 2,
+      "bin": 9,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -1.388133,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 328.918,
+        "y": 86.556
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 53,
+      "bin": 8,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": -1.911732,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 226.884,
+        "y": 94.648
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 40,
+      "bin": 6,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 2.958929,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 98.556,
+        "y": 316.918
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 36,
+      "bin": 5,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 2.43533,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 142.566,
+        "y": 409.328
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 49,
+      "bin": 8,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": -2.277059,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 164.672,
+        "y": 130.566
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 45,
+      "bin": 7,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -2.800657,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 106.648,
+        "y": 214.884
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 13,
+      "bin": 0,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -0.182663,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 487.444,
+        "y": 245.082
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 11,
+      "bin": 11,
+      "classification": "petal",
+      "radius": 197.733,
+      "angle": -0.340935,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 479.352,
+        "y": 214.884
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 27,
+      "bin": 3,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 1.388133,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 328.918,
+        "y": 475.444
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 26,
+      "bin": 2,
+      "classification": "star",
+      "radius": 197.733,
+      "angle": 1.229861,
+      "hasScaffold": false,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 146.552,
+      "centroid": {
+        "x": 359.116,
+        "y": 467.352
+      },
+      "vertexCount": 3
+    },
+    {
+      "id": 15,
+      "bin": 0,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": 0,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 494.241,
+        "y": 281
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 28,
+      "bin": 3,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": 1.570796,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 293,
+        "y": 482.241
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 37,
+      "bin": 5,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": 2.617994,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 118.721,
+        "y": 381.62
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 46,
+      "bin": 7,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": -2.617994,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 118.721,
+        "y": 180.38
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 0,
+      "bin": 9,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": -1.570796,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 293,
+        "y": 79.759
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 42,
+      "bin": 6,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": -3.141593,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 91.759,
+        "y": 281
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 51,
+      "bin": 8,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": -2.094395,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 192.38,
+        "y": 106.721
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 6,
+      "bin": 10,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": -1.047198,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 393.62,
+        "y": 106.721
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 19,
+      "bin": 1,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": 0.523599,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 467.279,
+        "y": 381.62
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 33,
+      "bin": 4,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": 2.094395,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 192.38,
+        "y": 455.279
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 10,
+      "bin": 11,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": -0.523599,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 467.279,
+        "y": 180.38
+      },
+      "vertexCount": 5
+    },
+    {
+      "id": 24,
+      "bin": 2,
+      "classification": "petal",
+      "radius": 201.241,
+      "angle": 1.047198,
+      "hasScaffold": true,
+      "hasStarThread": false,
+      "hasCircleEdge": false,
+      "starEdgeCount": 0,
+      "areaAbs": 1205.003,
+      "centroid": {
+        "x": 393.62,
+        "y": 455.279
+      },
+      "vertexCount": 5
+    }
+  ]
+}
