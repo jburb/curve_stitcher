@@ -13028,10 +13028,15 @@ function buildMashrabiyaDesignSvgString(options) {
       var firstPoint = pointsList[sequence[0]];
       if (!firstPoint) return;
       var path = ['M ' + formatSvgNumber(firstPoint.x) + ' ' + formatSvgNumber(firstPoint.y)];
+      var lastPoint = firstPoint;
       for (var i = 1; i < sequence.length; i++) {
         var point = pointsList[sequence[i]];
         if (!point) continue;
         path.push('L ' + formatSvgNumber(point.x) + ' ' + formatSvgNumber(point.y));
+        lastPoint = point;
+      }
+      if (lastPoint !== firstPoint) {
+        path.push('L ' + formatSvgNumber(firstPoint.x) + ' ' + formatSvgNumber(firstPoint.y));
       }
       lines.push(
         '<path d="' + path.join(' ') + '" fill="none" stroke="' + strokeColor +

@@ -336,4 +336,74 @@ test.describe('StitchLab regressions', () => {
     expect(layoutProbe.slidersBottom).toBeLessThanOrEqual(layoutProbe.viewportHeight + 2);
     expect(layoutProbe.maxScrollWidth).toBeLessThanOrEqual(layoutProbe.viewportWidth + 2);
   });
+
+  test('mashrabiya debug SVG export closes sequence stitch paths', async ({ page }) => {
+    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+
+    const svgProbe = await page.evaluate(() => {
+      if (typeof window.buildCurrentDesignSvgString !== 'function') {
+        return { ok: false, reason: 'missing-export-builder' };
+      }
+
+      const svgText = window.buildCurrentDesignSvgString({ mashrabiyaIncludeDebugLabels: true });
+      if (typeof svgText !== 'string' || !svgText.length) {
+        return { ok: false, reason: 'empty-svg' };
+      }
+
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(svgText, 'image/svg+xml');
+      var paths = Array.prototype.slice.call(doc.querySelectorAll('path'));
+      var sequencePaths = [];
+
+      function parseMovesAndLines(d) {
+        var tokens = String(d || '').trim().match(/[ML]\s*-?\d*\.?\d+\s+-?\d*\.?\d+/gi) || [];
+        return tokens.map(function(token) {
+          var parts = token.trim().split(/\s+/);
+          return {
+            cmd: parts[0],
+            x: Number(parts[1]),
+            y: Number(parts[2])
+          };
+        });
+      }
+
+      function almostEqual(a, b) {
+        return Math.abs(Number(a) - Number(b)) <= 1e-6;
+      }
+
+      for (var i = 0; i < paths.length; i++) {
+        var d = paths[i].getAttribute('d') || '';
+        if (d.indexOf('Z') >= 0 || d.indexOf('z') >= 0) {
+          continue;
+        }
+        var points = parseMovesAndLines(d);
+        if (points.length < 3) {
+          continue;
+        }
+        var first = points[0];
+        var last = points[points.length - 1];
+        var isClosedByEndpoint = almostEqual(first.x, last.x) && almostEqual(first.y, last.y);
+        sequencePaths.push({
+          index: i,
+          segmentCount: points.length - 1,
+          isClosedByEndpoint: isClosedByEndpoint
+        });
+      }
+
+      var longSequencePaths = sequencePaths.filter(function(entry) {
+        return entry.segmentCount >= 4;
+      });
+
+      return {
+        ok: true,
+        longSequencePathCount: longSequencePaths.length,
+        allLongSequencesClosed: longSequencePaths.every(function(entry) { return entry.isClosedByEndpoint; }),
+        debug: longSequencePaths.slice(0, 3)
+      };
+    });
+
+    expect(svgProbe.ok).toBe(true);
+    expect(svgProbe.longSequencePathCount).toBeGreaterThanOrEqual(2);
+    expect(svgProbe.allLongSequencesClosed).toBe(true);
+  });
 });
