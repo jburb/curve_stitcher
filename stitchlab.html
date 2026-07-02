@@ -11869,103 +11869,168 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     var selectedPetalFaceIds = Object.create(null);
     var selectedPointFaceIds = Object.create(null);
 
-    function mark12FoldPetalProfiles(faceList, outerRadiusValue) {
-      var result = Object.create(null);
-      if (safeFold !== 12 || !faceList || !faceList.length || !isFinite(outerRadiusValue) || outerRadiusValue <= 1e-6) {
-        return result;
+    function getMashrabiyaFaceProfilesForFold(fold) {
+      if (fold === 12) {
+        return {
+          petal: [
+            {
+              vertexCount: 5,
+              requiresScaffold: true,
+              requiresStarThread: false,
+              radiusRange: [0.88, 0.95],
+              areaRange: [0.02, 0.032],
+              pickMode: 'per-bin-best',
+              targetRadiusNorm: 0.91674143,
+              targetAreaNorm: 0.02500639
+            },
+            {
+              vertexCount: 5,
+              requiresScaffold: false,
+              requiresStarThread: true,
+              radiusRange: [0.57, 0.66],
+              areaRange: [0.1, 0.15],
+              pickMode: 'per-bin-best',
+              targetRadiusNorm: 0.61423034,
+              targetAreaNorm: 0.12815022
+            }
+          ],
+          point: [
+            {
+              vertexCount: 4,
+              requiresScaffold: false,
+              requiresStarThread: true,
+              radiusRange: [0.27, 0.36],
+              areaRange: [0.015, 0.03],
+              pickMode: 'all',
+              targetRadiusNorm: 0.31100423,
+              targetAreaNorm: 0.02123412
+            }
+          ]
+        };
       }
 
-      var OUTER_PETAL_RADIUS_NORM = 0.91674143;
-      var OUTER_PETAL_AREA_NORM = 0.02500639;
-      var INNER_PETAL_RADIUS_NORM = 0.61423034;
-      var INNER_PETAL_AREA_NORM = 0.12815022;
+      if (fold === 8) {
+        return {
+          petal: [
+            {
+              vertexCount: 5,
+              requiresScaffold: true,
+              requiresStarThread: false,
+              radiusRange: [0.78, 0.85],
+              areaRange: [0.06, 0.09],
+              pickMode: 'per-bin-best',
+              targetRadiusNorm: 0.81345281,
+              targetAreaNorm: 0.07547373
+            },
+            {
+              vertexCount: 5,
+              requiresScaffold: false,
+              requiresStarThread: true,
+              radiusRange: [0.5, 0.56],
+              areaRange: [0.11, 0.14],
+              pickMode: 'per-bin-best',
+              targetRadiusNorm: 0.53221215,
+              targetAreaNorm: 0.13043301
+            }
+          ],
+          point: [
+            {
+              vertexCount: 4,
+              requiresScaffold: false,
+              requiresStarThread: true,
+              radiusRange: [0.3, 0.34],
+              areaRange: [0.028, 0.033],
+              pickMode: 'all',
+              targetRadiusNorm: 0.31903559,
+              targetAreaNorm: 0.03033009
+            }
+          ]
+        };
+      }
 
-      function profileCandidate(info, radiusMin, radiusMax, areaMin, areaMax, requiresScaffold, requiresStarThread) {
-        if (!info || !info.face || !info.face.vertices || info.face.vertices.length !== 5) return false;
-        if (!!info.hasScaffold !== !!requiresScaffold) return false;
-        if (!!info.hasStarThread !== !!requiresStarThread) return false;
+      return {
+        petal: [],
+        point: []
+      };
+    }
+
+    function matchFaceProfile(info, profile, outerRadiusValue) {
+      if (!info || !profile || !info.face || !info.face.vertices) return false;
+      if (!isFinite(outerRadiusValue) || outerRadiusValue <= 1e-6) return false;
+
+      if (isFinite(profile.vertexCount) && info.face.vertices.length !== profile.vertexCount) return false;
+      if (typeof profile.requiresScaffold === 'boolean' && !!info.hasScaffold !== profile.requiresScaffold) return false;
+      if (typeof profile.requiresStarThread === 'boolean' && !!info.hasStarThread !== profile.requiresStarThread) return false;
+
+      var radiusNorm = info.radius / outerRadiusValue;
+      var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
+      if (!isFinite(radiusNorm) || !isFinite(areaNorm)) return false;
+
+      if (profile.radiusRange && profile.radiusRange.length === 2) {
+        if (radiusNorm < profile.radiusRange[0] || radiusNorm > profile.radiusRange[1]) return false;
+      }
+      if (profile.areaRange && profile.areaRange.length === 2) {
+        if (areaNorm < profile.areaRange[0] || areaNorm > profile.areaRange[1]) return false;
+      }
+
+      return true;
+    }
+
+    function pickFacesByProfile(faceList, profile, outerRadiusValue) {
+      var matches = faceList.filter(function(info) {
+        return matchFaceProfile(info, profile, outerRadiusValue);
+      });
+      if (!matches.length) return [];
+
+      if (profile.pickMode !== 'per-bin-best') {
+        return matches;
+      }
+
+      var bestByBin = new Array(safeFold);
+      var scoreByBin = new Array(safeFold);
+      var targetRadius = isFinite(profile.targetRadiusNorm) ? profile.targetRadiusNorm : 0;
+      var targetArea = isFinite(profile.targetAreaNorm) ? profile.targetAreaNorm : 0;
+
+      for (var i = 0; i < matches.length; i++) {
+        var info = matches[i];
+        var bin = getFaceBin(info.face);
+        if (bin < 0 || bin >= safeFold) continue;
         var radiusNorm = info.radius / outerRadiusValue;
         var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
-        if (!isFinite(radiusNorm) || !isFinite(areaNorm)) return false;
-        return radiusNorm >= radiusMin && radiusNorm <= radiusMax && areaNorm >= areaMin && areaNorm <= areaMax;
-      }
-
-      function pickBestOnePerBin(candidates, targetRadiusNorm, targetAreaNorm) {
-        var bestByBin = new Array(safeFold);
-        var scoreByBin = new Array(safeFold);
-        for (var i = 0; i < candidates.length; i++) {
-          var info = candidates[i];
-          var bin = getFaceBin(info.face);
-          if (bin < 0 || bin >= safeFold) continue;
-          var radiusNorm = info.radius / outerRadiusValue;
-          var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
-          var score = Math.abs(radiusNorm - targetRadiusNorm) + (0.55 * Math.abs(areaNorm - targetAreaNorm));
-          if (!bestByBin[bin] || score < scoreByBin[bin]) {
-            bestByBin[bin] = info;
-            scoreByBin[bin] = score;
-          }
+        var score = Math.abs(radiusNorm - targetRadius) + (0.55 * Math.abs(areaNorm - targetArea));
+        if (!bestByBin[bin] || score < scoreByBin[bin]) {
+          bestByBin[bin] = info;
+          scoreByBin[bin] = score;
         }
-        var chosen = [];
-        for (var b = 0; b < bestByBin.length; b++) {
-          if (bestByBin[b]) chosen.push(bestByBin[b]);
+      }
+
+      var chosen = [];
+      for (var b = 0; b < bestByBin.length; b++) {
+        if (bestByBin[b]) chosen.push(bestByBin[b]);
+      }
+      return chosen;
+    }
+
+    function markFacesFromProfiles(faceList, profiles, outerRadiusValue) {
+      var result = Object.create(null);
+      var profileList = Array.isArray(profiles) ? profiles : [];
+      for (var p = 0; p < profileList.length; p++) {
+        var picked = pickFacesByProfile(faceList, profileList[p], outerRadiusValue);
+        for (var i = 0; i < picked.length; i++) {
+          result[String(picked[i].face.id)] = true;
         }
-        return chosen;
       }
-
-      var outerCandidates = faceList.filter(function(info) {
-        return profileCandidate(info, 0.88, 0.95, 0.02, 0.032, true, false);
-      });
-      var innerCandidates = faceList.filter(function(info) {
-        return profileCandidate(info, 0.57, 0.66, 0.1, 0.15, false, true);
-      });
-
-      var pickedOuter = pickBestOnePerBin(outerCandidates, OUTER_PETAL_RADIUS_NORM, OUTER_PETAL_AREA_NORM);
-      var pickedInner = pickBestOnePerBin(innerCandidates, INNER_PETAL_RADIUS_NORM, INNER_PETAL_AREA_NORM);
-      for (var po = 0; po < pickedOuter.length; po++) {
-        result[String(pickedOuter[po].face.id)] = true;
-      }
-      for (var pi = 0; pi < pickedInner.length; pi++) {
-        result[String(pickedInner[pi].face.id)] = true;
-      }
-
       return result;
     }
 
-    function mark12FoldPointProfiles(faceList, outerRadiusValue) {
-      var result = Object.create(null);
-      if (safeFold !== 12 || !faceList || !faceList.length || !isFinite(outerRadiusValue) || outerRadiusValue <= 1e-6) {
-        return result;
-      }
-
-      var INNER_POINT_RADIUS_NORM = 0.31100423;
-      var INNER_POINT_AREA_NORM = 0.02123412;
-
-      function isPointProfileCandidate(info) {
-        if (!info || !info.face || !info.face.vertices || info.face.vertices.length !== 4) return false;
-        if (info.hasScaffold) return false;
-        if (!info.hasStarThread) return false;
-        var radiusNorm = info.radius / outerRadiusValue;
-        var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
-        if (!isFinite(radiusNorm) || !isFinite(areaNorm)) return false;
-        if (radiusNorm < 0.27 || radiusNorm > 0.36) return false;
-        if (areaNorm < 0.015 || areaNorm > 0.03) return false;
-        return true;
-      }
-
-      var candidates = faceList.filter(isPointProfileCandidate);
-      for (var p = 0; p < candidates.length; p++) {
-        result[String(candidates[p].face.id)] = true;
-      }
-      return result;
-    }
-
-    var forcedPetalFaceIds = mark12FoldPetalProfiles(faceInfo, petalRadius);
+    var faceProfiles = getMashrabiyaFaceProfilesForFold(safeFold);
+    var forcedPetalFaceIds = markFacesFromProfiles(faceInfo, faceProfiles.petal, petalRadius);
     var forcedPetalFaceIdList = Object.keys(forcedPetalFaceIds);
     for (var fp = 0; fp < forcedPetalFaceIdList.length; fp++) {
       selectedPetalFaceIds[forcedPetalFaceIdList[fp]] = true;
     }
 
-    var forcedPointFaceIds = mark12FoldPointProfiles(faceInfo, petalRadius);
+    var forcedPointFaceIds = markFacesFromProfiles(faceInfo, faceProfiles.point, petalRadius);
     var forcedPointFaceIdList = Object.keys(forcedPointFaceIds);
     for (var fpt = 0; fpt < forcedPointFaceIdList.length; fpt++) {
       selectedPointFaceIds[forcedPointFaceIdList[fpt]] = true;
@@ -12041,7 +12106,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       starRadiusMean = starRadiusMean / Math.max(1, starPathVertices.length);
     }
 
-    var useForcedPetalProfiles = safeFold === 12 && forcedPetalFaceIdList.length > 0;
+    var useForcedPetalProfiles = forcedPetalFaceIdList.length > 0;
 
     // 2) pickPetalFaces: connected outer scaffold components, one per sector.
     if (!useForcedPetalProfiles) {
@@ -12102,7 +12167,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       }
     }
 
-    var useForcedPointProfiles = safeFold === 12 && forcedPointFaceIdList.length > 0;
+    var useForcedPointProfiles = forcedPointFaceIdList.length > 0;
     if (useForcedPointProfiles) {
       for (var fi3 = 0; fi3 < faceInfo.length; fi3++) {
         var forcedPointInfo = faceInfo[fi3];
@@ -12167,19 +12232,95 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
               return !info.hasScaffold;
             }
           });
-          var mergedTriangle = mergeFacesToPolygon(triBucket[tk].faces);
-          if (mergedTriangle.length >= 3) {
-            for (var tif = 0; tif < triBucket[tk].faces.length; tif++) {
-              selectedPointFaceIds[String(triBucket[tk].faces[tif].id)] = true;
-            }
-            pointRegions.push(mergedTriangle);
+          for (var tif = 0; tif < triBucket[tk].faces.length; tif++) {
+            var triFace = triBucket[tk].faces[tif];
+            if (!triFace || !triFace.vertices || triFace.vertices.length < 3) continue;
+            var triFaceId = String(triFace.id);
+            if (selectedPointFaceIds[triFaceId]) continue;
+            selectedPointFaceIds[triFaceId] = true;
+            pointRegions.push(triFace.vertices.slice());
             debugRegions.push({
-              label: 'T ' + tb + ' (' + triBucket[tk].faces.length + ')',
-              centroid: polygonCentroid(mergedTriangle),
+              label: 'T ' + tb + ' (1)',
+              centroid: polygonCentroid(triFace.vertices),
               color: '#a73631'
             });
           }
         }
+      }
+    }
+
+    // Fold-8 specific stabilization: build star/point fill regions directly
+    // from selected face IDs so fill edges always match extracted face boundaries.
+    if (safeFold === 8) {
+      var keptDebugRegions = [];
+      for (var dbg = 0; dbg < debugRegions.length; dbg++) {
+        var dbgRegion = debugRegions[dbg];
+        if (!dbgRegion || typeof dbgRegion.label !== 'string') {
+          keptDebugRegions.push(dbgRegion);
+          continue;
+        }
+        if (dbgRegion.label.indexOf('S ') === 0) continue;
+        if (dbgRegion.label.indexOf('T ') === 0) continue;
+        keptDebugRegions.push(dbgRegion);
+      }
+
+      starRegions = [];
+      pointRegions = [];
+      for (var fs = 0; fs < faceInfo.length; fs++) {
+        var selectedInfo = faceInfo[fs];
+        var selectedFace = selectedInfo.face;
+        if (!selectedFace || !selectedFace.vertices || selectedFace.vertices.length < 3) continue;
+        var selectedId = String(selectedFace.id);
+        var selectedBin = getFaceBin(selectedFace);
+
+        if (selectedStarFaceIds[selectedId]) {
+          starRegions.push(selectedFace.vertices.slice());
+          keptDebugRegions.push({
+            label: 'S ' + selectedBin + ' (1)',
+            centroid: polygonCentroid(selectedFace.vertices),
+            color: '#9c6f1d'
+          });
+          continue;
+        }
+
+        if (selectedPointFaceIds[selectedId]) {
+          pointRegions.push(selectedFace.vertices.slice());
+          keptDebugRegions.push({
+            label: 'T ' + selectedBin + ' (1)',
+            centroid: polygonCentroid(selectedFace.vertices),
+            color: '#a73631'
+          });
+        }
+      }
+
+      debugRegions = keptDebugRegions;
+    }
+
+    // Keep point fills strictly aligned with selected point face IDs.
+    // This avoids union/merge artifacts causing correct labels but missing fills.
+    var selectedPointFaceIdListForFill = Object.keys(selectedPointFaceIds);
+    if (selectedPointFaceIdListForFill.length) {
+      pointRegions = [];
+      var nonPointDebugRegions = [];
+      for (var dr = 0; dr < debugRegions.length; dr++) {
+        var debugRegion = debugRegions[dr];
+        if (!debugRegion || typeof debugRegion.label !== 'string' || debugRegion.label.indexOf('T ') !== 0) {
+          nonPointDebugRegions.push(debugRegion);
+        }
+      }
+      debugRegions = nonPointDebugRegions;
+
+      for (var pf = 0; pf < faceInfo.length; pf++) {
+        var pointInfo = faceInfo[pf];
+        var pointFaceId = String(pointInfo.face.id);
+        if (!selectedPointFaceIds[pointFaceId]) continue;
+        if (!pointInfo.face.vertices || pointInfo.face.vertices.length < 3) continue;
+        pointRegions.push(pointInfo.face.vertices.slice());
+        debugRegions.push({
+          label: 'T ' + getFaceBin(pointInfo.face) + ' (1)',
+          centroid: polygonCentroid(pointInfo.face.vertices),
+          color: '#a73631'
+        });
       }
     }
 
@@ -12188,12 +12329,12 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       var face = info.face;
       var faceId = String(face.id);
       var classification = 'other';
-      if (selectedStarFaceIds[faceId]) {
-        classification = 'star';
-      } else if (selectedPetalFaceIds[faceId]) {
+      if (selectedPetalFaceIds[faceId]) {
         classification = 'petal';
       } else if (selectedPointFaceIds[faceId]) {
         classification = 'point';
+      } else if (selectedStarFaceIds[faceId]) {
+        classification = 'star';
       }
       faceDiagnostics.faces.push({
         id: face.id,
@@ -12228,10 +12369,10 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     }
   }
 
-  if (!petals.length || !pointRegions.length) {
+  if (!petals.length || (!pointRegions.length && safeFold !== 8)) {
     var legacy = buildLegacyFillGeometry(starPathVertices);
     if (!petals.length) petals = legacy.petals;
-    if (!pointRegions.length) pointRegions = legacy.pointRegions;
+    if (!pointRegions.length && safeFold !== 8) pointRegions = legacy.pointRegions;
   }
 
   return {
