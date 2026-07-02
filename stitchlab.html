@@ -2201,7 +2201,6 @@
   <div class="slider-block" id="mashrabiya-fold-block" style="display:none;">
     <div class="slider-label">🌸 Petals</div>
     <select id="mashrabiya-fold" class="curve-type-select">
-      <option value="6">6-fold</option>
       <option value="8">8-fold</option>
       <option value="12" selected>12-fold</option>
     </select>
@@ -2763,20 +2762,6 @@ var ROSETTE_DISCOVERY_RECIPES = [
       { jumpMode: 'fixed', jump: 16, startHole: 1 },
       { jumpMode: 'fixed', jump: 16, startHole: 9 },
       { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 32 }
-    ]
-  },
-  {
-    key: 'rosette-6-fold-dense-96',
-    holeCount: 96,
-    allowRotation: false,
-    requireNestedFrameEnabled: true,
-    requiredNestedFrameRatio: 0.5,
-    requiredInnerHoleCount: 48,
-    threads: [
-      { jumpMode: 'fixed', jump: 16, startHole: 1 },
-      { jumpMode: 'fixed', jump: 18, startHole: 4, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 },
-      { jumpMode: 'fixed', jump: 18, startHole: 6, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 },
-      { jumpMode: 'fixed', jump: 18, startHole: 8, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 }
     ]
   }
 ];
@@ -4261,8 +4246,8 @@ function sanitizeSquarusContactMode(value, fallback) {
 }
 
 function sanitizeMashrabiyaFold(value, fallback) {
-  var parsed = parseBoundedInt(value, 6, 12, fallback);
-  var allowed = [6, 8, 12];
+  var parsed = parseBoundedInt(value, 8, 12, fallback);
+  var allowed = [8, 12];
   if (allowed.indexOf(parsed) === -1) {
     return allowed.indexOf(fallback) !== -1 ? fallback : 12;
   }
