@@ -4025,6 +4025,7 @@ var mashrabiyaStarColor = '#f4d35e';
 var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
 var mashrabiyaFillBorderWidth = 0;
+var mashrabiyaFillPhaseBeatScale = 1.7;
 var mashrabiyaDevPreviewEnabled = true; // set true to bypass discovery gate during development
 var mashrabiyaDebugLabelsEnabled = true; // set to false for final release
 var mashrabiyaDebugKeepStitchLinesVisible = false; // debug: force true to inspect line topology
@@ -12397,27 +12398,220 @@ function drawMashrabiyaRegionPolygon(vertices, fillColor, fillOpacity) {
   shape.closed = true;
   shape.fillColor = fillColor;
   shape.opacity = Math.max(0, Math.min(1, fillOpacity));
-  var fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
-  if (fillBorderWidth > 0) {
-    shape.strokeColor = '#82511f';
-    shape.strokeWidth = fillBorderWidth;
+}
+
+function getMashrabiyaPointKey(point) {
+  if (!point) return '';
+  return formatSvgNumber(point.x) + ',' + formatSvgNumber(point.y);
+}
+
+function getMashrabiyaEdgeKey(a, b) {
+  var aKey = getMashrabiyaPointKey(a);
+  var bKey = getMashrabiyaPointKey(b);
+  if (!aKey || !bKey) return '';
+  return aKey < bKey ? (aKey + '|' + bKey) : (bKey + '|' + aKey);
+}
+
+function normalizeMashrabiyaPoint(point) {
+  return {
+    x: Math.round(point.x * 1000) / 1000,
+    y: Math.round(point.y * 1000) / 1000
+  };
+}
+
+function isMashrabiyaPointOnSegment(point, from, to) {
+  var epsilon = 1e-6;
+  var abx = to.x - from.x;
+  var aby = to.y - from.y;
+  var apx = point.x - from.x;
+  var apy = point.y - from.y;
+  var cross = (abx * apy) - (aby * apx);
+  if (Math.abs(cross) > epsilon) return false;
+  var dot = (apx * abx) + (apy * aby);
+  if (dot < -epsilon) return false;
+  var lenSq = (abx * abx) + (aby * aby);
+  if (dot > lenSq + epsilon) return false;
+  return true;
+}
+
+function splitMashrabiyaEdge(edgeStart, edgeEnd, allPoints) {
+  var pieces = [];
+  if (!edgeStart || !edgeEnd || !allPoints || !allPoints.length) return pieces;
+
+  var pointsOnEdge = [];
+  for (var i = 0; i < allPoints.length; i++) {
+    var candidate = allPoints[i];
+    if (isMashrabiyaPointOnSegment(candidate, edgeStart, edgeEnd)) {
+      pointsOnEdge.push(candidate);
+    }
+  }
+  if (pointsOnEdge.length < 2) return pieces;
+
+  var dominantAxis = Math.abs(edgeEnd.x - edgeStart.x) >= Math.abs(edgeEnd.y - edgeStart.y) ? 'x' : 'y';
+  pointsOnEdge.sort(function(a, b) {
+    if (dominantAxis === 'x') {
+      if (a.x !== b.x) return a.x - b.x;
+      return a.y - b.y;
+    }
+    if (a.y !== b.y) return a.y - b.y;
+    return a.x - b.x;
+  });
+
+  for (var j = 0; j < pointsOnEdge.length - 1; j++) {
+    var from = pointsOnEdge[j];
+    var to = pointsOnEdge[j + 1];
+    if (Math.abs(from.x - to.x) < 1e-6 && Math.abs(from.y - to.y) < 1e-6) continue;
+    pieces.push({ from: from, to: to });
+  }
+  return pieces;
+}
+
+function collectMashrabiyaBoundaryEdges(polygons) {
+  var edgeCounts = Object.create(null);
+  var edgeRefs = Object.create(null);
+  var edges = [];
+  if (!polygons || !polygons.length) return edges;
+
+  var pointMap = Object.create(null);
+  for (var i = 0; i < polygons.length; i++) {
+    var polygon = polygons[i];
+    if (!polygon || !polygon.length) continue;
+    for (var v = 0; v < polygon.length; v++) {
+      var normalizedVertex = normalizeMashrabiyaPoint(polygon[v]);
+      var vertexKey = getMashrabiyaPointKey(normalizedVertex);
+      if (!pointMap[vertexKey]) {
+        pointMap[vertexKey] = normalizedVertex;
+      }
+    }
+  }
+  var allPoints = Object.keys(pointMap).map(function(key) {
+    return pointMap[key];
+  });
+
+  for (var p = 0; p < polygons.length; p++) {
+    var vertices = polygons[p];
+    if (!vertices || vertices.length < 2) continue;
+    for (var j = 0; j < vertices.length; j++) {
+      var from = normalizeMashrabiyaPoint(vertices[j]);
+      var to = normalizeMashrabiyaPoint(vertices[(j + 1) % vertices.length]);
+      if (!from || !to) continue;
+      var subEdges = splitMashrabiyaEdge(from, to, allPoints);
+      for (var s = 0; s < subEdges.length; s++) {
+        var subEdge = subEdges[s];
+        var edgeKey = getMashrabiyaEdgeKey(subEdge.from, subEdge.to);
+        if (!edgeKey) continue;
+        edgeCounts[edgeKey] = (edgeCounts[edgeKey] || 0) + 1;
+        if (!edgeRefs[edgeKey]) {
+          edgeRefs[edgeKey] = {
+            from: subEdge.from,
+            to: subEdge.to
+          };
+        }
+      }
+    }
+  }
+
+  var keys = Object.keys(edgeCounts);
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    if (edgeCounts[key] === 1 && edgeRefs[key]) {
+      edges.push(edgeRefs[key]);
+    }
+  }
+
+  return edges;
+}
+
+function drawMashrabiyaFillBorderEdges(polygons, strokeColor, strokeWidth, opacity) {
+  if (!polygons || !polygons.length) return;
+  if (!isFinite(strokeWidth) || strokeWidth <= 0) return;
+  var strokeOpacity = Math.max(0, Math.min(1, isFinite(opacity) ? opacity : 1));
+  if (strokeOpacity <= 0) return;
+
+  // Unite same-type polygons first so shared internal seams cannot be stroked.
+  var unionItem = null;
+  for (var i = 0; i < polygons.length; i++) {
+    var vertices = polygons[i];
+    if (!vertices || vertices.length < 3) continue;
+    var polygonPath = new Path({
+      segments: vertices,
+      closed: true,
+      insert: false
+    });
+    if (!unionItem) {
+      unionItem = polygonPath;
+      continue;
+    }
+    var merged = unionItem.unite(polygonPath, { insert: false });
+    unionItem.remove();
+    polygonPath.remove();
+    unionItem = merged;
+  }
+
+  if (!unionItem) return;
+
+  unionItem.fillColor = null;
+  unionItem.strokeColor = strokeColor;
+  unionItem.strokeWidth = strokeWidth;
+  unionItem.strokeCap = 'round';
+  unionItem.strokeJoin = 'round';
+  unionItem.opacity = strokeOpacity;
+  if (!unionItem.parent) {
+    project.activeLayer.addChild(unionItem);
   }
 }
 
+function getMashrabiyaFillPhaseBeats(fold) {
+  var baseBeats = Math.max(2, Math.round(fold * 0.5));
+  return Math.max(2, Math.round(baseBeats * mashrabiyaFillPhaseBeatScale));
+}
+
+function buildMashrabiyaAnimationTimeline(geometry) {
+  var fillPhaseBeats = getMashrabiyaFillPhaseBeats(geometry.fold);
+  return {
+    dCircle: geometry.fold,
+    dOuter: geometry.firstPolygonSequence.length,
+    dOffset: geometry.offsetPolygonSequence.length,
+    dInner: (geometry.innerGuideCircleVertices && geometry.innerGuideCircleVertices.length) ? Math.max(2, Math.round(geometry.innerGuideCircleVertices.length / 6)) : 0,
+    dStar: (geometry.starThreadSegments && geometry.starThreadSegments.length) ? geometry.starThreadSegments.length : geometry.starSequence.length,
+    dFillStar: fillPhaseBeats,
+    dFillPetal: fillPhaseBeats,
+    dFillPoint: fillPhaseBeats
+  };
+}
+
+function getMashrabiyaTimelineFallback(geometry) {
+  if (!geometry) {
+    return {
+      dCircle: 12,
+      dOuter: 12,
+      dOffset: 12,
+      dInner: 0,
+      dStar: 12,
+      dFillStar: getMashrabiyaFillPhaseBeats(12),
+      dFillPetal: getMashrabiyaFillPhaseBeats(12),
+      dFillPoint: getMashrabiyaFillPhaseBeats(12)
+    };
+  }
+  return buildMashrabiyaAnimationTimeline(geometry);
+}
+
 function drawMashrabiyaFilledGeometry(geometry, starOpacity, petalOpacity, pointOpacity) {
+  if (!geometry) return;
   var opacityScale = Math.max(0, Math.min(1, mashrabiyaDebugFillOpacityScale));
   var starFillOpacity = Math.max(0, Math.min(1, starOpacity)) * opacityScale;
   var petalFillOpacity = Math.max(0, Math.min(1, petalOpacity)) * opacityScale;
   var pointFillOpacity = Math.max(0, Math.min(1, pointOpacity)) * opacityScale;
+  var fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
+
+  var starPolygons = (geometry.starRegions && geometry.starRegions.length)
+    ? geometry.starRegions
+    : [geometry.starPathVertices];
 
   // Paint order matters: point regions should sit above star/petal fills.
   // This avoids correctly classified point faces being visually overpainted.
-  if (geometry.starRegions && geometry.starRegions.length) {
-    for (var s = 0; s < geometry.starRegions.length; s++) {
-      drawMashrabiyaRegionPolygon(geometry.starRegions[s], mashrabiyaStarColor, starFillOpacity);
-    }
-  } else {
-    drawMashrabiyaRegionPolygon(geometry.starPathVertices, mashrabiyaStarColor, starFillOpacity);
+  for (var s = 0; s < starPolygons.length; s++) {
+    drawMashrabiyaRegionPolygon(starPolygons[s], mashrabiyaStarColor, starFillOpacity);
   }
 
   for (var i = 0; i < geometry.petals.length; i++) {
@@ -12425,6 +12619,12 @@ function drawMashrabiyaFilledGeometry(geometry, starOpacity, petalOpacity, point
   }
   for (var j = 0; j < geometry.pointRegions.length; j++) {
     drawMashrabiyaRegionPolygon(geometry.pointRegions[j], mashrabiyaPointColor, pointFillOpacity);
+  }
+
+  if (fillBorderWidth > 0) {
+    drawMashrabiyaFillBorderEdges(starPolygons, '#82511f', fillBorderWidth, starFillOpacity);
+    drawMashrabiyaFillBorderEdges(geometry.petals, '#82511f', fillBorderWidth, petalFillOpacity);
+    drawMashrabiyaFillBorderEdges(geometry.pointRegions, '#82511f', fillBorderWidth, pointFillOpacity);
   }
 }
 
@@ -12685,16 +12885,7 @@ function renderMashrabiyaAnimationStateFrame(state) {
 
   project.activeLayer.removeChildren();
 
-  var timeline = state.timeline || {
-    dCircle: state.geometry.fold,
-    dOuter: state.geometry.firstPolygonSequence.length,
-    dOffset: state.geometry.offsetPolygonSequence.length,
-    dInner: (state.geometry.innerGuideCircleVertices && state.geometry.innerGuideCircleVertices.length) ? Math.max(2, Math.round(state.geometry.innerGuideCircleVertices.length / 6)) : 0,
-    dStar: (state.geometry.starThreadSegments && state.geometry.starThreadSegments.length) ? state.geometry.starThreadSegments.length : state.geometry.starSequence.length,
-    dFillStar: Math.max(2, Math.round(state.geometry.fold * 0.5)),
-    dFillPetal: Math.max(2, Math.round(state.geometry.fold * 0.5)),
-    dFillPoint: Math.max(2, Math.round(state.geometry.fold * 0.5))
-  };
+  var timeline = state.timeline || getMashrabiyaTimelineFallback(state.geometry);
 
   var dCircle = timeline.dCircle;
   var dOuter = timeline.dOuter;
@@ -12834,16 +13025,7 @@ function animateMashrabiya() {
   triangulaAnimationState = null;
   squarusAnimationState = null;
   var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
-  var timeline = {
-    dCircle: geometry.fold,
-    dOuter: geometry.firstPolygonSequence.length,
-    dOffset: geometry.offsetPolygonSequence.length,
-    dInner: (geometry.innerGuideCircleVertices && geometry.innerGuideCircleVertices.length) ? Math.max(2, Math.round(geometry.innerGuideCircleVertices.length / 6)) : 0,
-    dStar: (geometry.starThreadSegments && geometry.starThreadSegments.length) ? geometry.starThreadSegments.length : geometry.starSequence.length,
-    dFillStar: Math.max(2, Math.round(geometry.fold * 0.5)),
-    dFillPetal: Math.max(2, Math.round(geometry.fold * 0.5)),
-    dFillPoint: Math.max(2, Math.round(geometry.fold * 0.5))
-  };
+  var timeline = buildMashrabiyaAnimationTimeline(geometry);
   var durationBeats = timeline.dCircle + timeline.dOuter + timeline.dOffset + timeline.dInner + timeline.dStar + timeline.dFillStar + timeline.dFillPetal + timeline.dFillPoint;
 
   mashrabiyaAnimationState = {
@@ -13286,6 +13468,144 @@ function buildMashrabiyaDesignSvgString(options) {
     return chunks.join(' ');
   }
 
+  function pointKey(point) {
+    if (!point) return '';
+    return formatSvgNumber(point.x) + ',' + formatSvgNumber(point.y);
+  }
+
+  function edgeKey(a, b) {
+    var aKey = pointKey(a);
+    var bKey = pointKey(b);
+    if (!aKey || !bKey) return '';
+    return aKey < bKey ? (aKey + '|' + bKey) : (bKey + '|' + aKey);
+  }
+
+  function normalizePoint(point) {
+    return {
+      x: Math.round(point.x * 1000) / 1000,
+      y: Math.round(point.y * 1000) / 1000
+    };
+  }
+
+  function isPointOnSegment(point, from, to) {
+    var epsilon = 1e-6;
+    var abx = to.x - from.x;
+    var aby = to.y - from.y;
+    var apx = point.x - from.x;
+    var apy = point.y - from.y;
+    var cross = (abx * apy) - (aby * apx);
+    if (Math.abs(cross) > epsilon) return false;
+    var dot = (apx * abx) + (apy * aby);
+    if (dot < -epsilon) return false;
+    var lenSq = (abx * abx) + (aby * aby);
+    if (dot > lenSq + epsilon) return false;
+    return true;
+  }
+
+  function splitEdge(edgeStart, edgeEnd, allPoints) {
+    var pieces = [];
+    if (!edgeStart || !edgeEnd || !allPoints || !allPoints.length) return pieces;
+
+    var pointsOnEdge = [];
+    for (var i = 0; i < allPoints.length; i++) {
+      var candidate = allPoints[i];
+      if (isPointOnSegment(candidate, edgeStart, edgeEnd)) {
+        pointsOnEdge.push(candidate);
+      }
+    }
+    if (pointsOnEdge.length < 2) return pieces;
+
+    var dominantAxis = Math.abs(edgeEnd.x - edgeStart.x) >= Math.abs(edgeEnd.y - edgeStart.y) ? 'x' : 'y';
+    pointsOnEdge.sort(function(a, b) {
+      if (dominantAxis === 'x') {
+        if (a.x !== b.x) return a.x - b.x;
+        return a.y - b.y;
+      }
+      if (a.y !== b.y) return a.y - b.y;
+      return a.x - b.x;
+    });
+
+    for (var j = 0; j < pointsOnEdge.length - 1; j++) {
+      var from = pointsOnEdge[j];
+      var to = pointsOnEdge[j + 1];
+      if (Math.abs(from.x - to.x) < 1e-6 && Math.abs(from.y - to.y) < 1e-6) continue;
+      pieces.push({ from: from, to: to });
+    }
+
+    return pieces;
+  }
+
+  function collectBoundaryEdges(polygons) {
+    var edgeCounts = Object.create(null);
+    var edgeRefs = Object.create(null);
+    var edges = [];
+    if (!polygons || !polygons.length) return edges;
+
+    var pointMap = Object.create(null);
+    for (var i = 0; i < polygons.length; i++) {
+      var polygon = polygons[i];
+      if (!polygon || !polygon.length) continue;
+      for (var v = 0; v < polygon.length; v++) {
+        var normalizedVertex = normalizePoint(polygon[v]);
+        var vertexKey = pointKey(normalizedVertex);
+        if (!pointMap[vertexKey]) {
+          pointMap[vertexKey] = normalizedVertex;
+        }
+      }
+    }
+    var allPoints = Object.keys(pointMap).map(function(key) {
+      return pointMap[key];
+    });
+
+    for (var p = 0; p < polygons.length; p++) {
+      var vertices = polygons[p];
+      if (!vertices || vertices.length < 2) continue;
+      for (var j = 0; j < vertices.length; j++) {
+        var from = normalizePoint(vertices[j]);
+        var to = normalizePoint(vertices[(j + 1) % vertices.length]);
+        if (!from || !to) continue;
+        var subEdges = splitEdge(from, to, allPoints);
+        for (var s = 0; s < subEdges.length; s++) {
+          var subEdge = subEdges[s];
+          var key = edgeKey(subEdge.from, subEdge.to);
+          if (!key) continue;
+          edgeCounts[key] = (edgeCounts[key] || 0) + 1;
+          if (!edgeRefs[key]) {
+            edgeRefs[key] = {
+              from: subEdge.from,
+              to: subEdge.to
+            };
+          }
+        }
+      }
+    }
+
+    var keys = Object.keys(edgeCounts);
+    for (var k = 0; k < keys.length; k++) {
+      var edgeLookupKey = keys[k];
+      if (edgeCounts[edgeLookupKey] === 1 && edgeRefs[edgeLookupKey]) {
+        edges.push(edgeRefs[edgeLookupKey]);
+      }
+    }
+
+    return edges;
+  }
+
+  function appendBoundaryEdges(polygons, strokeColor, strokeWidth) {
+    if (!polygons || !polygons.length || !isFinite(strokeWidth) || strokeWidth <= 0) return;
+    var edges = collectBoundaryEdges(polygons);
+    for (var i = 0; i < edges.length; i++) {
+      var edge = edges[i];
+      if (!edge || !edge.from || !edge.to) continue;
+      lines.push(
+        '<line x1="' + formatSvgNumber(edge.from.x) + '" y1="' + formatSvgNumber(edge.from.y) +
+        '" x2="' + formatSvgNumber(edge.to.x) + '" y2="' + formatSvgNumber(edge.to.y) +
+        '" stroke="' + strokeColor + '" stroke-width="' + formatSvgNumber(strokeWidth) +
+        '" stroke-linecap="round" stroke-linejoin="round"/>'
+      );
+    }
+  }
+
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   lines.push('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">');
   lines.push('<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="#ffffff"/>');
@@ -13380,24 +13700,26 @@ function buildMashrabiyaDesignSvgString(options) {
   }
 
   var fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
-  var fillBorderAttrs = fillBorderWidth > 0
-    ? (' stroke="#82511f" stroke-width="' + formatSvgNumber(fillBorderWidth) + '"')
-    : '';
+  var starPolygons = (geometry.starRegions && geometry.starRegions.length)
+    ? geometry.starRegions
+    : [geometry.starPathVertices];
 
   for (var p = 0; p < geometry.petals.length; p++) {
-    lines.push('<polygon points="' + toSvgPoints(geometry.petals[p]) + '" fill="' + mashrabiyaPetalColor + '"' + fillBorderAttrs + '/>');
+    lines.push('<polygon points="' + toSvgPoints(geometry.petals[p]) + '" fill="' + mashrabiyaPetalColor + '"/>');
   }
 
   for (var q = 0; q < geometry.pointRegions.length; q++) {
-    lines.push('<polygon points="' + toSvgPoints(geometry.pointRegions[q]) + '" fill="' + mashrabiyaPointColor + '"' + fillBorderAttrs + '/>');
+    lines.push('<polygon points="' + toSvgPoints(geometry.pointRegions[q]) + '" fill="' + mashrabiyaPointColor + '"/>');
   }
 
-  if (geometry.starRegions && geometry.starRegions.length) {
-    for (var s = 0; s < geometry.starRegions.length; s++) {
-      lines.push('<polygon points="' + toSvgPoints(geometry.starRegions[s]) + '" fill="' + mashrabiyaStarColor + '"' + fillBorderAttrs + '/>');
-    }
-  } else {
-    lines.push('<polygon points="' + toSvgPoints(geometry.starPathVertices) + '" fill="' + mashrabiyaStarColor + '"' + fillBorderAttrs + '/>');
+  for (var s = 0; s < starPolygons.length; s++) {
+    lines.push('<polygon points="' + toSvgPoints(starPolygons[s]) + '" fill="' + mashrabiyaStarColor + '"/>');
+  }
+
+  if (fillBorderWidth > 0) {
+    appendBoundaryEdges(starPolygons, '#82511f', fillBorderWidth);
+    appendBoundaryEdges(geometry.petals, '#82511f', fillBorderWidth);
+    appendBoundaryEdges(geometry.pointRegions, '#82511f', fillBorderWidth);
   }
   lines.push('</svg>');
   return lines.join('\n');
