@@ -11866,12 +11866,85 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       infoById[String(faceInfo[ii].face.id)] = faceInfo[ii];
     }
 
+    var selectedPetalFaceIds = Object.create(null);
+    var selectedPointFaceIds = Object.create(null);
+
+    function mark12FoldPetalProfiles(faceList, outerRadiusValue) {
+      var result = Object.create(null);
+      if (safeFold !== 12 || !faceList || !faceList.length || !isFinite(outerRadiusValue) || outerRadiusValue <= 1e-6) {
+        return result;
+      }
+
+      var OUTER_PETAL_RADIUS_NORM = 0.91674143;
+      var OUTER_PETAL_AREA_NORM = 0.02500639;
+      var INNER_PETAL_RADIUS_NORM = 0.61423034;
+      var INNER_PETAL_AREA_NORM = 0.12815022;
+
+      function profileCandidate(info, radiusMin, radiusMax, areaMin, areaMax, requiresScaffold, requiresStarThread) {
+        if (!info || !info.face || !info.face.vertices || info.face.vertices.length !== 5) return false;
+        if (!!info.hasScaffold !== !!requiresScaffold) return false;
+        if (!!info.hasStarThread !== !!requiresStarThread) return false;
+        var radiusNorm = info.radius / outerRadiusValue;
+        var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
+        if (!isFinite(radiusNorm) || !isFinite(areaNorm)) return false;
+        return radiusNorm >= radiusMin && radiusNorm <= radiusMax && areaNorm >= areaMin && areaNorm <= areaMax;
+      }
+
+      function pickBestOnePerBin(candidates, targetRadiusNorm, targetAreaNorm) {
+        var bestByBin = new Array(safeFold);
+        var scoreByBin = new Array(safeFold);
+        for (var i = 0; i < candidates.length; i++) {
+          var info = candidates[i];
+          var bin = getFaceBin(info.face);
+          if (bin < 0 || bin >= safeFold) continue;
+          var radiusNorm = info.radius / outerRadiusValue;
+          var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
+          var score = Math.abs(radiusNorm - targetRadiusNorm) + (0.55 * Math.abs(areaNorm - targetAreaNorm));
+          if (!bestByBin[bin] || score < scoreByBin[bin]) {
+            bestByBin[bin] = info;
+            scoreByBin[bin] = score;
+          }
+        }
+        var chosen = [];
+        for (var b = 0; b < bestByBin.length; b++) {
+          if (bestByBin[b]) chosen.push(bestByBin[b]);
+        }
+        return chosen;
+      }
+
+      var outerCandidates = faceList.filter(function(info) {
+        return profileCandidate(info, 0.88, 0.95, 0.02, 0.032, true, false);
+      });
+      var innerCandidates = faceList.filter(function(info) {
+        return profileCandidate(info, 0.57, 0.66, 0.1, 0.15, false, true);
+      });
+
+      var pickedOuter = pickBestOnePerBin(outerCandidates, OUTER_PETAL_RADIUS_NORM, OUTER_PETAL_AREA_NORM);
+      var pickedInner = pickBestOnePerBin(innerCandidates, INNER_PETAL_RADIUS_NORM, INNER_PETAL_AREA_NORM);
+      for (var po = 0; po < pickedOuter.length; po++) {
+        result[String(pickedOuter[po].face.id)] = true;
+      }
+      for (var pi = 0; pi < pickedInner.length; pi++) {
+        result[String(pickedInner[pi].face.id)] = true;
+      }
+
+      return result;
+    }
+
+    var forcedPetalFaceIds = mark12FoldPetalProfiles(faceInfo, petalRadius);
+    var forcedPetalFaceIdList = Object.keys(forcedPetalFaceIds);
+    for (var fp = 0; fp < forcedPetalFaceIdList.length; fp++) {
+      selectedPetalFaceIds[forcedPetalFaceIdList[fp]] = true;
+    }
+
     // 1) pickStarFaces: connected inner components (can merge multiple atomic faces).
     var starCandidates = faceInfo.filter(function(info) {
+      if (forcedPetalFaceIds[String(info.face.id)]) return false;
       return !info.hasScaffold && (info.hasStarThread || info.radius <= (starRadiusMean * 1.35));
     });
     if (!starCandidates.length) {
       starCandidates = faceInfo.filter(function(info) {
+        if (forcedPetalFaceIds[String(info.face.id)]) return false;
         return !info.hasScaffold;
       });
     }
@@ -11892,6 +11965,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
         steps: 2,
         maxAngleDrift: angleStep * 0.72,
         filter: function(info, currentRadius) {
+          if (forcedPetalFaceIds[String(info.face.id)]) return false;
           return !info.hasScaffold && info.radius >= (currentRadius * 0.9);
         }
       });
@@ -11930,45 +12004,76 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       starRadiusMean = starRadiusMean / Math.max(1, starPathVertices.length);
     }
 
+    var useForcedPetalProfiles = safeFold === 12 && forcedPetalFaceIdList.length > 0;
+
     // 2) pickPetalFaces: connected outer scaffold components, one per sector.
-    var petalInfoCandidates = faceInfo.filter(function(info) {
-      return info.hasScaffold && (info.hasStarThread || info.radius > (starRadiusMean * 1.3));
-    });
-    if (!petalInfoCandidates.length) {
-      petalInfoCandidates = faceInfo.filter(function(info) {
-        return info.hasScaffold;
+    if (!useForcedPetalProfiles) {
+      var petalInfoCandidates = faceInfo.filter(function(info) {
+        if (forcedPetalFaceIds[String(info.face.id)]) return false;
+        return info.hasScaffold && (info.hasStarThread || info.radius > (starRadiusMean * 1.3));
       });
+      if (!petalInfoCandidates.length) {
+        petalInfoCandidates = faceInfo.filter(function(info) {
+          if (forcedPetalFaceIds[String(info.face.id)]) return false;
+          return info.hasScaffold;
+        });
+      }
+
+      var petalComponentsByBin = buildConnectedComponentsByBin(petalInfoCandidates, adjacency);
+
+      for (var pb = 0; pb < safeFold; pb++) {
+        var petalBucket = petalComponentsByBin[pb] || [];
+        if (!petalBucket.length) continue;
+        petalBucket.sort(function(left, right) {
+          return right.radius - left.radius;
+        });
+        var chosenPetal = petalBucket[0];
+        expandComponent(chosenPetal, adjacency, infoById, {
+          steps: 2,
+          maxAngleDrift: angleStep * 0.78,
+          filter: function(info, currentRadius) {
+            return info.radius <= currentRadius && info.radius >= (starRadiusMean * 1.08);
+          }
+        });
+        for (var pfi = 0; pfi < chosenPetal.faces.length; pfi++) {
+          selectedPetalFaceIds[String(chosenPetal.faces[pfi].id)] = true;
+        }
+        var mergedPetal = mergeFacesToPolygon(chosenPetal.faces);
+        if (mergedPetal.length >= 3) {
+          petals.push(mergedPetal);
+          debugRegions.push({
+            label: 'P ' + pb + ' (' + chosenPetal.faces.length + ')',
+            centroid: polygonCentroid(mergedPetal),
+            color: '#a9491e'
+          });
+        }
+      }
     }
 
-    var petalComponentsByBin = buildConnectedComponentsByBin(petalInfoCandidates, adjacency);
-    var selectedPetalFaceIds = Object.create(null);
-    var selectedPointFaceIds = Object.create(null);
-
-    for (var pb = 0; pb < safeFold; pb++) {
-      var petalBucket = petalComponentsByBin[pb] || [];
-      if (!petalBucket.length) continue;
-      petalBucket.sort(function(left, right) {
-        return right.radius - left.radius;
-      });
-      var chosenPetal = petalBucket[0];
-      expandComponent(chosenPetal, adjacency, infoById, {
-        steps: 2,
-        maxAngleDrift: angleStep * 0.78,
-        filter: function(info, currentRadius) {
-          return info.radius <= currentRadius && info.radius >= (starRadiusMean * 1.08);
-        }
-      });
-      for (var pfi = 0; pfi < chosenPetal.faces.length; pfi++) {
-        selectedPetalFaceIds[String(chosenPetal.faces[pfi].id)] = true;
+    if (useForcedPetalProfiles) {
+      var forcedByBin = new Array(safeFold);
+      for (var fi2 = 0; fi2 < faceInfo.length; fi2++) {
+        var forcedInfo = faceInfo[fi2];
+        var forcedId = String(forcedInfo.face.id);
+        if (!forcedPetalFaceIds[forcedId]) continue;
+        var forcedBin = getFaceBin(forcedInfo.face);
+        if (forcedBin < 0 || forcedBin >= safeFold) continue;
+        if (!forcedByBin[forcedBin]) forcedByBin[forcedBin] = [];
+        forcedByBin[forcedBin].push(forcedInfo.face);
       }
-      var mergedPetal = mergeFacesToPolygon(chosenPetal.faces);
-      if (mergedPetal.length >= 3) {
-        petals.push(mergedPetal);
-        debugRegions.push({
-          label: 'P ' + pb + ' (' + chosenPetal.faces.length + ')',
-          centroid: polygonCentroid(mergedPetal),
-          color: '#a9491e'
-        });
+
+      for (var fb = 0; fb < forcedByBin.length; fb++) {
+        var forcedFaces = forcedByBin[fb] || [];
+        if (!forcedFaces.length) continue;
+        var mergedForcedPetal = mergeFacesToPolygon(forcedFaces);
+        if (mergedForcedPetal.length >= 3) {
+          petals.push(mergedForcedPetal);
+          debugRegions.push({
+            label: 'P ' + fb + ' (' + forcedFaces.length + ')',
+            centroid: polygonCentroid(mergedForcedPetal),
+            color: '#a9491e'
+          });
+        }
       }
     }
 
