@@ -11931,20 +11931,56 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
       return result;
     }
 
+    function mark12FoldPointProfiles(faceList, outerRadiusValue) {
+      var result = Object.create(null);
+      if (safeFold !== 12 || !faceList || !faceList.length || !isFinite(outerRadiusValue) || outerRadiusValue <= 1e-6) {
+        return result;
+      }
+
+      var INNER_POINT_RADIUS_NORM = 0.31100423;
+      var INNER_POINT_AREA_NORM = 0.02123412;
+
+      function isPointProfileCandidate(info) {
+        if (!info || !info.face || !info.face.vertices || info.face.vertices.length !== 4) return false;
+        if (info.hasScaffold) return false;
+        if (!info.hasStarThread) return false;
+        var radiusNorm = info.radius / outerRadiusValue;
+        var areaNorm = Math.abs(info.face.areaAbs || 0) / (outerRadiusValue * outerRadiusValue);
+        if (!isFinite(radiusNorm) || !isFinite(areaNorm)) return false;
+        if (radiusNorm < 0.27 || radiusNorm > 0.36) return false;
+        if (areaNorm < 0.015 || areaNorm > 0.03) return false;
+        return true;
+      }
+
+      var candidates = faceList.filter(isPointProfileCandidate);
+      for (var p = 0; p < candidates.length; p++) {
+        result[String(candidates[p].face.id)] = true;
+      }
+      return result;
+    }
+
     var forcedPetalFaceIds = mark12FoldPetalProfiles(faceInfo, petalRadius);
     var forcedPetalFaceIdList = Object.keys(forcedPetalFaceIds);
     for (var fp = 0; fp < forcedPetalFaceIdList.length; fp++) {
       selectedPetalFaceIds[forcedPetalFaceIdList[fp]] = true;
     }
 
+    var forcedPointFaceIds = mark12FoldPointProfiles(faceInfo, petalRadius);
+    var forcedPointFaceIdList = Object.keys(forcedPointFaceIds);
+    for (var fpt = 0; fpt < forcedPointFaceIdList.length; fpt++) {
+      selectedPointFaceIds[forcedPointFaceIdList[fpt]] = true;
+    }
+
     // 1) pickStarFaces: connected inner components (can merge multiple atomic faces).
     var starCandidates = faceInfo.filter(function(info) {
       if (forcedPetalFaceIds[String(info.face.id)]) return false;
+      if (forcedPointFaceIds[String(info.face.id)]) return false;
       return !info.hasScaffold && (info.hasStarThread || info.radius <= (starRadiusMean * 1.35));
     });
     if (!starCandidates.length) {
       starCandidates = faceInfo.filter(function(info) {
         if (forcedPetalFaceIds[String(info.face.id)]) return false;
+        if (forcedPointFaceIds[String(info.face.id)]) return false;
         return !info.hasScaffold;
       });
     }
@@ -11966,6 +12002,7 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
         maxAngleDrift: angleStep * 0.72,
         filter: function(info, currentRadius) {
           if (forcedPetalFaceIds[String(info.face.id)]) return false;
+          if (forcedPointFaceIds[String(info.face.id)]) return false;
           return !info.hasScaffold && info.radius >= (currentRadius * 0.9);
         }
       });
@@ -12051,91 +12088,97 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     }
 
     if (useForcedPetalProfiles) {
-      var forcedByBin = new Array(safeFold);
       for (var fi2 = 0; fi2 < faceInfo.length; fi2++) {
         var forcedInfo = faceInfo[fi2];
         var forcedId = String(forcedInfo.face.id);
         if (!forcedPetalFaceIds[forcedId]) continue;
         var forcedBin = getFaceBin(forcedInfo.face);
-        if (forcedBin < 0 || forcedBin >= safeFold) continue;
-        if (!forcedByBin[forcedBin]) forcedByBin[forcedBin] = [];
-        forcedByBin[forcedBin].push(forcedInfo.face);
+        petals.push(forcedInfo.face.vertices.slice());
+        debugRegions.push({
+          label: 'P ' + forcedBin + ' (1)',
+          centroid: polygonCentroid(forcedInfo.face.vertices),
+          color: '#a9491e'
+        });
       }
+    }
 
-      for (var fb = 0; fb < forcedByBin.length; fb++) {
-        var forcedFaces = forcedByBin[fb] || [];
-        if (!forcedFaces.length) continue;
-        var mergedForcedPetal = mergeFacesToPolygon(forcedFaces);
-        if (mergedForcedPetal.length >= 3) {
-          petals.push(mergedForcedPetal);
-          debugRegions.push({
-            label: 'P ' + fb + ' (' + forcedFaces.length + ')',
-            centroid: polygonCentroid(mergedForcedPetal),
-            color: '#a9491e'
-          });
-        }
+    var useForcedPointProfiles = safeFold === 12 && forcedPointFaceIdList.length > 0;
+    if (useForcedPointProfiles) {
+      for (var fi3 = 0; fi3 < faceInfo.length; fi3++) {
+        var forcedPointInfo = faceInfo[fi3];
+        var forcedPointId = String(forcedPointInfo.face.id);
+        if (!forcedPointFaceIds[forcedPointId]) continue;
+        var forcedPointBin = getFaceBin(forcedPointInfo.face);
+        pointRegions.push(forcedPointInfo.face.vertices.slice());
+        debugRegions.push({
+          label: 'T ' + forcedPointBin + ' (1)',
+          centroid: polygonCentroid(forcedPointInfo.face.vertices),
+          color: '#a73631'
+        });
       }
     }
 
     // 3) pickTriangleFaces: connected components adjacent to star components, up to two per sector.
-    var starFaceIdLookup = Object.create(null);
-    var starFaceIdList = Object.keys(usedStarFaceIds);
-    for (var sId = 0; sId < starFaceIdList.length; sId++) {
-      starFaceIdLookup[starFaceIdList[sId]] = true;
-    }
-
-    var triangleCandidates = [];
-    for (var ti = 0; ti < faceInfo.length; ti++) {
-      var info = faceInfo[ti];
-      var infoId = String(info.face.id);
-      if (selectedPetalFaceIds[infoId]) continue;
-      if (starFaceIdLookup[infoId]) continue;
-      if (info.hasScaffold) continue;
-      if (info.radius <= (starRadiusMean * 0.95)) continue;
-
-      var neighbors = adjacency[infoId] || {};
-      var neighborIds = Object.keys(neighbors);
-      var touchesStar = false;
-      for (var ni = 0; ni < neighborIds.length; ni++) {
-        if (starFaceIdLookup[neighborIds[ni]]) {
-          touchesStar = true;
-          break;
-        }
+    if (!useForcedPointProfiles) {
+      var starFaceIdLookup = Object.create(null);
+      var starFaceIdList = Object.keys(usedStarFaceIds);
+      for (var sId = 0; sId < starFaceIdList.length; sId++) {
+        starFaceIdLookup[starFaceIdList[sId]] = true;
       }
-      if (!touchesStar) continue;
-      triangleCandidates.push(info);
-    }
 
-    var triangleComponentsByBin = buildConnectedComponentsByBin(triangleCandidates, adjacency);
-    for (var tb = 0; tb < safeFold; tb++) {
-      var triBucket = triangleComponentsByBin[tb] || [];
-      if (!triBucket.length) continue;
-      var centerAngle = -Math.PI / 2 + tb * angleStep;
-      triBucket.sort(function(left, right) {
-        var leftKey = angleDistance(left.angle, centerAngle) * 10 + left.radius;
-        var rightKey = angleDistance(right.angle, centerAngle) * 10 + right.radius;
-        return leftKey - rightKey;
-      });
+      var triangleCandidates = [];
+      for (var ti = 0; ti < faceInfo.length; ti++) {
+        var info = faceInfo[ti];
+        var infoId = String(info.face.id);
+        if (selectedPetalFaceIds[infoId]) continue;
+        if (starFaceIdLookup[infoId]) continue;
+        if (info.hasScaffold) continue;
+        if (info.radius <= (starRadiusMean * 0.95)) continue;
 
-      for (var tk = 0; tk < triBucket.length && tk < 2; tk++) {
-        expandComponent(triBucket[tk], adjacency, infoById, {
-          steps: 1,
-          maxAngleDrift: angleStep * 0.65,
-          filter: function(info) {
-            return !info.hasScaffold;
+        var neighbors = adjacency[infoId] || {};
+        var neighborIds = Object.keys(neighbors);
+        var touchesStar = false;
+        for (var ni = 0; ni < neighborIds.length; ni++) {
+          if (starFaceIdLookup[neighborIds[ni]]) {
+            touchesStar = true;
+            break;
           }
+        }
+        if (!touchesStar) continue;
+        triangleCandidates.push(info);
+      }
+
+      var triangleComponentsByBin = buildConnectedComponentsByBin(triangleCandidates, adjacency);
+      for (var tb = 0; tb < safeFold; tb++) {
+        var triBucket = triangleComponentsByBin[tb] || [];
+        if (!triBucket.length) continue;
+        var centerAngle = -Math.PI / 2 + tb * angleStep;
+        triBucket.sort(function(left, right) {
+          var leftKey = angleDistance(left.angle, centerAngle) * 10 + left.radius;
+          var rightKey = angleDistance(right.angle, centerAngle) * 10 + right.radius;
+          return leftKey - rightKey;
         });
-        var mergedTriangle = mergeFacesToPolygon(triBucket[tk].faces);
-        if (mergedTriangle.length >= 3) {
-          for (var tif = 0; tif < triBucket[tk].faces.length; tif++) {
-            selectedPointFaceIds[String(triBucket[tk].faces[tif].id)] = true;
-          }
-          pointRegions.push(mergedTriangle);
-          debugRegions.push({
-            label: 'T ' + tb + ' (' + triBucket[tk].faces.length + ')',
-            centroid: polygonCentroid(mergedTriangle),
-            color: '#a73631'
+
+        for (var tk = 0; tk < triBucket.length && tk < 2; tk++) {
+          expandComponent(triBucket[tk], adjacency, infoById, {
+            steps: 1,
+            maxAngleDrift: angleStep * 0.65,
+            filter: function(info) {
+              return !info.hasScaffold;
+            }
           });
+          var mergedTriangle = mergeFacesToPolygon(triBucket[tk].faces);
+          if (mergedTriangle.length >= 3) {
+            for (var tif = 0; tif < triBucket[tk].faces.length; tif++) {
+              selectedPointFaceIds[String(triBucket[tk].faces[tif].id)] = true;
+            }
+            pointRegions.push(mergedTriangle);
+            debugRegions.push({
+              label: 'T ' + tb + ' (' + triBucket[tk].faces.length + ')',
+              centroid: polygonCentroid(mergedTriangle),
+              color: '#a73631'
+            });
+          }
         }
       }
     }
@@ -12232,18 +12275,22 @@ function drawMashrabiyaFilledGeometry(geometry, starOpacity, petalOpacity, point
   var starFillOpacity = Math.max(0, Math.min(1, starOpacity)) * opacityScale;
   var petalFillOpacity = Math.max(0, Math.min(1, petalOpacity)) * opacityScale;
   var pointFillOpacity = Math.max(0, Math.min(1, pointOpacity)) * opacityScale;
-  for (var i = 0; i < geometry.petals.length; i++) {
-    drawMashrabiyaRegionPolygon(geometry.petals[i], mashrabiyaPetalColor, petalFillOpacity);
-  }
-  for (var j = 0; j < geometry.pointRegions.length; j++) {
-    drawMashrabiyaRegionPolygon(geometry.pointRegions[j], mashrabiyaPointColor, pointFillOpacity);
-  }
+
+  // Paint order matters: point regions should sit above star/petal fills.
+  // This avoids correctly classified point faces being visually overpainted.
   if (geometry.starRegions && geometry.starRegions.length) {
     for (var s = 0; s < geometry.starRegions.length; s++) {
       drawMashrabiyaRegionPolygon(geometry.starRegions[s], mashrabiyaStarColor, starFillOpacity);
     }
   } else {
     drawMashrabiyaRegionPolygon(geometry.starPathVertices, mashrabiyaStarColor, starFillOpacity);
+  }
+
+  for (var i = 0; i < geometry.petals.length; i++) {
+    drawMashrabiyaRegionPolygon(geometry.petals[i], mashrabiyaPetalColor, petalFillOpacity);
+  }
+  for (var j = 0; j < geometry.pointRegions.length; j++) {
+    drawMashrabiyaRegionPolygon(geometry.pointRegions[j], mashrabiyaPointColor, pointFillOpacity);
   }
 }
 
