@@ -12252,18 +12252,6 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     // Fold-8 specific stabilization: build star/point fill regions directly
     // from selected face IDs so fill edges always match extracted face boundaries.
     if (safeFold === 8) {
-      var keptDebugRegions = [];
-      for (var dbg = 0; dbg < debugRegions.length; dbg++) {
-        var dbgRegion = debugRegions[dbg];
-        if (!dbgRegion || typeof dbgRegion.label !== 'string') {
-          keptDebugRegions.push(dbgRegion);
-          continue;
-        }
-        if (dbgRegion.label.indexOf('S ') === 0) continue;
-        if (dbgRegion.label.indexOf('T ') === 0) continue;
-        keptDebugRegions.push(dbgRegion);
-      }
-
       starRegions = [];
       pointRegions = [];
       for (var fs = 0; fs < faceInfo.length; fs++) {
@@ -12271,29 +12259,16 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
         var selectedFace = selectedInfo.face;
         if (!selectedFace || !selectedFace.vertices || selectedFace.vertices.length < 3) continue;
         var selectedId = String(selectedFace.id);
-        var selectedBin = getFaceBin(selectedFace);
 
         if (selectedStarFaceIds[selectedId]) {
           starRegions.push(selectedFace.vertices.slice());
-          keptDebugRegions.push({
-            label: 'S ' + selectedBin + ' (1)',
-            centroid: polygonCentroid(selectedFace.vertices),
-            color: '#9c6f1d'
-          });
           continue;
         }
 
         if (selectedPointFaceIds[selectedId]) {
           pointRegions.push(selectedFace.vertices.slice());
-          keptDebugRegions.push({
-            label: 'T ' + selectedBin + ' (1)',
-            centroid: polygonCentroid(selectedFace.vertices),
-            color: '#a73631'
-          });
         }
       }
-
-      debugRegions = keptDebugRegions;
     }
 
     // Keep point fills strictly aligned with selected point face IDs.
@@ -12301,14 +12276,6 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
     var selectedPointFaceIdListForFill = Object.keys(selectedPointFaceIds);
     if (selectedPointFaceIdListForFill.length) {
       pointRegions = [];
-      var nonPointDebugRegions = [];
-      for (var dr = 0; dr < debugRegions.length; dr++) {
-        var debugRegion = debugRegions[dr];
-        if (!debugRegion || typeof debugRegion.label !== 'string' || debugRegion.label.indexOf('T ') !== 0) {
-          nonPointDebugRegions.push(debugRegion);
-        }
-      }
-      debugRegions = nonPointDebugRegions;
 
       for (var pf = 0; pf < faceInfo.length; pf++) {
         var pointInfo = faceInfo[pf];
@@ -12316,11 +12283,6 @@ function buildMashrabiyaRosetteGeometry(fold, geometryMode) {
         if (!selectedPointFaceIds[pointFaceId]) continue;
         if (!pointInfo.face.vertices || pointInfo.face.vertices.length < 3) continue;
         pointRegions.push(pointInfo.face.vertices.slice());
-        debugRegions.push({
-          label: 'T ' + getFaceBin(pointInfo.face) + ' (1)',
-          centroid: polygonCentroid(pointInfo.face.vertices),
-          color: '#a73631'
-        });
       }
     }
 
