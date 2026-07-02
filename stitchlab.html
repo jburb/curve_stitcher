@@ -14225,7 +14225,7 @@ function openExportOptionsModal() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
   var isMashrabiyaExport = currentExperienceId === 'mashrabiya';
-  var hideThreadsControl = isTriangulaExport || isSquarusExport;
+  var hideThreadsControl = isTriangulaExport || isSquarusExport || isMashrabiyaExport;
   var threadsRow = exportIncludeThreadsInput ? exportIncludeThreadsInput.closest('.modal-row') : null;
   var previewRow = exportIncludePreviewInput ? exportIncludePreviewInput.closest('.modal-row') : null;
 
@@ -14246,7 +14246,7 @@ function openExportOptionsModal() {
     previewRow.style.display = isTriangulaExport ? 'none' : '';
   }
   if (exportMashrabiyaDebugRow) {
-    exportMashrabiyaDebugRow.style.display = isMashrabiyaExport ? '' : 'none';
+    exportMashrabiyaDebugRow.style.display = (isMashrabiyaExport && mashrabiyaDebugLabelsEnabled) ? '' : 'none';
   }
   exportOptionsModal.classList.add('open');
   exportNameInput.focus();
@@ -15560,13 +15560,13 @@ async function runExportFromModalSelection() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
   var isMashrabiyaExport = currentExperienceId === 'mashrabiya';
-  var includeThreadsAllowed = !isTriangulaExport && !isSquarusExport;
+  var includeThreadsAllowed = !isTriangulaExport && !isSquarusExport && !isMashrabiyaExport;
   var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(exportNameInput.value));
   var options = {
     includeThreads: includeThreadsAllowed ? exportIncludeThreadsInput.checked : false,
     includeGuide: exportIncludeGuideInput.checked,
     includePreview: isTriangulaExport ? false : exportIncludePreviewInput.checked,
-    mashrabiyaIncludeDebugLabels: !!(isMashrabiyaExport && exportMashrabiyaDebugLabelsInput && exportMashrabiyaDebugLabelsInput.checked)
+    mashrabiyaIncludeDebugLabels: !!(isMashrabiyaExport && mashrabiyaDebugLabelsEnabled && exportMashrabiyaDebugLabelsInput && exportMashrabiyaDebugLabelsInput.checked)
   };
 
   try {
