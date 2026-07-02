@@ -2205,17 +2205,21 @@
       <option value="12" selected>12-fold</option>
     </select>
   </div>
+  <div class="slider-block" id="mashrabiya-fill-border-block" style="display:none;">
+    <div class="slider-label">🖌 Fill Border <span class="slider-value" id="mashrabiya-fill-border-value">0</span></div>
+    <input id="mashrabiya-fill-border-width" type="range" min="0" max="3" step="1" value="0">
+  </div>
   <div class="slider-block" id="mashrabiya-star-color-block" style="display:none;">
     <div class="slider-label">⭐ Inner Star</div>
     <input id="mashrabiya-star-color" type="color" value="#f4d35e" aria-label="Mashrabiya inner star color">
   </div>
-  <div class="slider-block" id="mashrabiya-petal-color-block" style="display:none;">
-    <div class="slider-label">🌺 Petals</div>
-    <input id="mashrabiya-petal-color" type="color" value="#ee964b" aria-label="Mashrabiya petal color">
-  </div>
   <div class="slider-block" id="mashrabiya-point-color-block" style="display:none;">
     <div class="slider-label">🔶 Star Points</div>
     <input id="mashrabiya-point-color" type="color" value="#f95738" aria-label="Mashrabiya star point color">
+  </div>
+  <div class="slider-block" id="mashrabiya-petal-color-block" style="display:none;">
+    <div class="slider-label">🌺 Petals</div>
+    <input id="mashrabiya-petal-color" type="color" value="#ee964b" aria-label="Mashrabiya petal color">
   </div>
 </div>
 
@@ -2266,6 +2270,11 @@
       <div class="advanced-global-title">Export</div>
       <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Save Pattern</button></div>
       <div id="advanced-export-help" class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
+    </div>
+    <div class="advanced-subsection" id="mashrabiya-advanced-subsection" style="display:none;">
+      <div class="advanced-global-title">Mashrabiya Fill</div>
+      <div class="advanced-global-row">Fill border width: <input id="advanced-mashrabiya-fill-border" class="advanced-inline-number" type="number" min="0" max="3" step="1" value="0" aria-label="Mashrabiya fill border width"></div>
+      <div class="advanced-global-help">0 disables fill borders. 1-3 sets polygon stroke width.</div>
     </div>
     <div class="advanced-subsection" id="triangula-advanced-subsection" style="display:none;">
       <div class="advanced-global-title">Triangula Animation</div>
@@ -2475,6 +2484,7 @@ var squarusContactBlock = document.getElementById('squarus-contact-block');
 var squarusPieceCountBlock = document.getElementById('squarus-piece-count-block');
 var squarusSequenceBlock = document.getElementById('squarus-sequence-block');
 var mashrabiyaFoldBlock = document.getElementById('mashrabiya-fold-block');
+var mashrabiyaFillBorderBlock = document.getElementById('mashrabiya-fill-border-block');
 var mashrabiyaStarColorBlock = document.getElementById('mashrabiya-star-color-block');
 var mashrabiyaPetalColorBlock = document.getElementById('mashrabiya-petal-color-block');
 var mashrabiyaPointColorBlock = document.getElementById('mashrabiya-point-color-block');
@@ -2484,9 +2494,13 @@ var squarusSequenceSlider = document.getElementById('squarus-sequence-seed');
 var squarusSequenceValue = document.getElementById('squarus-sequence-value');
 var squarusSequenceRandomizeBtn = document.getElementById('squarus-sequence-randomize');
 var mashrabiyaFoldSelect = document.getElementById('mashrabiya-fold');
+var mashrabiyaFillBorderSlider = document.getElementById('mashrabiya-fill-border-width');
+var mashrabiyaFillBorderValue = document.getElementById('mashrabiya-fill-border-value');
 var mashrabiyaStarColorInput = document.getElementById('mashrabiya-star-color');
 var mashrabiyaPetalColorInput = document.getElementById('mashrabiya-petal-color');
 var mashrabiyaPointColorInput = document.getElementById('mashrabiya-point-color');
+var mashrabiyaAdvancedSubsection = document.getElementById('mashrabiya-advanced-subsection');
+var advancedMashrabiyaFillBorderInput = document.getElementById('advanced-mashrabiya-fill-border');
 var squarusOrderInlineSelect = document.getElementById('squarus-order-inline');
 var squarusLayoutInlineSelect = document.getElementById('squarus-layout-inline');
 var squarusContactModeInlineSelect = document.getElementById('squarus-contact-mode-inline');
@@ -3623,6 +3637,7 @@ var EXPERIENCE_LIBRARY = {
         multiply: false,
         width: false,
         mashrabiyaFold: true,
+        mashrabiyaFillBorder: true,
         mashrabiyaStarColor: true,
         mashrabiyaPetalColor: true,
         mashrabiyaPointColor: true
@@ -3632,7 +3647,8 @@ var EXPERIENCE_LIBRARY = {
         border: false,
         holeNumbers: false,
         holesNumber: false,
-        threads: false
+        threads: false,
+        mashrabiyaFillBorder: true
       }
     }
   }
@@ -4008,10 +4024,11 @@ var mashrabiyaGeometryMode = 'stitch-vertex';
 var mashrabiyaStarColor = '#f4d35e';
 var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
+var mashrabiyaFillBorderWidth = 0;
 var mashrabiyaDevPreviewEnabled = true; // set true to bypass discovery gate during development
 var mashrabiyaDebugLabelsEnabled = true; // set to false for final release
-var mashrabiyaDebugKeepStitchLinesVisible = true; // debug: set false to restore fade-out behavior
-var mashrabiyaDebugFillOpacityScale = 0.45; // debug: set to 1 for final release opacity
+var mashrabiyaDebugKeepStitchLinesVisible = false; // debug: force true to inspect line topology
+var mashrabiyaDebugFillOpacityScale = 1;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
 var SQUARUS_SCATTER_EDGE_PADDING = 10;
 var SQUARUS_SCATTER_WOBBLE_AMPLITUDE = 0;
@@ -4065,7 +4082,8 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   mashrabiyaGeometryMode: 'mashrabiyaGeometryMode',
   mashrabiyaStarColor: 'mashrabiyaStarColor',
   mashrabiyaPetalColor: 'mashrabiyaPetalColor',
-  mashrabiyaPointColor: 'mashrabiyaPointColor'
+  mashrabiyaPointColor: 'mashrabiyaPointColor',
+  mashrabiyaFillBorderWidth: 'mashrabiyaFillBorderWidth'
 });
 var URL_SYNC_DEBOUNCE_MS = 800;
 var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
@@ -4115,7 +4133,8 @@ var appState = {
     geometryMode: 'stitch-vertex',
     starColor: '#f4d35e',
     petalColor: '#ee964b',
-    pointColor: '#f95738'
+    pointColor: '#f95738',
+    fillBorderWidth: 0
   }
 };
 
@@ -4256,6 +4275,10 @@ function sanitizeMashrabiyaFold(value, fallback) {
 
 function sanitizeMashrabiyaGeometryMode(value, fallback) {
   return 'stitch-vertex';
+}
+
+function sanitizeMashrabiyaFillBorderWidth(value, fallback) {
+  return parseBoundedInt(value, 0, 3, parseBoundedInt(fallback, 0, 3, 0));
 }
 
 function getSquarusSequenceDomainSize(orderRef) {
@@ -4834,7 +4857,8 @@ function buildMashrabiyaStateSnapshotFromRuntime() {
     geometryMode: sanitizeMashrabiyaGeometryMode(mashrabiyaGeometryMode, 'stitch-vertex'),
     starColor: sanitizeHexColor(mashrabiyaStarColor, '#f4d35e'),
     petalColor: sanitizeHexColor(mashrabiyaPetalColor, '#ee964b'),
-    pointColor: sanitizeHexColor(mashrabiyaPointColor, '#f95738')
+    pointColor: sanitizeHexColor(mashrabiyaPointColor, '#f95738'),
+    fillBorderWidth: sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0)
   };
 }
 
@@ -4863,7 +4887,8 @@ function hydrateMashrabiyaStateCacheFromStorage() {
       geometryMode: sanitizeMashrabiyaGeometryMode(parsed.geometryMode, fallback.geometryMode),
       starColor: sanitizeHexColor(parsed.starColor, fallback.starColor),
       petalColor: sanitizeHexColor(parsed.petalColor, fallback.petalColor),
-      pointColor: sanitizeHexColor(parsed.pointColor, fallback.pointColor)
+      pointColor: sanitizeHexColor(parsed.pointColor, fallback.pointColor),
+      fillBorderWidth: sanitizeMashrabiyaFillBorderWidth(parsed.fillBorderWidth, fallback.fillBorderWidth)
     };
   } catch (error) {
     mashrabiyaStateCache = fallback;
@@ -4879,6 +4904,7 @@ function restoreMashrabiyaStateFromCache() {
   mashrabiyaStarColor = cached.starColor;
   mashrabiyaPetalColor = cached.petalColor;
   mashrabiyaPointColor = cached.pointColor;
+  mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(cached.fillBorderWidth, 0);
 }
 
 function syncCurrentExperienceStateCacheFromRuntime() {
@@ -4958,6 +4984,7 @@ function syncAppStateFromRuntime() {
   appState.mashrabiya.starColor = sanitizeHexColor(mashrabiyaStarColor, '#f4d35e');
   appState.mashrabiya.petalColor = sanitizeHexColor(mashrabiyaPetalColor, '#ee964b');
   appState.mashrabiya.pointColor = sanitizeHexColor(mashrabiyaPointColor, '#f95738');
+  appState.mashrabiya.fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
 }
 
 function buildSearchParamsFromAppState() {
@@ -5006,6 +5033,7 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'mashrabiyaStarColor', appState.mashrabiya.starColor);
     setUrlStateParam(params, 'mashrabiyaPetalColor', appState.mashrabiya.petalColor);
     setUrlStateParam(params, 'mashrabiyaPointColor', appState.mashrabiya.pointColor);
+    setUrlStateParam(params, 'mashrabiyaFillBorderWidth', String(appState.mashrabiya.fillBorderWidth));
   }
 
   return params;
@@ -5166,6 +5194,7 @@ function applyStateFromCurrentUrl(options) {
       mashrabiyaStarColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaStarColor'), mashrabiyaStarColor);
       mashrabiyaPetalColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaPetalColor'), mashrabiyaPetalColor);
       mashrabiyaPointColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaPointColor'), mashrabiyaPointColor);
+      mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(getUrlStateParam(params, 'mashrabiyaFillBorderWidth'), mashrabiyaFillBorderWidth);
       syncMashrabiyaControls();
     }
 
@@ -5465,9 +5494,10 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(squarusPieceCountBlock, controls.squarusPieceCount === true && currentExperienceId === 'squarus', '');
   setElementDisplay(squarusSequenceBlock, controls.squarusSequence === true && currentExperienceId === 'squarus', '');
   setElementDisplay(mashrabiyaFoldBlock, controls.mashrabiyaFold === true && currentExperienceId === 'mashrabiya', '');
+  setElementDisplay(mashrabiyaFillBorderBlock, controls.mashrabiyaFillBorder === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(mashrabiyaStarColorBlock, controls.mashrabiyaStarColor === true && currentExperienceId === 'mashrabiya', '');
-  setElementDisplay(mashrabiyaPetalColorBlock, controls.mashrabiyaPetalColor === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(mashrabiyaPointColorBlock, controls.mashrabiyaPointColor === true && currentExperienceId === 'mashrabiya', '');
+  setElementDisplay(mashrabiyaPetalColorBlock, controls.mashrabiyaPetalColor === true && currentExperienceId === 'mashrabiya', '');
 }
 
 function applyAdvancedControlPolicy(profile) {
@@ -5494,6 +5524,7 @@ function applyAdvancedControlPolicy(profile) {
     setElementDisplay(addThreadBtn, false, '');
     setElementDisplay(threadControlsContainer, false, '');
   }
+  setElementDisplay(mashrabiyaAdvancedSubsection, controls.mashrabiyaFillBorder === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(triangulaAdvancedSubsection, controls.triangulaAnimationFitMode === true, '');
   setElementDisplay(squarusAdvancedSubsection, controls.squarusControls === true, '');
 }
@@ -5551,9 +5582,19 @@ function syncMashrabiyaControls() {
   mashrabiyaStarColor = sanitizeHexColor(mashrabiyaStarColor, '#f4d35e');
   mashrabiyaPetalColor = sanitizeHexColor(mashrabiyaPetalColor, '#ee964b');
   mashrabiyaPointColor = sanitizeHexColor(mashrabiyaPointColor, '#f95738');
+  mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
 
   if (mashrabiyaFoldSelect) {
     mashrabiyaFoldSelect.value = String(mashrabiyaFold);
+  }
+  if (mashrabiyaFillBorderSlider) {
+    mashrabiyaFillBorderSlider.value = String(mashrabiyaFillBorderWidth);
+  }
+  if (mashrabiyaFillBorderValue) {
+    mashrabiyaFillBorderValue.textContent = String(mashrabiyaFillBorderWidth);
+  }
+  if (advancedMashrabiyaFillBorderInput) {
+    advancedMashrabiyaFillBorderInput.value = String(mashrabiyaFillBorderWidth);
   }
   if (mashrabiyaStarColorInput) {
     mashrabiyaStarColorInput.value = mashrabiyaStarColor;
@@ -12356,6 +12397,11 @@ function drawMashrabiyaRegionPolygon(vertices, fillColor, fillOpacity) {
   shape.closed = true;
   shape.fillColor = fillColor;
   shape.opacity = Math.max(0, Math.min(1, fillOpacity));
+  var fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
+  if (fillBorderWidth > 0) {
+    shape.strokeColor = '#82511f';
+    shape.strokeWidth = fillBorderWidth;
+  }
 }
 
 function drawMashrabiyaFilledGeometry(geometry, starOpacity, petalOpacity, pointOpacity) {
@@ -12671,9 +12717,10 @@ function renderMashrabiyaAnimationStateFrame(state) {
   var sEnd = sFillPoint + dFillPoint;
 
   var lineFade = 1 - mashrabiyaPhaseProgress(t, sFillStar, dFillStar + dFillPetal + dFillPoint);
-  var lineOpacity = mashrabiyaDebugKeepStitchLinesVisible
-    ? 0.92
-    : (0.9 * Math.max(0.15, lineFade));
+  var lineOpacity = 0.9 * lineFade;
+  if (mashrabiyaDebugKeepStitchLinesVisible) {
+    lineOpacity = 0.92;
+  }
 
   drawMashrabiyaClosedStrokeProgress(state.geometry.guideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sCircle, dCircle));
   drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOuter, dOuter));
@@ -12712,9 +12759,6 @@ function drawMashrabiyaStatic() {
   project.activeLayer.removeChildren();
   var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
   drawMashrabiyaFilledGeometry(geometry, 1, 1, 1);
-  if (mashrabiyaDebugKeepStitchLinesVisible) {
-    drawMashrabiyaStitchedLines(geometry, 0.92);
-  }
   drawMashrabiyaFaceDiagnostics(geometry.faceDiagnostics, 1);
   clearHighlightedHoleNumbers();
 }
@@ -13335,20 +13379,25 @@ function buildMashrabiyaDesignSvgString(options) {
     return lines.join('\n');
   }
 
+  var fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
+  var fillBorderAttrs = fillBorderWidth > 0
+    ? (' stroke="#82511f" stroke-width="' + formatSvgNumber(fillBorderWidth) + '"')
+    : '';
+
   for (var p = 0; p < geometry.petals.length; p++) {
-    lines.push('<polygon points="' + toSvgPoints(geometry.petals[p]) + '" fill="' + mashrabiyaPetalColor + '"/>');
+    lines.push('<polygon points="' + toSvgPoints(geometry.petals[p]) + '" fill="' + mashrabiyaPetalColor + '"' + fillBorderAttrs + '/>');
   }
 
   for (var q = 0; q < geometry.pointRegions.length; q++) {
-    lines.push('<polygon points="' + toSvgPoints(geometry.pointRegions[q]) + '" fill="' + mashrabiyaPointColor + '"/>');
+    lines.push('<polygon points="' + toSvgPoints(geometry.pointRegions[q]) + '" fill="' + mashrabiyaPointColor + '"' + fillBorderAttrs + '/>');
   }
 
   if (geometry.starRegions && geometry.starRegions.length) {
     for (var s = 0; s < geometry.starRegions.length; s++) {
-      lines.push('<polygon points="' + toSvgPoints(geometry.starRegions[s]) + '" fill="' + mashrabiyaStarColor + '"/>');
+      lines.push('<polygon points="' + toSvgPoints(geometry.starRegions[s]) + '" fill="' + mashrabiyaStarColor + '"' + fillBorderAttrs + '/>');
     }
   } else {
-    lines.push('<polygon points="' + toSvgPoints(geometry.starPathVertices) + '" fill="' + mashrabiyaStarColor + '"/>');
+    lines.push('<polygon points="' + toSvgPoints(geometry.starPathVertices) + '" fill="' + mashrabiyaStarColor + '"' + fillBorderAttrs + '/>');
   }
   lines.push('</svg>');
   return lines.join('\n');
@@ -16481,6 +16530,28 @@ if (mashrabiyaFoldSelect) {
     mashrabiyaFold = sanitizeMashrabiyaFold(mashrabiyaFoldSelect.value, mashrabiyaFold);
     syncMashrabiyaControls();
     redrawForPathChange();
+  });
+}
+
+if (mashrabiyaFillBorderSlider) {
+  mashrabiyaFillBorderSlider.addEventListener('input', () => {
+    mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderSlider.value, mashrabiyaFillBorderWidth);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
+  });
+}
+
+if (advancedMashrabiyaFillBorderInput) {
+  advancedMashrabiyaFillBorderInput.addEventListener('input', () => {
+    if (advancedMashrabiyaFillBorderInput.value === '') return;
+    mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(advancedMashrabiyaFillBorderInput.value, mashrabiyaFillBorderWidth);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
+  });
+  advancedMashrabiyaFillBorderInput.addEventListener('change', () => {
+    mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(advancedMashrabiyaFillBorderInput.value, mashrabiyaFillBorderWidth);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
   });
 }
 
