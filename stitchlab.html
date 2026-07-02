@@ -4026,8 +4026,7 @@ var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
 var mashrabiyaFillBorderWidth = 0;
 var mashrabiyaFillPhaseBeatScale = 1.7;
-var mashrabiyaDevPreviewEnabled = true; // set true to bypass discovery gate during development
-var mashrabiyaDebugLabelsEnabled = true; // set to false for final release
+var mashrabiyaDebugLabelsEnabled = false; // set to false for final release
 var mashrabiyaDebugKeepStitchLinesVisible = false; // debug: force true to inspect line topology
 var mashrabiyaDebugFillOpacityScale = 1;
 var SQUARUS_PIECE_SCALE_FACTOR = 0.75;
@@ -5369,7 +5368,7 @@ function isMashrabiyaExperienceUnlocked() {
 function isExperienceAccessible(experienceId) {
   var resolvedId = resolveExperienceId(experienceId) || 'stitching';
   if (resolvedId === 'mashrabiya') {
-    return mashrabiyaDevPreviewEnabled || isMashrabiyaExperienceUnlocked();
+    return isMashrabiyaExperienceUnlocked();
   }
   return true;
 }
