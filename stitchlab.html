@@ -2743,19 +2743,9 @@ var DISCOVERY_LIBRARY = {
 var DISCOVERY_STABILIZE_MS = 900;
 var ROSETTE_DISCOVERY_RECIPES = [
   {
-    key: 'rosette-12-fold-offset-hexagons',
-    holeCount: 12,
-    allowRotation: true,
-    threads: [
-      { jumpMode: 'fixed', jump: 2, startHole: 1 },
-      { jumpMode: 'fixed', jump: 2, startHole: 2 },
-      { jumpMode: 'fixed', jump: 5, startHole: 1 }
-    ]
-  },
-  {
     key: 'rosette-12-fold-dense-96',
     holeCount: 96,
-    allowRotation: false,
+    allowRotation: true,
     requireNestedFrameEnabled: true,
     requiredNestedFrameRatio: 0.5,
     requiredInnerHoleCount: 48,
@@ -2768,7 +2758,7 @@ var ROSETTE_DISCOVERY_RECIPES = [
   {
     key: 'rosette-8-fold-dense-64',
     holeCount: 64,
-    allowRotation: false,
+    allowRotation: true,
     requireNestedFrameEnabled: true,
     requiredNestedFrameRatio: 0.5,
     requiredInnerHoleCount: 32,
@@ -7182,17 +7172,38 @@ function normalizeRosetteThreadSignature(thread, holeCount, options) {
     rawStartHole = 1;
   }
   var startHole = ((rawStartHole - 1) % sourceHoleCount + sourceHoleCount) % sourceHoleCount + 1;
+  var jumpGcd = getRosetteGreatestCommonDivisor(jump, sourceHoleCount);
+  var startHoleOrbitSize = Math.max(1, jumpGcd);
+  var canonicalStartHole = ((startHole - 1) % startHoleOrbitSize + startHoleOrbitSize) % startHoleOrbitSize + 1;
 
   return {
     jump: jump,
     startHole: startHole,
+    canonicalStartHole: canonicalStartHole,
+    startHoleOrbitSize: startHoleOrbitSize,
     frameMode: frameMode,
     sourceHoleCount: sourceHoleCount
   };
 }
 
+function getRosetteGreatestCommonDivisor(a, b) {
+  var x = Math.abs(Math.round(Number(a) || 0));
+  var y = Math.abs(Math.round(Number(b) || 0));
+  if (!x && !y) return 1;
+  if (!x) return Math.max(1, y);
+  if (!y) return Math.max(1, x);
+  while (y !== 0) {
+    var remainder = x % y;
+    x = y;
+    y = remainder;
+  }
+  return Math.max(1, x);
+}
+
 function buildRosetteSignatureKey(signature) {
-  return String(signature.jump) + '|' + String(signature.startHole) + '|' + String(signature.frameMode || 'outer') + '|' + String(signature.sourceHoleCount || 0);
+  var orbitSize = Math.max(1, parseBoundedInt(signature.startHoleOrbitSize, 1, MAX_HOLES, 1));
+  var canonicalStartHole = parseBoundedInt(signature.canonicalStartHole, 1, orbitSize, parseBoundedInt(signature.startHole, 1, MAX_HOLES, 1));
+  return String(signature.jump) + '|' + String(canonicalStartHole) + '|' + String(signature.frameMode || 'outer') + '|' + String(signature.sourceHoleCount || 0);
 }
 
 function areRosetteSignatureMultisetsEqual(left, right) {
@@ -7218,9 +7229,13 @@ function areRosetteSignatureMultisetsEqual(left, right) {
 
 function rotateRosetteSignature(signature, delta, holeCount) {
   var sourceCount = parseBoundedInt(signature.sourceHoleCount, 3, MAX_HOLES, holeCount);
+  var startHole = ((signature.startHole - 1 + delta) % sourceCount + sourceCount) % sourceCount + 1;
+  var orbitSize = Math.max(1, getRosetteGreatestCommonDivisor(signature.jump, sourceCount));
   return {
     jump: signature.jump,
-    startHole: ((signature.startHole - 1 + delta) % sourceCount + sourceCount) % sourceCount + 1,
+    startHole: startHole,
+    canonicalStartHole: ((startHole - 1) % orbitSize + orbitSize) % orbitSize + 1,
+    startHoleOrbitSize: orbitSize,
     frameMode: signature.frameMode,
     sourceHoleCount: sourceCount
   };
