@@ -2730,13 +2730,22 @@ var DISCOVERY_LIBRARY = {
     passphrase: 'Four points in square or circle scribed, with steps of one do square themselves design.',
     passphraseInputEnabled: true
   },
-  rosette: {
-    title: 'Mystic Rose / Rosette',
+  rosette12: {
+    title: 'Mystic Rose / Rosette (12-fold)',
     icon: '🌹',
-    description: 'Unlocked the path to Mashrabiya.',
+    description: 'Unlocked the 12-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
     songId: 'rosette',
     passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the twelve-petal rose appears.',
+    passphraseInputEnabled: true
+  },
+  rosette8: {
+    title: 'Mystic Rose / Rosette (8-fold)',
+    icon: '🌹',
+    description: 'Unlocked the 8-fold path to Mashrabiya.',
+    experienceName: 'Mashrabiya',
+    songId: 'rosette',
+    passphrase: 'In a 64 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the eight-petal rose appears.',
     passphraseInputEnabled: true
   }
 };
@@ -2744,6 +2753,7 @@ var DISCOVERY_STABILIZE_MS = 900;
 var ROSETTE_DISCOVERY_RECIPES = [
   {
     key: 'rosette-12-fold-dense-96',
+    discoveryKey: 'rosette12',
     holeCount: 96,
     mashrabiyaFold: 12,
     allowRotation: true,
@@ -2758,6 +2768,7 @@ var ROSETTE_DISCOVERY_RECIPES = [
   },
   {
     key: 'rosette-8-fold-dense-64',
+    discoveryKey: 'rosette8',
     holeCount: 64,
     mashrabiyaFold: 8,
     allowRotation: true,
@@ -2775,7 +2786,6 @@ var DISCOVERY_FLOAT_DURATION_MS = 4400;
 var RETURN_TO_STITCHING_TRAIL_DURATION_MS = 350;
 var discoveryTimer = null;
 var discoveredShapeKeys = Object.create(null);
-var lastDiscoveredRosetteRecipeKey = null;
 var unlockedSongIds = [];
 var currentSongId = 'bach';
 var hasUnseenDiscoveries = false;
@@ -4162,7 +4172,7 @@ function getDiscoveryKeyForExperience(experienceId) {
   var resolved = resolveExperienceId(experienceId);
   if (resolved === 'triangula') return 'triangle';
   if (resolved === 'squarus') return 'square';
-  if (resolved === 'mashrabiya') return 'rosette';
+  if (resolved === 'mashrabiya') return 'rosette12';
   return null;
 }
 
@@ -5355,7 +5365,7 @@ function resolveExperienceId(experienceRef) {
 }
 
 function isMashrabiyaExperienceUnlocked() {
-  return !!discoveredShapeKeys.rosette;
+  return !!(discoveredShapeKeys.rosette8 || discoveredShapeKeys.rosette12);
 }
 
 function isExperienceAccessible(experienceId) {
@@ -6860,8 +6870,9 @@ function renderDiscoveryLibrary() {
           return;
         }
 
-        if (discoveryKey === 'rosette' && experienceId === 'mashrabiya') {
-          applyLastDiscoveredRosetteFoldPreference();
+        if ((discoveryKey === 'rosette8' || discoveryKey === 'rosette12') && experienceId === 'mashrabiya') {
+          mashrabiyaFold = (discoveryKey === 'rosette8') ? 8 : 12;
+          persistMashrabiyaStateCache();
         }
 
         setCurrentExperience(experienceId);
@@ -6989,38 +7000,6 @@ function getDiscoveryCandidateThreads() {
     return [threads[selectedThreadIndex]];
   }
   return threads.slice();
-}
-
-function getRosetteDiscoveryRecipeByKey(recipeKey) {
-  if (!recipeKey) return null;
-  for (var i = 0; i < ROSETTE_DISCOVERY_RECIPES.length; i++) {
-    if (ROSETTE_DISCOVERY_RECIPES[i] && ROSETTE_DISCOVERY_RECIPES[i].key === recipeKey) {
-      return ROSETTE_DISCOVERY_RECIPES[i];
-    }
-  }
-  return null;
-}
-
-function getMashrabiyaFoldForRosetteRecipe(recipe) {
-  if (!recipe) return sanitizeMashrabiyaFold(12, 12);
-  if (isFinite(recipe.mashrabiyaFold)) {
-    return sanitizeMashrabiyaFold(recipe.mashrabiyaFold, 12);
-  }
-  var holeCount = parseBoundedInt(recipe.holeCount, 3, MAX_HOLES, 96);
-  if (holeCount === 64) return 8;
-  return 12;
-}
-
-function recordLastDiscoveredRosetteRecipe(recipe) {
-  if (!recipe || !recipe.key) return;
-  lastDiscoveredRosetteRecipeKey = recipe.key;
-}
-
-function applyLastDiscoveredRosetteFoldPreference() {
-  var recipe = getRosetteDiscoveryRecipeByKey(lastDiscoveredRosetteRecipeKey);
-  if (!recipe) return;
-  mashrabiyaFold = getMashrabiyaFoldForRosetteRecipe(recipe);
-  persistMashrabiyaStateCache();
 }
 
 function buildUndirectedGraphFromSegments(segments, pointCount) {
@@ -7411,8 +7390,7 @@ function evaluateDiscoveryCandidates() {
   }
   var matchingRosetteRecipe = findMatchingRosetteDiscoveryRecipe();
   if (matchingRosetteRecipe) {
-    recordLastDiscoveredRosetteRecipe(matchingRosetteRecipe);
-    unlockDiscovery('rosette');
+    unlockDiscovery(matchingRosetteRecipe.discoveryKey || 'rosette12');
   }
 
   if (activeShape !== currentShape) {
