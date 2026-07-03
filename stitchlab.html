@@ -1054,17 +1054,17 @@
     margin-top: auto;
   }
   .discovery-card.is-preview {
-    background: #f2f4f8;
-    border-color: #cbd2dc;
+    background: var(--ui-discovery-preview-bg, #f2f4f8);
+    border-color: var(--ui-discovery-preview-border, #cbd2dc);
   }
   .discovery-card.is-preview h4,
   .discovery-card.is-preview p,
   .discovery-card.is-preview .discovery-passphrase {
-    color: #7c8697;
+    color: var(--ui-discovery-preview-text, #7c8697);
   }
   .discovery-card.is-preview .discovery-passphrase {
-    border-color: #bcc6d6;
-    background: #ebeff6;
+    border-color: var(--ui-discovery-preview-passphrase-border, #bcc6d6);
+    background: var(--ui-discovery-preview-passphrase-bg, #ebeff6);
   }
   .discovery-card.is-preview .advanced-reset-btn {
     opacity: 0.72;
@@ -1615,6 +1615,11 @@
     --ui-pane-text: #d7e0ec;
     --ui-pane-muted-text: #aeb9c8;
     --ui-focus-outline: #7ab6ff;
+    --ui-discovery-preview-bg: #2c3138;
+    --ui-discovery-preview-border: #454d58;
+    --ui-discovery-preview-text: #a0acbc;
+    --ui-discovery-preview-passphrase-bg: #323943;
+    --ui-discovery-preview-passphrase-border: #4a5564;
   }
 
   body {
@@ -1685,22 +1690,6 @@
     background: var(--ui-pane-soft-surface);
     border-color: var(--ui-pane-soft-border);
     color: var(--ui-pane-text);
-  }
-
-  .discovery-card.is-preview {
-    background: #2c3138;
-    border-color: #454d58;
-  }
-
-  .discovery-card.is-preview h4,
-  .discovery-card.is-preview p,
-  .discovery-card.is-preview .discovery-passphrase {
-    color: #a0acbc;
-  }
-
-  .discovery-card.is-preview .discovery-passphrase {
-    background: #323943;
-    border-color: #4a5564;
   }
 
   #close-advanced,
@@ -6933,9 +6922,11 @@ function renderDiscoveryLibrary() {
     var text = document.createElement('p');
     var previewShapeName = String(config.previewShapeName || config.title || 'shape');
     var previewExperienceName = String(config.experienceName || 'experience');
+    var previewShapeForArticle = previewShapeName.replace(/^[^A-Za-z]+/, '');
+    var previewArticle = (/^[AEIOUaeiou]/.test(previewShapeForArticle)) ? 'an' : 'a';
     text.textContent = isUnlocked
       ? config.description
-      : ('Discover the ' + previewShapeName + ' in Stitching to unlock travel to ' + previewExperienceName + '.');
+      : ('Stitch ' + previewArticle + ' ' + previewShapeName + ' to unlock travel to ' + previewExperienceName + '.');
     card.appendChild(text);
 
     if (config.passphrase) {
