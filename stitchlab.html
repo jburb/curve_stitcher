@@ -1032,6 +1032,33 @@
     margin: 0 0 5px;
     font-size: 14px;
     color: #2f4368;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .discovery-card-icon-chip {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    box-sizing: border-box;
+    padding: 2px;
+    border-radius: 7px;
+    border: 1px solid var(--ui-discovery-icon-chip-border, #c9d7ee);
+    background: var(--ui-discovery-icon-chip-bg, #eef3fb);
+    display: inline-block;
+  }
+  .discovery-card-icon-chip.is-preview {
+    background: var(--ui-discovery-preview-icon-chip-bg, #e4ebf6);
+    border-color: var(--ui-discovery-preview-icon-chip-border, #bcc9dd);
+  }
+  .discovery-card-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .discovery-card-icon.is-preview {
+    filter: var(--ui-discovery-preview-icon-filter, contrast(1.5) brightness(0.62));
   }
   .discovery-card p {
     margin: 0 0 8px;
@@ -1598,6 +1625,11 @@
     --ui-pane-text: #2f4368;
     --ui-pane-muted-text: #5f7090;
     --ui-focus-outline: #1982c4;
+    --ui-discovery-icon-chip-bg: #ffffff;
+    --ui-discovery-icon-chip-border: #c9d7ee;
+    --ui-discovery-preview-icon-chip-bg: #ffffff;
+    --ui-discovery-preview-icon-chip-border: #bcc9dd;
+    --ui-discovery-preview-icon-filter: contrast(1.5) brightness(0.62);
   }
 
   html[data-theme="dark"] {
@@ -1620,6 +1652,11 @@
     --ui-discovery-preview-text: #a0acbc;
     --ui-discovery-preview-passphrase-bg: #323943;
     --ui-discovery-preview-passphrase-border: #4a5564;
+    --ui-discovery-icon-chip-bg: #ffffff;
+    --ui-discovery-icon-chip-border: #46546b;
+    --ui-discovery-preview-icon-chip-bg: #ffffff;
+    --ui-discovery-preview-icon-chip-border: #546176;
+    --ui-discovery-preview-icon-filter: contrast(1.25) brightness(1.22);
   }
 
   body {
@@ -2761,22 +2798,22 @@ var DISCOVERY_LIBRARY = {
     passphraseInputEnabled: true
   },
   rosette12: {
-    title: 'Mystic Rose / Rosette (12-fold)',
+    title: 'Rosette (12-fold)',
     icon: '🌹',
     description: 'Discovered the 12-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
-    previewShapeName: 'Mystic Rose / Rosette (12-fold)',
+    previewShapeName: 'Rosette (12-fold)',
     songId: 'rosette',
     passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the twelve-petal rose appears.',
     passphrasePreviewStep: 'In a 96-point circle',
     passphraseInputEnabled: true
   },
   rosette8: {
-    title: 'Mystic Rose / Rosette (8-fold)',
+    title: 'Rosette (8-fold)',
     icon: '🌹',
     description: 'Discovered the 8-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
-    previewShapeName: 'Mystic Rose / Rosette (8-fold)',
+    previewShapeName: 'Rosette (8-fold)',
     songId: 'rosette',
     passphrase: 'In a 64 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the eight-petal rose appears.',
     passphrasePreviewStep: 'In a 64-point circle',
@@ -6845,6 +6882,23 @@ function getDiscoveryPassphrasePreview(config) {
   return 'Passphrase hint: ' + candidate + '...';
 }
 
+function getDiscoveryIconPath(discoveryKey, isUnlocked) {
+  var iconName = null;
+  if (discoveryKey === 'triangle') {
+    iconName = 'triangle';
+  } else if (discoveryKey === 'square') {
+    iconName = 'square';
+  } else if (discoveryKey === 'rosette12') {
+    iconName = 'rosette_12fold';
+  } else if (discoveryKey === 'rosette8') {
+    iconName = 'rosette_8fold';
+  }
+
+  if (!iconName) return '';
+  var suffix = isUnlocked ? 'color' : 'bw';
+  return 'assets/images/icons/stitchlab-stitching-stitchlab_' + iconName + '_' + suffix + '.svg';
+}
+
 function renderSongPicker() {
   if (!kidSongToggle || !kidSongMenu) return;
 
@@ -6916,7 +6970,24 @@ function renderDiscoveryLibrary() {
     card.className = 'discovery-card' + (isUnlocked ? '' : ' is-preview');
 
     var title = document.createElement('h4');
-    title.textContent = config.icon + ' ' + config.title;
+    var iconPath = getDiscoveryIconPath(key, isUnlocked);
+    if (iconPath) {
+      var iconChip = document.createElement('span');
+      iconChip.className = 'discovery-card-icon-chip' + (isUnlocked ? ' is-unlocked' : ' is-preview');
+      iconChip.setAttribute('aria-hidden', 'true');
+
+      var iconImage = document.createElement('img');
+      iconImage.className = 'discovery-card-icon' + (isUnlocked ? ' is-unlocked' : ' is-preview');
+      iconImage.src = iconPath;
+      iconImage.alt = '';
+      iconImage.setAttribute('aria-hidden', 'true');
+      iconChip.appendChild(iconImage);
+      title.appendChild(iconChip);
+    }
+
+    var titleLabel = document.createElement('span');
+    titleLabel.textContent = config.title;
+    title.appendChild(titleLabel);
     card.appendChild(title);
 
     var text = document.createElement('p');
