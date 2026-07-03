@@ -1024,11 +1024,41 @@
     border-radius: 10px;
     padding: 10px;
     margin: 0 0 10px;
+    min-height: 154px;
+    display: flex;
+    flex-direction: column;
   }
   .discovery-card h4 {
     margin: 0 0 5px;
     font-size: 14px;
     color: #2f4368;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .discovery-card-icon-chip {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    box-sizing: border-box;
+    padding: 2px;
+    border-radius: 7px;
+    border: 1px solid var(--ui-discovery-icon-chip-border, #c9d7ee);
+    background: var(--ui-discovery-icon-chip-bg, #eef3fb);
+    display: inline-block;
+  }
+  .discovery-card-icon-chip.is-preview {
+    background: var(--ui-discovery-preview-icon-chip-bg, #e4ebf6);
+    border-color: var(--ui-discovery-preview-icon-chip-border, #bcc9dd);
+  }
+  .discovery-card-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .discovery-card-icon.is-preview {
+    filter: var(--ui-discovery-preview-icon-filter, contrast(1.5) brightness(0.62));
   }
   .discovery-card p {
     margin: 0 0 8px;
@@ -1048,6 +1078,24 @@
   }
   .discovery-card .advanced-reset-btn {
     font-size: 12px;
+    margin-top: auto;
+  }
+  .discovery-card.is-preview {
+    background: var(--ui-discovery-preview-bg, #f2f4f8);
+    border-color: var(--ui-discovery-preview-border, #cbd2dc);
+  }
+  .discovery-card.is-preview h4,
+  .discovery-card.is-preview p,
+  .discovery-card.is-preview .discovery-passphrase {
+    color: var(--ui-discovery-preview-text, #7c8697);
+  }
+  .discovery-card.is-preview .discovery-passphrase {
+    border-color: var(--ui-discovery-preview-passphrase-border, #bcc6d6);
+    background: var(--ui-discovery-preview-passphrase-bg, #ebeff6);
+  }
+  .discovery-card.is-preview .advanced-reset-btn {
+    opacity: 0.72;
+    cursor: not-allowed;
   }
   .discovery-passphrase-entry {
     margin: 0 0 12px;
@@ -1577,6 +1625,11 @@
     --ui-pane-text: #2f4368;
     --ui-pane-muted-text: #5f7090;
     --ui-focus-outline: #1982c4;
+    --ui-discovery-icon-chip-bg: #ffffff;
+    --ui-discovery-icon-chip-border: #c9d7ee;
+    --ui-discovery-preview-icon-chip-bg: #ffffff;
+    --ui-discovery-preview-icon-chip-border: #bcc9dd;
+    --ui-discovery-preview-icon-filter: contrast(1.5) brightness(0.62);
   }
 
   html[data-theme="dark"] {
@@ -1594,6 +1647,16 @@
     --ui-pane-text: #d7e0ec;
     --ui-pane-muted-text: #aeb9c8;
     --ui-focus-outline: #7ab6ff;
+    --ui-discovery-preview-bg: #3a424d;
+    --ui-discovery-preview-border: #69768a;
+    --ui-discovery-preview-text: #c2ccda;
+    --ui-discovery-preview-passphrase-bg: #4b5665;
+    --ui-discovery-preview-passphrase-border: #7b8aa1;
+    --ui-discovery-icon-chip-bg: #ffffff;
+    --ui-discovery-icon-chip-border: #46546b;
+    --ui-discovery-preview-icon-chip-bg: #ffffff;
+    --ui-discovery-preview-icon-chip-border: #546176;
+    --ui-discovery-preview-icon-filter: contrast(1.25) brightness(1.22);
   }
 
   body {
@@ -2715,37 +2778,45 @@ var DISCOVERY_LIBRARY = {
   triangle: {
     title: 'Equilateral Triangle',
     icon: '🔺',
-    description: 'Unlocked the path to Triangula.',
+    description: 'Discovered the path to Triangula.',
     experienceName: 'Triangula',
+    previewShapeName: 'Equilateral Triangle',
     songId: 'triangle',
     passphrase: 'Holes of three and step of one do this tri-angled creature make, if they\'re set in even shape.',
+    passphrasePreviewStep: 'Holes of three',
     passphraseInputEnabled: true
   },
   square: {
     title: 'Square',
     icon: '⬜',
-    description: 'Unlocked the path to Squarus.',
+    description: 'Discovered the path to Squarus.',
     experienceName: 'Squarus',
+    previewShapeName: 'Square',
     songId: 'square',
     passphrase: 'Four points in square or circle scribed, with steps of one do square themselves design.',
+    passphrasePreviewStep: 'Four points in square or circle',
     passphraseInputEnabled: true
   },
   rosette12: {
-    title: 'Mystic Rose / Rosette (12-fold)',
+    title: 'Rosette (12-fold)',
     icon: '🌹',
-    description: 'Unlocked the 12-fold path to Mashrabiya.',
+    description: 'Discovered the 12-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
+    previewShapeName: 'Rosette (12-fold)',
     songId: 'rosette',
-    passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the twelve-petal rose appears.',
+    passphrase: 'In circle of 96, for hexagons from 1 and 9 there\'s room. From inner frame of 1/2, projected thread by 20s makes twelve petals bloom.',
+    passphrasePreviewStep: 'In circle of 96, for hexexagons from 1 and 9',
     passphraseInputEnabled: true
   },
   rosette8: {
-    title: 'Mystic Rose / Rosette (8-fold)',
+    title: 'Rosette (8-fold)',
     icon: '🌹',
-    description: 'Unlocked the 8-fold path to Mashrabiya.',
+    description: 'Discovered the 8-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
+    previewShapeName: 'Rosette (8-fold)',
     songId: 'rosette',
-    passphrase: 'In a 64 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the eight-petal rose appears.',
+    passphrase: 'In circle of 64, for hexagons from 1 and 9 there\'s room. From inner frame of 1/2, projected thread by 20s makes eight petals bloom.',
+    passphrasePreviewStep: 'In circle of 64, for hexagons from 1 and 9',
     passphraseInputEnabled: true
   }
 };
@@ -6778,6 +6849,56 @@ function repeatSongLabel(label) {
   return clean.toUpperCase();
 }
 
+function getDiscoveryPassphrasePreview(config) {
+  if (!config || typeof config !== 'object') return 'Passphrase hint: ...';
+  var explicitStep = String(config.passphrasePreviewStep || '').replace(/\s+/g, ' ').trim();
+  if (explicitStep) {
+    return 'Passphrase hint: ' + explicitStep.replace(/[,:;.!?]+$/g, '') + '...';
+  }
+
+  var text = String(config.passphrase || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 'Passphrase hint: ...';
+
+  var clauses = text.split(/[;:.!?]/).map(function(part) {
+    return part.trim();
+  }).filter(function(part) {
+    return !!part;
+  });
+
+  var candidate = clauses.length ? clauses[0] : text;
+  var words = candidate.split(' ').filter(function(word) {
+    return !!word;
+  });
+
+  if (words.length > 10) {
+    candidate = words.slice(0, 10).join(' ');
+  }
+
+  candidate = candidate.replace(/[,:;.!?]+$/g, '').trim();
+  if (!candidate) {
+    candidate = 'Pattern details';
+  }
+
+  return 'Passphrase hint: ' + candidate + '...';
+}
+
+function getDiscoveryIconPath(discoveryKey, isUnlocked) {
+  var iconName = null;
+  if (discoveryKey === 'triangle') {
+    iconName = 'triangle';
+  } else if (discoveryKey === 'square') {
+    iconName = 'square';
+  } else if (discoveryKey === 'rosette12') {
+    iconName = 'rosette_12fold';
+  } else if (discoveryKey === 'rosette8') {
+    iconName = 'rosette_8fold';
+  }
+
+  if (!iconName) return '';
+  var suffix = isUnlocked ? 'color' : 'bw';
+  return 'assets/images/icons/stitchlab-stitching-stitchlab_' + iconName + '_' + suffix + '.svg';
+}
+
 function renderSongPicker() {
   if (!kidSongToggle || !kidSongMenu) return;
 
@@ -6827,36 +6948,75 @@ function renderDiscoveryLibrary() {
   discoveryCards.innerHTML = '';
 
   var keys = Object.keys(DISCOVERY_LIBRARY);
-  var unlockedCount = 0;
+  var unlockedKeys = [];
+  var lockedKeys = [];
 
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (!discoveredShapeKeys[key]) continue;
-    unlockedCount++;
+  for (var index = 0; index < keys.length; index++) {
+    if (discoveredShapeKeys[keys[index]]) {
+      unlockedKeys.push(keys[index]);
+    } else {
+      lockedKeys.push(keys[index]);
+    }
+  }
+
+  var orderedKeys = unlockedKeys.concat(lockedKeys);
+
+  for (var i = 0; i < orderedKeys.length; i++) {
+    var key = orderedKeys[i];
+    var isUnlocked = !!discoveredShapeKeys[key];
 
     var config = DISCOVERY_LIBRARY[key];
     var card = document.createElement('div');
-    card.className = 'discovery-card';
+    card.className = 'discovery-card' + (isUnlocked ? '' : ' is-preview');
 
     var title = document.createElement('h4');
-    title.textContent = config.icon + ' ' + config.title;
+    var iconPath = getDiscoveryIconPath(key, isUnlocked);
+    if (iconPath) {
+      var iconChip = document.createElement('span');
+      iconChip.className = 'discovery-card-icon-chip' + (isUnlocked ? ' is-unlocked' : ' is-preview');
+      iconChip.setAttribute('aria-hidden', 'true');
+
+      var iconImage = document.createElement('img');
+      iconImage.className = 'discovery-card-icon' + (isUnlocked ? ' is-unlocked' : ' is-preview');
+      iconImage.src = iconPath;
+      iconImage.alt = '';
+      iconImage.setAttribute('aria-hidden', 'true');
+      iconChip.appendChild(iconImage);
+      title.appendChild(iconChip);
+    }
+
+    var titleLabel = document.createElement('span');
+    titleLabel.textContent = config.title;
+    title.appendChild(titleLabel);
     card.appendChild(title);
 
     var text = document.createElement('p');
-    text.textContent = config.description;
+    var previewShapeName = String(config.previewShapeName || config.title || 'shape');
+    var previewExperienceName = String(config.experienceName || 'experience');
+    var previewShapeForArticle = previewShapeName.replace(/^[^A-Za-z]+/, '');
+    var previewArticle = (/^[AEIOUaeiou]/.test(previewShapeForArticle)) ? 'an' : 'a';
+    text.textContent = isUnlocked
+      ? config.description
+      : ('Stitch ' + previewArticle + ' ' + previewShapeName + ' to unlock travel to ' + previewExperienceName + '.');
     card.appendChild(text);
 
     if (config.passphrase) {
       var passphrase = document.createElement('p');
       passphrase.className = 'discovery-passphrase';
-      passphrase.textContent = 'Passphrase: ' + config.passphrase;
+      passphrase.textContent = isUnlocked
+        ? ('Passphrase: ' + config.passphrase)
+        : getDiscoveryPassphrasePreview(config);
       card.appendChild(passphrase);
     }
 
     var action = document.createElement('button');
     action.type = 'button';
     action.className = 'advanced-reset-btn';
-    action.textContent = 'Travel to ' + config.experienceName;
+    action.textContent = isUnlocked
+      ? ('Travel to ' + config.experienceName)
+      : ('Locked: ' + config.experienceName);
+    action.disabled = !isUnlocked;
+    action.setAttribute('aria-disabled', isUnlocked ? 'false' : 'true');
     action.addEventListener('click', function(experienceName, songId, discoveryKey) {
       return function() {
         var experienceId = resolveExperienceId(experienceName);
@@ -6884,13 +7044,6 @@ function renderDiscoveryLibrary() {
     card.appendChild(action);
 
     discoveryCards.appendChild(card);
-  }
-
-  if (!unlockedCount) {
-    var empty = document.createElement('div');
-    empty.className = 'advanced-global-help';
-    empty.textContent = 'No explorable shapes discovered yet. Keep stitching new patterns to find one!';
-    discoveryCards.appendChild(empty);
   }
 
   renderSongPicker();
@@ -7164,6 +7317,26 @@ function threadHasSquareDiscovery(thread) {
   return false;
 }
 
+function isPerfectSquareInteger(value) {
+  var n = parseInt(value, 10);
+  if (!isFinite(n) || n < 1) return false;
+  var root = Math.round(Math.sqrt(n));
+  return root * root === n;
+}
+
+function threadHasSquareFramePerfectSquareDiscovery(thread, activeShape, holeCount) {
+  if (activeShape !== 'square') return false;
+  if (!thread) return false;
+  if (!isPerfectSquareInteger(holeCount)) return false;
+
+  var jumpMode = sanitizeThreadJumpMode(thread.jumpMode, 'fixed');
+  if (jumpMode !== 'fixed') return false;
+
+  var jump = parseInt(thread.jump, 10);
+  if (!isFinite(jump)) return false;
+  return jump === 1;
+}
+
 function normalizeRosetteThreadSignature(thread, holeCount, options) {
   options = options || {};
   if (!thread || !isFinite(holeCount) || holeCount < 3) return null;
@@ -7362,6 +7535,7 @@ function evaluateDiscoveryCandidates() {
   if (currentExperienceId !== 'stitching') return;
 
   var activeShape = currentShape;
+  var activeHoleCount = parseInt(holesSlider.value, 10);
   if (activeShape !== 'circle') {
     // Keep discovery criteria consistent across stitching frames.
     currentShape = 'circle';
@@ -7376,7 +7550,7 @@ function evaluateDiscoveryCandidates() {
     if (!foundTriangle && threadHasEquilateralTriangleDiscovery(candidates[i])) {
       foundTriangle = true;
     }
-    if (!foundSquare && threadHasSquareDiscovery(candidates[i])) {
+    if (!foundSquare && (threadHasSquareDiscovery(candidates[i]) || threadHasSquareFramePerfectSquareDiscovery(candidates[i], activeShape, activeHoleCount))) {
       foundSquare = true;
     }
     if (foundTriangle && foundSquare) break;

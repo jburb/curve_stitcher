@@ -578,4 +578,174 @@ test.describe('StitchLab regressions', () => {
     expect(probe.fold12.debugOff.areaRatios.point).toBeCloseTo(1, 6);
     expect(probe.fold12.debugOff.areaRatios.petal).toBeCloseTo(1, 6);
   });
+
+  test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function makeThread(options) {
+        options = options || {};
+        return {
+          jump: Number(options.jump || 1),
+          width: Number(options.width || 2),
+          color: String(options.color || '#1982c4'),
+          solidColor: String(options.solidColor || '#1982c4'),
+          startHole: Number(options.startHole || 1),
+          sequence: null,
+          jumpMode: String(options.jumpMode || 'fixed'),
+          jumpFormula: String(options.jumpFormula || 'skip'),
+          jumpSequence: String(options.jumpSequence || ''),
+          connectMultiplier: Number(options.connectMultiplier || 2),
+          connectOffset: Number(options.connectOffset || 0),
+          frameMode: String(options.frameMode || 'outer'),
+          sourceHoleCount: options.sourceHoleCount ? Number(options.sourceHoleCount) : undefined
+        };
+      }
+
+      function setHoleCount(value) {
+        if (!window.holesSlider) return;
+        window.holesSlider.value = String(value);
+        if (window.advancedHolesNumberInput) {
+          window.advancedHolesNumberInput.value = String(value);
+        }
+      }
+
+      function resetDiscoveryState() {
+        window.discoveredShapeKeys = Object.create(null);
+        window.unlockedSongIds = [];
+        window.hasUnseenDiscoveries = false;
+        window.hasUnseenSongUnlock = false;
+        if (typeof window.renderDiscoveryLibrary === 'function') {
+          window.renderDiscoveryLibrary();
+        }
+      }
+
+      function cardStatusForTitle(titleText) {
+        var cardsRoot = document.getElementById('discovery-cards');
+        if (!cardsRoot) {
+          return { found: false, unlocked: false, preview: false, actionText: '' };
+        }
+
+        var cards = Array.prototype.slice.call(cardsRoot.querySelectorAll('.discovery-card'));
+        for (var i = 0; i < cards.length; i++) {
+          var titleNode = cards[i].querySelector('h4');
+          var currentTitle = titleNode ? String(titleNode.textContent || '').replace(/\s+/g, ' ').trim() : '';
+          if (currentTitle.indexOf(String(titleText || '')) === -1) continue;
+          var actionBtn = cards[i].querySelector('button');
+          var actionText = actionBtn ? String(actionBtn.textContent || '').trim() : '';
+          return {
+            found: true,
+            preview: cards[i].classList.contains('is-preview'),
+            unlocked: !cards[i].classList.contains('is-preview') && /^Travel to\s+/i.test(actionText),
+            actionText: actionText
+          };
+        }
+
+        return { found: false, unlocked: false, preview: false, actionText: '' };
+      }
+
+      function runCandidate(candidate) {
+        var discoveryEntry = window.DISCOVERY_LIBRARY && window.DISCOVERY_LIBRARY[candidate.discoveryKey]
+          ? window.DISCOVERY_LIBRARY[candidate.discoveryKey]
+          : null;
+        var cardTitle = discoveryEntry && discoveryEntry.title
+          ? String(discoveryEntry.title)
+          : String(candidate.discoveryKey || '');
+
+        if (typeof window.setCurrentExperience === 'function') {
+          window.setCurrentExperience('stitching', { suppressUrlSync: true });
+        } else {
+          window.currentExperienceId = 'stitching';
+        }
+
+        if (typeof window.setCurrentShape === 'function') {
+          window.setCurrentShape(candidate.shape, false);
+        } else {
+          window.currentShape = candidate.shape;
+        }
+
+        window.nestedFrameEnabled = !!candidate.nestedFrameEnabled;
+        window.nestedFrameRatio = Number(candidate.nestedFrameRatio || 0.5);
+        setHoleCount(candidate.holes);
+
+        window.threads = candidate.threads.map(function(thread) {
+          return makeThread(thread);
+        });
+        window.selectedThreadIndex = 0;
+
+        if (typeof window.computePoints === 'function') {
+          window.computePoints();
+        }
+        if (typeof window.evaluateDiscoveryCandidates === 'function') {
+          window.evaluateDiscoveryCandidates();
+        }
+
+        var discovered = !!window.discoveredShapeKeys[candidate.discoveryKey];
+        var card = cardStatusForTitle(cardTitle);
+        return {
+          key: candidate.discoveryKey,
+          discovered: discovered,
+          card: card
+        };
+      }
+
+      resetDiscoveryState();
+
+      var candidates = [
+        {
+          discoveryKey: 'triangle',
+          shape: 'circle',
+          holes: 3,
+          nestedFrameEnabled: false,
+          nestedFrameRatio: 0.5,
+          threads: [
+            { jumpMode: 'fixed', jump: 1, startHole: 1 }
+          ]
+        },
+        {
+          discoveryKey: 'square',
+          shape: 'square',
+          holes: 16,
+          nestedFrameEnabled: false,
+          nestedFrameRatio: 0.5,
+          threads: [
+            { jumpMode: 'fixed', jump: 1, startHole: 1 }
+          ]
+        },
+        {
+          discoveryKey: 'rosette8',
+          shape: 'circle',
+          holes: 64,
+          nestedFrameEnabled: true,
+          nestedFrameRatio: 0.5,
+          threads: [
+            { jumpMode: 'fixed', jump: 16, startHole: 1 },
+            { jumpMode: 'fixed', jump: 16, startHole: 9 },
+            { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 32 }
+          ]
+        },
+        {
+          discoveryKey: 'rosette12',
+          shape: 'circle',
+          holes: 96,
+          nestedFrameEnabled: true,
+          nestedFrameRatio: 0.5,
+          threads: [
+            { jumpMode: 'fixed', jump: 16, startHole: 1 },
+            { jumpMode: 'fixed', jump: 16, startHole: 9 },
+            { jumpMode: 'fixed', jump: 20, startHole: 3, frameMode: 'bridge-reverse-project', sourceHoleCount: 48 }
+          ]
+        }
+      ];
+
+      return candidates.map(runCandidate);
+    });
+
+    for (const result of probe) {
+      expect(result.discovered, `Expected ${result.key} to unlock`).toBe(true);
+      expect(result.card.found, `Expected ${result.key} card to be present`).toBe(true);
+      expect(result.card.preview, `Expected ${result.key} card to leave preview mode`).toBe(false);
+      expect(result.card.unlocked, `Expected ${result.key} card action to be travel-enabled`).toBe(true);
+    }
+  });
 });
