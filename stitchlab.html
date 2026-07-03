@@ -7246,6 +7246,26 @@ function threadHasSquareDiscovery(thread) {
   return false;
 }
 
+function isPerfectSquareInteger(value) {
+  var n = parseInt(value, 10);
+  if (!isFinite(n) || n < 1) return false;
+  var root = Math.round(Math.sqrt(n));
+  return root * root === n;
+}
+
+function threadHasSquareFramePerfectSquareDiscovery(thread, activeShape, holeCount) {
+  if (activeShape !== 'square') return false;
+  if (!thread) return false;
+  if (!isPerfectSquareInteger(holeCount)) return false;
+
+  var jumpMode = sanitizeThreadJumpMode(thread.jumpMode, 'fixed');
+  if (jumpMode !== 'fixed') return false;
+
+  var jump = parseInt(thread.jump, 10);
+  if (!isFinite(jump)) return false;
+  return jump === 1;
+}
+
 function normalizeRosetteThreadSignature(thread, holeCount, options) {
   options = options || {};
   if (!thread || !isFinite(holeCount) || holeCount < 3) return null;
@@ -7444,6 +7464,7 @@ function evaluateDiscoveryCandidates() {
   if (currentExperienceId !== 'stitching') return;
 
   var activeShape = currentShape;
+  var activeHoleCount = parseInt(holesSlider.value, 10);
   if (activeShape !== 'circle') {
     // Keep discovery criteria consistent across stitching frames.
     currentShape = 'circle';
@@ -7458,7 +7479,7 @@ function evaluateDiscoveryCandidates() {
     if (!foundTriangle && threadHasEquilateralTriangleDiscovery(candidates[i])) {
       foundTriangle = true;
     }
-    if (!foundSquare && threadHasSquareDiscovery(candidates[i])) {
+    if (!foundSquare && (threadHasSquareDiscovery(candidates[i]) || threadHasSquareFramePerfectSquareDiscovery(candidates[i], activeShape, activeHoleCount))) {
       foundSquare = true;
     }
     if (foundTriangle && foundSquare) break;
