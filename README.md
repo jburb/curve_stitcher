@@ -55,10 +55,9 @@ Contributor terms:
 
 ## Current Milestones
 
-1. Mashrabiya experience
+1. Stitch library (offline-first)
 2. Experience title bar (animated stitched reveal)
-3. Stitch library (offline-first)
-4. Advanced stitch ribbon motion (Option 4)
+3. Advanced stitch ribbon motion (Option 4)
 
 ## Recently Completed
 
@@ -75,26 +74,24 @@ Contributor terms:
 11. Triangula
 12. Dynamic add/multiply bounds guardrail
 14. Squarus
+15. Mashrabiya
+16. Discovery Preview Cards
 
 ## TODO Backlog
 
-1. **Mashrabiya experience**
-	- Entry trigger and transition:
-	  - Allow edge/line styling controls where relevant to preserve geometric legibility at different fold counts.
-
-2. **Stitch library (offline-first)**
+1. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-3. **Experience title bar (animated stitched reveal)**
+2. **Experience title bar (animated stitched reveal)**
 	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
 	- Trigger the reveal on initial page load and on transition into a new experience/world.
 	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
 	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
 
-4. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+3. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
@@ -110,7 +107,6 @@ Contributor terms:
 
 ## Suggested Delivery Order
 
-1. Mashrabiya experience
-2. Stitch library (offline-first)
-3. Experience title bar (animated stitched reveal)
-4. Advanced stitch ribbon motion (Option 4)
+1. Stitch library (offline-first)
+2. Experience title bar (animated stitched reveal)
+3. Advanced stitch ribbon motion (Option 4)
