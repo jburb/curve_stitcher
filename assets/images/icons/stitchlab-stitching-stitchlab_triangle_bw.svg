@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="588" height="588" viewBox="0 0 588 588">
+<line x1="115.772" y1="396.9" x2="294" y2="88.2" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="294" y1="88.2" x2="472.228" y2="396.9" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="472.228" y1="396.9" x2="115.772" y2="396.9" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="294" cy="88.2" r="3" fill="#333"/>
+<circle cx="472.228" cy="396.9" r="3" fill="#333"/>
+<circle cx="115.772" cy="396.9" r="3" fill="#333"/>
+</svg>
