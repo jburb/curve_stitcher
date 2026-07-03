@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="584" height="584" viewBox="0 0 584 584">
+<rect x="0" y="0" width="584" height="584" fill="#ffffff"/>
+<path d="M 292 63.89 L 306.919 64.378 L 321.774 65.841 L 336.502 68.273 L 351.039 71.662 L 365.324 75.995 L 379.294 81.253 L 392.891 87.414 L 406.055 94.451 L 418.731 102.333 L 430.865 111.028 L 442.404 120.498 L 453.298 130.702 L 463.502 141.596 L 472.972 153.135 L 481.667 165.269 L 489.549 177.945 L 496.586 191.109 L 502.747 204.706 L 508.005 218.676 L 512.338 232.961 L 515.727 247.498 L 518.159 262.226 L 519.622 277.081 L 520.11 292 L 519.622 306.919 L 518.159 321.774 L 515.727 336.502 L 512.338 351.039 L 508.005 365.324 L 502.747 379.294 L 496.586 392.891 L 489.549 406.055 L 481.667 418.731 L 472.972 430.865 L 463.502 442.404 L 453.298 453.298 L 442.404 463.502 L 430.865 472.972 L 418.731 481.667 L 406.055 489.549 L 392.891 496.586 L 379.294 502.747 L 365.324 508.005 L 351.039 512.338 L 336.502 515.727 L 321.774 518.159 L 306.919 519.622 L 292 520.11 L 277.081 519.622 L 262.226 518.159 L 247.498 515.727 L 232.961 512.338 L 218.676 508.005 L 204.706 502.747 L 191.109 496.586 L 177.945 489.549 L 165.269 481.667 L 153.135 472.972 L 141.596 463.502 L 130.702 453.298 L 120.498 442.404 L 111.028 430.865 L 102.333 418.731 L 94.451 406.055 L 87.414 392.891 L 81.253 379.294 L 75.995 365.324 L 71.662 351.039 L 68.273 336.502 L 65.841 321.774 L 64.378 306.919 L 63.89 292 L 64.378 277.081 L 65.841 262.226 L 68.273 247.498 L 71.662 232.961 L 75.995 218.676 L 81.253 204.706 L 87.414 191.109 L 94.451 177.945 L 102.333 165.269 L 111.028 153.135 L 120.498 141.596 L 130.702 130.702 L 141.596 120.498 L 153.135 111.028 L 165.269 102.333 L 177.945 94.451 L 191.109 87.414 L 204.706 81.253 L 218.676 75.995 L 232.961 71.662 L 247.498 68.273 L 262.226 65.841 L 277.081 64.378 Z" fill="none" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<path d="M 292 63.89 L 489.549 177.945 L 489.549 406.055 L 292 520.11 L 94.451 406.055 L 94.451 177.945 L 292 63.89" fill="none" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<path d="M 406.055 94.451 L 520.11 292 L 406.055 489.549 L 177.945 489.549 L 63.89 292 L 177.945 94.451 L 406.055 94.451" fill="none" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<path d="M 292 177.945 L 306.887 178.921 L 321.52 181.831 L 335.647 186.627 L 349.028 193.225 L 361.432 201.514 L 372.649 211.351 L 382.486 222.568 L 390.775 234.972 L 397.373 248.353 L 402.169 262.48 L 405.079 277.113 L 406.055 292 L 405.079 306.887 L 402.169 321.52 L 397.373 335.647 L 390.775 349.028 L 382.486 361.432 L 372.649 372.649 L 361.432 382.486 L 349.028 390.775 L 335.647 397.373 L 321.52 402.169 L 306.887 405.079 L 292 406.055 L 277.113 405.079 L 262.48 402.169 L 248.353 397.373 L 234.972 390.775 L 222.568 382.486 L 211.351 372.649 L 201.514 361.432 L 193.225 349.028 L 186.627 335.647 L 181.831 321.52 L 178.921 306.887 L 177.945 292 L 178.921 277.113 L 181.831 262.48 L 186.627 248.353 L 193.225 234.972 L 201.514 222.568 L 211.351 211.351 L 222.568 201.514 L 234.972 193.225 L 248.353 186.627 L 262.48 181.831 L 277.113 178.921 Z" fill="none" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="321.52" y1="65.808" x2="321.52" y2="181.831" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="321.52" y1="181.831" x2="321.52" y2="402.169" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="321.52" y1="402.169" x2="321.52" y2="518.192" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="379.531" y1="502.648" x2="321.52" y2="402.169" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="321.52" y1="402.169" x2="211.351" y2="211.351" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="211.351" y1="211.351" x2="153.339" y2="110.872" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="110.872" y1="153.339" x2="211.351" y2="211.351" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="211.351" y1="211.351" x2="402.169" y2="321.52" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="402.169" y1="321.52" x2="502.648" y2="379.531" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="518.192" y1="321.52" x2="402.169" y2="321.52" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="402.169" y1="321.52" x2="181.831" y2="321.52" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="181.831" y1="321.52" x2="65.808" y2="321.52" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="81.352" y1="379.531" x2="181.831" y2="321.52" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="181.831" y1="321.52" x2="372.649" y2="211.351" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="372.649" y1="211.351" x2="473.128" y2="153.339" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="430.661" y1="110.872" x2="372.649" y2="211.351" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="372.649" y1="211.351" x2="262.48" y2="402.169" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="262.48" y1="402.169" x2="204.469" y2="502.648" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="262.48" y1="518.192" x2="262.48" y2="402.169" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="262.48" y1="402.169" x2="262.48" y2="181.831" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="262.48" y1="181.831" x2="262.48" y2="65.808" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="204.469" y1="81.352" x2="262.48" y2="181.831" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="262.48" y1="181.831" x2="372.649" y2="372.649" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="372.649" y1="372.649" x2="430.661" y2="473.128" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="473.128" y1="430.661" x2="372.649" y2="372.649" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="372.649" y1="372.649" x2="181.831" y2="262.48" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="181.831" y1="262.48" x2="81.352" y2="204.469" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="65.808" y1="262.48" x2="181.831" y2="262.48" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="181.831" y1="262.48" x2="402.169" y2="262.48" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="402.169" y1="262.48" x2="518.192" y2="262.48" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="502.648" y1="204.469" x2="402.169" y2="262.48" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="402.169" y1="262.48" x2="211.351" y2="372.649" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="211.351" y1="372.649" x2="110.872" y2="430.661" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="153.339" y1="473.128" x2="211.351" y2="372.649" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="211.351" y1="372.649" x2="321.52" y2="181.831" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<line x1="321.52" y1="181.831" x2="379.531" y2="81.352" stroke="#82511f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<text x="292" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F68 S b6</text>
+<text x="260.958" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F84 S b6</text>
+<text x="265.117" y="310.521" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F83 S b5</text>
+<text x="307.521" y="268.117" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F97 S b10</text>
+<text x="318.883" y="279.479" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F66 S b11</text>
+<text x="265.117" y="279.479" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F107 S b7</text>
+<text x="323.042" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F69 S b0</text>
+<text x="292" y="263.958" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F95 S b9</text>
+<text x="292" y="326.042" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F103 S b3</text>
+<text x="276.479" y="268.117" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F109 S b8</text>
+<text x="276.479" y="321.883" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F81 S b4</text>
+<text x="318.883" y="310.521" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F70 S b1</text>
+<text x="307.521" y="321.883" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F101 S b2</text>
+<text x="267.196" y="270.196" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F108 S b8</text>
+<text x="258.118" y="285.921" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F86 S b6</text>
+<text x="325.882" y="304.079" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F71 S b0</text>
+<text x="316.804" y="319.804" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F72 S b2</text>
+<text x="282.921" y="328.882" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F79 S b4</text>
+<text x="325.882" y="285.921" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F67 S b11</text>
+<text x="282.921" y="261.118" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F93 S b9</text>
+<text x="316.804" y="270.196" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F64 S b10</text>
+<text x="267.196" y="319.804" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F82 S b5</text>
+<text x="301.079" y="261.118" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F96 S b10</text>
+<text x="301.079" y="328.882" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F102 S b2</text>
+<text x="258.118" y="304.079" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F85 S b6</text>
+<text x="330.524" y="317.242" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F73 S b1</text>
+<text x="247.517" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F87 S b6</text>
+<text x="314.242" y="333.524" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F74 S b2</text>
+<text x="269.758" y="333.524" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F80 S b4</text>
+<text x="292" y="250.517" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F94 S b9</text>
+<text x="253.476" y="317.242" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F104 S b5</text>
+<text x="314.242" y="256.476" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F62 S b10</text>
+<text x="269.758" y="256.476" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F91 S b8</text>
+<text x="330.524" y="272.758" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F65 S b11</text>
+<text x="292" y="339.483" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F77 S b3</text>
+<text x="336.483" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F98 S b0</text>
+<text x="253.476" y="272.758" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F88 S b7</text>
+<text x="360.526" y="313.361" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F100 S b0</text>
+<text x="273.639" y="363.526" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F78 S b4</text>
+<text x="342.164" y="345.164" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F75 S b2</text>
+<text x="342.164" y="244.836" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F63 S b10</text>
+<text x="241.836" y="244.836" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F90 S b8</text>
+<text x="223.474" y="313.361" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F106 S b6</text>
+<text x="310.361" y="226.474" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F61 S b9</text>
+<text x="310.361" y="363.526" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F76 S b2</text>
+<text x="223.474" y="276.639" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F89 S b7</text>
+<text x="241.836" y="345.164" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F105 S b4</text>
+<text x="273.639" y="226.474" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F92 S b8</text>
+<text x="360.526" y="276.639" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F99 S b0</text>
+<text x="221.944" y="416.341" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F32 S b4</text>
+<text x="292" y="154.888" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F60 S b9</text>
+<text x="170.659" y="365.056" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F58 S b5</text>
+<text x="221.944" y="173.659" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F50 S b8</text>
+<text x="151.888" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F41 S b6</text>
+<text x="413.341" y="224.944" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F55 S b11</text>
+<text x="170.659" y="224.944" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F59 P b7</text>
+<text x="362.056" y="173.659" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F5 S b10</text>
+<text x="292" y="435.112" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F57 P b3</text>
+<text x="413.341" y="365.056" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F56 P b1</text>
+<text x="432.112" y="295" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F14 S b0</text>
+<text x="362.056" y="416.341" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F23 S b2</text>
+<text x="413.866" y="416.866" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F21 S b1</text>
+<text x="458.471" y="250.394" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F12 S b11</text>
+<text x="336.606" y="461.471" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F25 S b3</text>
+<text x="247.394" y="461.471" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F30 S b4</text>
+<text x="336.606" y="128.529" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F3 S b9</text>
+<text x="413.866" y="173.134" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F7 S b10</text>
+<text x="170.134" y="173.134" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F48 S b8</text>
+<text x="247.394" y="128.529" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F52 S b8</text>
+<text x="125.529" y="250.394" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F43 S b6</text>
+<text x="125.529" y="339.606" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F39 S b5</text>
+<text x="170.134" y="416.866" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F34 S b4</text>
+<text x="458.471" y="339.606" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F16 S b1</text>
+<text x="448.323" y="428.351" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F20 S b1</text>
+<text x="485.647" y="363.704" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F18 S b1</text>
+<text x="223.296" y="101.353" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F53 S b8</text>
+<text x="494.055" y="257.676" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F13 S b0</text>
+<text x="135.677" y="428.351" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F36 S b5</text>
+<text x="135.677" y="161.649" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F47 S b7</text>
+<text x="448.323" y="161.649" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F9 S b11</text>
+<text x="158.649" y="138.677" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F49 S b8</text>
+<text x="98.353" y="363.704" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F38 S b5</text>
+<text x="89.945" y="332.324" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F40 S b6</text>
+<text x="329.324" y="92.945" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F2 S b9</text>
+<text x="360.704" y="101.353" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F4 S b10</text>
+<text x="254.676" y="92.945" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F54 S b9</text>
+<text x="98.353" y="226.296" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F45 S b7</text>
+<text x="158.649" y="451.323" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F35 S b4</text>
+<text x="89.945" y="257.676" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F44 S b6</text>
+<text x="425.351" y="451.323" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F22 S b2</text>
+<text x="494.055" y="332.324" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F17 S b0</text>
+<text x="254.676" y="497.055" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F29 S b3</text>
+<text x="485.647" y="226.296" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F11 P b11</text>
+<text x="425.351" y="138.677" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F8 S b10</text>
+<text x="360.704" y="488.647" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F26 S b2</text>
+<text x="223.296" y="488.647" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F31 S b4</text>
+<text x="329.324" y="497.055" fill="#9c6f1d" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F27 S b3</text>
+<text x="473.102" y="399.559" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F19 P b1</text>
+<text x="396.559" y="476.102" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F24 P b2</text>
+<text x="292" y="504.118" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F28 P b3</text>
+<text x="187.441" y="476.102" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F33 P b4</text>
+<text x="110.898" y="399.559" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F37 P b5</text>
+<text x="82.882" y="295" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F42 P b6</text>
+<text x="292" y="85.882" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F0 P b9</text>
+<text x="110.898" y="190.441" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F46 P b7</text>
+<text x="396.559" y="113.898" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F6 P b10</text>
+<text x="187.441" y="113.898" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F51 P b8</text>
+<text x="473.102" y="190.441" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F10 P b11</text>
+<text x="501.118" y="295" fill="#a9491e" font-size="8" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" opacity="0.92">F15 P b0</text>
+</svg>
