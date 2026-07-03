@@ -10,6 +10,22 @@ This repository includes dev-only Playwright tests for repeatable regression cov
 Current covered checks:
 - Stitching shape selection persists to URL and survives refresh.
 - SVG export flow opens/closes correctly and does not throw the export failure alert.
+- Squarus squares selection snaps "pieces placed" to the max for the selected polyomino set.
+- Experience switching updates the visible control groups correctly (Stitching, Triangula, Squarus).
+- Basic and advanced shared controls remain synchronized (holes, tempo, etc.).
+- Basic palette custom dropper applies the selected thread color.
+- Acknowledgments viewer opens from about controls and cycles styles by line.
+- Acknowledgments viewer opens from About actions.
+- Advanced pane remains open during thread-card interactions.
+- Advanced pane remains open for top/lower control-bar interactions and closes on canvas click.
+- Squarus basic and advanced squares controls stay synchronized.
+- Slider touchmove events are not canceled by global handlers.
+- Playback remains operable after orientation-style viewport changes.
+- Mobile layout baseline remains usable at phone viewport.
+- Mashrabiya debug SVG export closes sequence stitch paths.
+- Mashrabiya fold 8 classification and fills match expected point IDs and area coverage.
+- Mashrabiya fold 8 and 12 fills are invariant to debug-label toggle.
+- Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
 
 ### Run Locally
 
