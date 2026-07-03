@@ -1024,6 +1024,9 @@
     border-radius: 10px;
     padding: 10px;
     margin: 0 0 10px;
+    min-height: 154px;
+    display: flex;
+    flex-direction: column;
   }
   .discovery-card h4 {
     margin: 0 0 5px;
@@ -1048,6 +1051,24 @@
   }
   .discovery-card .advanced-reset-btn {
     font-size: 12px;
+    margin-top: auto;
+  }
+  .discovery-card.is-preview {
+    background: #f2f4f8;
+    border-color: #cbd2dc;
+  }
+  .discovery-card.is-preview h4,
+  .discovery-card.is-preview p,
+  .discovery-card.is-preview .discovery-passphrase {
+    color: #7c8697;
+  }
+  .discovery-card.is-preview .discovery-passphrase {
+    border-color: #bcc6d6;
+    background: #ebeff6;
+  }
+  .discovery-card.is-preview .advanced-reset-btn {
+    opacity: 0.72;
+    cursor: not-allowed;
   }
   .discovery-passphrase-entry {
     margin: 0 0 12px;
@@ -1664,6 +1685,22 @@
     background: var(--ui-pane-soft-surface);
     border-color: var(--ui-pane-soft-border);
     color: var(--ui-pane-text);
+  }
+
+  .discovery-card.is-preview {
+    background: #2c3138;
+    border-color: #454d58;
+  }
+
+  .discovery-card.is-preview h4,
+  .discovery-card.is-preview p,
+  .discovery-card.is-preview .discovery-passphrase {
+    color: #a0acbc;
+  }
+
+  .discovery-card.is-preview .discovery-passphrase {
+    background: #323943;
+    border-color: #4a5564;
   }
 
   #close-advanced,
@@ -2715,37 +2752,45 @@ var DISCOVERY_LIBRARY = {
   triangle: {
     title: 'Equilateral Triangle',
     icon: '🔺',
-    description: 'Unlocked the path to Triangula.',
+    description: 'Discovered the path to Triangula.',
     experienceName: 'Triangula',
+    previewShapeName: 'Equilateral Triangle',
     songId: 'triangle',
     passphrase: 'Holes of three and step of one do this tri-angled creature make, if they\'re set in even shape.',
+    passphrasePreviewStep: 'Holes of three',
     passphraseInputEnabled: true
   },
   square: {
     title: 'Square',
     icon: '⬜',
-    description: 'Unlocked the path to Squarus.',
+    description: 'Discovered the path to Squarus.',
     experienceName: 'Squarus',
+    previewShapeName: 'Square',
     songId: 'square',
     passphrase: 'Four points in square or circle scribed, with steps of one do square themselves design.',
+    passphrasePreviewStep: 'Four points in square or circle',
     passphraseInputEnabled: true
   },
   rosette12: {
     title: 'Mystic Rose / Rosette (12-fold)',
     icon: '🌹',
-    description: 'Unlocked the 12-fold path to Mashrabiya.',
+    description: 'Discovered the 12-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
+    previewShapeName: 'Mystic Rose / Rosette (12-fold)',
     songId: 'rosette',
     passphrase: 'In a 96 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the twelve-petal rose appears.',
+    passphrasePreviewStep: 'In a 96-point circle',
     passphraseInputEnabled: true
   },
   rosette8: {
     title: 'Mystic Rose / Rosette (8-fold)',
     icon: '🌹',
-    description: 'Unlocked the 8-fold path to Mashrabiya.',
+    description: 'Discovered the 8-fold path to Mashrabiya.',
     experienceName: 'Mashrabiya',
+    previewShapeName: 'Mystic Rose / Rosette (8-fold)',
     songId: 'rosette',
     passphrase: 'In a 64 point circle, stitch jump 16 from starts 1 and 9, then add by 20 from start 3 on an inner projected thread; the eight-petal rose appears.',
+    passphrasePreviewStep: 'In a 64-point circle',
     passphraseInputEnabled: true
   }
 };
@@ -6778,6 +6823,39 @@ function repeatSongLabel(label) {
   return clean.toUpperCase();
 }
 
+function getDiscoveryPassphrasePreview(config) {
+  if (!config || typeof config !== 'object') return 'Passphrase hint: ...';
+  var explicitStep = String(config.passphrasePreviewStep || '').replace(/\s+/g, ' ').trim();
+  if (explicitStep) {
+    return 'Passphrase hint: ' + explicitStep.replace(/[,:;.!?]+$/g, '') + '...';
+  }
+
+  var text = String(config.passphrase || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 'Passphrase hint: ...';
+
+  var clauses = text.split(/[;:.!?]/).map(function(part) {
+    return part.trim();
+  }).filter(function(part) {
+    return !!part;
+  });
+
+  var candidate = clauses.length ? clauses[0] : text;
+  var words = candidate.split(' ').filter(function(word) {
+    return !!word;
+  });
+
+  if (words.length > 10) {
+    candidate = words.slice(0, 10).join(' ');
+  }
+
+  candidate = candidate.replace(/[,:;.!?]+$/g, '').trim();
+  if (!candidate) {
+    candidate = 'Pattern details';
+  }
+
+  return 'Passphrase hint: ' + candidate + '...';
+}
+
 function renderSongPicker() {
   if (!kidSongToggle || !kidSongMenu) return;
 
@@ -6827,36 +6905,56 @@ function renderDiscoveryLibrary() {
   discoveryCards.innerHTML = '';
 
   var keys = Object.keys(DISCOVERY_LIBRARY);
-  var unlockedCount = 0;
+  var unlockedKeys = [];
+  var lockedKeys = [];
 
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    if (!discoveredShapeKeys[key]) continue;
-    unlockedCount++;
+  for (var index = 0; index < keys.length; index++) {
+    if (discoveredShapeKeys[keys[index]]) {
+      unlockedKeys.push(keys[index]);
+    } else {
+      lockedKeys.push(keys[index]);
+    }
+  }
+
+  var orderedKeys = unlockedKeys.concat(lockedKeys);
+
+  for (var i = 0; i < orderedKeys.length; i++) {
+    var key = orderedKeys[i];
+    var isUnlocked = !!discoveredShapeKeys[key];
 
     var config = DISCOVERY_LIBRARY[key];
     var card = document.createElement('div');
-    card.className = 'discovery-card';
+    card.className = 'discovery-card' + (isUnlocked ? '' : ' is-preview');
 
     var title = document.createElement('h4');
     title.textContent = config.icon + ' ' + config.title;
     card.appendChild(title);
 
     var text = document.createElement('p');
-    text.textContent = config.description;
+    var previewShapeName = String(config.previewShapeName || config.title || 'shape');
+    var previewExperienceName = String(config.experienceName || 'experience');
+    text.textContent = isUnlocked
+      ? config.description
+      : ('Discover the ' + previewShapeName + ' in Stitching to unlock travel to ' + previewExperienceName + '.');
     card.appendChild(text);
 
     if (config.passphrase) {
       var passphrase = document.createElement('p');
       passphrase.className = 'discovery-passphrase';
-      passphrase.textContent = 'Passphrase: ' + config.passphrase;
+      passphrase.textContent = isUnlocked
+        ? ('Passphrase: ' + config.passphrase)
+        : getDiscoveryPassphrasePreview(config);
       card.appendChild(passphrase);
     }
 
     var action = document.createElement('button');
     action.type = 'button';
     action.className = 'advanced-reset-btn';
-    action.textContent = 'Travel to ' + config.experienceName;
+    action.textContent = isUnlocked
+      ? ('Travel to ' + config.experienceName)
+      : ('Locked: ' + config.experienceName);
+    action.disabled = !isUnlocked;
+    action.setAttribute('aria-disabled', isUnlocked ? 'false' : 'true');
     action.addEventListener('click', function(experienceName, songId, discoveryKey) {
       return function() {
         var experienceId = resolveExperienceId(experienceName);
@@ -6884,13 +6982,6 @@ function renderDiscoveryLibrary() {
     card.appendChild(action);
 
     discoveryCards.appendChild(card);
-  }
-
-  if (!unlockedCount) {
-    var empty = document.createElement('div');
-    empty.className = 'advanced-global-help';
-    empty.textContent = 'No explorable shapes discovered yet. Keep stitching new patterns to find one!';
-    discoveryCards.appendChild(empty);
   }
 
   renderSongPicker();
