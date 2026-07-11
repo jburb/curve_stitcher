@@ -579,6 +579,186 @@ test.describe('StitchLab regressions', () => {
     expect(probe.fold12.debugOff.areaRatios.petal).toBeCloseTo(1, 6);
   });
 
+  test('list type variants produce the expected stitch routing', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function makeThread(options) {
+        options = options || {};
+        return {
+          jump: Number(options.jump || 1),
+          width: Number(options.width || 2),
+          color: String(options.color || '#1982c4'),
+          solidColor: String(options.solidColor || '#1982c4'),
+          startHole: Number(options.startHole || 1),
+          sequence: null,
+          jumpMode: String(options.jumpMode || 'fixed'),
+          jumpFormula: String(options.jumpFormula || 'skip'),
+          jumpSequence: String(options.jumpSequence || ''),
+          jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
+          connectMultiplier: Number(options.connectMultiplier || 2),
+          connectOffset: Number(options.connectOffset || 0),
+          frameMode: String(options.frameMode || 'outer')
+        };
+      }
+
+      function setHoleCount(value) {
+        if (!window.holesSlider) return;
+        window.holesSlider.value = String(value);
+        var inputEvt = document.createEvent('Event');
+        inputEvt.initEvent('input', true, true);
+        window.holesSlider.dispatchEvent(inputEvt);
+        var changeEvt = document.createEvent('Event');
+        changeEvt.initEvent('change', true, true);
+        window.holesSlider.dispatchEvent(changeEvt);
+      }
+
+      setHoleCount(10);
+      if (typeof window.computePoints === 'function') {
+        window.computePoints();
+      }
+
+      var holeListThread = makeThread({
+        jumpMode: 'sequence',
+        jumpSequenceMode: 'holes',
+        jumpSequence: '1,1,2,3,5,8',
+        startHole: 7
+      });
+
+      var stepListThread = makeThread({
+        jumpMode: 'sequence',
+        jumpSequenceMode: 'steps',
+        jumpSequence: '1,2,3',
+        startHole: 1
+      });
+
+      return {
+        holeListSegments: (window.computeSegments(holeListThread) || []).slice(0, 8),
+        stepListSegments: (window.computeSegments(stepListThread) || []).slice(0, 8)
+      };
+    });
+
+    expect(probe.holeListSegments).toEqual([
+      [0, 0],
+      [0, 1],
+      [1, 2],
+      [2, 4],
+      [4, 7]
+    ]);
+
+    expect(probe.stepListSegments).toEqual([
+      [0, 1],
+      [1, 3],
+      [3, 6],
+      [6, 7],
+      [7, 9],
+      [9, 2],
+      [2, 0]
+    ]);
+  });
+
+  test('start hole is hidden and ignored for list mode with Holes list type', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.selectOption('#kid-stitch-by', 'sequence');
+    await page.selectOption('#kid-sequence-mode', 'holes');
+
+    await expect(page.locator('#start-hole-block')).toBeHidden();
+
+    const probe = await page.evaluate(() => {
+      function makeThread(startHole) {
+        return {
+          jump: 1,
+          width: 2,
+          color: '#1982c4',
+          solidColor: '#1982c4',
+          startHole: startHole,
+          sequence: null,
+          jumpMode: 'sequence',
+          jumpFormula: 'skip',
+          jumpSequence: '1,1,2,3,5,8',
+          jumpSequenceMode: 'holes',
+          connectMultiplier: 2,
+          connectOffset: 0,
+          frameMode: 'outer'
+        };
+      }
+
+      if (window.holesSlider) {
+        window.holesSlider.value = '10';
+      }
+      if (typeof window.computePoints === 'function') {
+        window.computePoints();
+      }
+
+      var a = window.computeSegments(makeThread(1));
+      var b = window.computeSegments(makeThread(9));
+
+      return {
+        equalSegments: JSON.stringify(a) === JSON.stringify(b),
+        a: a,
+        b: b
+      };
+    });
+
+    expect(probe.equalSegments).toBe(true);
+  });
+
+  test('start hole remains functional for add, multiply, and Steps list modes', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function makeThread(options) {
+        options = options || {};
+        return {
+          jump: Number(options.jump || 1),
+          width: 2,
+          color: '#1982c4',
+          solidColor: '#1982c4',
+          startHole: Number(options.startHole || 1),
+          sequence: null,
+          jumpMode: String(options.jumpMode || 'fixed'),
+          jumpFormula: 'skip',
+          jumpSequence: String(options.jumpSequence || ''),
+          jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
+          connectMultiplier: Number(options.connectMultiplier || 2),
+          connectOffset: 0,
+          frameMode: 'outer'
+        };
+      }
+
+      if (window.holesSlider) {
+        window.holesSlider.value = '10';
+      }
+      if (typeof window.computePoints === 'function') {
+        window.computePoints();
+      }
+
+      var addA = window.computeSegments(makeThread({ jumpMode: 'fixed', jump: 2, startHole: 1 }));
+      var addB = window.computeSegments(makeThread({ jumpMode: 'fixed', jump: 2, startHole: 3 }));
+
+      var mulA = window.computeSegments(makeThread({ jumpMode: 'connect', connectMultiplier: 2, startHole: 1 }));
+      var mulB = window.computeSegments(makeThread({ jumpMode: 'connect', connectMultiplier: 2, startHole: 4 }));
+
+      var stepA = window.computeSegments(makeThread({ jumpMode: 'sequence', jumpSequenceMode: 'steps', jumpSequence: '1,2,3', startHole: 1 }));
+      var stepB = window.computeSegments(makeThread({ jumpMode: 'sequence', jumpSequenceMode: 'steps', jumpSequence: '1,2,3', startHole: 4 }));
+
+      function differs(x, y) {
+        return JSON.stringify(x) !== JSON.stringify(y);
+      }
+
+      return {
+        addDiffers: differs(addA, addB),
+        multiplyDiffers: differs(mulA, mulB),
+        stepListDiffers: differs(stepA, stepB)
+      };
+    });
+
+    expect(probe.addDiffers).toBe(true);
+    expect(probe.multiplyDiffers).toBe(true);
+    expect(probe.stepListDiffers).toBe(true);
+  });
+
   test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
