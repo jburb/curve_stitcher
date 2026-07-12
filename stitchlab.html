@@ -1008,24 +1008,36 @@
     font-weight: 600;
   }
   .play-pause-btn {
-    min-width: 84px;
+    min-width: 98px;
     height: 30px;
     padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.01em;
+    white-space: nowrap;
     border-width: 2px;
-    border-color: #6e9720;
-    background: #8ac926;
-    color: #1f2f08;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 0 0 2px rgba(138, 201, 38, 0.3);
+    border-color: #6f9740;
+    background: #89bb52;
+    color: #1b2a16;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26), 0 0 0 2px rgba(137, 187, 82, 0.3);
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   }
   .play-pause-btn.is-playing {
-    border-color: #b5941e;
-    background: #ffca3a;
-    color: #3a2a00;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26), 0 0 0 2px rgba(255, 202, 58, 0.34);
+    border-color: #5f8f35;
+    background: #7caf49;
+    color: #14220f;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 0 0 2px rgba(124, 175, 73, 0.34);
+  }
+  .play-pause-btn .pause-bars {
+    display: inline-block;
+    font-size: 0.84em;
+    letter-spacing: -0.08em;
+    line-height: 1;
+    margin-right: 0.2em;
+    vertical-align: middle;
   }
 
   /* --- ADVANCED PANEL --- */
@@ -1959,17 +1971,17 @@
   }
 
   html[data-theme="dark"] #activity-bar .play-pause-btn {
-    border-color: #88b72f;
-    background: #a8dd4d;
-    color: #1f2f08;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 0 2px rgba(168, 221, 77, 0.32);
+    border-color: #89b858;
+    background: #9fcd6c;
+    color: #12210d;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 0 2px rgba(159, 205, 108, 0.32);
   }
 
   html[data-theme="dark"] #activity-bar .play-pause-btn.is-playing {
-    border-color: #d7b43b;
-    background: #ffd45a;
-    color: #2f2500;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 0 2px rgba(255, 212, 90, 0.36);
+    border-color: #79aa4a;
+    background: #8fc45d;
+    color: #0f1d0b;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 0 0 2px rgba(143, 196, 93, 0.36);
   }
 
   @media (max-width: 720px) {
@@ -2929,8 +2941,8 @@ var pendingCanvasFit = false;
 var BORDER_STROKE_WIDTH = 1.5;
 var BORDER_INNER_GAP = 11;
 var BORDER_OUTER_GAP = 20;
-var LABEL_HOLE_CLEARANCE = 3.2;
-var LABEL_HOLE_CLEARANCE_SVG = 5.2;
+var LABEL_HOLE_CLEARANCE = 4.4;
+var LABEL_HOLE_CLEARANCE_SVG = 6.4;
 var LABEL_BORDER_CLEARANCE = 2.2;
 var LABEL_BORDER_CLEARANCE_SVG = 4.2;
 var LABEL_OUTER_BIAS = 0.72;
@@ -8241,7 +8253,7 @@ function applyTempoValue(bpm, options) {
 function syncAnimateButtonLabel() {
   if (!animateBtn) return;
   if (animationPlaybackState === 'playing') {
-    animateBtn.textContent = '⏸ Pause';
+    animateBtn.innerHTML = '<span class="pause-bars" aria-hidden="true">||</span> Pause';
     animateBtn.classList.add('is-playing');
     animateBtn.setAttribute('aria-pressed', 'true');
     animateBtn.setAttribute('aria-label', 'Pause stitch animation');
@@ -13499,7 +13511,9 @@ function getHoleLabelOffsetFromExtent(extent, borderClearance, holeClearance) {
   var holePad = isFinite(holeClearance) ? holeClearance : LABEL_HOLE_CLEARANCE;
   var minOffset = 3 + holePad + extent;
   var maxOffset = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + borderPad + extent);
-  var preferredOffset = Math.max(minOffset, BORDER_OUTER_GAP * LABEL_OUTER_BIAS);
+  // Interpolate within the feasible band so both hole and border clearances
+  // influence the result. This makes padding constants responsive.
+  var preferredOffset = minOffset + ((maxOffset - minOffset) * LABEL_OUTER_BIAS);
   var clampedOffset;
 
   if (maxOffset >= minOffset) {
