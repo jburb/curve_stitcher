@@ -589,7 +589,29 @@
     font-size: 12px;
     line-height: 1.25;
     white-space: nowrap;
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .onboarding-hint-text {
+    display: inline;
+  }
+  .onboarding-hint-hear-btn {
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .onboarding-hint-hear-btn[aria-pressed="true"] {
+    background: rgba(255, 255, 255, 0.28);
   }
   .onboarding-hint[hidden] {
     display: none;
@@ -621,6 +643,7 @@
   .onboarding-tour-actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
     justify-content: flex-end;
   }
   .onboarding-target {
@@ -1036,7 +1059,7 @@
     font-size: 0.84em;
     letter-spacing: -0.08em;
     line-height: 1;
-    margin-right: 0.2em;
+    margin-right: 0.32em;
     vertical-align: middle;
   }
 
@@ -2099,16 +2122,11 @@
   </div>
 </div>
 
-<div id="onboarding-hints" class="onboarding-hints-layer" aria-hidden="true">
-  <div id="onboarding-hint-shape" class="onboarding-hint" hidden>Pick a frame shape to begin.</div>
-  <div id="onboarding-hint-holes" class="onboarding-hint" hidden>Drag Holes to change stitch density.</div>
-  <div id="onboarding-hint-play" class="onboarding-hint" hidden>Press Play to watch stitching.</div>
-</div>
-
 <div id="onboarding-tour" class="onboarding-tour" hidden>
   <p id="onboarding-tour-title" class="onboarding-tour-title">Quick tour</p>
   <p id="onboarding-tour-text" class="onboarding-tour-text"></p>
   <div class="onboarding-tour-actions">
+    <button id="onboarding-tour-hear" class="onboarding-chip-btn" type="button" aria-pressed="false">Hear this</button>
     <button id="onboarding-tour-skip" class="onboarding-chip-btn" type="button">Skip</button>
     <button id="onboarding-tour-next" class="onboarding-chip-btn primary" type="button">Next</button>
   </div>
@@ -2719,9 +2737,16 @@ var onboardingHintsLayer = document.getElementById('onboarding-hints');
 var onboardingHintShape = document.getElementById('onboarding-hint-shape');
 var onboardingHintHoles = document.getElementById('onboarding-hint-holes');
 var onboardingHintPlay = document.getElementById('onboarding-hint-play');
+var onboardingHintShapeText = document.querySelector('#onboarding-hint-shape .onboarding-hint-text');
+var onboardingHintHolesText = document.querySelector('#onboarding-hint-holes .onboarding-hint-text');
+var onboardingHintPlayText = document.querySelector('#onboarding-hint-play .onboarding-hint-text');
+var onboardingHintShapeHearBtn = document.getElementById('onboarding-hint-shape-hear');
+var onboardingHintHolesHearBtn = document.getElementById('onboarding-hint-holes-hear');
+var onboardingHintPlayHearBtn = document.getElementById('onboarding-hint-play-hear');
 var onboardingTour = document.getElementById('onboarding-tour');
 var onboardingTourTitle = document.getElementById('onboarding-tour-title');
 var onboardingTourText = document.getElementById('onboarding-tour-text');
+var onboardingTourHearBtn = document.getElementById('onboarding-tour-hear');
 var onboardingTourSkipBtn = document.getElementById('onboarding-tour-skip');
 var onboardingTourNextBtn = document.getElementById('onboarding-tour-next');
 
@@ -3029,10 +3054,16 @@ var onboardingState = {
 var ONBOARDING_HINTS_ENABLED = false;
 var onboardingInteractionMarked = false;
 var onboardingHintsDismissed = false;
+var onboardingHintStepIndex = 0;
 var onboardingTourSteps = [];
 var onboardingTourIndex = -1;
 var onboardingTourTarget = null;
 var onboardingGuideContent = null;
+var onboardingHintsEnabledByHelp = false;
+var onboardingGuidanceMode = 'none';
+var onboardingHintNarrationUtterance = null;
+var onboardingHintNarrationButton = null;
+var onboardingTourNarrationUtterance = null;
 
 function getOnboardingTailSteps() {
   return [
@@ -3394,9 +3425,56 @@ function resolveOnboardingTarget(selector) {
   return isElementVisibleForOnboarding(element) ? element : null;
 }
 
+function ensureOnboardingHintStructure(hintElement, textSelector, hearButtonId) {
+  if (!hintElement) return null;
+  var textElement = hintElement.querySelector(textSelector);
+  if (!textElement) {
+    textElement = document.createElement('span');
+    textElement.className = 'onboarding-hint-text';
+    hintElement.insertBefore(textElement, hintElement.firstChild || null);
+  }
+
+  var hearButton = document.getElementById(hearButtonId);
+  if (!hearButton || !hintElement.contains(hearButton)) {
+    hearButton = document.createElement('button');
+    hearButton.id = hearButtonId;
+    hearButton.className = 'onboarding-hint-hear-btn';
+    hearButton.type = 'button';
+    hearButton.setAttribute('aria-pressed', 'false');
+    hearButton.textContent = 'Hear this';
+    hintElement.appendChild(hearButton);
+  }
+
+  var nextHintButton = hintElement.querySelector('.onboarding-hint-next-btn');
+  if (!nextHintButton) {
+    nextHintButton = document.createElement('button');
+    nextHintButton.className = 'onboarding-hint-hear-btn onboarding-hint-next-btn';
+    nextHintButton.type = 'button';
+    nextHintButton.textContent = 'Next hint';
+    hintElement.appendChild(nextHintButton);
+  }
+
+  var startTourButton = hintElement.querySelector('.onboarding-hint-start-tour-btn');
+  if (!startTourButton) {
+    startTourButton = document.createElement('button');
+    startTourButton.className = 'onboarding-hint-hear-btn onboarding-hint-start-tour-btn';
+    startTourButton.type = 'button';
+    startTourButton.textContent = 'Start tour';
+    hintElement.appendChild(startTourButton);
+  }
+  return textElement;
+}
+
 function applyOnboardingGuideContentForCurrentExperience() {
   onboardingGuideContent = getOnboardingGuideContentForExperience(currentExperienceId);
   onboardingTourSteps = (onboardingGuideContent && onboardingGuideContent.steps) ? onboardingGuideContent.steps.slice() : [];
+
+  onboardingHintShapeText = ensureOnboardingHintStructure(onboardingHintShape, '.onboarding-hint-text', 'onboarding-hint-shape-hear');
+  onboardingHintHolesText = ensureOnboardingHintStructure(onboardingHintHoles, '.onboarding-hint-text', 'onboarding-hint-holes-hear');
+  onboardingHintPlayText = ensureOnboardingHintStructure(onboardingHintPlay, '.onboarding-hint-text', 'onboarding-hint-play-hear');
+  onboardingHintShapeHearBtn = document.getElementById('onboarding-hint-shape-hear');
+  onboardingHintHolesHearBtn = document.getElementById('onboarding-hint-holes-hear');
+  onboardingHintPlayHearBtn = document.getElementById('onboarding-hint-play-hear');
 
   if (onboardingQuickStartTitle) {
     onboardingQuickStartTitle.textContent = onboardingGuideContent.quickStartTitle || 'Welcome To StitchLab';
@@ -3404,44 +3482,238 @@ function applyOnboardingGuideContentForCurrentExperience() {
   if (onboardingQuickStartText) {
     onboardingQuickStartText.textContent = onboardingGuideContent.quickStartText || 'Try this: choose a frame shape, drag Holes or Add, then press Play.';
   }
-  if (onboardingHintShape && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.shape) {
-    onboardingHintShape.textContent = onboardingGuideContent.hints.shape.text;
+  if (onboardingHintShapeText && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.shape) {
+    onboardingHintShapeText.textContent = onboardingGuideContent.hints.shape.text;
   }
-  if (onboardingHintHoles && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.control) {
-    onboardingHintHoles.textContent = onboardingGuideContent.hints.control.text;
+  if (onboardingHintHolesText && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.control) {
+    onboardingHintHolesText.textContent = onboardingGuideContent.hints.control.text;
   }
-  if (onboardingHintPlay && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.play) {
-    onboardingHintPlay.textContent = onboardingGuideContent.hints.play.text;
+  if (onboardingHintPlayText && onboardingGuideContent && onboardingGuideContent.hints && onboardingGuideContent.hints.play) {
+    onboardingHintPlayText.textContent = onboardingGuideContent.hints.play.text;
   }
+}
+
+function syncOnboardingHintNarrationButtonState(button, isPlaying) {
+  if (!button) return;
+  button.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+  button.textContent = isPlaying ? 'Stop' : 'Hear this';
+}
+
+function syncOnboardingHelpButtonState() {
+  if (!onboardingHelpBtn) return;
+  var isTourOpen = !!(onboardingTour && !onboardingTour.hidden);
+  var areHintsVisible = !!((onboardingHintShape && !onboardingHintShape.hidden) ||
+    (onboardingHintHoles && !onboardingHintHoles.hidden) ||
+    (onboardingHintPlay && !onboardingHintPlay.hidden));
+  onboardingHelpBtn.setAttribute('aria-pressed', (isTourOpen || areHintsVisible) ? 'true' : 'false');
+}
+
+function areOnboardingHintsEnabled() {
+  return !!(ONBOARDING_HINTS_ENABLED || onboardingHintsEnabledByHelp);
+}
+
+function getCurrentOnboardingHintConfig() {
+  return onboardingGuideContent && onboardingGuideContent.hints ? onboardingGuideContent.hints : getDefaultOnboardingGuideContent().hints;
+}
+
+function hasVisibleOnboardingHintTargets() {
+  var hints = getCurrentOnboardingHintConfig();
+  return !!(
+    resolveOnboardingTarget(hints.shape && hints.shape.selector) ||
+    resolveOnboardingTarget(hints.control && hints.control.selector) ||
+    resolveOnboardingTarget(hints.play && hints.play.selector)
+  );
+}
+
+function getAvailableOnboardingHintEntries() {
+  var hints = getCurrentOnboardingHintConfig();
+  var entries = [];
+  var shapeTarget = resolveOnboardingTarget(hints.shape && hints.shape.selector);
+  var controlTarget = resolveOnboardingTarget(hints.control && hints.control.selector);
+  var playTarget = resolveOnboardingTarget(hints.play && hints.play.selector);
+  if (shapeTarget && onboardingHintShape) {
+    entries.push({ key: 'shape', element: onboardingHintShape, target: shapeTarget });
+  }
+  if (controlTarget && onboardingHintHoles) {
+    entries.push({ key: 'control', element: onboardingHintHoles, target: controlTarget });
+  }
+  if (playTarget && onboardingHintPlay) {
+    entries.push({ key: 'play', element: onboardingHintPlay, target: playTarget });
+  }
+  return entries;
+}
+
+function advanceOnboardingHintStep() {
+  var entries = getAvailableOnboardingHintEntries();
+  if (!entries.length) return;
+  onboardingHintStepIndex = (onboardingHintStepIndex + 1) % entries.length;
+  showOnboardingHints();
+}
+
+function resetOnboardingHintNarrationButtons() {
+  syncOnboardingHintNarrationButtonState(onboardingHintShapeHearBtn, false);
+  syncOnboardingHintNarrationButtonState(onboardingHintHolesHearBtn, false);
+  syncOnboardingHintNarrationButtonState(onboardingHintPlayHearBtn, false);
+}
+
+function syncOnboardingTourNarrationButtonState(isPlaying) {
+  if (!onboardingTourHearBtn) return;
+  onboardingTourHearBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+  onboardingTourHearBtn.textContent = isPlaying ? 'Stop' : 'Hear this';
+}
+
+function stopOnboardingHintNarration() {
+  if (onboardingHintNarrationUtterance && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  onboardingHintNarrationUtterance = null;
+  onboardingHintNarrationButton = null;
+  resetOnboardingHintNarrationButtons();
+}
+
+function stopOnboardingTourNarration() {
+  if (onboardingTourNarrationUtterance && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  onboardingTourNarrationUtterance = null;
+  syncOnboardingTourNarrationButtonState(false);
+}
+
+function getOnboardingHintNarrationText(hintElement) {
+  if (!hintElement) return '';
+  var textElement = hintElement.querySelector('.onboarding-hint-text');
+  var textValue = textElement ? textElement.textContent : hintElement.textContent;
+  return String(textValue || '').replace(/\s+/g, ' ').trim();
+}
+
+function toggleOnboardingHintNarration(hintElement, buttonElement) {
+  if (!buttonElement) return;
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+
+  if (onboardingHintNarrationUtterance && onboardingHintNarrationButton === buttonElement) {
+    stopOnboardingHintNarration();
+    return;
+  }
+
+  var narrationText = getOnboardingHintNarrationText(hintElement);
+  if (!narrationText) return;
+
+  stopOnboardingHintNarration();
+  var utterance = new SpeechSynthesisUtterance(narrationText);
+  utterance.rate = 0.97;
+  utterance.pitch = 1;
+  utterance.onend = function() {
+    onboardingHintNarrationUtterance = null;
+    onboardingHintNarrationButton = null;
+    resetOnboardingHintNarrationButtons();
+  };
+  utterance.onerror = function() {
+    onboardingHintNarrationUtterance = null;
+    onboardingHintNarrationButton = null;
+    resetOnboardingHintNarrationButtons();
+  };
+
+  onboardingHintNarrationUtterance = utterance;
+  onboardingHintNarrationButton = buttonElement;
+  resetOnboardingHintNarrationButtons();
+  syncOnboardingHintNarrationButtonState(buttonElement, true);
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+function toggleOnboardingTourNarration() {
+  if (!onboardingTourHearBtn) return;
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+
+  if (onboardingTourNarrationUtterance) {
+    stopOnboardingTourNarration();
+    return;
+  }
+
+  var narrationText = String(onboardingTourText && onboardingTourText.textContent ? onboardingTourText.textContent : '').replace(/\s+/g, ' ').trim();
+  if (!narrationText) return;
+
+  stopOnboardingHintNarration();
+  var utterance = new SpeechSynthesisUtterance(narrationText);
+  utterance.rate = 0.97;
+  utterance.pitch = 1;
+  utterance.onend = function() {
+    onboardingTourNarrationUtterance = null;
+    syncOnboardingTourNarrationButtonState(false);
+  };
+  utterance.onerror = function() {
+    onboardingTourNarrationUtterance = null;
+    syncOnboardingTourNarrationButtonState(false);
+  };
+
+  onboardingTourNarrationUtterance = utterance;
+  syncOnboardingTourNarrationButtonState(true);
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
 }
 
 function positionHintBubble(hintElement, targetElement, verticalOffset) {
   if (!hintElement || !targetElement) return;
   var center = getElementCenterCoordinates(targetElement);
   if (!center) return;
-  hintElement.style.left = center.x + 'px';
+  var margin = 12;
+  var hintWidth = hintElement.offsetWidth || 0;
+  var halfWidth = hintWidth > 0 ? hintWidth / 2 : 0;
+  var minCenterX = margin + halfWidth;
+  var maxCenterX = window.innerWidth - margin - halfWidth;
+  var centerX = center.x;
+  if (maxCenterX >= minCenterX) {
+    centerX = Math.max(minCenterX, Math.min(centerX, maxCenterX));
+  }
+  hintElement.style.left = centerX + 'px';
   hintElement.style.top = Math.max(44, center.top - (verticalOffset || 12)) + 'px';
 }
 
 function positionOnboardingHints() {
-  if (!ONBOARDING_HINTS_ENABLED) return;
+  if (!areOnboardingHintsEnabled()) return;
   if (onboardingHintsDismissed) return;
-  var hints = onboardingGuideContent && onboardingGuideContent.hints ? onboardingGuideContent.hints : getDefaultOnboardingGuideContent().hints;
-  positionHintBubble(onboardingHintShape, resolveOnboardingTarget(hints.shape && hints.shape.selector), 14);
-  positionHintBubble(onboardingHintHoles, resolveOnboardingTarget(hints.control && hints.control.selector), 14);
-  positionHintBubble(onboardingHintPlay, resolveOnboardingTarget(hints.play && hints.play.selector), 14);
+  var entries = getAvailableOnboardingHintEntries();
+  if (!entries.length) return;
+  var activeIndex = onboardingHintStepIndex;
+  if (activeIndex < 0 || activeIndex >= entries.length) {
+    activeIndex = 0;
+    onboardingHintStepIndex = 0;
+  }
+  var activeEntry = entries[activeIndex];
+  positionHintBubble(activeEntry.element, activeEntry.target, 14);
 }
 
 function showOnboardingHints() {
-  if (!ONBOARDING_HINTS_ENABLED) {
+  if (!areOnboardingHintsEnabled()) {
     hideOnboardingHints();
     return;
   }
   if (onboardingHintsDismissed || !onboardingHintsLayer) return;
-  var hints = onboardingGuideContent && onboardingGuideContent.hints ? onboardingGuideContent.hints : getDefaultOnboardingGuideContent().hints;
-  if (onboardingHintShape) onboardingHintShape.hidden = !resolveOnboardingTarget(hints.shape && hints.shape.selector);
-  if (onboardingHintHoles) onboardingHintHoles.hidden = !resolveOnboardingTarget(hints.control && hints.control.selector);
-  if (onboardingHintPlay) onboardingHintPlay.hidden = !resolveOnboardingTarget(hints.play && hints.play.selector);
+  var entries = getAvailableOnboardingHintEntries();
+  if (!entries.length) {
+    hideOnboardingHints();
+    return;
+  }
+  var activeIndex = onboardingHintStepIndex;
+  if (activeIndex < 0 || activeIndex >= entries.length) {
+    activeIndex = 0;
+    onboardingHintStepIndex = 0;
+  }
+
+  if (onboardingHintShape) onboardingHintShape.hidden = true;
+  if (onboardingHintHoles) onboardingHintHoles.hidden = true;
+  if (onboardingHintPlay) onboardingHintPlay.hidden = true;
+
+  var activeEntry = entries[activeIndex];
+  if (activeEntry && activeEntry.element) {
+    activeEntry.element.hidden = false;
+    var nextHintBtn = activeEntry.element.querySelector('.onboarding-hint-next-btn');
+    if (nextHintBtn) {
+      nextHintBtn.hidden = entries.length <= 1;
+    }
+  }
+  onboardingGuidanceMode = 'hints';
+  syncOnboardingHelpButtonState();
   positionOnboardingHints();
 }
 
@@ -3449,6 +3721,9 @@ function hideOnboardingHints() {
   if (onboardingHintShape) onboardingHintShape.hidden = true;
   if (onboardingHintHoles) onboardingHintHoles.hidden = true;
   if (onboardingHintPlay) onboardingHintPlay.hidden = true;
+  stopOnboardingHintNarration();
+  if (onboardingGuidanceMode === 'hints') onboardingGuidanceMode = 'none';
+  syncOnboardingHelpButtonState();
 }
 
 function dismissOnboardingHints() {
@@ -3476,6 +3751,9 @@ function markOnboardingInteractionFromEvent(event) {
   if (onboardingQuickStart && onboardingQuickStart.contains(event.target)) {
     return;
   }
+  if (onboardingHintsLayer && onboardingHintsLayer.contains(event.target)) {
+    return;
+  }
   if (onboardingTour && onboardingTour.contains(event.target)) {
     return;
   }
@@ -3492,6 +3770,9 @@ function hideOnboardingTour() {
   clearOnboardingTourTarget();
   onboardingTourIndex = -1;
   if (onboardingTour) onboardingTour.hidden = true;
+  stopOnboardingTourNarration();
+  if (onboardingGuidanceMode === 'tour') onboardingGuidanceMode = 'none';
+  syncOnboardingHelpButtonState();
 }
 
 function dismissOnboardingUiForExperienceChange() {
@@ -3541,6 +3822,9 @@ function showOnboardingTourStep(index) {
   onboardingTourText.textContent = step.text;
   onboardingTourNextBtn.textContent = nextIndex === onboardingTourSteps.length - 1 ? 'Done' : 'Next';
   onboardingTour.hidden = false;
+  onboardingGuidanceMode = 'tour';
+  stopOnboardingTourNarration();
+  syncOnboardingHelpButtonState();
   positionOnboardingTourForTarget(target);
 }
 
@@ -3548,8 +3832,21 @@ function startOnboardingTour() {
   applyOnboardingGuideContentForCurrentExperience();
   if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
   if (onboardingQuickStart) onboardingQuickStart.hidden = true;
-  dismissOnboardingHints();
+  onboardingHintsEnabledByHelp = false;
+  hideOnboardingHints();
   showOnboardingTourStep(0);
+}
+
+function openOnboardingGuidance() {
+  applyOnboardingGuideContentForCurrentExperience();
+  if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
+  if (onboardingQuickStart) onboardingQuickStart.hidden = true;
+
+  onboardingHintsDismissed = false;
+  onboardingHintStepIndex = 0;
+  onboardingHintsEnabledByHelp = true;
+  hideOnboardingTour();
+  showOnboardingHints();
 }
 
 function completeOnboardingTour() {
@@ -3610,11 +3907,16 @@ function refreshOnboardingOverlayPositions() {
 function initializeOnboarding() {
   hydrateOnboardingState();
   onboardingHintsDismissed = false;
+  onboardingHintStepIndex = 0;
+  onboardingHintsEnabledByHelp = false;
+  onboardingGuidanceMode = 'none';
   applyOnboardingGuideContentForCurrentExperience();
   showOnboardingQuickStartIfNeeded();
   showOnboardingHints();
   refreshOnboardingOverlayPositions();
   syncOnboardingHelpPulse();
+  syncOnboardingTourNarrationButtonState(false);
+  syncOnboardingHelpButtonState();
 }
 
 function clearSessionScopedCachesOnLoad() {
@@ -17655,6 +17957,84 @@ if (onboardingTourNextBtn) {
 
 if (onboardingTourSkipBtn) {
   onboardingTourSkipBtn.addEventListener('click', handleOnboardingTourSkip);
+}
+
+if (onboardingTourHearBtn) {
+  onboardingTourHearBtn.addEventListener('click', function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    toggleOnboardingTourNarration();
+  });
+}
+
+if (onboardingHintShapeHearBtn) {
+  onboardingHintShapeHearBtn.addEventListener('click', function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    toggleOnboardingHintNarration(onboardingHintShape, onboardingHintShapeHearBtn);
+  });
+}
+
+if (onboardingHintHolesHearBtn) {
+  onboardingHintHolesHearBtn.addEventListener('click', function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    toggleOnboardingHintNarration(onboardingHintHoles, onboardingHintHolesHearBtn);
+  });
+}
+
+if (onboardingHintPlayHearBtn) {
+  onboardingHintPlayHearBtn.addEventListener('click', function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    toggleOnboardingHintNarration(onboardingHintPlay, onboardingHintPlayHearBtn);
+  });
+}
+
+if (onboardingHintsLayer) {
+  onboardingHintsLayer.addEventListener('click', function(event) {
+    if (!event || !event.target || !event.target.closest) return;
+    var nextButton = event.target.closest('.onboarding-hint-next-btn');
+    if (nextButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      advanceOnboardingHintStep();
+      return;
+    }
+
+    var startTourButton = event.target.closest('.onboarding-hint-start-tour-btn');
+    if (startTourButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      setOnboardingStatePatch({ quickStartDismissed: true });
+      startOnboardingTour();
+      return;
+    }
+
+    var button = event.target.closest('.onboarding-hint-hear-btn');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (button.id === 'onboarding-hint-shape-hear') {
+      toggleOnboardingHintNarration(onboardingHintShape, button);
+      return;
+    }
+    if (button.id === 'onboarding-hint-holes-hear') {
+      toggleOnboardingHintNarration(onboardingHintHoles, button);
+      return;
+    }
+    if (button.id === 'onboarding-hint-play-hear') {
+      toggleOnboardingHintNarration(onboardingHintPlay, button);
+    }
+  });
 }
 
 window.addEventListener('resize', refreshOnboardingOverlayPositions);
