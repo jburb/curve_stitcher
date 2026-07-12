@@ -1008,15 +1008,24 @@
     font-weight: 600;
   }
   .play-pause-btn {
-    min-width: 78px;
+    min-width: 84px;
     height: 30px;
     padding: 0 10px;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.01em;
+    border-width: 2px;
+    border-color: #6e9720;
+    background: #8ac926;
+    color: #1f2f08;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 0 0 2px rgba(138, 201, 38, 0.3);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
   }
   .play-pause-btn.is-playing {
-    box-shadow: inset 0 0 0 1px rgba(35, 76, 142, 0.18), 0 0 0 2px rgba(47, 95, 179, 0.14);
+    border-color: #b5941e;
+    background: #ffca3a;
+    color: #3a2a00;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26), 0 0 0 2px rgba(255, 202, 58, 0.34);
   }
 
   /* --- ADVANCED PANEL --- */
@@ -1949,11 +1958,18 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
+  html[data-theme="dark"] #activity-bar .play-pause-btn {
+    border-color: #88b72f;
+    background: #a8dd4d;
+    color: #1f2f08;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 0 2px rgba(168, 221, 77, 0.32);
+  }
+
   html[data-theme="dark"] #activity-bar .play-pause-btn.is-playing {
-    background: #3f4d5f;
-    border-color: #6e84a2;
-    color: #f4f8ff;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 2px rgba(117, 147, 188, 0.25);
+    border-color: #d7b43b;
+    background: #ffd45a;
+    color: #2f2500;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 0 2px rgba(255, 212, 90, 0.36);
   }
 
   @media (max-width: 720px) {
