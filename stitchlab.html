@@ -2927,12 +2927,12 @@ var STITCH_PULL_SETTLE_SECONDS = 0.18; // was 120ms, increased to 180ms for a sl
 var STITCH_PULL_SETTLE_OVERSHOOT = 0.027;
 var pendingCanvasFit = false;
 var BORDER_STROKE_WIDTH = 1.5;
-var BORDER_INNER_GAP = 10;
-var BORDER_OUTER_GAP = 17;
-var LABEL_HOLE_CLEARANCE = 2.2;
-var LABEL_HOLE_CLEARANCE_SVG = 4.2;
-var LABEL_BORDER_CLEARANCE = 1.2;
-var LABEL_BORDER_CLEARANCE_SVG = 3.2;
+var BORDER_INNER_GAP = 11;
+var BORDER_OUTER_GAP = 20;
+var LABEL_HOLE_CLEARANCE = 3.2;
+var LABEL_HOLE_CLEARANCE_SVG = 5.2;
+var LABEL_BORDER_CLEARANCE = 2.2;
+var LABEL_BORDER_CLEARANCE_SVG = 4.2;
 var LABEL_OUTER_BIAS = 0.72;
 var BORDER_STROKE_COLOR = '#2f4368';
 var BORDER_STROKE_COLOR_DARK = '#d9e0eb';
@@ -13489,9 +13489,9 @@ function getBoundsExtentAlongDirection(item, direction) {
 }
 
 function getHoleNumberFontSize(holeCount) {
-  if (holeCount >= 70) return 8;
-  if (holeCount >= 55) return 8.5;
-  return 9;
+  if (holeCount >= 70) return 9;
+  if (holeCount >= 55) return 9.5;
+  return 10;
 }
 
 function getHoleLabelOffsetFromExtent(extent, borderClearance, holeClearance) {
@@ -13505,8 +13505,10 @@ function getHoleLabelOffsetFromExtent(extent, borderClearance, holeClearance) {
   if (maxOffset >= minOffset) {
     clampedOffset = Math.max(minOffset, Math.min(preferredOffset, maxOffset));
   } else {
-    // Fallback: prioritize staying inside the outer border band.
-    clampedOffset = Math.max(3.8, maxOffset);
+    // Fallback: allow a very small overshoot beyond the border band so labels
+    // remain visually even without drifting far from their ring holes.
+    var overflowAllowance = 0.8;
+    clampedOffset = Math.min(minOffset, maxOffset + overflowAllowance);
   }
 
   if (!isFinite(clampedOffset)) {
@@ -14181,24 +14183,38 @@ function buildCurrentDesignSvgString(options) {
       if (!ringPoints || !ringPoints.length) return;
       var ccw = signedAreaOfClosedPolyline(ringPoints) > 0;
       var ringFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
+      var maxExtent = 0;
 
+      for (var e = 0; e < ringPoints.length; e++) {
+        var sampleText = String(e + 1);
+        var sampleExtent = estimateTextExtentAlongDirection(sampleText, ringFontSize);
+        if (sampleExtent > maxExtent) {
+          maxExtent = sampleExtent;
+        }
+      }
+
+      var metrics = getHoleLabelOffsetFromExtent(maxExtent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+      if (metrics.maxOffset < metrics.minOffset) {
+        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
+        var reducedFont = Math.max(6, Math.min(ringFontSize, availableBand * 1.6));
+        if (reducedFont < ringFontSize) {
+          ringFontSize = reducedFont;
+          maxExtent = 0;
+          for (var r = 0; r < ringPoints.length; r++) {
+            var reducedExtent = estimateTextExtentAlongDirection(String(r + 1), ringFontSize);
+            if (reducedExtent > maxExtent) {
+              maxExtent = reducedExtent;
+            }
+          }
+          metrics = getHoleLabelOffsetFromExtent(maxExtent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
+        }
+      }
+
+      var sharedOffset = metrics.offset;
       for (var j = 0; j < ringPoints.length; j++) {
         var text = String(j + 1);
         var outward = getOutwardDirectionAtHoleFromRing(ringPoints, j, ccw, invertOutward);
-        var extent = estimateTextExtentAlongDirection(text, ringFontSize);
-        var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
-
-        if (metrics.maxOffset < metrics.minOffset) {
-          var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE_SVG) - (3 + LABEL_HOLE_CLEARANCE_SVG);
-          var reducedFont = Math.max(6, Math.min(ringFontSize, availableBand * 1.6));
-          if (reducedFont < ringFontSize) {
-            ringFontSize = reducedFont;
-            extent = estimateTextExtentAlongDirection(text, ringFontSize);
-            metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE_SVG, LABEL_HOLE_CLEARANCE_SVG);
-          }
-        }
-
-        var labelPos = ringPoints[j].add(outward.multiply(metrics.offset));
+        var labelPos = ringPoints[j].add(outward.multiply(sharedOffset));
         lines.push(
           '<text x="' + formatSvgNumber(labelPos.x) + '" y="' + formatSvgNumber(labelPos.y) +
           '" fill="' + holeLabelColor + '" font-size="' + formatSvgNumber(ringFontSize) +
@@ -16013,12 +16029,16 @@ function drawHoles() {
     if (!ringPoints || !ringPoints.length) return;
     var ccw = signedAreaOfClosedPolyline(ringPoints) > 0;
     var ringBaseFontSize = isInnerRing ? Math.max(6, fontSize * 0.9) : fontSize;
+    var ringLabels = [];
+    var ringOutward = [];
+    var maxExtent = 0;
 
     for (var i = 0; i < ringPoints.length; i++) {
       new Path.Circle(ringPoints[i], 3).fillColor = holeFillColor;
       if (!numbersVisible) continue;
 
       var outward = getOutwardDirectionAtHoleFromRing(ringPoints, i, ccw, invertOutward);
+      ringOutward[i] = outward;
 
       var label = new PointText(ringPoints[i]);
       label.justification = 'center';
@@ -16026,31 +16046,40 @@ function drawHoles() {
       label.fontSize = ringBaseFontSize;
       label.fontWeight = 'normal';
       label.content = String(i + 1);
+      ringLabels[i] = label;
 
       var extent = getBoundsExtentAlongDirection(label, outward);
-      var metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
-      var minOffset = metrics.minOffset;
-      var maxOffset = metrics.maxOffset;
+      if (extent > maxExtent) {
+        maxExtent = extent;
+      }
+    }
 
-      if (maxOffset < minOffset) {
-        var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE) - (3 + LABEL_HOLE_CLEARANCE);
-        var targetFont = Math.max(6, Math.min(label.fontSize, availableBand * 1.6));
-        if (targetFont < label.fontSize) {
-          label.fontSize = targetFont;
-          extent = getBoundsExtentAlongDirection(label, outward);
-          metrics = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
-          minOffset = metrics.minOffset;
-          maxOffset = metrics.maxOffset;
+    if (!numbersVisible) return;
+
+    var metrics = getHoleLabelOffsetFromExtent(maxExtent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
+    if (metrics.maxOffset < metrics.minOffset) {
+      var availableBand = BORDER_OUTER_GAP - (BORDER_STROKE_WIDTH * 0.5 + LABEL_BORDER_CLEARANCE) - (3 + LABEL_HOLE_CLEARANCE);
+      var targetFont = Math.max(6, Math.min(ringBaseFontSize, availableBand * 1.6));
+      if (targetFont < ringBaseFontSize) {
+        ringBaseFontSize = targetFont;
+        maxExtent = 0;
+        for (var j = 0; j < ringLabels.length; j++) {
+          if (!ringLabels[j]) continue;
+          ringLabels[j].fontSize = ringBaseFontSize;
+          var resizedExtent = getBoundsExtentAlongDirection(ringLabels[j], ringOutward[j]);
+          if (resizedExtent > maxExtent) {
+            maxExtent = resizedExtent;
+          }
         }
+        metrics = getHoleLabelOffsetFromExtent(maxExtent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE);
       }
+    }
 
-      var clampedOffset = metrics.offset;
-      if (maxOffset < minOffset) {
-        clampedOffset = getHoleLabelOffsetFromExtent(extent, LABEL_BORDER_CLEARANCE, LABEL_HOLE_CLEARANCE).offset;
-      }
-      label.position = ringPoints[i].add(outward.multiply(clampedOffset));
-
-      holeNumberLabelsByIndex[indexOffset + i] = label;
+    var sharedOffset = metrics.offset;
+    for (var k = 0; k < ringLabels.length; k++) {
+      if (!ringLabels[k]) continue;
+      ringLabels[k].position = ringPoints[k].add(ringOutward[k].multiply(sharedOffset));
+      holeNumberLabelsByIndex[indexOffset + k] = ringLabels[k];
     }
   }
 
