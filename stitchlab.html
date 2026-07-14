@@ -5608,6 +5608,13 @@ function applyStateFromCurrentUrl(options) {
     withUrlSyncSuspended(function() {
     if (allowExperienceUrlDiscoveryUnlock && hasExplicitExperienceParam) {
       var unlockKey = getDiscoveryKeyForExperience(requestedExperience);
+      if (requestedExperience === 'mashrabiya') {
+        var requestedMashrabiyaFoldForUnlock = sanitizeMashrabiyaFold(
+          getUrlStateParam(params, 'mashrabiyaFold'),
+          mashrabiyaFold
+        );
+        unlockKey = requestedMashrabiyaFoldForUnlock === 8 ? 'rosette8' : 'rosette12';
+      }
       if (unlockKey) {
         unlockDiscovery(unlockKey);
       }
