@@ -2371,6 +2371,12 @@
     <div class="slider-label">🖌 Fill Border <span class="slider-value" id="mashrabiya-fill-border-value">2</span></div>
     <input id="mashrabiya-fill-border-width" type="range" min="0" max="3" step="1" value="2">
   </div>
+  <div class="slider-block" id="mashrabiya-lines-visibility-block" style="display:none;">
+    <label class="slider-label" for="mashrabiya-keep-construction-lines">
+      <input id="mashrabiya-keep-construction-lines" type="checkbox">
+      ✏️ Keep construction lines
+    </label>
+  </div>
   <div class="slider-block" id="mashrabiya-star-color-block" style="display:none;">
     <div class="slider-label">⭐ Inner Star</div>
     <input id="mashrabiya-star-color" type="color" value="#f4d35e" aria-label="Mashrabiya inner star color">
@@ -2652,6 +2658,7 @@ var squarusPieceCountBlock = document.getElementById('squarus-piece-count-block'
 var squarusSequenceBlock = document.getElementById('squarus-sequence-block');
 var mashrabiyaFoldBlock = document.getElementById('mashrabiya-fold-block');
 var mashrabiyaFillBorderBlock = document.getElementById('mashrabiya-fill-border-block');
+var mashrabiyaLinesVisibilityBlock = document.getElementById('mashrabiya-lines-visibility-block');
 var mashrabiyaStarColorBlock = document.getElementById('mashrabiya-star-color-block');
 var mashrabiyaPetalColorBlock = document.getElementById('mashrabiya-petal-color-block');
 var mashrabiyaPointColorBlock = document.getElementById('mashrabiya-point-color-block');
@@ -2663,6 +2670,7 @@ var squarusSequenceRandomizeBtn = document.getElementById('squarus-sequence-rand
 var mashrabiyaFoldSelect = document.getElementById('mashrabiya-fold');
 var mashrabiyaFillBorderSlider = document.getElementById('mashrabiya-fill-border-width');
 var mashrabiyaFillBorderValue = document.getElementById('mashrabiya-fill-border-value');
+var mashrabiyaKeepConstructionLinesInput = document.getElementById('mashrabiya-keep-construction-lines');
 var mashrabiyaStarColorInput = document.getElementById('mashrabiya-star-color');
 var mashrabiyaPetalColorInput = document.getElementById('mashrabiya-petal-color');
 var mashrabiyaPointColorInput = document.getElementById('mashrabiya-point-color');
@@ -4121,6 +4129,7 @@ var EXPERIENCE_LIBRARY = {
         width: false,
         mashrabiyaFold: true,
         mashrabiyaFillBorder: true,
+        mashrabiyaConstructionLines: true,
         mashrabiyaStarColor: true,
         mashrabiyaPetalColor: true,
         mashrabiyaPointColor: true
@@ -4508,6 +4517,7 @@ var mashrabiyaStarColor = '#f4d35e';
 var mashrabiyaPetalColor = '#ee964b';
 var mashrabiyaPointColor = '#f95738';
 var mashrabiyaFillBorderWidth = 2;
+var mashrabiyaKeepConstructionLines = false;
 var mashrabiyaFillPhaseBeatScale = 1.7;
 var mashrabiyaDebugLabelsEnabled = false; // set to false for final release
 var mashrabiyaDebugKeepStitchLinesVisible = false; // debug: force true to inspect line topology
@@ -4566,7 +4576,8 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   mashrabiyaStarColor: 'mashrabiyaStarColor',
   mashrabiyaPetalColor: 'mashrabiyaPetalColor',
   mashrabiyaPointColor: 'mashrabiyaPointColor',
-  mashrabiyaFillBorderWidth: 'mashrabiyaFillBorderWidth'
+  mashrabiyaFillBorderWidth: 'mashrabiyaFillBorderWidth',
+  mashrabiyaKeepConstructionLines: 'mashrabiyaKeepConstructionLines'
 });
 var URL_SYNC_DEBOUNCE_MS = 800;
 var TRIANGULA_DRAWABLE_COUNTS = [1, 3, 9, 27, 81, 243, 729];
@@ -4617,7 +4628,8 @@ var appState = {
     starColor: '#f4d35e',
     petalColor: '#ee964b',
     pointColor: '#f95738',
-    fillBorderWidth: 2
+    fillBorderWidth: 2,
+    keepConstructionLines: false
   }
 };
 
@@ -4807,6 +4819,11 @@ function sanitizeBooleanParam(value, fallback) {
   if (value === '1' || value === 'true') return true;
   if (value === '0' || value === 'false') return false;
   return fallback;
+}
+
+function sanitizeBooleanValue(value, fallback) {
+  if (value === true || value === false) return value;
+  return !!sanitizeBooleanParam(value, fallback);
 }
 
 function sanitizeSongId(value, fallback) {
@@ -5353,7 +5370,8 @@ function buildMashrabiyaStateSnapshotFromRuntime() {
     starColor: sanitizeHexColor(mashrabiyaStarColor, '#f4d35e'),
     petalColor: sanitizeHexColor(mashrabiyaPetalColor, '#ee964b'),
     pointColor: sanitizeHexColor(mashrabiyaPointColor, '#f95738'),
-    fillBorderWidth: sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0)
+    fillBorderWidth: sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0),
+    keepConstructionLines: sanitizeBooleanValue(mashrabiyaKeepConstructionLines, false)
   };
 }
 
@@ -5383,7 +5401,8 @@ function hydrateMashrabiyaStateCacheFromStorage() {
       starColor: sanitizeHexColor(parsed.starColor, fallback.starColor),
       petalColor: sanitizeHexColor(parsed.petalColor, fallback.petalColor),
       pointColor: sanitizeHexColor(parsed.pointColor, fallback.pointColor),
-      fillBorderWidth: sanitizeMashrabiyaFillBorderWidth(parsed.fillBorderWidth, fallback.fillBorderWidth)
+      fillBorderWidth: sanitizeMashrabiyaFillBorderWidth(parsed.fillBorderWidth, fallback.fillBorderWidth),
+      keepConstructionLines: sanitizeBooleanValue(parsed.keepConstructionLines, fallback.keepConstructionLines)
     };
   } catch (error) {
     mashrabiyaStateCache = fallback;
@@ -5400,6 +5419,7 @@ function restoreMashrabiyaStateFromCache() {
   mashrabiyaPetalColor = cached.petalColor;
   mashrabiyaPointColor = cached.pointColor;
   mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(cached.fillBorderWidth, 0);
+  mashrabiyaKeepConstructionLines = sanitizeBooleanValue(cached.keepConstructionLines, false);
 }
 
 function syncCurrentExperienceStateCacheFromRuntime() {
@@ -5480,6 +5500,7 @@ function syncAppStateFromRuntime() {
   appState.mashrabiya.petalColor = sanitizeHexColor(mashrabiyaPetalColor, '#ee964b');
   appState.mashrabiya.pointColor = sanitizeHexColor(mashrabiyaPointColor, '#f95738');
   appState.mashrabiya.fillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
+  appState.mashrabiya.keepConstructionLines = sanitizeBooleanValue(mashrabiyaKeepConstructionLines, false);
 }
 
 function buildSearchParamsFromAppState() {
@@ -5529,6 +5550,7 @@ function buildSearchParamsFromAppState() {
     setUrlStateParam(params, 'mashrabiyaPetalColor', appState.mashrabiya.petalColor);
     setUrlStateParam(params, 'mashrabiyaPointColor', appState.mashrabiya.pointColor);
     setUrlStateParam(params, 'mashrabiyaFillBorderWidth', String(appState.mashrabiya.fillBorderWidth));
+    setUrlStateParam(params, 'mashrabiyaKeepConstructionLines', appState.mashrabiya.keepConstructionLines ? '1' : '0');
   }
 
   return params;
@@ -5690,6 +5712,7 @@ function applyStateFromCurrentUrl(options) {
       mashrabiyaPetalColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaPetalColor'), mashrabiyaPetalColor);
       mashrabiyaPointColor = sanitizeHexColor(getUrlStateParam(params, 'mashrabiyaPointColor'), mashrabiyaPointColor);
       mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(getUrlStateParam(params, 'mashrabiyaFillBorderWidth'), mashrabiyaFillBorderWidth);
+      mashrabiyaKeepConstructionLines = sanitizeBooleanValue(getUrlStateParam(params, 'mashrabiyaKeepConstructionLines'), mashrabiyaKeepConstructionLines);
       syncMashrabiyaControls();
     }
 
@@ -5990,6 +6013,7 @@ function applyBasicControlPolicy(profile) {
   setElementDisplay(squarusSequenceBlock, controls.squarusSequence === true && currentExperienceId === 'squarus', '');
   setElementDisplay(mashrabiyaFoldBlock, controls.mashrabiyaFold === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(mashrabiyaFillBorderBlock, controls.mashrabiyaFillBorder === true && currentExperienceId === 'mashrabiya', '');
+  setElementDisplay(mashrabiyaLinesVisibilityBlock, controls.mashrabiyaConstructionLines === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(mashrabiyaStarColorBlock, controls.mashrabiyaStarColor === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(mashrabiyaPointColorBlock, controls.mashrabiyaPointColor === true && currentExperienceId === 'mashrabiya', '');
   setElementDisplay(mashrabiyaPetalColorBlock, controls.mashrabiyaPetalColor === true && currentExperienceId === 'mashrabiya', '');
@@ -6078,6 +6102,7 @@ function syncMashrabiyaControls() {
   mashrabiyaPetalColor = sanitizeHexColor(mashrabiyaPetalColor, '#ee964b');
   mashrabiyaPointColor = sanitizeHexColor(mashrabiyaPointColor, '#f95738');
   mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderWidth, 0);
+  mashrabiyaKeepConstructionLines = sanitizeBooleanValue(mashrabiyaKeepConstructionLines, false);
 
   if (mashrabiyaFoldSelect) {
     mashrabiyaFoldSelect.value = String(mashrabiyaFold);
@@ -6099,6 +6124,9 @@ function syncMashrabiyaControls() {
   }
   if (mashrabiyaPointColorInput) {
     mashrabiyaPointColorInput.value = mashrabiyaPointColor;
+  }
+  if (mashrabiyaKeepConstructionLinesInput) {
+    mashrabiyaKeepConstructionLinesInput.checked = !!mashrabiyaKeepConstructionLines;
   }
 
   if (currentExperienceId === 'mashrabiya') {
@@ -9486,8 +9514,19 @@ function computeSegments(thread) {
   function remapLocalIndex(localIndex, fromCount, toCount) {
     if (!isFinite(fromCount) || fromCount <= 0 || !isFinite(toCount) || toCount <= 0) return 0;
     var normalized = ((localIndex % fromCount) + fromCount) % fromCount;
-    var projected = Math.floor((normalized * toCount) / fromCount);
+    // Use nearest angular neighbor when mapping between rings.
+    var projected = Math.round((normalized * toCount) / fromCount);
     return ((projected % toCount) + toCount) % toCount;
+  }
+
+  function remapInnerToOuterBridge(localInnerIndex) {
+    if (!isFinite(localInnerIndex) || nInner <= 0 || nOuter <= 0) {
+      return 0;
+    }
+    var normalized = ((localInnerIndex % nInner) + nInner) % nInner;
+    // Deterministic index-proportional mapping from inner ring to outer ring.
+    var projected = Math.floor((normalized * nOuter) / nInner);
+    return ((projected % nOuter) + nOuter) % nOuter;
   }
 
   function mapPair(sourceLocal, mappedLocal) {
@@ -9513,7 +9552,25 @@ function computeSegments(thread) {
     var sourceResolved = ((sourceLocal % sourceCount) + sourceCount) % sourceCount;
     var targetResolved = remapLocalIndex(mappedLocal, sourceCount, targetCount);
 
-    return [toGlobalIndex(sourceResolved, sourceRing), toGlobalIndex(targetResolved, targetRing)];
+    if (frameMode === 'bridge-reverse') {
+      // Inner-gated bridge: each outward bridge passes through a relay inner hole.
+      var relayInner = ((mappedLocal % sourceCount) + sourceCount) % sourceCount;
+      var mappedOuter = remapInnerToOuterBridge(relayInner);
+      var bridgeSegments = [];
+      if (sourceResolved !== relayInner) {
+        bridgeSegments.push([
+          toGlobalIndex(sourceResolved, 'inner'),
+          toGlobalIndex(relayInner, 'inner')
+        ]);
+      }
+      bridgeSegments.push([
+        toGlobalIndex(relayInner, 'inner'),
+        toGlobalIndex(mappedOuter, 'outer')
+      ]);
+      return bridgeSegments;
+    }
+
+    return [[toGlobalIndex(sourceResolved, sourceRing), toGlobalIndex(targetResolved, targetRing)]];
   }
 
   var sourceHoleCount = getThreadSourceHoleCount(thread);
@@ -9531,7 +9588,10 @@ function computeSegments(thread) {
       var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % sourceHoleCount;
       if (mappedLabel < 0) mappedLabel += sourceHoleCount;
       var mapped = mappedLabel;
-      segments.push(mapPair(sourceIndex, mapped));
+      var mappedSegments = mapPair(sourceIndex, mapped);
+      for (var m = 0; m < mappedSegments.length; m++) {
+        segments.push(mappedSegments[m]);
+      }
     }
     return segments;
   }
@@ -9540,7 +9600,10 @@ function computeSegments(thread) {
     var holeSequence = computeSequence(thread, sourceHoleCount);
     var holeSegments = [];
     for (var h = 0; h < holeSequence.length - 1; h++) {
-      holeSegments.push(mapPair(holeSequence[h], holeSequence[h + 1]));
+      var mappedHoleSegments = mapPair(holeSequence[h], holeSequence[h + 1]);
+      for (var hs = 0; hs < mappedHoleSegments.length; hs++) {
+        holeSegments.push(mappedHoleSegments[hs]);
+      }
     }
     return holeSegments;
   }
@@ -9548,7 +9611,10 @@ function computeSegments(thread) {
   var seq = computeSequence(thread, sourceHoleCount);
   var chained = [];
   for (var j = 0; j < seq.length; j++) {
-    chained.push(mapPair(seq[j], seq[(j + 1) % seq.length]));
+    var mappedChainSegments = mapPair(seq[j], seq[(j + 1) % seq.length]);
+    for (var cs = 0; cs < mappedChainSegments.length; cs++) {
+      chained.push(mappedChainSegments[cs]);
+    }
   }
   return chained;
 }
@@ -13612,19 +13678,23 @@ function renderMashrabiyaAnimationStateFrame(state) {
   var sFillPoint = sFillPetal + dFillPetal;
   var sEnd = sFillPoint + dFillPoint;
 
+  var keepConstructionLinesVisible = mashrabiyaKeepConstructionLines || mashrabiyaDebugKeepStitchLinesVisible;
   var lineFade = 1 - mashrabiyaPhaseProgress(t, sFillStar, dFillStar + dFillPetal + dFillPoint);
-  var lineOpacity = 0.9 * lineFade;
-  if (mashrabiyaDebugKeepStitchLinesVisible) {
-    lineOpacity = 0.92;
-  }
+  var lineOpacity = keepConstructionLinesVisible ? 0.92 : (0.9 * lineFade);
 
-  drawMashrabiyaClosedStrokeProgress(state.geometry.guideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sCircle, dCircle));
-  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOuter, dOuter));
-  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sOffset, dOffset));
+  var circleProgress = mashrabiyaPhaseProgress(t, sCircle, dCircle);
+  var outerProgress = mashrabiyaPhaseProgress(t, sOuter, dOuter);
+  var offsetProgress = mashrabiyaPhaseProgress(t, sOffset, dOffset);
+  var innerProgress = mashrabiyaPhaseProgress(t, sInner, dInner);
+  var starProgress = mashrabiyaPhaseProgress(t, sStar, dStar);
+
+  drawMashrabiyaClosedStrokeProgress(state.geometry.guideCircleVertices, '#82511f', 2, lineOpacity, circleProgress);
+  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, outerProgress);
+  drawMashrabiyaSequenceProgress(state.geometry.scaffoldPoints || state.geometry.holePoints, state.geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, offsetProgress);
   if (dInner > 0) {
-    drawMashrabiyaClosedStrokeProgress(state.geometry.innerGuideCircleVertices, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sInner, dInner));
+    drawMashrabiyaClosedStrokeProgress(state.geometry.innerGuideCircleVertices, '#82511f', 2, lineOpacity, innerProgress);
   }
-  drawMashrabiyaSegmentListProgress(state.geometry.starThreadSegments, '#82511f', 2, lineOpacity, mashrabiyaPhaseProgress(t, sStar, dStar));
+  drawMashrabiyaSegmentListProgress(state.geometry.starThreadSegments, '#82511f', 2, lineOpacity, starProgress);
 
   var selectStar = mashrabiyaPhaseProgress(t, sFillStar, dFillStar);
   var selectPetal = mashrabiyaPhaseProgress(t, sFillPetal, dFillPetal);
@@ -13654,6 +13724,14 @@ function renderMashrabiyaAnimationStateFrame(state) {
 function drawMashrabiyaStatic() {
   project.activeLayer.removeChildren();
   var geometry = buildMashrabiyaRosetteGeometry(mashrabiyaFold, mashrabiyaGeometryMode);
+  if (mashrabiyaKeepConstructionLines || mashrabiyaDebugKeepStitchLinesVisible) {
+    var lineOpacity = 0.92;
+    drawMashrabiyaClosedStrokeProgress(geometry.guideCircleVertices, '#82511f', 2, lineOpacity, 1);
+    drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.firstPolygonSequence, '#82511f', 2, lineOpacity, 1);
+    drawMashrabiyaSequenceProgress(geometry.scaffoldPoints || geometry.holePoints, geometry.offsetPolygonSequence, '#82511f', 2, lineOpacity, 1);
+    drawMashrabiyaClosedStrokeProgress(geometry.innerGuideCircleVertices, '#82511f', 2, lineOpacity, 1);
+    drawMashrabiyaSegmentListProgress(geometry.starThreadSegments, '#82511f', 2, lineOpacity, 1);
+  }
   drawMashrabiyaFilledGeometry(geometry, 1, 1, 1);
   drawMashrabiyaFaceDiagnostics(geometry.faceDiagnostics, 1);
   clearHighlightedHoleNumbers();
@@ -16687,7 +16765,7 @@ function renderThreadControls() {
   threads.forEach((thread, index) => {
     ensureThreadConnectConfig(thread);
     thread.frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
-    if (thread.frameMode === 'bridge' || thread.frameMode === 'bridge-reverse') {
+    if (thread.frameMode === 'bridge') {
       thread.frameMode = 'bridge-reverse-project';
     }
     if (thread.color === 'rainbow') {
@@ -16721,6 +16799,7 @@ function renderThreadControls() {
       <select id="frame-mode-${index}">
         <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
         <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
+        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Inner -&gt; Outer (Bridge)</option>
         <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Inner -&gt; Outer (Projected)</option>
       </select><br>
       ` : ''}
@@ -17689,6 +17768,14 @@ if (mashrabiyaFoldSelect) {
 if (mashrabiyaFillBorderSlider) {
   mashrabiyaFillBorderSlider.addEventListener('input', () => {
     mashrabiyaFillBorderWidth = sanitizeMashrabiyaFillBorderWidth(mashrabiyaFillBorderSlider.value, mashrabiyaFillBorderWidth);
+    syncMashrabiyaControls();
+    redrawAnimationInPlace();
+  });
+}
+
+if (mashrabiyaKeepConstructionLinesInput) {
+  mashrabiyaKeepConstructionLinesInput.addEventListener('change', () => {
+    mashrabiyaKeepConstructionLines = !!mashrabiyaKeepConstructionLinesInput.checked;
     syncMashrabiyaControls();
     redrawAnimationInPlace();
   });
