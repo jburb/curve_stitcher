@@ -862,6 +862,15 @@
   #sliders .slider-label {
     min-height: 1.5em;
   }
+  .mashrabiya-lines-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 27px;
+    font-size: 12px;
+    color: #334b72;
+    white-space: nowrap;
+  }
   .list-control-row {
     display: flex;
     align-items: center;
@@ -2371,12 +2380,6 @@
     <div class="slider-label">🖌 Fill Border <span class="slider-value" id="mashrabiya-fill-border-value">2</span></div>
     <input id="mashrabiya-fill-border-width" type="range" min="0" max="3" step="1" value="2">
   </div>
-  <div class="slider-block" id="mashrabiya-lines-visibility-block" style="display:none;">
-    <label class="slider-label" for="mashrabiya-keep-construction-lines">
-      <input id="mashrabiya-keep-construction-lines" type="checkbox">
-      ✏️ Keep construction lines
-    </label>
-  </div>
   <div class="slider-block" id="mashrabiya-star-color-block" style="display:none;">
     <div class="slider-label">⭐ Inner Star</div>
     <input id="mashrabiya-star-color" type="color" value="#f4d35e" aria-label="Mashrabiya inner star color">
@@ -2388,6 +2391,13 @@
   <div class="slider-block" id="mashrabiya-petal-color-block" style="display:none;">
     <div class="slider-label">🌺 Petals</div>
     <input id="mashrabiya-petal-color" type="color" value="#ee964b" aria-label="Mashrabiya petal color">
+  </div>
+  <div class="slider-block" id="mashrabiya-lines-visibility-block" style="display:none;">
+    <div class="slider-label">✏️ Construction Lines</div>
+    <label class="mashrabiya-lines-toggle" for="mashrabiya-keep-construction-lines">
+      <input id="mashrabiya-keep-construction-lines" type="checkbox">
+      Keep visible
+    </label>
   </div>
 </div>
 
