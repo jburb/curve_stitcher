@@ -159,6 +159,30 @@ body {
   clear: both;
 }
 
+/* Mashrabiya about page: tighten float wrapping and normalize copy rhythm. */
+.about-mashrabiya .layout p {
+  margin: 0 0 1rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.about-mashrabiya .layout .about-figure {
+  display: block;
+  max-width: min(260px, 40%);
+}
+
+.about-mashrabiya .layout .about-figure-left {
+  margin: 0 20px 12px 0;
+}
+
+.about-mashrabiya .layout .about-figure-right {
+  margin: 0 0 12px 20px;
+}
+
+.about-mashrabiya .layout h3 {
+  clear: both;
+}
+
 .clear-both {
   clear: both;
 }
@@ -256,6 +280,10 @@ body {
   }
 
   .about-stitching .layout .about-figure {
+    max-width: 260px;
+  }
+
+  .about-mashrabiya .layout .about-figure {
     max-width: 260px;
   }
 }
