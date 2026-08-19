@@ -191,10 +191,10 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#start-hole-number-0').press('Tab');
     await expect(advancedPanel).toHaveClass(/open/);
 
-    await page.selectOption('#jump-mode-0', 'formula');
+    await page.selectOption('#jump-mode-0', 'sequence');
     await expect(advancedPanel).toHaveClass(/open/);
 
-    await page.locator('#use-preset-0').click();
+    await page.locator('#jump-sequence-0').fill('2,3,5,8');
     await expect(advancedPanel).toHaveClass(/open/);
   });
 
@@ -747,16 +747,34 @@ test.describe('StitchLab regressions', () => {
         return JSON.stringify(x) !== JSON.stringify(y);
       }
 
+      function canonicalUndirectedSet(segments) {
+        return (segments || [])
+          .map(function(seg) {
+            var a = Math.min(seg[0], seg[1]);
+            var b = Math.max(seg[0], seg[1]);
+            return a + '-' + b;
+          })
+          .sort()
+          .join('|');
+      }
+
       return {
         addDiffers: differs(addA, addB),
         multiplyDiffers: differs(mulA, mulB),
-        stepListDiffers: differs(stepA, stepB)
+        stepListDiffers: differs(stepA, stepB),
+        multiplyStartSourceA: mulA.length ? (mulA[0][0] + 1) : null,
+        multiplyStartSourceB: mulB.length ? (mulB[0][0] + 1) : null,
+        multiplyEdgeSetA: canonicalUndirectedSet(mulA),
+        multiplyEdgeSetB: canonicalUndirectedSet(mulB)
       };
     });
 
     expect(probe.addDiffers).toBe(true);
     expect(probe.multiplyDiffers).toBe(true);
     expect(probe.stepListDiffers).toBe(true);
+    expect(probe.multiplyStartSourceA).toBe(1);
+    expect(probe.multiplyStartSourceB).toBe(4);
+    expect(probe.multiplyEdgeSetA).not.toBe(probe.multiplyEdgeSetB);
   });
 
   test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
