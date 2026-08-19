@@ -2280,7 +2280,6 @@
       <option value="add">Adding</option>
       <option value="multiply">Multiplying</option>
       <option value="sequence">List</option>
-      <option value="formula">Expression</option>
     </select>
   </div>
   <div class="slider-block" id="add-slider-block">
@@ -2595,6 +2594,14 @@
 <script>
 paper.install(window);
 paper.setup('myCanvas');
+
+var featureFlags = {
+  showExpressionStitchMode: false
+};
+
+function isExpressionStitchModeEnabled() {
+  return !!featureFlags.showExpressionStitchMode;
+}
 
 /* ------------------------------
    BASIC STATE
@@ -4880,8 +4887,13 @@ function sanitizeThreadColorList(value, fallbackList) {
 }
 
 function sanitizeThreadJumpMode(value, fallback) {
-  var allowed = ['fixed', 'connect', 'sequence', 'formula'];
-  if (allowed.indexOf(value) === -1) return fallback;
+  var allowed = ['fixed', 'connect', 'sequence'];
+  if (isExpressionStitchModeEnabled()) {
+    allowed.push('formula');
+  }
+  if (allowed.indexOf(value) === -1) {
+    return allowed.indexOf(fallback) !== -1 ? fallback : 'fixed';
+  }
   return value;
 }
 
@@ -8273,7 +8285,9 @@ function getKidStitchByForThread(thread) {
   }
   if (thread.jumpMode === 'connect') return 'multiply';
   if (thread.jumpMode === 'sequence') return 'sequence';
-  if (thread.jumpMode === 'formula') return 'formula';
+  if (thread.jumpMode === 'formula') {
+    return isExpressionStitchModeEnabled() ? 'formula' : 'add';
+  }
   return 'add';
 }
 
@@ -8317,7 +8331,7 @@ function syncBasicMathSliderVisibility() {
 
   var isMultiplyMode = mode === 'connect';
   var isSequenceMode = mode === 'sequence';
-  var isFormulaMode = mode === 'formula';
+  var isFormulaMode = isExpressionStitchModeEnabled() && mode === 'formula';
   var isFixedMode = !isMultiplyMode && !isSequenceMode && !isFormulaMode;
   var hideStartHole = index >= 0 && threads[index] && isThreadHoleListMode(threads[index]);
 
@@ -9397,6 +9411,9 @@ function computeSequence(thread, holeCount) {
   }
 
   var jumpMode = thread.jumpMode || 'fixed';
+  if (!isExpressionStitchModeEnabled() && jumpMode === 'formula') {
+    jumpMode = 'fixed';
+  }
   var visited = new Array(n).fill(false);
   var startIndex = parseBoundedInt(thread.startHole, 1, n, 1) - 1;
   var current = startIndex;
@@ -9600,12 +9617,12 @@ function computeSegments(thread) {
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
     var startOffset = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1) - 1;
     for (var i = 0; i < sourceHoleCount; i++) {
-      var sourceIndex = i;
-      // Use label-based (1..n) arithmetic so visible hole numbers match mapping behavior.
-      var sourceLabel = sourceIndex + 1;
-      var mappedLabel = (multiplier * sourceLabel + startOffset - 1) % sourceHoleCount;
-      if (mappedLabel < 0) mappedLabel += sourceHoleCount;
-      var mapped = mappedLabel;
+      // Multiplication mode honors startHole as ring phase origin.
+      var sourceIndex = (startOffset + i) % sourceHoleCount;
+      // i is 0-based within the phased ring; convert to 1-based for the multiplication rule.
+      var phaseLabel = i + 1;
+      var mapped = (startOffset + (multiplier * phaseLabel - 1)) % sourceHoleCount;
+      if (mapped < 0) mapped += sourceHoleCount;
       var mappedSegments = mapPair(sourceIndex, mapped);
       for (var m = 0; m < mappedSegments.length; m++) {
         segments.push(mappedSegments[m]);
@@ -14816,7 +14833,7 @@ function buildStitchingGuideText(fileBaseName, options) {
     lines.push('  Start hole: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
 
     if (thread.jumpMode === 'connect') {
-      lines.push('  Rule: target = ((multiplier * source + start - 2) mod n) + 1.');
+      lines.push('  Rule: start at Start hole and count forward as i = 1..n, then target = ((start + multiplier * i - 2) mod n) + 1.');
       lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
       lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
@@ -16803,7 +16820,7 @@ function renderThreadControls() {
     div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
 
     var isFixedMode = thread.jumpMode === 'fixed';
-    var isFormulaMode = thread.jumpMode === 'formula';
+    var isFormulaMode = isExpressionStitchModeEnabled() && thread.jumpMode === 'formula';
     var isSequenceMode = thread.jumpMode === 'sequence';
     var isConnectMode = thread.jumpMode === 'connect';
     var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
@@ -16826,7 +16843,7 @@ function renderThreadControls() {
         <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
         <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
         <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>List</option>
-        <option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>
+        ${isExpressionStitchModeEnabled() ? `<option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>` : ''}
       </select><br>
       ${isFixedMode ? `
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
@@ -16861,7 +16878,7 @@ function renderThreadControls() {
       ${!isHoleListMode ? `Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>` : ''}
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      <div class="jump-help">For each hole i, connect to (multiplier × i + start - 1) mod n.</div>
+      <div class="jump-help">Begin at Start hole and count forward as i = 1..n, then connect to ((start + multiplier × i - 2) mod n) + 1.</div>
       ` : ''}
       Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
@@ -16919,7 +16936,11 @@ function renderThreadControls() {
     }
 
     document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
-      thread.jumpMode = e.target.value;
+      var nextMode = e.target.value;
+      if (nextMode === 'formula' && !isExpressionStitchModeEnabled()) {
+        nextMode = 'fixed';
+      }
+      thread.jumpMode = nextMode;
       if (thread.jumpMode === 'sequence') {
         thread.jumpSequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
         if (!thread.jumpSequence) {
@@ -16943,7 +16964,7 @@ function renderThreadControls() {
     if (formulaInput) {
       formulaInput.addEventListener('input', e => {
         thread.jumpFormula = e.target.value;
-        if (thread.jumpMode === 'formula') {
+        if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula') {
           redrawForPathChange();
         }
       });
@@ -16952,6 +16973,7 @@ function renderThreadControls() {
     var usePresetBtn = document.getElementById(`use-preset-${index}`);
     if (usePresetBtn) {
       usePresetBtn.addEventListener('click', () => {
+        if (!isExpressionStitchModeEnabled()) return;
         var preset = document.getElementById(`jump-preset-${index}`).value;
         if (!preset) return;
         thread.jumpFormula = preset;
@@ -17157,7 +17179,7 @@ kidStitchBySelect.addEventListener('change', () => {
     thread.jumpMode = 'sequence';
     thread.jumpSequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
     thread.jumpSequence = String(thread.jumpSequence || (thread.jumpSequenceMode === 'steps' ? '2,3,5,8' : '1,1,2,3,5,8'));
-  } else if (choice === 'formula') {
+  } else if (choice === 'formula' && isExpressionStitchModeEnabled()) {
     thread.jumpMode = 'formula';
     thread.jumpFormula = String(thread.jumpFormula || 'skip');
   } else if (choice === 'add') {
@@ -17207,6 +17229,7 @@ if (kidSequenceModeSelect) {
 
 if (kidJumpFormulaInput) {
   kidJumpFormulaInput.addEventListener('input', () => {
+    if (!isExpressionStitchModeEnabled()) return;
     var targetIndex = getKidTargetThreadIndex();
     if (targetIndex < 0 || !threads[targetIndex]) return;
     var thread = threads[targetIndex];
@@ -17218,6 +17241,31 @@ if (kidJumpFormulaInput) {
     redrawForPathChange();
   });
 }
+
+function syncExpressionStitchModeOptionVisibility() {
+  if (!kidStitchBySelect) return;
+
+  var expressionOption = kidStitchBySelect.querySelector('option[value="formula"]');
+  if (isExpressionStitchModeEnabled()) {
+    if (!expressionOption) {
+      expressionOption = document.createElement('option');
+      expressionOption.value = 'formula';
+      expressionOption.textContent = 'Expression';
+      kidStitchBySelect.appendChild(expressionOption);
+    }
+    return;
+  }
+
+  if (expressionOption) {
+    expressionOption.remove();
+  }
+
+  if (kidStitchBySelect.value === 'formula') {
+    kidStitchBySelect.value = 'add';
+  }
+}
+
+syncExpressionStitchModeOptionVisibility();
 jumpSlider.addEventListener('input', () => {
   var targetIndex = getKidTargetThreadIndex();
   if (targetIndex < 0) return;
