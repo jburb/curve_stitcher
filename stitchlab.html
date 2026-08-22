@@ -2884,7 +2884,7 @@ var nestedFrameEnabled = false;
 var nestedFrameRatio = DEFAULT_NESTED_FRAME_RATIO;
 var MAX_HOLES = 144;
 var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
-var DEFAULT_ANIMATION_BPM = 168;
+var DEFAULT_ANIMATION_BPM = 84;
 var BEATS_PER_STITCH_SEGMENT = 1;
 var currentAnimationBpm = DEFAULT_ANIMATION_BPM;
 var DEFAULT_TEMPO_OPTIONS = [84, 168, 252, 336, 420];
@@ -5132,19 +5132,19 @@ function buildExperiencePlaybackStateFallback() {
   return {
     stitching: {
       songId: stitchingSong,
-      bpm: getKidTempoPresetsForSong(stitchingSong).normal || DEFAULT_ANIMATION_BPM
+      bpm: getKidTempoPresetsForSong(stitchingSong).slow || DEFAULT_ANIMATION_BPM
     },
     triangula: {
       songId: triangulaSong,
-      bpm: getKidTempoPresetsForSong(triangulaSong).normal || DEFAULT_ANIMATION_BPM
+      bpm: getKidTempoPresetsForSong(triangulaSong).slow || DEFAULT_ANIMATION_BPM
     },
     squarus: {
       songId: squarusSong,
-      bpm: getKidTempoPresetsForSong(squarusSong).normal || DEFAULT_ANIMATION_BPM
+      bpm: getKidTempoPresetsForSong(squarusSong).slow || DEFAULT_ANIMATION_BPM
     },
     mashrabiya: {
       songId: mashrabiyaSong,
-      bpm: getKidTempoPresetsForSong(mashrabiyaSong).normal || DEFAULT_ANIMATION_BPM
+      bpm: getKidTempoPresetsForSong(mashrabiyaSong).slow || DEFAULT_ANIMATION_BPM
     }
   };
 }
@@ -5152,7 +5152,7 @@ function buildExperiencePlaybackStateFallback() {
 function normalizePlaybackEntry(rawEntry, fallbackSongId) {
   var songId = sanitizeSongId(rawEntry && rawEntry.songId, fallbackSongId);
   var allowedTempos = getTempoOptionsForSong(songId);
-  var fallbackBpm = getKidTempoPresetsForSong(songId).normal || DEFAULT_ANIMATION_BPM;
+  var fallbackBpm = getKidTempoPresetsForSong(songId).slow || DEFAULT_ANIMATION_BPM;
   var bpm = parseBoundedInt(rawEntry && rawEntry.bpm, 1, 2000, fallbackBpm);
   if (allowedTempos.indexOf(bpm) === -1) {
     bpm = fallbackBpm;
@@ -7005,7 +7005,7 @@ function setCurrentSong(songId, options) {
   renderAdvancedTempoOptions();
   var allowedTempos = getActiveTempoOptions();
   if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
-    currentAnimationBpm = getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM;
+    currentAnimationBpm = getKidTempoPresetsForSong(currentSongId).slow || DEFAULT_ANIMATION_BPM;
   }
   syncAdvancedTempoControls();
   syncKidTempoPresetControls();
@@ -7610,7 +7610,7 @@ function unlockDiscovery(shapeKey) {
     playbackState.mashrabiya = normalizePlaybackEntry(
       {
         songId: 'rosette',
-        bpm: getKidTempoPresetsForSong('rosette').normal || DEFAULT_ANIMATION_BPM
+        bpm: getKidTempoPresetsForSong('rosette').slow || DEFAULT_ANIMATION_BPM
       },
       'rosette'
     );
@@ -8604,7 +8604,7 @@ function applyDefaultSkipAndSize() {
 function syncAdvancedTempoControls() {
   var allowedTempos = getActiveTempoOptions();
   if (allowedTempos.indexOf(currentAnimationBpm) === -1) {
-    currentAnimationBpm = getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM;
+    currentAnimationBpm = getKidTempoPresetsForSong(currentSongId).slow || DEFAULT_ANIMATION_BPM;
   }
   advancedTempoInput.value = String(currentAnimationBpm);
   advancedTempoValue.textContent = String(currentAnimationBpm);
@@ -8632,7 +8632,7 @@ function applyTempoValue(bpm, options) {
   var parsed = Math.round(Number(bpm));
   var allowedTempos = getActiveTempoOptions();
   if (!isFinite(parsed) || allowedTempos.indexOf(parsed) === -1) {
-    parsed = getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM;
+    parsed = getKidTempoPresetsForSong(currentSongId).slow || DEFAULT_ANIMATION_BPM;
   }
   currentAnimationBpm = parsed;
   syncAdvancedTempoControls();
@@ -8673,7 +8673,7 @@ function syncAnimateButtonLabel() {
 }
 
 function applyDefaultTempo() {
-  applyTempoValue(getKidTempoPresetsForSong(currentSongId).normal || DEFAULT_ANIMATION_BPM);
+  applyTempoValue(getKidTempoPresetsForSong(currentSongId).slow || DEFAULT_ANIMATION_BPM);
 }
 
 function stopAnimationIfActive() {
