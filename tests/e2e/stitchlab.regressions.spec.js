@@ -946,4 +946,74 @@ test.describe('StitchLab regressions', () => {
       expect(result.card.unlocked, `Expected ${result.key} card action to be travel-enabled`).toBe(true);
     }
   });
+
+  test('about narration uses paragraph text and excludes figure captions', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    await expect(page.locator('#experience-info-html')).toBeVisible();
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        var frame = document.getElementById('experience-info-html');
+        if (!frame) return false;
+        try {
+          var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+          return !!(doc && doc.querySelector('p'));
+        } catch (error) {
+          return false;
+        }
+      });
+    }).toBe(true);
+
+    const narrationProbe = await page.evaluate(async () => {
+      const text = await window.getExperienceNarrationScript('stitching');
+      const normalized = String(text || '');
+      return {
+        hasNarration: normalized.length > 0,
+        includesParagraphText: normalized.indexOf('Curve stitching is a special mathematical art') >= 0,
+        includesFigureCaptionText: normalized.indexOf('Cardioid Stitching from the Seattle Universal Math Museum (SUMM) - full view.') >= 0
+      };
+    });
+
+    expect(narrationProbe.hasNarration).toBe(true);
+    expect(narrationProbe.includesParagraphText).toBe(true);
+    expect(narrationProbe.includesFigureCaptionText).toBe(false);
+  });
+
+  test('about and onboarding Hear this buttons include speaker icon', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await expect(page.locator('#experience-narrate-toggle')).toHaveText(/🔊\s*Hear this/);
+    await expect(page.locator('#onboarding-tour-hear')).toHaveText(/🔊\s*Hear this/);
+
+    await page.evaluate(() => {
+      var btn = document.getElementById('onboarding-help');
+      if (btn) btn.click();
+    });
+
+    const iconProbe = await page.evaluate(() => {
+      const ids = [
+        'experience-narrate-toggle',
+        'onboarding-tour-hear',
+        'onboarding-hint-shape-hear',
+        'onboarding-hint-holes-hear',
+        'onboarding-hint-play-hear'
+      ];
+      return ids.map((id) => {
+        const el = document.getElementById(id);
+        const text = el ? String(el.textContent || '').trim() : '';
+        return {
+          id,
+          present: !!el,
+          text,
+          hasSpeakerIcon: text.indexOf('🔊') === 0 && /Hear this$/i.test(text)
+        };
+      });
+    });
+
+    for (const entry of iconProbe) {
+      if (!entry.present) continue;
+      expect(entry.hasSpeakerIcon, `Expected speaker icon hear label for ${entry.id}, got "${entry.text}"`).toBe(true);
+    }
+  });
 });
