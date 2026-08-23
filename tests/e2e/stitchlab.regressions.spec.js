@@ -947,6 +947,228 @@ test.describe('StitchLab regressions', () => {
     }
   });
 
+  test('core interaction sweep does not raise runtime reference/type errors', async ({ page }) => {
+    const pageErrors = [];
+    const consoleErrors = [];
+
+    page.on('pageerror', (error) => {
+      pageErrors.push(String(error && error.message ? error.message : error));
+    });
+
+    page.on('console', (msg) => {
+      if (msg.type() !== 'error') return;
+      const text = String(msg.text() || '');
+      if (/(ReferenceError|TypeError|SyntaxError|is not defined|Cannot read properties)/i.test(text)) {
+        consoleErrors.push(text);
+      }
+    });
+
+    await page.goto('/stitchlab.html');
+
+    await page.locator('.shape-btn[data-shape="square"]').click();
+    await page.locator('#gear').click();
+    await page.selectOption('#jump-mode-0', 'sequence');
+    await page.locator('#jump-sequence-0').fill('2,3,5,8');
+
+    await page.evaluate(() => window.setCurrentExperience('triangula'));
+    await page.evaluate(() => window.setCurrentExperience('squarus'));
+    await page.evaluate(() => window.setCurrentExperience('mashrabiya'));
+    await page.evaluate(() => window.setCurrentExperience('stitching'));
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-acknowledgments-toggle').click();
+    await expect(page.locator('#acknowledgments-modal')).toHaveClass(/open/);
+    await page.locator('#acknowledgments-close-btn').click();
+
+    await page.waitForTimeout(150);
+
+    expect(pageErrors, 'Unexpected page errors during core interaction sweep').toEqual([]);
+    expect(consoleErrors, 'Unexpected console runtime errors during core interaction sweep').toEqual([]);
+  });
+
+  test('acknowledgments viewer autoplay lifecycle resets cleanly across reopen', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-acknowledgments-toggle').click();
+    const modal = page.locator('#acknowledgments-modal');
+    await expect(modal).toHaveClass(/open/);
+    await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
+
+    const autoplayBtn = page.locator('#acknowledgments-autoplay-btn');
+    await expect(autoplayBtn).toContainText('Pause');
+    await autoplayBtn.click();
+    await expect(autoplayBtn).toContainText('Auto play');
+
+    await page.locator('#acknowledgments-next-btn').click();
+    await expect(page.locator('#acknowledgments-progress')).toContainText('2 /');
+
+    await page.locator('#acknowledgments-close-btn').click();
+    await expect(modal).not.toHaveClass(/open/);
+
+    const closeProbe = await page.evaluate(() => {
+      return {
+        autoPlay: !!(window.acknowledgmentsViewerState && window.acknowledgmentsViewerState.autoPlay),
+        timerCleared: !!(window.acknowledgmentsViewerState && window.acknowledgmentsViewerState.timerId == null)
+      };
+    });
+    expect(closeProbe.autoPlay).toBe(false);
+    expect(closeProbe.timerCleared).toBe(true);
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-acknowledgments-toggle').click();
+    await expect(modal).toHaveClass(/open/);
+    await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
+    await expect(page.locator('#acknowledgments-autoplay-btn')).toContainText('Pause');
+  });
+
+  test('triangula URL state roundtrip persists key controls on reload', async ({ page }) => {
+    await page.goto('/stitchlab.html?version=2&experience=triangula');
+
+    await page.selectOption('#triangula-construction-mode', 'cut');
+    await page.evaluate(() => {
+      var slider = document.getElementById('triangula-start-count');
+      if (!slider) return;
+      slider.value = '2';
+      var inputEvt = document.createEvent('Event');
+      inputEvt.initEvent('input', true, true);
+      slider.dispatchEvent(inputEvt);
+      var changeEvt = document.createEvent('Event');
+      changeEvt.initEvent('change', true, true);
+      slider.dispatchEvent(changeEvt);
+    });
+
+    await expect.poll(() => new URL(page.url()).searchParams.get('experience')).toBe('triangula');
+    await expect.poll(() => new URL(page.url()).searchParams.get('triangulaConstructionMode')).toBe('cut');
+    await expect.poll(() => new URL(page.url()).searchParams.get('triangulaStartCount')).toBe('9');
+
+    await page.reload();
+
+    await expect(page.locator('#triangula-construction-mode')).toHaveValue('cut');
+    await expect(page.locator('#triangula-start-count')).toHaveValue('2');
+  });
+
+  test('squarus URL state roundtrip persists key controls on reload', async ({ page }) => {
+    await page.goto('/stitchlab.html?version=2&experience=squarus');
+
+    await page.selectOption('#squarus-order-inline', '5');
+    await page.selectOption('#squarus-layout-inline', 'force-directed');
+
+    await expect.poll(() => new URL(page.url()).searchParams.get('experience')).toBe('squarus');
+    await expect.poll(() => new URL(page.url()).searchParams.get('squarusOrder')).toBe('5');
+    await expect.poll(() => new URL(page.url()).searchParams.get('squarusLayout')).toBe('force-directed');
+
+    await page.reload();
+
+    await expect(page.locator('#squarus-order-inline')).toHaveValue('5');
+    await expect(page.locator('#squarus-layout-inline')).toHaveValue('force-directed');
+  });
+
+  test('mashrabiya URL state roundtrip persists key controls on reload', async ({ page }) => {
+    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+
+    await page.selectOption('#mashrabiya-fold', '8');
+    await page.locator('#mashrabiya-keep-construction-lines').check();
+
+    await expect.poll(() => new URL(page.url()).searchParams.get('experience')).toBe('mashrabiya');
+    await expect.poll(() => new URL(page.url()).searchParams.get('mashrabiyaFold')).toBe('8');
+    await expect.poll(() => new URL(page.url()).searchParams.get('mashrabiyaKeepConstructionLines')).toBe('1');
+
+    await page.reload();
+
+    await expect(page.locator('#mashrabiya-fold')).toHaveValue('8');
+    await expect(page.locator('#mashrabiya-keep-construction-lines')).toBeChecked();
+  });
+
+  test('export fallback path works when JSZip is unavailable', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.evaluate(() => {
+      window.__exportFallbackProbe = { svg: 0, guide: 0, preview: 0 };
+      window.__savedJSZip = window.JSZip;
+      window.JSZip = undefined;
+
+      window.downloadCurrentDesignSvg = function() {
+        window.__exportFallbackProbe.svg += 1;
+      };
+      window.downloadStitchingGuide = function() {
+        window.__exportFallbackProbe.guide += 1;
+      };
+      window.downloadPreviewImage = function() {
+        window.__exportFallbackProbe.preview += 1;
+      };
+    });
+
+    await page.locator('#gear').click();
+    await page.locator('#advanced-export-svg').click();
+    const exportModal = page.locator('#export-options-modal');
+    await expect(exportModal).toHaveClass(/open/);
+
+    await page.locator('#export-confirm-btn').click();
+    await expect(exportModal).not.toHaveClass(/open/);
+
+    const probe = await page.evaluate(() => {
+      var payload = window.__exportFallbackProbe || { svg: 0, guide: 0, preview: 0 };
+      if (window.__savedJSZip !== undefined) {
+        window.JSZip = window.__savedJSZip;
+      }
+      return payload;
+    });
+
+    expect(probe.svg).toBeGreaterThanOrEqual(1);
+  });
+
+  test('squarus seeded piece sequencing is deterministic for fixed seed', async ({ page }) => {
+    await page.goto('/stitchlab.html?version=2&experience=squarus');
+
+    const deterministicProbe = await page.evaluate(() => {
+      function signatures(order, seed) {
+        return (window.getSquarusSequencedPieces(order, seed) || []).map(function(piece) {
+          return piece && piece.signature ? piece.signature : '';
+        }).join('|');
+      }
+
+      var a = signatures(5, 17);
+      var b = signatures(5, 17);
+      var c = signatures(5, 18);
+      return {
+        sameSeedStable: a === b,
+        differentSeedChangesOrder: a !== c,
+        sampleLength: a ? a.split('|').length : 0
+      };
+    });
+
+    expect(deterministicProbe.sameSeedStable).toBe(true);
+    expect(deterministicProbe.differentSeedChangesOrder).toBe(true);
+    expect(deterministicProbe.sampleLength).toBeGreaterThan(1);
+  });
+
+  test('runtime load-order contract exposes required global functions', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const contract = await page.evaluate(() => {
+      var required = {
+        setCurrentExperience: typeof window.setCurrentExperience === 'function',
+        applyStateFromCurrentUrl: typeof window.applyStateFromCurrentUrl === 'function',
+        redrawForPathChange: typeof window.redrawForPathChange === 'function',
+        animateTriangula: typeof window.animateTriangula === 'function',
+        getSquarusPolyominoes: typeof window.getSquarusPolyominoes === 'function',
+        buildMashrabiyaRosetteGeometry: typeof window.buildMashrabiyaRosetteGeometry === 'function',
+        openExportOptionsModal: typeof window.openExportOptionsModal === 'function',
+        openAcknowledgmentsViewer: typeof window.openAcknowledgmentsViewer === 'function',
+        attachExperienceInfoAcknowledgmentsBridge: typeof window.attachExperienceInfoAcknowledgmentsBridge === 'function'
+      };
+
+      var missing = Object.keys(required).filter(function(key) {
+        return !required[key];
+      });
+
+      return { required, missing };
+    });
+
+    expect(contract.missing).toEqual([]);
+  });
+
   test('about narration uses paragraph text and excludes figure captions', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
