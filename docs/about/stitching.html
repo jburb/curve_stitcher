@@ -74,5 +74,49 @@
       <li><a target="_blank" rel="noopener noreferrer" href="https://en.wikipedia.org/wiki/George_Boole">George Boole - Wikipedia</a></li>
     </ul>
   </div>
+  <script>
+    (function() {
+      function collectNarrationText() {
+        var blocks = document.querySelectorAll('p, blockquote, h2, h3, li');
+        var parts = [];
+        var seen = Object.create(null);
+        for (var i = 0; i < blocks.length; i++) {
+          var text = String(blocks[i].textContent || '').replace(/\s+/g, ' ').trim();
+          if (!text || seen[text]) continue;
+          seen[text] = true;
+          parts.push(text);
+        }
+        return parts.join('\n\n').trim();
+      }
+
+      function postNarrationText(messageType, requestId) {
+        if (!window.parent || typeof window.parent.postMessage !== 'function') return;
+        window.parent.postMessage({
+          type: messageType,
+          requestId: requestId || '',
+          path: String(window.location && window.location.pathname ? window.location.pathname : ''),
+          text: collectNarrationText()
+        }, '*');
+      }
+
+      window.addEventListener('message', function(event) {
+        var data = event && event.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.type !== 'stitchlab-about-narration-request') return;
+        postNarrationText('stitchlab-about-narration-response', data.requestId);
+      });
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          postNarrationText('stitchlab-about-narration-text', '');
+        });
+      } else {
+        postNarrationText('stitchlab-about-narration-text', '');
+      }
+      window.addEventListener('load', function() {
+        postNarrationText('stitchlab-about-narration-text', '');
+      });
+    })();
+  </script>
 </body>
 </html>

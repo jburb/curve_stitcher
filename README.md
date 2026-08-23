@@ -10,18 +10,26 @@ This repository includes dev-only Playwright tests for repeatable regression cov
 Current covered checks:
 - Stitching shape selection persists to URL and survives refresh.
 - SVG export flow opens/closes correctly and does not throw the export failure alert.
+- Export fallback path works when JSZip is unavailable.
 - Squarus squares selection snaps "pieces placed" to the max for the selected polyomino set.
+- Squarus seeded piece sequencing is deterministic for fixed seed.
 - Experience switching updates the visible control groups correctly (Stitching, Triangula, Squarus).
 - Basic and advanced shared controls remain synchronized (holes, tempo, etc.).
 - Basic palette custom dropper applies the selected thread color.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
 - Acknowledgments viewer opens from About actions.
+- Acknowledgments autoplay lifecycle resets cleanly across close/reopen.
 - Advanced pane remains open during thread-card interactions.
 - Advanced pane remains open for top/lower control-bar interactions and closes on canvas click.
 - Squarus basic and advanced squares controls stay synchronized.
 - Slider touchmove events are not canceled by global handlers.
 - Playback remains operable after orientation-style viewport changes.
 - Mobile layout baseline remains usable at phone viewport.
+- Triangula URL state roundtrip persists key controls on reload.
+- Squarus URL state roundtrip persists key controls on reload.
+- Mashrabiya URL state roundtrip persists key controls on reload.
+- Runtime load-order contract exposes required global functions.
+- Core interaction sweep does not raise runtime reference/type errors.
 - Mashrabiya debug SVG export closes sequence stitch paths.
 - Mashrabiya fold 8 classification and fills match expected point IDs and area coverage.
 - Mashrabiya fold 8 and 12 fills are invariant to debug-label toggle.
@@ -50,6 +58,54 @@ Optional:
   - `test-results/`
 
 This setup does not change runtime app behavior and should not be included in mobile/desktop packaged artifacts.
+
+## App Script Ownership (Current)
+
+The runtime is loaded in deterministic order from stitchlab.html, and ownership is currently organized as follows.
+
+| Load order | Script | Primary ownership | Notes |
+| --- | --- | --- | --- |
+| 1 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
+| 2 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
+| 3 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
+| 4 | js/app/state-url-persistence.js | URL schema, sanitizers, per-experience state serialization and hydration helpers | Canonical place for state shape and normalization logic. |
+| 5 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
+| 6 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
+| 7 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
+| 8 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
+| 9 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
+| 10 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
+| 11 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
+| 12 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
+
+## Development Notes
+
+### 1) Current stability boundary
+
+- The known-green baseline (23 Playwright regressions passing) currently depends on a mixed-ownership state in js/app/acknowledgments.js.
+- Until a targeted follow-up refactor lands with full regression coverage, treat js/app/acknowledgments.js as a stability-sensitive module.
+
+### 2) Safe refactor workflow for module moves
+
+- Move in very small batches (one function group or one listener cluster at a time).
+- After each batch, run diagnostics on touched files and then run tests/e2e/stitchlab.regressions.spec.js.
+- Prefer mechanical moves (copy then delete) over rewrites, and preserve script load order expectations.
+- If a move introduces broad regressions, revert to the last passing baseline first, then narrow scope.
+
+### 3) Practical ownership guidance
+
+- Keep experience-specific math/render logic in its experience module (triangula.js, squarus.js, mashrabiya.js).
+- Keep export surface area in export.js.
+- Keep URL/state normalization in state-url-persistence.js.
+- Keep pure runtime orchestration in experience-runtime.js.
+- Keep DOM wiring and startup sequence in ui-wiring.js unless a flow is tightly coupled and proven to require local ownership.
+
+### 4) Verification gate for ownership edits
+
+- Required gate before merging ownership refactors:
+	1. No diagnostics in changed files.
+	2. All Playwright regressions in tests/e2e/stitchlab.regressions.spec.js passing.
+	3. Updated ownership notes in this README if boundaries changed.
 
 ## License
 
