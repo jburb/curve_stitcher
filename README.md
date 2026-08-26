@@ -229,6 +229,10 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Autoplay of onboarding hints as tutorial
+2. Random thread value selection in page load w/zero params
+3. Curve sewing cards viewer
+4. Tips library and modal
 1. Stitch library (offline-first)
 2. Experience title bar (animated stitched reveal)
 3. Advanced stitch ribbon motion (Option 4)
@@ -253,19 +257,32 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
-1. **Stitch library (offline-first)**
+1. **Autoplay of onboarding hints as tutorial**
+     - can include extra preliminary hints e.g. an intro message. 
+
+2. **Random thread value selection in page load w/zero params**
+     - ensure all options are open to randomization, e.g inner frame enablement, list mode for stitching, etc.
+ 
+3. **Curve sewing cards viewer**
+     - to be opened from stitching about doc modal?
+     - must include the Cambridge lib attribution
+
+4. **Tips library and modal**
+     - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
+
+5. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-2. **Experience title bar (animated stitched reveal)**
+6. **Experience title bar (animated stitched reveal)**
 	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
 	- Trigger the reveal on initial page load and on transition into a new experience/world.
 	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
 	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
 
-3. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+7. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
