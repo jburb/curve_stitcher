@@ -249,8 +249,9 @@ This section describes the practical steps for adding a new experience named zoo
 8. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
 9. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
 10. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
-11. Triangula
-12. Dynamic add/multiply bounds guardrail
+11. Experience about docs/viewer
+12. Triangula
+13. Dynamic add/multiply bounds guardrail
 14. Squarus
 15. Mashrabiya
 16. Discovery Preview Cards 
