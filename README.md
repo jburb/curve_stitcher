@@ -255,7 +255,8 @@ This section describes the practical steps for adding a new experience named zoo
 15. Mashrabiya
 16. Discovery Preview Cards 
 17. Acknowledgments viewer
-18. Code Modularization
+18. Fix start hole implementation for threads stitched by multiplication
+19. Code Modularization
 
 
 ## TODO Backlog
