@@ -256,8 +256,9 @@ This section describes the practical steps for adding a new experience named zoo
 15. Mashrabiya
 16. Discovery Preview Cards 
 17. Acknowledgments viewer
-18. Fix start hole implementation for threads stitched by multiplication
-19. Code Modularization
+18. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
+19. Fix start hole implementation for threads stitched by multiplication
+20. Code Modularization
 
 
 ## TODO Backlog
