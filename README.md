@@ -233,9 +233,9 @@ This section describes the practical steps for adding a new experience named zoo
 2. Random thread value selection in page load w/zero params
 3. Curve sewing cards viewer
 4. Tips library and modal
-1. Stitch library (offline-first)
-2. Experience title bar (animated stitched reveal)
-3. Advanced stitch ribbon motion (Option 4)
+5. Stitch library (offline-first)
+6. Experience title bar (animated stitched reveal)
+7. Advanced stitch ribbon motion (Option 
 
 ## Recently Completed
 
@@ -253,7 +253,10 @@ This section describes the practical steps for adding a new experience named zoo
 12. Dynamic add/multiply bounds guardrail
 14. Squarus
 15. Mashrabiya
-16. Discovery Preview Cards
+16. Discovery Preview Cards 
+17. Acknowledgments viewer
+18. Code Modularization
+
 
 ## TODO Backlog
 
