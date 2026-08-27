@@ -203,8 +203,18 @@ if (onboardingTourNextBtn) {
   onboardingTourNextBtn.addEventListener('click', handleOnboardingTourNext);
 }
 
+if (onboardingTourPrevBtn) {
+  onboardingTourPrevBtn.addEventListener('click', handleOnboardingTourPrev);
+}
+
 if (onboardingTourSkipBtn) {
   onboardingTourSkipBtn.addEventListener('click', handleOnboardingTourSkip);
+}
+
+if (onboardingTourOptOutInput) {
+  onboardingTourOptOutInput.addEventListener('change', function() {
+    setOnboardingTutorialOptOutPreference(!!onboardingTourOptOutInput.checked);
+  });
 }
 
 if (onboardingTourHearBtn) {
@@ -214,6 +224,16 @@ if (onboardingTourHearBtn) {
       event.stopPropagation();
     }
     toggleOnboardingTourNarration();
+  });
+}
+
+if (onboardingTourHearAllBtn) {
+  onboardingTourHearAllBtn.addEventListener('click', function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    toggleOnboardingTourHearAll();
   });
 }
 
@@ -375,6 +395,6 @@ if (hasUrlStateParams()) {
 }
 scheduleDiscoveryEvaluation();
 syncExportUiCopy();
-scheduleUrlStateSync(true);
 initializeOnboarding();
+scheduleUrlStateSync(true);
 window.setCurrentExperience = setCurrentExperience;

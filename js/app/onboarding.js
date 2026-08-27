@@ -15,9 +15,30 @@ var onboardingGuidanceMode = 'none';
 var onboardingHintNarrationUtterance = null;
 var onboardingHintNarrationButton = null;
 var onboardingTourNarrationUtterance = null;
+var onboardingTutorialAutoplayActive = false;
+var onboardingTutorialAutoplayTimer = null;
 var HEAR_THIS_BUTTON_LABEL = '🔊 Hear this';
 var STOP_BUTTON_LABEL = '⏹ Stop';
 var STOP_NARRATION_BUTTON_LABEL = '⏹ Stop narration';
+var HEAR_ALL_BUTTON_LABEL = '🔊 Hear all';
+var STOP_ALL_BUTTON_LABEL = '⏹ Stop all';
+var ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS = 520;
+var ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS = 2400;
+
+function getStitchingIntroTutorialSteps() {
+  return [
+    {
+      title: 'Welcome to StitchLab!',
+      text: 'Welcome to StitchLab. This quick tutorial will walk you through the stitching experience.',
+      selector: '#onboarding-help'
+    },
+    {
+      title: 'This Is The Stitching Frame',
+      text: 'Any thread you add is stitched inside this frame using the controls below. We will highlight each key control as we go.',
+      selector: '#canvas-stage'
+    }
+  ];
+}
 
 function getOnboardingTailSteps() {
   return [
@@ -82,7 +103,7 @@ function getDefaultOnboardingGuideContent() {
         selector: '#animate'
       }
     },
-    steps: [
+    steps: getStitchingIntroTutorialSteps().concat([
       {
         title: 'Pick A Shape',
         text: 'Start by choosing a shape for the stitching frame.',
@@ -93,7 +114,7 @@ function getDefaultOnboardingGuideContent() {
         text: 'Show or hide hole numbers around the frame.',
         selector: '#toggle-hole-numbers'
       }
-    ].concat(getOnboardingPlaybackSteps('stitching')).concat([
+    ]).concat(getOnboardingPlaybackSteps('stitching')).concat([
       {
         title: 'Choose Thread Color',
         text: 'Pick a thread color from presets, use rainbow, or tap the dropper for a custom color.',
@@ -126,7 +147,7 @@ function getDefaultOnboardingGuideContent() {
       },
       {
         title: 'Enter Multiply Value',
-        text: 'Enter the number by which hole numbers will be multilplied to choose connecting holes.',
+        text: 'Enter the number by which hole numbers will be multiplied to choose connecting holes.',
         selector: '#multiply'
       },
       {
@@ -182,13 +203,7 @@ function getOnboardingGuideContentForExperience(experienceId) {
           selector: '#animate'
         }
       },
-      steps: [
-        {
-          title: 'Frame Shape',
-          text: 'Triangula uses a fixed triangle frame.',
-          selector: '.shape-picker-group'
-        }
-      ].concat(getOnboardingPlaybackSteps('triangula')).concat([
+      steps: getOnboardingPlaybackSteps('triangula').concat([
         {
           title: 'Choose Palette Color',
           text: 'Pick a color from presets, use rainbow, or tap the dropper for a custom color.',
@@ -236,13 +251,7 @@ function getOnboardingGuideContentForExperience(experienceId) {
           selector: '#animate'
         }
       },
-      steps: [
-        {
-          title: 'Frame Shape',
-          text: 'Squarus uses a fixed square frame.',
-          selector: '.shape-picker-group'
-        }
-      ].concat(getOnboardingPlaybackSteps('squarus')).concat([
+      steps: getOnboardingPlaybackSteps('squarus').concat([
         {
           title: 'Choose Polyomino Type',
           text: 'Select a type from 1-square (monomino) through 6-square (hexomino) families.',
@@ -295,13 +304,7 @@ function getOnboardingGuideContentForExperience(experienceId) {
           selector: '#animate'
         }
       },
-      steps: [
-        {
-          title: 'Frame Shape',
-          text: 'Mashrabiya uses a fixed rosette frame.',
-          selector: '.shape-picker-group'
-        }
-      ].concat(getOnboardingPlaybackSteps('mashrabiya')).concat([
+      steps: getOnboardingPlaybackSteps('mashrabiya').concat([
         {
           title: 'Choose Petal Fold',
           text: 'Select 6, 8, or 12-fold symmetry.',
@@ -333,12 +336,14 @@ function sanitizeOnboardingState(rawState) {
   if (!rawState || typeof rawState !== 'object') {
     return {
       quickStartDismissed: false,
-      tourCompleted: false
+      tourCompleted: false,
+      startupTutorialOptOut: false
     };
   }
   return {
     quickStartDismissed: !!rawState.quickStartDismissed,
-    tourCompleted: !!rawState.tourCompleted
+    tourCompleted: !!rawState.tourCompleted,
+    startupTutorialOptOut: !!rawState.startupTutorialOptOut
   };
 }
 
@@ -359,6 +364,123 @@ function persistOnboardingState() {
 function setOnboardingStatePatch(patch) {
   onboardingState = Object.assign({}, onboardingState, patch || {});
   persistOnboardingState();
+}
+
+function setOnboardingTutorialOptOutPreference(shouldOptOut) {
+  setOnboardingStatePatch({ startupTutorialOptOut: !!shouldOptOut });
+  if (onboardingTourOptOutInput) {
+    onboardingTourOptOutInput.checked = !!onboardingState.startupTutorialOptOut;
+  }
+}
+
+function shouldAutoplayStartupTutorial() {
+  if (hasUrlStateParams()) return false;
+  if (currentExperienceId !== 'stitching') return false;
+  return !onboardingState.startupTutorialOptOut;
+}
+
+function isStitchingOnboardingTourContext() {
+  return currentExperienceId === 'stitching';
+}
+
+function syncOnboardingTourOptOutControl() {
+  if (!onboardingTourOptOutInput) return;
+  var isStitching = isStitchingOnboardingTourContext();
+  var optOutLabel = onboardingTourOptOutInput.closest('.onboarding-tour-optout');
+
+  onboardingTourOptOutInput.disabled = !isStitching;
+  onboardingTourOptOutInput.checked = !!onboardingState.startupTutorialOptOut;
+
+  if (optOutLabel) {
+    optOutLabel.hidden = !isStitching;
+    optOutLabel.setAttribute('aria-hidden', isStitching ? 'false' : 'true');
+    optOutLabel.style.display = isStitching ? '' : 'none';
+  }
+}
+
+function clearOnboardingTutorialAutoplayTimer() {
+  if (!onboardingTutorialAutoplayTimer) return;
+  window.clearTimeout(onboardingTutorialAutoplayTimer);
+  onboardingTutorialAutoplayTimer = null;
+}
+
+function scheduleOnboardingTutorialAutoplayAdvance(delayMs) {
+  if (!onboardingTutorialAutoplayActive) return;
+  clearOnboardingTutorialAutoplayTimer();
+  onboardingTutorialAutoplayTimer = window.setTimeout(function() {
+    onboardingTutorialAutoplayTimer = null;
+    if (!onboardingTutorialAutoplayActive) return;
+    if (!onboardingTour || onboardingTour.hidden) return;
+    handleOnboardingTourNext();
+  }, Math.max(150, delayMs || ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS));
+}
+
+function findOnboardingTourStepEntry(startIndex, direction) {
+  var dir = direction < 0 ? -1 : 1;
+  if (!onboardingTourSteps.length) return null;
+  if (startIndex < 0 || startIndex >= onboardingTourSteps.length) return null;
+
+  for (var i = startIndex; i >= 0 && i < onboardingTourSteps.length; i += dir) {
+    var step = onboardingTourSteps[i];
+    var target = resolveOnboardingTarget(step && step.selector);
+    if (target) {
+      return {
+        index: i,
+        step: step,
+        target: target
+      };
+    }
+  }
+  return null;
+}
+
+function getPreviousOnboardingTourStepIndex(currentIndex) {
+  if (currentIndex <= 0) return -1;
+  var previousEntry = findOnboardingTourStepEntry(currentIndex - 1, -1);
+  return previousEntry ? previousEntry.index : -1;
+}
+
+function syncOnboardingTourNavigationControls() {
+  if (!onboardingTourPrevBtn && !onboardingTourNextBtn) return;
+  var isManualTour = !onboardingTutorialAutoplayActive;
+  var previousIndex = getPreviousOnboardingTourStepIndex(onboardingTourIndex);
+
+  if (onboardingTourPrevBtn) {
+    onboardingTourPrevBtn.hidden = !isManualTour || previousIndex < 0;
+    onboardingTourPrevBtn.disabled = !isManualTour || previousIndex < 0;
+    onboardingTourPrevBtn.setAttribute('aria-hidden', (!isManualTour || previousIndex < 0) ? 'true' : 'false');
+  }
+
+  if (onboardingTourNextBtn) {
+    onboardingTourNextBtn.hidden = !isManualTour;
+    onboardingTourNextBtn.disabled = !isManualTour;
+    onboardingTourNextBtn.setAttribute('aria-hidden', isManualTour ? 'false' : 'true');
+  }
+}
+
+function syncOnboardingTourHearAllButtonState() {
+  syncOnboardingTourAudioControls();
+}
+
+function syncOnboardingTourAudioControls() {
+  var isAllActive = !!onboardingTutorialAutoplayActive;
+  var isSingleActive = !isAllActive && !!onboardingTourNarrationUtterance;
+
+  if (onboardingTourHearBtn) {
+    onboardingTourHearBtn.hidden = isAllActive;
+    onboardingTourHearBtn.disabled = isAllActive;
+    onboardingTourHearBtn.setAttribute('aria-hidden', isAllActive ? 'true' : 'false');
+    onboardingTourHearBtn.setAttribute('aria-pressed', isSingleActive ? 'true' : 'false');
+    onboardingTourHearBtn.textContent = isSingleActive ? STOP_BUTTON_LABEL : HEAR_THIS_BUTTON_LABEL;
+  }
+
+  if (onboardingTourHearAllBtn) {
+    onboardingTourHearAllBtn.hidden = isSingleActive;
+    onboardingTourHearAllBtn.disabled = isSingleActive;
+    onboardingTourHearAllBtn.setAttribute('aria-hidden', isSingleActive ? 'true' : 'false');
+    onboardingTourHearAllBtn.setAttribute('aria-pressed', isAllActive ? 'true' : 'false');
+    onboardingTourHearAllBtn.textContent = isAllActive ? STOP_ALL_BUTTON_LABEL : HEAR_ALL_BUTTON_LABEL;
+  }
 }
 
 function getElementCenterCoordinates(element) {
@@ -432,6 +554,7 @@ function ensureOnboardingHintStructure(hintElement, textSelector, hearButtonId) 
 function applyOnboardingGuideContentForCurrentExperience() {
   onboardingGuideContent = getOnboardingGuideContentForExperience(currentExperienceId);
   onboardingTourSteps = (onboardingGuideContent && onboardingGuideContent.steps) ? onboardingGuideContent.steps.slice() : [];
+  syncOnboardingTourOptOutControl();
 
   onboardingHintShapeText = ensureOnboardingHintStructure(onboardingHintShape, '.onboarding-hint-text', 'onboarding-hint-shape-hear');
   onboardingHintHolesText = ensureOnboardingHintStructure(onboardingHintHoles, '.onboarding-hint-text', 'onboarding-hint-holes-hear');
@@ -521,9 +644,7 @@ function resetOnboardingHintNarrationButtons() {
 }
 
 function syncOnboardingTourNarrationButtonState(isPlaying) {
-  if (!onboardingTourHearBtn) return;
-  onboardingTourHearBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
-  onboardingTourHearBtn.textContent = isPlaying ? STOP_BUTTON_LABEL : HEAR_THIS_BUTTON_LABEL;
+  syncOnboardingTourAudioControls();
 }
 
 function stopOnboardingHintNarration() {
@@ -541,6 +662,39 @@ function stopOnboardingTourNarration() {
   }
   onboardingTourNarrationUtterance = null;
   syncOnboardingTourNarrationButtonState(false);
+}
+
+function speakOnboardingTourNarration(options) {
+  options = options || {};
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+
+  var narrationText = String(onboardingTourText && onboardingTourText.textContent ? onboardingTourText.textContent : '').replace(/\s+/g, ' ').trim();
+  if (!narrationText) return false;
+
+  stopOnboardingHintNarration();
+  var utterance = new SpeechSynthesisUtterance(narrationText);
+  utterance.rate = 0.97;
+  utterance.pitch = 1;
+  utterance.onend = function() {
+    onboardingTourNarrationUtterance = null;
+    syncOnboardingTourNarrationButtonState(false);
+    if (options.autoAdvanceOnFinish && onboardingTutorialAutoplayActive) {
+      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS);
+    }
+  };
+  utterance.onerror = function() {
+    onboardingTourNarrationUtterance = null;
+    syncOnboardingTourNarrationButtonState(false);
+    if (options.autoAdvanceOnFinish && onboardingTutorialAutoplayActive) {
+      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
+    }
+  };
+
+  onboardingTourNarrationUtterance = utterance;
+  syncOnboardingTourNarrationButtonState(true);
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+  return true;
 }
 
 function getOnboardingHintNarrationText(hintElement) {
@@ -591,29 +745,12 @@ function toggleOnboardingTourNarration() {
 
   if (onboardingTourNarrationUtterance) {
     stopOnboardingTourNarration();
+    if (onboardingTutorialAutoplayActive) {
+      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
+    }
     return;
   }
-
-  var narrationText = String(onboardingTourText && onboardingTourText.textContent ? onboardingTourText.textContent : '').replace(/\s+/g, ' ').trim();
-  if (!narrationText) return;
-
-  stopOnboardingHintNarration();
-  var utterance = new SpeechSynthesisUtterance(narrationText);
-  utterance.rate = 0.97;
-  utterance.pitch = 1;
-  utterance.onend = function() {
-    onboardingTourNarrationUtterance = null;
-    syncOnboardingTourNarrationButtonState(false);
-  };
-  utterance.onerror = function() {
-    onboardingTourNarrationUtterance = null;
-    syncOnboardingTourNarrationButtonState(false);
-  };
-
-  onboardingTourNarrationUtterance = utterance;
-  syncOnboardingTourNarrationButtonState(true);
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
+  speakOnboardingTourNarration({ autoAdvanceOnFinish: false });
 }
 
 function positionHintBubble(hintElement, targetElement, verticalOffset) {
@@ -699,6 +836,13 @@ function dismissOnboardingHints() {
 function markOnboardingInteraction() {
   if (onboardingInteractionMarked) return;
   onboardingInteractionMarked = true;
+  if (onboardingTutorialAutoplayActive) {
+    onboardingTutorialAutoplayActive = false;
+    clearOnboardingTutorialAutoplayTimer();
+    stopOnboardingTourNarration();
+    syncOnboardingTourHearAllButtonState();
+    syncOnboardingTourNavigationControls();
+  }
   if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
   dismissOnboardingHints();
   if (!onboardingState.quickStartDismissed && onboardingQuickStart) {
@@ -733,8 +877,12 @@ function clearOnboardingTourTarget() {
 function hideOnboardingTour() {
   clearOnboardingTourTarget();
   onboardingTourIndex = -1;
+  onboardingTutorialAutoplayActive = false;
+  clearOnboardingTutorialAutoplayTimer();
   if (onboardingTour) onboardingTour.hidden = true;
   stopOnboardingTourNarration();
+  syncOnboardingTourNavigationControls();
+  syncOnboardingTourHearAllButtonState();
   if (onboardingGuidanceMode === 'tour') onboardingGuidanceMode = 'none';
   syncOnboardingHelpButtonState();
 }
@@ -763,21 +911,18 @@ function positionOnboardingTourForTarget(targetElement) {
 
 function showOnboardingTourStep(index) {
   if (!onboardingTour || index < 0 || index >= onboardingTourSteps.length) return;
-  var nextIndex = -1;
-  var step = null;
-  var target = null;
-  for (var i = index; i < onboardingTourSteps.length; i++) {
-    step = onboardingTourSteps[i];
-    target = resolveOnboardingTarget(step && step.selector);
-    if (target) {
-      nextIndex = i;
-      break;
-    }
+  var direction = index < onboardingTourIndex ? -1 : 1;
+  var stepEntry = findOnboardingTourStepEntry(index, direction);
+  if (!stepEntry && direction < 0) {
+    stepEntry = findOnboardingTourStepEntry(index, 1);
   }
-  if (nextIndex < 0) {
+  if (!stepEntry) {
     completeOnboardingTour();
     return;
   }
+  var step = stepEntry.step;
+  var target = stepEntry.target;
+  var nextIndex = stepEntry.index;
   clearOnboardingTourTarget();
   onboardingTourTarget = target;
   onboardingTourTarget.classList.add('onboarding-target');
@@ -788,17 +933,47 @@ function showOnboardingTourStep(index) {
   onboardingTour.hidden = false;
   onboardingGuidanceMode = 'tour';
   stopOnboardingTourNarration();
+  clearOnboardingTutorialAutoplayTimer();
+  if (onboardingTutorialAutoplayActive) {
+    var narrationStarted = speakOnboardingTourNarration({ autoAdvanceOnFinish: true });
+    if (!narrationStarted) {
+      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
+    }
+  }
+  syncOnboardingTourHearAllButtonState();
+  syncOnboardingTourNavigationControls();
   syncOnboardingHelpButtonState();
   positionOnboardingTourForTarget(target);
 }
 
-function startOnboardingTour() {
+function startOnboardingTour(options) {
+  options = options || {};
   applyOnboardingGuideContentForCurrentExperience();
   if (onboardingHelpBtn) onboardingHelpBtn.classList.remove('has-onboarding-pulse');
   if (onboardingQuickStart) onboardingQuickStart.hidden = true;
   onboardingHintsEnabledByHelp = false;
+  onboardingTutorialAutoplayActive = !!options.autoplay;
+  clearOnboardingTutorialAutoplayTimer();
+  syncOnboardingTourOptOutControl();
   hideOnboardingHints();
   showOnboardingTourStep(0);
+}
+
+function toggleOnboardingTourHearAll() {
+  if (!onboardingTour) return;
+  if (onboardingTutorialAutoplayActive) {
+    onboardingTutorialAutoplayActive = false;
+    clearOnboardingTutorialAutoplayTimer();
+    stopOnboardingTourNarration();
+    syncOnboardingTourHearAllButtonState();
+    syncOnboardingTourNavigationControls();
+    return;
+  }
+
+  onboardingTutorialAutoplayActive = true;
+  syncOnboardingTourHearAllButtonState();
+  syncOnboardingTourNavigationControls();
+  showOnboardingTourStep(onboardingTourIndex >= 0 ? onboardingTourIndex : 0);
 }
 
 function openOnboardingGuidance() {
@@ -814,10 +989,15 @@ function openOnboardingGuidance() {
 }
 
 function completeOnboardingTour() {
+  var shouldOptOut = !!onboardingState.startupTutorialOptOut;
+  if (isStitchingOnboardingTourContext() && onboardingTourOptOutInput) {
+    shouldOptOut = !!onboardingTourOptOutInput.checked;
+  }
   hideOnboardingTour();
   setOnboardingStatePatch({
     quickStartDismissed: true,
-    tourCompleted: true
+    tourCompleted: true,
+    startupTutorialOptOut: shouldOptOut
   });
 }
 
@@ -833,15 +1013,38 @@ function handleOnboardingTourNext() {
   showOnboardingTourStep(onboardingTourIndex + 1);
 }
 
+function handleOnboardingTourPrev() {
+  if (onboardingTutorialAutoplayActive) return;
+  if (onboardingTourIndex <= 0) {
+    syncOnboardingTourNavigationControls();
+    return;
+  }
+  var previousIndex = getPreviousOnboardingTourStepIndex(onboardingTourIndex);
+  if (previousIndex < 0) {
+    syncOnboardingTourNavigationControls();
+    return;
+  }
+  showOnboardingTourStep(previousIndex);
+}
+
 function handleOnboardingTourSkip() {
+  var shouldOptOut = !!onboardingState.startupTutorialOptOut;
+  if (isStitchingOnboardingTourContext() && onboardingTourOptOutInput) {
+    shouldOptOut = !!onboardingTourOptOutInput.checked;
+  }
   hideOnboardingTour();
   setOnboardingStatePatch({
-    quickStartDismissed: true
+    quickStartDismissed: true,
+    startupTutorialOptOut: shouldOptOut
   });
 }
 
 function showOnboardingQuickStartIfNeeded() {
   if (!onboardingQuickStart) return;
+  if (shouldAutoplayStartupTutorial()) {
+    onboardingQuickStart.hidden = true;
+    return;
+  }
   if (onboardingState.quickStartDismissed || hasUrlStateParams()) {
     onboardingQuickStart.hidden = true;
     return;
@@ -875,8 +1078,13 @@ function initializeOnboarding() {
   onboardingHintsEnabledByHelp = false;
   onboardingGuidanceMode = 'none';
   applyOnboardingGuideContentForCurrentExperience();
-  showOnboardingQuickStartIfNeeded();
-  showOnboardingHints();
+  syncOnboardingTourOptOutControl();
+  if (shouldAutoplayStartupTutorial()) {
+    startOnboardingTour({ autoplay: true });
+  } else {
+    showOnboardingQuickStartIfNeeded();
+    showOnboardingHints();
+  }
   refreshOnboardingOverlayPositions();
   syncOnboardingHelpPulse();
   syncOnboardingTourNarrationButtonState(false);
