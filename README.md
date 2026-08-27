@@ -229,66 +229,63 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Autoplay of onboarding hints as tutorial
-2. Random thread value selection in page load w/zero params
-3. Curve sewing cards viewer
-4. Tips library and modal
-5. Stitch library (offline-first)
-6. Experience title bar (animated stitched reveal)
-7. Advanced stitch ribbon motion (Option 
+1. Random thread value selection in page load w/zero params
+2. Curve sewing cards viewer
+3. Tips library and modal
+4. Stitch library (offline-first)
+5. Experience title bar (animated stitched reveal)
+6. Advanced stitch ribbon motion (Option 
 
 ## Recently Completed
 
-1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
-2. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
-3. Stitch motion realism (progressive pull + settle accent, tempo-locked)
-4. Arithmetic-first stitch controls in kid and advanced UI
-5. Multiplication mapping mode (cardioid/nephroid capable)
-6. Formula UX pass (math-friendly input normalization and clearer guidance)
-7. Multiplication mapping aligned to visible hole numbering semantics
-8. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
-9. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
-10. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
-11. Experience about docs/viewer
-12. Triangula
-13. Dynamic add/multiply bounds guardrail
-14. Squarus
-15. Mashrabiya
-16. Discovery Preview Cards 
-17. Acknowledgments viewer
-18. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
-19. Fix start hole implementation for threads stitched by multiplication
-20. Code Modularization
+1. Autoplay of onboarding hints as tutorial
+2. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
+3. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
+4. Stitch motion realism (progressive pull + settle accent, tempo-locked)
+5. Arithmetic-first stitch controls in kid and advanced UI
+6. Multiplication mapping mode (cardioid/nephroid capable)
+7. Formula UX pass (math-friendly input normalization and clearer guidance)
+8. Multiplication mapping aligned to visible hole numbering semantics
+9. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
+10. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
+11. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
+12. Experience about docs/viewer
+13. Triangula
+14. Dynamic add/multiply bounds guardrail
+15. Squarus
+16. Mashrabiya
+17. Discovery Preview Cards 
+18. Acknowledgments viewer
+19. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
+20. Fix start hole implementation for threads stitched by multiplication
+21. Code Modularization
 
 
 ## TODO Backlog
 
-1. **Autoplay of onboarding hints as tutorial**
-     - can include extra preliminary hints e.g. an intro message. 
-
-2. **Random thread value selection in page load w/zero params**
+1. **Random thread value selection in page load w/zero params**
      - ensure all options are open to randomization, e.g inner frame enablement, list mode for stitching, etc.
  
-3. **Curve sewing cards viewer**
+2. **Curve sewing cards viewer**
      - to be opened from stitching about doc modal?
      - must include the Cambridge lib attribution
 
-4. **Tips library and modal**
+3. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
 
-5. **Stitch library (offline-first)**
+4. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-6. **Experience title bar (animated stitched reveal)**
+5. **Experience title bar (animated stitched reveal)**
 	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
 	- Trigger the reveal on initial page load and on transition into a new experience/world.
 	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
 	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
 
-7. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+6. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.

@@ -87,6 +87,205 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#triangula-start-block')).toBeHidden();
   });
 
+  test('onboarding tour uses stitching-only intro and startup opt-out control', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const onboardingProbe = await page.evaluate(() => {
+      const readTourState = () => ({
+        title: (document.getElementById('onboarding-tour-title') || {}).textContent || '',
+        optOutHidden: !!((document.querySelector('.onboarding-tour-optout') || {}).hidden),
+        optOutDisabled: !!((document.getElementById('onboarding-tour-optout') || {}).disabled),
+        prevHidden: !!((document.getElementById('onboarding-tour-prev') || {}).hidden),
+        prevDisabled: !!((document.getElementById('onboarding-tour-prev') || {}).disabled),
+        nextHidden: !!((document.getElementById('onboarding-tour-next') || {}).hidden),
+        nextDisabled: !!((document.getElementById('onboarding-tour-next') || {}).disabled),
+        hearHidden: !!((document.getElementById('onboarding-tour-hear') || {}).hidden),
+        hearPressed: ((document.getElementById('onboarding-tour-hear') || {}).getAttribute || function() { return null; }).call(document.getElementById('onboarding-tour-hear'), 'aria-pressed'),
+        hearLabel: (document.getElementById('onboarding-tour-hear') || {}).textContent || '',
+        hearAllHidden: !!((document.getElementById('onboarding-tour-hear-all') || {}).hidden),
+        hearAllPressed: ((document.getElementById('onboarding-tour-hear-all') || {}).getAttribute || function() { return null; }).call(document.getElementById('onboarding-tour-hear-all'), 'aria-pressed'),
+        hearAllLabel: (document.getElementById('onboarding-tour-hear-all') || {}).textContent || ''
+      });
+
+      if (typeof window.setCurrentExperience !== 'function' || typeof window.startOnboardingTour !== 'function') {
+        return { missingHooks: true };
+      }
+
+      window.setCurrentExperience('triangula', { suppressUrlSync: true });
+      window.startOnboardingTour();
+      const triangula = readTourState();
+      var triangulaNext = document.getElementById('onboarding-tour-next');
+      if (triangulaNext) triangulaNext.click();
+      const triangulaAfterNext = readTourState();
+
+      window.setCurrentExperience('stitching', { suppressUrlSync: true });
+      window.startOnboardingTour();
+      const stitching = readTourState();
+
+      var hearBtn = document.getElementById('onboarding-tour-hear');
+      var hearAllBtn = document.getElementById('onboarding-tour-hear-all');
+
+      if (hearBtn) hearBtn.click();
+      const stitchingHearSingleActive = readTourState();
+
+      if (hearBtn) hearBtn.click();
+      const stitchingHearSingleStopped = readTourState();
+
+      if (hearAllBtn) hearAllBtn.click();
+      const stitchingHearAllActive = readTourState();
+
+      if (hearBtn) hearBtn.click();
+      const stitchingAfterStopCurrent = readTourState();
+
+      if (hearAllBtn) hearAllBtn.click();
+      const stitchingHearAllStopped = readTourState();
+
+      var stitchingNext = document.getElementById('onboarding-tour-next');
+      if (stitchingNext) stitchingNext.click();
+      const stitchingAfterNext = readTourState();
+
+      window.startOnboardingTour({ autoplay: true });
+      const stitchingAutoplay = readTourState();
+
+      return {
+        missingHooks: false,
+        triangula,
+        triangulaAfterNext,
+        stitching,
+        stitchingHearSingleActive,
+        stitchingHearSingleStopped,
+        stitchingHearAllActive,
+        stitchingAfterStopCurrent,
+        stitchingHearAllStopped,
+        stitchingAfterNext,
+        stitchingAutoplay
+      };
+    });
+
+    expect(onboardingProbe.missingHooks).toBe(false);
+    expect(onboardingProbe.triangula.title).toBe('Play Animation');
+    expect(onboardingProbe.triangula.optOutHidden).toBe(true);
+    expect(onboardingProbe.triangula.optOutDisabled).toBe(true);
+    expect(onboardingProbe.triangula.prevHidden).toBe(true);
+    expect(onboardingProbe.triangula.prevDisabled).toBe(true);
+    expect(onboardingProbe.triangula.nextHidden).toBe(false);
+    expect(onboardingProbe.triangula.nextDisabled).toBe(false);
+    expect(onboardingProbe.triangulaAfterNext.prevHidden).toBe(false);
+    expect(onboardingProbe.triangulaAfterNext.prevDisabled).toBe(false);
+
+    expect(onboardingProbe.stitching.title).toBe('Welcome to StitchLab!');
+    expect(onboardingProbe.stitching.optOutHidden).toBe(false);
+    expect(onboardingProbe.stitching.optOutDisabled).toBe(false);
+    expect(onboardingProbe.stitching.prevHidden).toBe(true);
+    expect(onboardingProbe.stitching.prevDisabled).toBe(true);
+    expect(onboardingProbe.stitching.nextHidden).toBe(false);
+    expect(onboardingProbe.stitching.nextDisabled).toBe(false);
+    expect(onboardingProbe.stitching.hearPressed).toBe('false');
+    expect(onboardingProbe.stitching.hearLabel).toContain('Hear this');
+    expect(onboardingProbe.stitching.hearHidden).toBe(false);
+    expect(onboardingProbe.stitching.hearAllPressed).toBe('false');
+    expect(onboardingProbe.stitching.hearAllLabel).toContain('Hear all');
+    expect(onboardingProbe.stitching.hearAllHidden).toBe(false);
+
+    expect(onboardingProbe.stitchingHearSingleActive.hearPressed).toBe('true');
+    expect(onboardingProbe.stitchingHearSingleActive.hearLabel).toContain('Stop');
+    expect(onboardingProbe.stitchingHearSingleActive.hearHidden).toBe(false);
+    expect(onboardingProbe.stitchingHearSingleActive.hearAllHidden).toBe(true);
+
+    expect(onboardingProbe.stitchingHearSingleStopped.hearPressed).toBe('false');
+    expect(onboardingProbe.stitchingHearSingleStopped.hearLabel).toContain('Hear this');
+    expect(onboardingProbe.stitchingHearSingleStopped.hearHidden).toBe(false);
+    expect(onboardingProbe.stitchingHearSingleStopped.hearAllHidden).toBe(false);
+
+    expect(onboardingProbe.stitchingHearAllActive.hearAllPressed).toBe('true');
+    expect(onboardingProbe.stitchingHearAllActive.hearAllLabel).toContain('Stop all');
+    expect(onboardingProbe.stitchingHearAllActive.hearHidden).toBe(true);
+    expect(onboardingProbe.stitchingHearAllActive.hearAllHidden).toBe(false);
+    expect(onboardingProbe.stitchingHearAllActive.nextHidden).toBe(true);
+    expect(onboardingProbe.stitchingHearAllActive.nextDisabled).toBe(true);
+    expect(onboardingProbe.stitchingHearAllActive.prevHidden).toBe(true);
+
+    expect(onboardingProbe.stitchingAfterStopCurrent.hearAllPressed).toBe('true');
+
+    expect(onboardingProbe.stitchingHearAllStopped.hearAllPressed).toBe('false');
+    expect(onboardingProbe.stitchingHearAllStopped.hearAllLabel).toContain('Hear all');
+    expect(onboardingProbe.stitchingHearAllStopped.prevHidden).toBe(true);
+    expect(onboardingProbe.stitchingHearAllStopped.nextHidden).toBe(false);
+    expect(onboardingProbe.stitchingHearAllStopped.nextDisabled).toBe(false);
+
+    expect(onboardingProbe.stitchingAfterNext.prevHidden).toBe(false);
+    expect(onboardingProbe.stitchingAfterNext.prevDisabled).toBe(false);
+
+    expect(onboardingProbe.stitchingAutoplay.prevHidden).toBe(true);
+    expect(onboardingProbe.stitchingAutoplay.prevDisabled).toBe(true);
+    expect(onboardingProbe.stitchingAutoplay.nextHidden).toBe(true);
+    expect(onboardingProbe.stitchingAutoplay.nextDisabled).toBe(true);
+    expect(onboardingProbe.stitchingAutoplay.hearHidden).toBe(true);
+    expect(onboardingProbe.stitchingAutoplay.hearAllPressed).toBe('true');
+    expect(onboardingProbe.stitchingAutoplay.hearAllLabel).toContain('Stop all');
+  });
+
+  test('onboarding autoplay preference and hear-all stop-all flow work across reloads', async ({ page }) => {
+    const ONBOARDING_STATE_KEY = 'stitchlab.onboarding.v1';
+
+    await page.goto('/stitchlab.html');
+    await page.evaluate((key) => {
+      window.localStorage.removeItem(key);
+    }, ONBOARDING_STATE_KEY);
+
+    await page.goto('/stitchlab.html');
+
+    const tour = page.locator('#onboarding-tour');
+    const quickStart = page.locator('#onboarding-quickstart');
+    const hearAll = page.locator('#onboarding-tour-hear-all');
+    const nextBtn = page.locator('#onboarding-tour-next');
+    const optOut = page.locator('#onboarding-tour-optout');
+    const endBtn = page.locator('#onboarding-tour-skip');
+
+    await expect(tour).toBeVisible();
+    await expect(hearAll).toHaveAttribute('aria-pressed', 'true');
+    await expect(hearAll).toContainText('Stop all');
+
+    await hearAll.click();
+    await expect(hearAll).toHaveAttribute('aria-pressed', 'false');
+    await expect(hearAll).toContainText('Hear all');
+    await expect(nextBtn).toBeVisible();
+
+    await page.evaluate((key) => {
+      window.localStorage.setItem(key, JSON.stringify({
+        quickStartDismissed: false,
+        tourCompleted: false,
+        startupTutorialOptOut: true
+      }));
+    }, ONBOARDING_STATE_KEY);
+
+    await page.goto('/stitchlab.html');
+    await expect(tour).toBeHidden();
+    await expect(quickStart).toBeVisible();
+
+    await page.evaluate((key) => {
+      window.localStorage.setItem(key, JSON.stringify({
+        quickStartDismissed: false,
+        tourCompleted: false,
+        startupTutorialOptOut: false
+      }));
+    }, ONBOARDING_STATE_KEY);
+
+    await page.goto('/stitchlab.html');
+    await expect(tour).toBeVisible();
+    await expect(hearAll).toHaveAttribute('aria-pressed', 'true');
+    await expect(hearAll).toContainText('Stop all');
+
+    await hearAll.click();
+    await expect(hearAll).toHaveAttribute('aria-pressed', 'false');
+
+    await optOut.check();
+    await endBtn.click();
+    await page.goto('/stitchlab.html');
+    await expect(tour).toBeHidden();
+    await expect(quickStart).toBeHidden();
+  });
+
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
@@ -988,6 +1187,13 @@ test.describe('StitchLab regressions', () => {
 
   test('acknowledgments viewer autoplay lifecycle resets cleanly across reopen', async ({ page }) => {
     await page.goto('/stitchlab.html');
+
+    await page.evaluate(() => {
+      var tour = document.getElementById('onboarding-tour');
+      var skip = document.getElementById('onboarding-tour-skip');
+      if (!tour || tour.hidden || !skip) return;
+      skip.click();
+    });
 
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-acknowledgments-toggle').click();

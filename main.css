@@ -530,15 +530,21 @@
     flex-wrap: wrap;
   }
   .onboarding-chip-btn {
-    border: 1px solid #cfd9ef;
+    border: 1px solid #b9cef2;
     border-radius: 999px;
-    background: #ffffff;
-    color: #2f4368;
+    background: #f0f5ff;
+    color: #2f5fb3;
     font-size: 12px;
-    padding: 6px 10px;
+    line-height: 1;
+    white-space: nowrap;
+    padding: 5px 11px;
     cursor: pointer;
   }
-  .onboarding-chip-btn.primary {
+  .onboarding-chip-btn:hover {
+    background: #f5f8ff;
+  }
+  .onboarding-chip-btn.primary,
+  .onboarding-chip-btn[aria-pressed="true"] {
     background: #2f5fb3;
     border-color: #2f5fb3;
     color: #ffffff;
@@ -569,10 +575,10 @@
     display: inline;
   }
   .onboarding-hint-hear-btn {
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    border: 1px solid #b9cef2;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    color: #ffffff;
+    background: #f0f5ff;
+    color: #2f5fb3;
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
@@ -581,7 +587,9 @@
     white-space: nowrap;
   }
   .onboarding-hint-hear-btn[aria-pressed="true"] {
-    background: rgba(255, 255, 255, 0.28);
+    background: #2f5fb3;
+    border-color: #2f5fb3;
+    color: #ffffff;
   }
   .onboarding-hint[hidden] {
     display: none;
@@ -589,7 +597,7 @@
   .onboarding-tour {
     position: fixed;
     z-index: 94;
-    width: min(320px, calc(100vw - 24px));
+    width: min(520px, calc(100vw - 24px));
     background: var(--ui-pane-card-surface, #ffffff);
     color: var(--ui-pane-text, #2f4368);
     border: 1px solid var(--ui-pane-card-border, #d7e0f3);
@@ -612,9 +620,56 @@
   }
   .onboarding-tour-actions {
     display: flex;
+    align-items: stretch;
     gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    flex-direction: column;
+  }
+  .onboarding-tour-button-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow-x: visible;
+    overflow-y: hidden;
+  }
+  .onboarding-tour-audio-actions,
+  .onboarding-tour-nav-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+  .onboarding-tour-nav-actions {
+    margin-left: 2px;
+    padding-left: 10px;
+    border-left: 1px solid #d7e3f7;
+  }
+  @media (max-width: 560px) {
+    .onboarding-tour-nav-actions {
+      margin-left: 0;
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+  .onboarding-tour-optout {
+    margin-left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ui-pane-muted-text, #5f7090);
+    user-select: none;
+  }
+  .onboarding-tour-optout[hidden] {
+    display: none !important;
+  }
+  .onboarding-tour-optout input {
+    margin: 0;
+    inline-size: 14px;
+    block-size: 14px;
+    accent-color: #2f5fb3;
   }
   .onboarding-target {
     outline: 3px solid var(--ui-focus-outline, #1982c4);
@@ -1862,6 +1917,16 @@
   }
 
   html[data-theme="dark"] #experience-acknowledgments-toggle {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
+  }
+
+  html[data-theme="dark"] .onboarding-chip-btn,
+  html[data-theme="dark"] .onboarding-chip-btn.primary,
+  html[data-theme="dark"] .onboarding-chip-btn[aria-pressed="true"],
+  html[data-theme="dark"] .onboarding-hint-hear-btn,
+  html[data-theme="dark"] .onboarding-hint-hear-btn[aria-pressed="true"] {
     border-color: #5a6f8f;
     background: #2f3f55;
     color: #e4eeff;

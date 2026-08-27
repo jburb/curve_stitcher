@@ -81,9 +81,21 @@
   <p id="onboarding-tour-title" class="onboarding-tour-title">Quick tour</p>
   <p id="onboarding-tour-text" class="onboarding-tour-text"></p>
   <div class="onboarding-tour-actions">
-    <button id="onboarding-tour-hear" class="onboarding-chip-btn" type="button" aria-pressed="false">🔊 Hear this</button>
-    <button id="onboarding-tour-skip" class="onboarding-chip-btn" type="button">End</button>
-    <button id="onboarding-tour-next" class="onboarding-chip-btn primary" type="button">Next</button>
+    <div class="onboarding-tour-button-row" aria-label="Tour action buttons">
+      <div class="onboarding-tour-audio-actions">
+        <button id="onboarding-tour-hear" class="onboarding-chip-btn" type="button" aria-pressed="false">🔊 Hear this</button>
+        <button id="onboarding-tour-hear-all" class="onboarding-chip-btn" type="button" aria-pressed="false">🔊 Hear all</button>
+      </div>
+      <div class="onboarding-tour-nav-actions" aria-label="Tour navigation actions">
+        <button id="onboarding-tour-prev" class="onboarding-chip-btn" type="button">Previous</button>
+        <button id="onboarding-tour-next" class="onboarding-chip-btn" type="button">Next</button>
+        <button id="onboarding-tour-skip" class="onboarding-chip-btn" type="button">End</button>
+      </div>
+    </div>
+    <label class="onboarding-tour-optout" for="onboarding-tour-optout">
+      <input id="onboarding-tour-optout" type="checkbox">
+      Don't autoplay on startup
+    </label>
   </div>
 </div>
 
@@ -719,7 +731,10 @@
   var onboardingTour = document.getElementById('onboarding-tour');
   var onboardingTourTitle = document.getElementById('onboarding-tour-title');
   var onboardingTourText = document.getElementById('onboarding-tour-text');
+  var onboardingTourOptOutInput = document.getElementById('onboarding-tour-optout');
   var onboardingTourHearBtn = document.getElementById('onboarding-tour-hear');
+  var onboardingTourHearAllBtn = document.getElementById('onboarding-tour-hear-all');
+  var onboardingTourPrevBtn = document.getElementById('onboarding-tour-prev');
   var onboardingTourSkipBtn = document.getElementById('onboarding-tour-skip');
   var onboardingTourNextBtn = document.getElementById('onboarding-tour-next');
 
