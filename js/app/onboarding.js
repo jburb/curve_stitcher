@@ -29,12 +29,12 @@ function getStitchingIntroTutorialSteps() {
   return [
     {
       title: 'Welcome!',
-      text: 'Welcome to StitchLab, a tool for creating and discovering patterns by stitching imaginary threads! This tutorial will walk you through the stitching experience. To end this tutorial at any timd, click or tap "End."',
+      text: 'Welcome to StitchLab, a tool for creating and discovering patterns by stitching imaginary threads! This tutorial will walk you through the stitching experience. To end this tutorial at any time, click or tap "End."',
       selector: '#onboarding-help'
     },
     {
       title: 'The Stitching Frame',
-      text: 'This is the stitching frame. It will always have at least one thread stitched between its holes. You can change the pattern of any thread inside the frame using the frame controls on tge top, the basic thread controls on the bottom, or the advanced controls on the right, which you can access by clicking the gear icon. Next we\'ll explore the frame and thread controls.',
+      text: 'This is the stitching frame. It will always have at least one thread stitched between its holes. You can change the pattern of any thread inside the frame using the frame controls on the top, the basic thread controls on the bottom, or the advanced controls on the right, which you can access by clicking the gear icon. Next we\'ll explore the frame and thread controls.',
       selector: '#canvas-stage'
     }
   ];
