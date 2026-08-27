@@ -173,7 +173,7 @@ test.describe('StitchLab regressions', () => {
     expect(onboardingProbe.triangulaAfterNext.prevHidden).toBe(false);
     expect(onboardingProbe.triangulaAfterNext.prevDisabled).toBe(false);
 
-    expect(onboardingProbe.stitching.title).toBe('Welcome to StitchLab!');
+    expect(onboardingProbe.stitching.title).toBe('Welcome!');
     expect(onboardingProbe.stitching.optOutHidden).toBe(false);
     expect(onboardingProbe.stitching.optOutDisabled).toBe(false);
     expect(onboardingProbe.stitching.prevHidden).toBe(true);
