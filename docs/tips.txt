@@ -5,3 +5,9 @@ You can make animations run even faster than the rabbit speed setting. To do do,
 When you choose "List" as the "Stitch by" mode for a thread, you can specify whether you want the numbers in the list to be treated as hole numbers, or as amounts to add to each hole to determine its next connection point.
 
 Inner frame threads can be woven into their outer frame, too! To connect a Thread's inner points to their nearest outer points, choose "Inner -> Outer (Bridge)" from the"Frame" dropdown in the Thread's card, within the "Threads" section of  Advanced Controls. Or, choose "Inner -> Outer (Projected)" to make the inner frame thread project directly to the outer frame at both ends of the stitch (even if there are no holes on the outer frame at those points)!
+
+You can re-unlock a discovered experience in StitchLab by entering its passphrase in its discovery card, in the Discovery Library. How do you keep all those experience passphrases handy, you ask? You could memorize them, or you child just write all down in afile or on paper, just like we did in the old days!
+
+In addition to allowing you to save patterns as images and maker instructions, you can save any given configuration of a StitchLab experience for later access - just bookmark it in your web browser!
+
+Advanced Controls aren't just for Stitching. Unique options can be found there for the other StitchLab experiences, too - like the "Parallel" Fractal Mode setting for Triangula. Go on, try it!
