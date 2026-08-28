@@ -391,7 +391,7 @@ function finalizeStartupOnboardingSequence() {
 }
 
 function finalizeStartupOnboardingSequenceAfterPreviewDelay() {
-  var STARTUP_PREVIEW_HANDOFF_BEATS = 2;
+  var STARTUP_PREVIEW_HANDOFF_BEATS = 1;
   var delayMs = Math.max(220, Math.round(getAnimationSecondsPerSegment() * STARTUP_PREVIEW_HANDOFF_BEATS * 1000));
   window.setTimeout(function() {
     if (hasUrlStateParams()) {
