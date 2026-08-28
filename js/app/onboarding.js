@@ -34,7 +34,7 @@ function getStitchingIntroTutorialSteps() {
     },
     {
       title: 'The Stitching Frame',
-      text: 'This is the stitching frame. It will always have at least one thread stitched between its holes. You can change the pattern of any thread inside the frame using the frame controls on the top, the basic thread controls on the bottom, or the advanced controls on the right, which you can access by clicking the gear icon. Next we\'ll explore the frame and thread controls.',
+      text: 'This is the stitching frame. It will always have at least one thread stitched through its holes. You can change the pattern of any thread inside the frame using the frame controls on the top, the basic thread controls on the bottom, or the advanced controls on the right, which you can access by clicking the gear icon. Next we\'ll explore the frame and thread controls.',
       selector: '#canvas-stage'
     }
   ];
@@ -167,7 +167,7 @@ function getDefaultOnboardingGuideContent() {
       },
       {
         title: 'Enter Add Value',
-        text: 'Increase or decrease this value to make the stitch connections longer or shorter.',
+        text: 'Increase or decrease the add value to make the stitch connections longer or shorter.',
         selector: '#jump'
       },
       {
