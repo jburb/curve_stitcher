@@ -106,12 +106,8 @@ if (window.visualViewport) {
 
 window.addEventListener('pageshow', () => {
   if (!hasUrlStateParams()) {
-    hydrateStitchingStateCacheFromStorage();
-    if (stitchingStateCacheLoadedFromStorage) {
-      restoreStitchingStateFromCache();
-    } else {
-      applyDefaultHoles();
-      applyDefaultSkipAndSize();
+    if (!hasAppliedParamlessStitchingRandomization) {
+      applyRandomizedStitchingStateForParamlessLoad();
       applyDefaultTempo();
     }
     animationPlaybackState = 'idle';
@@ -349,8 +345,6 @@ renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
 clearSessionScopedCachesOnLoad();
-hydrateStitchingStateCacheFromStorage();
-var restoredStitchingStateOnInit = false;
 if (hasUrlStateParams()) {
   var initialParams = new URLSearchParams(window.location.search || '');
   var initialExperience = resolveExperienceId(getUrlStateParam(initialParams, 'experienceId')) || 'stitching';
@@ -364,21 +358,12 @@ if (hasUrlStateParams()) {
   }
 } else {
   setCurrentExperience('stitching');
-  restoredStitchingStateOnInit = stitchingStateCacheLoadedFromStorage;
-  if (!restoredStitchingStateOnInit) {
-    setCurrentShape('circle', false);
-  }
+  applyRandomizedStitchingStateForParamlessLoad();
+  applyDefaultTempo();
 }
 advancedPanel.classList.remove('open');
 discoveryPanel.classList.remove('open');
 renderAdvancedTempoOptions();
-if (!hasUrlStateParams()) {
-  if (!restoredStitchingStateOnInit) {
-    applyDefaultHoles();
-    applyDefaultSkipAndSize();
-    applyDefaultTempo();
-  }
-}
 syncAnimateButtonLabel();
 syncHoleNumberToggles();
 syncBorderControls();

@@ -173,6 +173,112 @@ var hasMusicStartedSinceLoad = false;
 var sliderMotionKeys = Object.create(null);
 var sliderMotionSettleTimers = Object.create(null);
 var sliderMotionKeySeed = 0;
+var hasAppliedParamlessStitchingRandomization = false;
+
+function getRandomIntInclusive(min, max) {
+  var safeMin = Math.ceil(Number(min));
+  var safeMax = Math.floor(Number(max));
+  if (!isFinite(safeMin) || !isFinite(safeMax)) return 0;
+  if (safeMax < safeMin) return safeMin;
+  return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
+}
+
+function pickRandomValue(options, fallback) {
+  if (!Array.isArray(options) || !options.length) return fallback;
+  return options[getRandomIntInclusive(0, options.length - 1)];
+}
+
+function buildRandomThreadSequence(sourceHoleCount, jumpLimit, sequenceMode) {
+  var usesStepList = sanitizeThreadSequenceMode(sequenceMode, 'holes') === 'steps';
+  var itemMax = usesStepList
+    ? Math.max(1, jumpLimit)
+    : Math.max(1, sourceHoleCount);
+  var sequenceLength = getRandomIntInclusive(3, Math.min(8, itemMax + 2));
+  var values = [];
+
+  for (var i = 0; i < sequenceLength; i++) {
+    values.push(getRandomIntInclusive(1, itemMax));
+  }
+
+  return values.join(',');
+}
+
+function applyRandomizedStitchingStateForParamlessLoad() {
+  var stitchingProfile = getExperienceUiProfile('stitching');
+  var allowedShapes = (stitchingProfile && Array.isArray(stitchingProfile.allowedShapes) && stitchingProfile.allowedShapes.length)
+    ? stitchingProfile.allowedShapes.slice()
+    : ['circle', 'triangle', 'square'];
+  var randomShape = sanitizeShape(pickRandomValue(allowedShapes, 'circle'), 'circle');
+  var holesMin = parseBoundedInt(holesSlider && holesSlider.min, 3, MAX_HOLES, 3);
+  var holesDisplayLimit = parseBoundedInt(HOLE_NUMBER_AUTO_HIDE_THRESHOLD, holesMin, MAX_HOLES, MAX_HOLES);
+  var holesMaxFromSlider = parseBoundedInt(holesSlider && holesSlider.max, holesMin, MAX_HOLES, DEFAULT_HOLES);
+  var holesMax = Math.min(holesMaxFromSlider, holesDisplayLimit);
+  var randomHoleCount = getRandomIntInclusive(holesMin, holesMax);
+
+  setCurrentShape(randomShape, false);
+  stitchingFrameShape = sanitizeShape(randomShape, stitchingFrameShape || 'circle');
+  holesSlider.value = String(randomHoleCount);
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = String(randomHoleCount);
+  }
+
+  nestedFrameEnabled = Math.random() < 0.5;
+  nestedFrameRatio = sanitizeNestedFrameRatio(
+    pickRandomValue(NESTED_FRAME_RATIO_OPTIONS, DEFAULT_NESTED_FRAME_RATIO),
+    DEFAULT_NESTED_FRAME_RATIO
+  );
+  // Keep startup visuals beginner-readable on random loads.
+  showHoleNumbers = true;
+  borderEnabled = true;
+
+  var threadWidthMin = parseBoundedInt(widthSlider && widthSlider.min, 1, 10, 1);
+  var threadWidthMaxFromSlider = parseBoundedInt(widthSlider && widthSlider.max, threadWidthMin, 10, DEFAULT_THREAD_SIZE);
+  var threadWidthMax = Math.min(threadWidthMaxFromSlider, 5);
+  var connectMin = parseBoundedInt(multiplySlider && multiplySlider.min, 1, 12, 1);
+  var connectMax = parseBoundedInt(multiplySlider && multiplySlider.max, connectMin, 12, 12);
+  var frameModes = nestedFrameEnabled
+    ? ['outer', 'inner', 'bridge-reverse', 'bridge-reverse-project']
+    : ['outer'];
+
+  var randomThread = createThread({
+    jump: DEFAULT_SKIP,
+    width: getRandomIntInclusive(threadWidthMin, threadWidthMax),
+    color: pickRandomValue(magicThreadColors.concat(['rainbow']), '#1982c4'),
+    startHole: 1,
+    frameMode: pickRandomValue(frameModes, 'outer'),
+    jumpSequenceMode: pickRandomValue(['holes', 'steps'], 'holes')
+  });
+  var randomJumpMode = pickRandomValue(['fixed', 'connect', 'sequence'], 'fixed');
+  var sourceHoleCount = Math.max(3, getThreadSourceHoleCount(randomThread));
+  var jumpLimit = Math.max(1, sourceHoleCount - 1);
+
+  randomThread.startHole = 1;
+  randomThread.jump = getRandomIntInclusive(1, jumpLimit);
+  if (randomJumpMode === 'connect') {
+    randomThread.connectMultiplier = getRandomIntInclusive(Math.max(2, connectMin), connectMax);
+  } else {
+    randomThread.connectMultiplier = getRandomIntInclusive(connectMin, connectMax);
+  }
+  randomThread.jumpMode = randomJumpMode;
+  randomThread.jumpFormula = 'skip';
+  randomThread.jumpSequence = '';
+
+  if (randomJumpMode === 'sequence') {
+    randomThread.jumpSequence = buildRandomThreadSequence(sourceHoleCount, jumpLimit, randomThread.jumpSequenceMode);
+  }
+
+  threads = [randomThread];
+  selectedThreadIndex = 0;
+
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  syncNestedFrameControls();
+  syncHoleNumberToggles();
+  syncBorderControls();
+  updateKidControlValues();
+  persistStitchingStateCache(buildStitchingStateSnapshotFromRuntime());
+  hasAppliedParamlessStitchingRandomization = true;
+}
 
 function getSliderMotionKey(slider) {
   if (!slider) return null;

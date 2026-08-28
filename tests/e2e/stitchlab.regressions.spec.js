@@ -410,6 +410,8 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#holes').click();
     await expect(advancedPanel).toHaveClass(/open/);
 
+    await page.selectOption('#kid-stitch-by', 'add');
+    await expect(page.locator('#jump')).toBeVisible();
     await page.locator('#jump').click();
     await expect(advancedPanel).toHaveClass(/open/);
 
@@ -496,6 +498,9 @@ test.describe('StitchLab regressions', () => {
   test('mobile layout baseline remains usable at phone viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/stitchlab.html');
+
+    // Keep a deterministic control stack height for viewport assertions.
+    await page.selectOption('#kid-stitch-by', 'add');
 
     await expect(page.locator('#shape-bar')).toBeVisible();
     await expect(page.locator('#canvas-container')).toBeVisible();
