@@ -174,6 +174,7 @@ var sliderMotionKeys = Object.create(null);
 var sliderMotionSettleTimers = Object.create(null);
 var sliderMotionKeySeed = 0;
 var hasAppliedParamlessStitchingRandomization = false;
+var startupTailPreviewInProgress = false;
 
 function getRandomIntInclusive(min, max) {
   var safeMin = Math.ceil(Number(min));
@@ -278,6 +279,89 @@ function applyRandomizedStitchingStateForParamlessLoad() {
   updateKidControlValues();
   persistStitchingStateCache(buildStitchingStateSnapshotFromRuntime());
   hasAppliedParamlessStitchingRandomization = true;
+}
+
+function runParamlessStartupTailPreview(onComplete) {
+  var done = typeof onComplete === 'function' ? onComplete : function() {};
+
+  if (startupTailPreviewInProgress) {
+    done();
+    return;
+  }
+  if (hasUrlStateParams()) {
+    done();
+    return;
+  }
+  if (currentExperienceId !== 'stitching' || !hasAppliedParamlessStitchingRandomization) {
+    done();
+    return;
+  }
+  if (!threads.length) {
+    done();
+    return;
+  }
+
+  // Keep the preview cadence anchored to the default startup tempo.
+  applyTempoValue(getKidTempoPresetsForSong(currentSongId).slow || DEFAULT_ANIMATION_BPM, {
+    suppressUrlSync: true,
+    suppressRedraw: true
+  });
+
+  var previewThread = threads[0];
+  var segments = computeSegments(previewThread) || [];
+  if (segments.length < 3) {
+    done();
+    return;
+  }
+
+  var previewStartStep = Math.max(0, segments.length - 3);
+  var previewDurationMs = Math.ceil((3 * getAnimationSecondsPerSegment() + 1.2) * 1000);
+  var previewTimeoutMs = Math.max(2200, previewDurationMs + 800);
+
+  startupTailPreviewInProgress = true;
+  stopAnimationIfActive();
+  project.activeLayer.removeChildren();
+  computePoints();
+
+  animationState = {
+    threadIndex: 0,
+    step: previewStartStep,
+    elapsed: 0,
+    activeHolePair: null,
+    settle: null,
+    segmentLists: [segments]
+  };
+  animationActive = true;
+  animationPlaybackState = 'playing';
+  syncAnimateButtonLabel();
+  updateMusicPlaybackState();
+  scheduleUrlStateSync(false);
+  renderAnimationFrame();
+  startAnimationLoop();
+
+  var previewStartAt = Date.now();
+
+  function finalizePreview() {
+    if (!startupTailPreviewInProgress) return;
+    startupTailPreviewInProgress = false;
+    done();
+  }
+
+  function watchPreviewCompletion() {
+    if (!startupTailPreviewInProgress) return;
+    if (!animationActive && animationPlaybackState === 'idle') {
+      finalizePreview();
+      return;
+    }
+    if (Date.now() - previewStartAt > previewTimeoutMs) {
+      stopAnimationIfActive();
+      finalizePreview();
+      return;
+    }
+    window.requestAnimationFrame(watchPreviewCompletion);
+  }
+
+  window.requestAnimationFrame(watchPreviewCompletion);
 }
 
 function getSliderMotionKey(slider) {

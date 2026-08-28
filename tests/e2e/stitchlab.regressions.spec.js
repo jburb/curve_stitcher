@@ -242,7 +242,7 @@ test.describe('StitchLab regressions', () => {
     const optOut = page.locator('#onboarding-tour-optout');
     const endBtn = page.locator('#onboarding-tour-skip');
 
-    await expect(tour).toBeVisible();
+    await expect(tour).toBeVisible({ timeout: 12000 });
     await expect(hearAll).toHaveAttribute('aria-pressed', 'true');
     await expect(hearAll).toContainText('Stop all');
 
@@ -386,6 +386,8 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#thread-controls .thread-card strong').first().click();
     await expect(advancedPanel).toHaveClass(/open/);
 
+    await page.selectOption('#jump-mode-0', 'fixed');
+    await expect(page.locator('#start-hole-number-0')).toBeVisible();
     await page.locator('#start-hole-number-0').fill('2');
     await page.locator('#start-hole-number-0').press('Tab');
     await expect(advancedPanel).toHaveClass(/open/);
@@ -460,6 +462,10 @@ test.describe('StitchLab regressions', () => {
     await page.goto('/stitchlab.html');
 
     const animateBtn = page.locator('#animate');
+
+    await expect.poll(() => {
+      return page.evaluate(() => window.animationPlaybackState);
+    }).toBe('idle');
 
     await animateBtn.click();
     await expect.poll(() => {

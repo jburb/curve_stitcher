@@ -105,6 +105,10 @@ if (window.visualViewport) {
 }
 
 window.addEventListener('pageshow', () => {
+  if (startupTailPreviewInProgress) {
+    return;
+  }
+
   if (!hasUrlStateParams()) {
     if (!hasAppliedParamlessStitchingRandomization) {
       applyRandomizedStitchingStateForParamlessLoad();
@@ -380,6 +384,27 @@ if (hasUrlStateParams()) {
 }
 scheduleDiscoveryEvaluation();
 syncExportUiCopy();
-initializeOnboarding();
-scheduleUrlStateSync(true);
+
+function finalizeStartupOnboardingSequence() {
+  initializeOnboarding();
+  scheduleUrlStateSync(true);
+}
+
+function finalizeStartupOnboardingSequenceAfterPreviewDelay() {
+  var STARTUP_PREVIEW_HANDOFF_BEATS = 2;
+  var delayMs = Math.max(220, Math.round(getAnimationSecondsPerSegment() * STARTUP_PREVIEW_HANDOFF_BEATS * 1000));
+  window.setTimeout(function() {
+    if (hasUrlStateParams()) {
+      history.replaceState({ appStateVersion: APP_STATE_URL_VERSION }, '', window.location.pathname);
+    }
+    finalizeStartupOnboardingSequence();
+  }, delayMs);
+}
+
+if (hasUrlStateParams()) {
+  finalizeStartupOnboardingSequence();
+} else {
+  runParamlessStartupTailPreview(finalizeStartupOnboardingSequenceAfterPreviewDelay);
+}
+
 window.setCurrentExperience = setCurrentExperience;
