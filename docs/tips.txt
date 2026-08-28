@@ -1,0 +1,7 @@
+You can add an inner stitch frame to make even more complex patterns! Just open the advanced controls pane and toggle "enabled" in the inner frame section!
+
+You can make animations run even faster than the rabbit speed setting. To do do, choose the fourth or fifth value from the "BPM" dropdown, in the "Stitch Tempo" section of advanced controls. 
+
+When you choose "List" as the "Stitch by" mode for a thread, you can specify whether you want the numbers in the list to be treated as hole numbers, or as amounts to add to each hole to determine its next connection point.
+
+Inner frame threads can be woven into their outer frame, too! To connect inner points to their nearest outer points, choose "Inner -> Outer (Bridge)" from the Frame dropdown in the Thread's card, within the "Threads" section of  Advanced Controls. 
