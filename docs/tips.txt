@@ -4,4 +4,4 @@ You can make animations run even faster than the rabbit speed setting. To do do,
 
 When you choose "List" as the "Stitch by" mode for a thread, you can specify whether you want the numbers in the list to be treated as hole numbers, or as amounts to add to each hole to determine its next connection point.
 
-Inner frame threads can be woven into their outer frame, too! To connect inner points to their nearest outer points, choose "Inner -> Outer (Bridge)" from the Frame dropdown in the Thread's card, within the "Threads" section of  Advanced Controls. 
+Inner frame threads can be woven into their outer frame, too! To connect a Thread's inner points to their nearest outer points, choose "Inner -> Outer (Bridge)" from the"Frame" dropdown in the Thread's card, within the "Threads" section of  Advanced Controls. Or, choose "Inner -> Outer (Projected)" to make the inner frame thread project directly to the outer frame at both ends of the stitch (even if there are no holes on the outer frame at those points)!
