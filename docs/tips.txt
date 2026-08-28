@@ -11,3 +11,9 @@ You can re-unlock a discovered experience in StitchLab by entering its passphras
 In addition to allowing you to save patterns as images and maker instructions, you can save any given configuration of a StitchLab experience for later access - just bookmark it in your web browser!
 
 Advanced Controls aren't just for Stitching. Unique options can be found there for the other StitchLab experiences, too - like the "Parallel" Fractal Mode setting for Triangula. Go on, try it!
+
+It's possible to blend colors where threads overlap. Wherever a thinner thread shares a stitch path over a thicker thread, both colors will be blended together. 
+
+#TODO reference to Boole Sewing Cards viewer, once available
+
+#TODO Need a fresh idea for a thread? Try reopening the app with its base URL: [LINK]
