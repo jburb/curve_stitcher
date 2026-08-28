@@ -238,7 +238,7 @@ function applyRandomizedStitchingStateForParamlessLoad() {
   var connectMin = parseBoundedInt(multiplySlider && multiplySlider.min, 1, 12, 1);
   var connectMax = parseBoundedInt(multiplySlider && multiplySlider.max, connectMin, 12, 12);
   var frameModes = nestedFrameEnabled
-    ? ['outer', 'inner', 'bridge-reverse', 'bridge-reverse-project']
+    ? ['inner', 'bridge-reverse', 'bridge-reverse-project']
     : ['outer'];
 
   var randomThread = createThread({

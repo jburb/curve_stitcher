@@ -229,7 +229,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. ~~Random thread value selection in page load w/zero params (optional: also cause the last three connections of the displayed stitching pattern to animate on page load,~~ with the three prominent notes from the acknowledgments song in the background). Also for aesthetics, force thread to use an inner frame mode if inner frame is present.
+1. ~~Random thread value selection in page load w/zero params (optional: also cause the last three connections of the displayed stitching pattern to animate on page load,~~ with the three prominent notes from the acknowledgments song in the background). ~~Also for aesthetics, force thread to use an inner frame mode if inner frame is present.~~
 1. Enable hole number rotation in Stitching (See details in corresponding backlog TODO item)
 1. Tips library and modal
 1. Curve sewing cards viewer
@@ -268,8 +268,8 @@ This section describes the practical steps for adding a new experience named zoo
 
 1. **Random thread value selection in page load w/zero params**
      - ~~ensure all options are open to randomization, e.g inner frame enablement, list mode for stitching, etc.~~
-     - force thread to use an inner frame mode if inner frame is present
-     - for animation preview of last the steps, play the three prominent notes from the acknowledgments song in the background
+     - ~~force thread to use an inner frame mode if inner frame is present~~
+     - for animation preview of last three steps, play the three prominent notes from the acknowledgments song in the background
 
 1. **Enable hole number rotation in Stitching**
      - for all stitch-by modes
