@@ -229,71 +229,78 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Random thread value selection in page load w/zero params (optional: also cause the last three connections of the displayed stitching pattern to animate on page load, with the three prominent notes from the acknowledgments song in the background)
-2. Curve sewing cards viewer
-3. Tips library and modal
-4. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
-5. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
-6. Stitch library (offline-first)
-7. Experience title bar (animated stitched reveal)
-8. Advanced stitch ribbon motion (Option 
+1. ~~Random thread value selection in page load w/zero params (optional: also cause the last three connections of the displayed stitching pattern to animate on page load,~~ with the three prominent notes from the acknowledgments song in the background)
+1. Enable hole number rotation in Stitching (See details in corresponding backlog TODO item)
+1. Tips library and modal
+1. Curve sewing cards viewer
+1. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
+1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
+1. Stitch library (offline-first)
+1. Experience title bar (animated stitched reveal)
+1. Advanced stitch ribbon motion (Option 
 
 ## Recently Completed
 
 1. Autoplay of onboarding hints as tutorial
-2. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
-3. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
-4. Stitch motion realism (progressive pull + settle accent, tempo-locked)
-5. Arithmetic-first stitch controls in kid and advanced UI
-6. Multiplication mapping mode (cardioid/nephroid capable)
-7. Formula UX pass (math-friendly input normalization and clearer guidance)
-8. Multiplication mapping aligned to visible hole numbering semantics
-9. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
-10. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
-11. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
-12. Experience about docs/viewer
-13. Triangula
-14. Dynamic add/multiply bounds guardrail
-15. Squarus
-16. Mashrabiya
-17. Discovery Preview Cards 
-18. Acknowledgments viewer
-19. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
-20. Fix start hole implementation for threads stitched by multiplication
-21. Code Modularization
+1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
+1. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
+1. Stitch motion realism (progressive pull + settle accent, tempo-locked)
+1. Arithmetic-first stitch controls in kid and advanced UI
+1. Multiplication mapping mode (cardioid/nephroid capable)
+1. Formula UX pass (math-friendly input normalization and clearer guidance)
+1. Multiplication mapping aligned to visible hole numbering semantics
+1. SVG export workflows (single ZIP bundle with optional stitched threads, stitching guide with embedded parameters, and preview image)
+1. Playback control refinement (play/pause/resume stitching plus kid-friendly tempo icon controls synced with advanced BPM)
+1. Known pattern discovery detector (geometry-based discovery unlocks, song picker unlock flow, and discovery affordance cues)
+1. Experience about docs/viewer
+1. Triangula
+1. Dynamic add/multiply bounds guardrail
+1. Squarus
+1. Mashrabiya
+1. Discovery Preview Cards 
+1. Acknowledgments viewer
+1. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
+1. Fix start hole implementation for threads stitched by multiplication
+1. Code Modularization
 
 
 ## TODO Backlog
 
 1. **Random thread value selection in page load w/zero params**
-     - ensure all options are open to randomization, e.g inner frame enablement, list mode for stitching, etc.
- 
-2. **Curve sewing cards viewer**
+     - ~~ensure all options are open to randomization, e.g inner frame enablement, list mode for stitching, etc.~~
+     - for animation preview of last the steps, play the three prominent notes from the acknowledgments song in the background
+
+1. **Enable hole number rotation in Stitching**
+     - for all stitch-by modes
+     - as a new frame control in the advanced pane only
+     - remove "start hole" control for the multiplication stitch-by mode (this broader control serves the same intent while being more mathematically correct)
+
+1. **Tips library and modal**
+     - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
+
+1. **Curve sewing cards viewer**
      - to be opened from stitching about doc modal?
      - must include the Cambridge lib attribution
 
-3. **Tips library and modal**
-     - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
-
-4. **Export notes**
+1. **Export notes**
      - Enable exported text file to include personal note, if specified by user on zip export should’ve forward compatible with stitch library plan)
  
-5. **Acknowledgements song discovery**
+1. **Acknowledgements song discovery**
      - When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options.
 
-6. **Stitch library (offline-first)**
+1. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
 	 - Leave room for optional future cloud sync/import-export.
 
-7. **Experience title bar (animated stitched reveal)**
+1. **Experience title bar (animated stitched reveal)**
 	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
 	- Trigger the reveal on initial page load and on transition into a new experience/world.
 	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
 	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
 
-8. **Advanced stitch ribbon motion (Option 4, lowest priority)**
+1. **Advanced stitch ribbon motion (Option 4, lowest priority)**
 	- Explore a richer thread-brush/ribbon rendering mode with tapered trail and smoother pull dynamics.
 	- Keep BPM timing behavior unchanged; visual enhancement only.
 	- Treat as post-core polish after all other roadmap priorities.
