@@ -241,7 +241,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Recently Completed
 
-1. Autoplay of onboarding hints as tutorial
 1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
 1. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
 1. Stitch motion realism (progressive pull + settle accent, tempo-locked)
@@ -262,6 +261,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
 1. Fix start hole implementation for threads stitched by multiplication
 1. Code Modularization
+1. Autoplay of onboarding hints as tutorial
 
 
 ## TODO Backlog
