@@ -286,6 +286,99 @@ test.describe('StitchLab regressions', () => {
     await expect(quickStart).toBeHidden();
   });
 
+  test('paramless splash continue primes onboarding autoplay narration for webkit-style speech lock', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
+    });
+
+    await page.goto('/stitchlab.html');
+    await expect(page.locator('#startup-splash')).toBeVisible();
+
+    await page.evaluate(() => {
+      const synth = window.speechSynthesis;
+      if (!synth || typeof synth.speak !== 'function') {
+        window.__stitchlabSpeechProbe = { unsupported: true };
+        return;
+      }
+
+      let primed = false;
+      let audibleSpeakCount = 0;
+      const speakCalls = [];
+
+      const originalSpeak = synth.speak.bind(synth);
+      const originalCancel = typeof synth.cancel === 'function' ? synth.cancel.bind(synth) : () => {};
+
+      synth.cancel = function() {};
+      synth.speak = function(utterance) {
+        const text = String((utterance && utterance.text) || '');
+        const volume = Number(utterance && utterance.volume);
+        const isSilentPrime = text.trim().length === 0 || volume === 0;
+        speakCalls.push({ text, volume, silent: isSilentPrime });
+
+        if (isSilentPrime) {
+          primed = true;
+          if (utterance && typeof utterance.onend === 'function') {
+            window.setTimeout(() => utterance.onend(), 0);
+          }
+          return;
+        }
+
+        if (!primed) {
+          if (utterance && typeof utterance.onerror === 'function') {
+            window.setTimeout(() => utterance.onerror({ error: 'not-allowed' }), 0);
+          }
+          return;
+        }
+
+        audibleSpeakCount += 1;
+        if (utterance && typeof utterance.onend === 'function') {
+          window.setTimeout(() => utterance.onend(), 220);
+        }
+      };
+
+      window.__stitchlabSpeechProbe = {
+        unsupported: false,
+        getState: () => ({
+          primed,
+          audibleSpeakCount,
+          speakCalls: speakCalls.slice()
+        }),
+        restore: () => {
+          synth.speak = originalSpeak;
+          synth.cancel = originalCancel;
+        }
+      };
+    });
+
+    await page.locator('#startup-splash-continue').click();
+    await expect(page.locator('#onboarding-tour')).toBeVisible({ timeout: 12000 });
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const probe = window.__stitchlabSpeechProbe;
+        if (!probe || probe.unsupported) return null;
+        return probe.getState();
+      });
+    }).toMatchObject({
+      primed: true
+    });
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const probe = window.__stitchlabSpeechProbe;
+        if (!probe || probe.unsupported) return 0;
+        return probe.getState().audibleSpeakCount;
+      });
+    }).toBeGreaterThan(0);
+
+    await page.evaluate(() => {
+      const probe = window.__stitchlabSpeechProbe;
+      if (probe && typeof probe.restore === 'function') {
+        probe.restore();
+      }
+    });
+  });
+
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
