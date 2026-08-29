@@ -229,7 +229,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
 1. Enable hole number rotation in Stitching (See details in corresponding backlog TODO item)
 1. Tips library and modal
 1. Curve sewing cards viewer
@@ -263,11 +262,10 @@ This section describes the practical steps for adding a new experience named zoo
 1. Code Modularization
 1. Autoplay of onboarding hints as tutorial
 1. Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment
+1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
 
 
 ## TODO Backlog
-
-1. **Fix mobile safari and chrome tutorial autoplay after paramless thread preview**
 
 1. **Enable hole number rotation in Stitching**
      - for all stitch-by modes
