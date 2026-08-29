@@ -408,7 +408,7 @@ function beginParamlessStartupSequence(initialParamlessLoad) {
 }
 
 function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
-  if (window.navigator && window.navigator.webdriver) {
+  if (window.navigator && window.navigator.webdriver && !window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__) {
     onContinue(!!initialParamlessLoad);
     return;
   }
@@ -481,6 +481,9 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
 
   continueBtn.addEventListener('click', function handleStartupSplashContinue() {
     continueBtn.removeEventListener('click', handleStartupSplashContinue);
+    if (typeof prewarmOnboardingNarrationSpeech === 'function') {
+      prewarmOnboardingNarrationSpeech();
+    }
     stopSplashNarration();
     startupSplash.hidden = true;
     onContinue(!!initialParamlessLoad);

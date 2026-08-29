@@ -664,6 +664,23 @@ function stopOnboardingTourNarration() {
   syncOnboardingTourNarrationButtonState(false);
 }
 
+function prewarmOnboardingNarrationSpeech() {
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+  try {
+    var synth = window.speechSynthesis;
+    // Prime speech synthesis with a silent utterance while user activation is present.
+    var prewarm = new SpeechSynthesisUtterance('');
+    prewarm.volume = 0;
+    prewarm.rate = 1;
+    prewarm.pitch = 1;
+    synth.cancel();
+    synth.speak(prewarm);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 function speakOnboardingTourNarration(options) {
   options = options || {};
   if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
