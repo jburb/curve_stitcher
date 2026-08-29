@@ -175,6 +175,29 @@ var sliderMotionSettleTimers = Object.create(null);
 var sliderMotionKeySeed = 0;
 var hasAppliedParamlessStitchingRandomization = false;
 var startupTailPreviewInProgress = false;
+var PARAMLESS_STARTUP_PREVIEW_SONG_PATH = 'assets/audio/SonatainCmajor_3sec_fanfare.mp3';
+var PARAMLESS_STARTUP_PREVIEW_START_SECONDS = 1.05;
+var PARAMLESS_STARTUP_PREVIEW_BPM = 115;
+
+function seekAudioToStartupPreviewOffset(audioEl) {
+  if (!audioEl) return;
+  var previewStart = Number(PARAMLESS_STARTUP_PREVIEW_START_SECONDS);
+  if (!isFinite(previewStart) || previewStart <= 0) return;
+
+  function applySeek() {
+    try {
+      audioEl.currentTime = previewStart;
+    } catch (error) {
+      // Some browsers reject seeks before enough media is buffered.
+    }
+  }
+
+  if (audioEl.readyState >= 1) {
+    applySeek();
+    return;
+  }
+  audioEl.addEventListener('loadedmetadata', applySeek, { once: true });
+}
 
 function getRandomIntInclusive(min, max) {
   var safeMin = Math.ceil(Number(min));
@@ -281,35 +304,102 @@ function applyRandomizedStitchingStateForParamlessLoad() {
   hasAppliedParamlessStitchingRandomization = true;
 }
 
-function runParamlessStartupTailPreview(onComplete) {
+function runParamlessStartupTailPreview(onComplete, options) {
   var done = typeof onComplete === 'function' ? onComplete : function() {};
+  options = options || {};
+  var ignoreUrlParamCheck = !!options.ignoreUrlParamCheck;
+  var previewAudioStarted = false;
+  var previewPlaybackStartedAt = 0;
+  var previewAutoplayBlocked = false;
 
   if (startupTailPreviewInProgress) {
+    console.debug('[StartupPreviewAudio] skipped: preview already in progress');
     done();
     return;
   }
-  if (hasUrlStateParams()) {
+  if (!ignoreUrlParamCheck && hasUrlStateParams()) {
+    console.debug('[StartupPreviewAudio] skipped: URL state params detected', window.location.search || '');
     done();
     return;
   }
   if (currentExperienceId !== 'stitching' || !hasAppliedParamlessStitchingRandomization) {
+    console.debug('[StartupPreviewAudio] skipped: preview preconditions not met', {
+      currentExperienceId: currentExperienceId,
+      hasAppliedParamlessStitchingRandomization: !!hasAppliedParamlessStitchingRandomization
+    });
     done();
     return;
   }
   if (!threads.length) {
+    console.debug('[StartupPreviewAudio] skipped: no threads available');
     done();
     return;
   }
 
-  // Keep the preview cadence anchored to the default startup tempo.
-  applyTempoValue(getKidTempoPresetsForSong(currentSongId).slow || DEFAULT_ANIMATION_BPM, {
-    suppressUrlSync: true,
-    suppressRedraw: true
+  var previousBpm = currentAnimationBpm;
+  var previewBpm = parseBoundedInt(PARAMLESS_STARTUP_PREVIEW_BPM, 1, 2000, previousBpm);
+  var previousSongPath = (MUSIC_LIBRARY[currentSongId] && MUSIC_LIBRARY[currentSongId].path)
+    ? MUSIC_LIBRARY[currentSongId].path
+    : joyAudio.src;
+
+  // Startup preview uses a short fanfare and restores the active song right after.
+  console.debug('[StartupPreviewAudio] starting preview', {
+    fromSongId: currentSongId,
+    fromSongPath: previousSongPath,
+    previewSongPath: PARAMLESS_STARTUP_PREVIEW_SONG_PATH,
+    previousBpm: previousBpm,
+    previewBpm: previewBpm,
+    isMusicMuted: !!isMusicMuted
   });
+  currentAnimationBpm = previewBpm;
+  joyAudio.pause();
+  joyAudio.src = PARAMLESS_STARTUP_PREVIEW_SONG_PATH;
+  joyAudio.load();
+  seekAudioToStartupPreviewOffset(joyAudio);
+  hasMusicStartedSinceLoad = false;
+
+  function attemptPreviewPlayback(trigger) {
+    if (!startupTailPreviewInProgress || previewAudioStarted || isMusicMuted) return;
+    hasMusicStartedSinceLoad = false;
+    seekAudioToStartupPreviewOffset(joyAudio);
+    var request = joyAudio.play();
+    if (!request || typeof request.then !== 'function') {
+      return;
+    }
+    request.then(function() {
+      previewAudioStarted = true;
+      previewPlaybackStartedAt = Date.now();
+      console.debug('[StartupPreviewAudio] preview playback started', {
+        trigger: trigger,
+        currentTime: joyAudio.currentTime,
+        readyState: joyAudio.readyState
+      });
+    }).catch(function(error) {
+      var errorName = error && error.name;
+      console.warn('[StartupPreviewAudio] preview playback attempt rejected', {
+        trigger: trigger,
+        name: errorName,
+        message: error && error.message,
+        src: joyAudio && joyAudio.src
+      });
+      if (errorName === 'NotAllowedError') {
+        previewAutoplayBlocked = true;
+        console.debug('[StartupPreviewAudio] autoplay blocked by browser policy; continuing startup preview animation without fanfare audio');
+      }
+    });
+  }
+
+  function onPreviewCanPlay() {
+    if (!startupTailPreviewInProgress || previewAudioStarted) return;
+    attemptPreviewPlayback('canplay-retry');
+  }
+
+  joyAudio.addEventListener('canplay', onPreviewCanPlay);
 
   var previewThread = threads[0];
   var segments = computeSegments(previewThread) || [];
   if (segments.length < 3) {
+    joyAudio.removeEventListener('canplay', onPreviewCanPlay);
     done();
     return;
   }
@@ -317,6 +407,8 @@ function runParamlessStartupTailPreview(onComplete) {
   var previewStartStep = Math.max(0, segments.length - 3);
   var previewDurationMs = Math.ceil((3 * getAnimationSecondsPerSegment() + 1.2) * 1000);
   var previewTimeoutMs = Math.max(2200, previewDurationMs + 800);
+  var minimumPreviewPlaybackMs = Math.max(1100, Math.min(previewTimeoutMs - 200, 1600));
+  var pendingFinalizeTimer = null;
 
   startupTailPreviewInProgress = true;
   stopAnimationIfActive();
@@ -335,27 +427,64 @@ function runParamlessStartupTailPreview(onComplete) {
   animationPlaybackState = 'playing';
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
+  attemptPreviewPlayback('initial-preview-start');
   scheduleUrlStateSync(false);
   renderAnimationFrame();
   startAnimationLoop();
 
   var previewStartAt = Date.now();
 
-  function finalizePreview() {
+  function finalizePreview(reason) {
     if (!startupTailPreviewInProgress) return;
+    var elapsedMs = Math.max(0, Date.now() - previewStartAt);
+    var audibleElapsedMs = previewPlaybackStartedAt > 0 ? (Date.now() - previewPlaybackStartedAt) : 0;
+    if (previewAudioStarted && reason !== 'timeout' && audibleElapsedMs < minimumPreviewPlaybackMs) {
+      if (pendingFinalizeTimer) {
+        window.clearTimeout(pendingFinalizeTimer);
+      }
+      pendingFinalizeTimer = window.setTimeout(function() {
+        pendingFinalizeTimer = null;
+        finalizePreview((reason || 'playing') + '-deferred');
+      }, minimumPreviewPlaybackMs - audibleElapsedMs);
+      return;
+    }
     startupTailPreviewInProgress = false;
+    joyAudio.removeEventListener('canplay', onPreviewCanPlay);
+    console.debug('[StartupPreviewAudio] finalizing preview and restoring prior song', {
+      reason: reason || 'unspecified',
+      elapsedMs: elapsedMs,
+      previewAudioStarted: previewAudioStarted,
+      previewAutoplayBlocked: previewAutoplayBlocked,
+      audibleElapsedMs: audibleElapsedMs,
+      minimumPreviewPlaybackMs: minimumPreviewPlaybackMs,
+      restoreSongPath: previousSongPath,
+      restoreBpm: previousBpm
+    });
+    if (pendingFinalizeTimer) {
+      window.clearTimeout(pendingFinalizeTimer);
+      pendingFinalizeTimer = null;
+    }
+    joyAudio.pause();
+    joyAudio.src = previousSongPath;
+    joyAudio.load();
+    hasMusicStartedSinceLoad = false;
+    currentAnimationBpm = previousBpm;
+    syncAdvancedTempoControls();
+    syncKidTempoPresetControls();
     done();
   }
 
   function watchPreviewCompletion() {
     if (!startupTailPreviewInProgress) return;
+    var wallElapsedMs = Date.now() - previewStartAt;
+    var elapsedMs = Math.max(0, wallElapsedMs);
     if (!animationActive && animationPlaybackState === 'idle') {
-      finalizePreview();
+      finalizePreview('animation-idle');
       return;
     }
-    if (Date.now() - previewStartAt > previewTimeoutMs) {
+    if (elapsedMs > previewTimeoutMs) {
       stopAnimationIfActive();
-      finalizePreview();
+      finalizePreview('timeout');
       return;
     }
     window.requestAnimationFrame(watchPreviewCompletion);
@@ -1176,8 +1305,17 @@ function playMusicFromCurrentState() {
   }
   var playRequest = joyAudio.play();
   if (playRequest && typeof playRequest.catch === 'function') {
-    playRequest.catch(function() {
+    playRequest.catch(function(error) {
       // Ignore autoplay-policy rejections; the next user gesture will retry.
+      console.warn('[StartupPreviewAudio] play() rejected (likely autoplay policy until user gesture)', {
+        name: error && error.name,
+        message: error && error.message,
+        src: joyAudio && joyAudio.src,
+        isMuted: !!isMusicMuted,
+        hasMusicStartedSinceLoad: !!hasMusicStartedSinceLoad,
+        shouldMusicBePlaying: !!shouldMusicBePlaying(),
+        isStartupPreview: !!startupTailPreviewInProgress
+      });
     });
   }
 }

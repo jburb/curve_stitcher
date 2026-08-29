@@ -401,10 +401,98 @@ function finalizeStartupOnboardingSequenceAfterPreviewDelay() {
   }, delayMs);
 }
 
-if (hasUrlStateParams()) {
+function beginParamlessStartupSequence(initialParamlessLoad) {
+  runParamlessStartupTailPreview(finalizeStartupOnboardingSequenceAfterPreviewDelay, {
+    ignoreUrlParamCheck: !!initialParamlessLoad
+  });
+}
+
+function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
+  if (window.navigator && window.navigator.webdriver) {
+    onContinue(!!initialParamlessLoad);
+    return;
+  }
+
+  var startupSplash = document.getElementById('startup-splash');
+  var hearBtn = document.getElementById('startup-splash-hear');
+  var continueBtn = document.getElementById('startup-splash-continue');
+  if (!startupSplash || !continueBtn) {
+    onContinue(!!initialParamlessLoad);
+    return;
+  }
+
+  var splashNarrationUtterance = null;
+  var SPLASH_HEAR_LABEL = '🔊 Hear this';
+  var SPLASH_STOP_LABEL = '⏹ Stop narration';
+
+  function stopSplashNarration() {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    splashNarrationUtterance = null;
+    if (hearBtn) {
+      hearBtn.setAttribute('aria-pressed', 'false');
+      hearBtn.textContent = SPLASH_HEAR_LABEL;
+    }
+  }
+
+  function startSplashNarration() {
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance || !hearBtn) return;
+    stopSplashNarration();
+    var splashText = (document.getElementById('startup-splash-text') || {}).textContent || '';
+    var narrationText = String(splashText || '').trim();
+    if (!narrationText) return;
+    var utterance = new SpeechSynthesisUtterance(narrationText);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.onend = function() {
+      if (splashNarrationUtterance !== utterance) return;
+      splashNarrationUtterance = null;
+      hearBtn.setAttribute('aria-pressed', 'false');
+      hearBtn.textContent = SPLASH_HEAR_LABEL;
+    };
+    utterance.onerror = function() {
+      if (splashNarrationUtterance !== utterance) return;
+      splashNarrationUtterance = null;
+      hearBtn.setAttribute('aria-pressed', 'false');
+      hearBtn.textContent = SPLASH_HEAR_LABEL;
+    };
+    splashNarrationUtterance = utterance;
+    hearBtn.setAttribute('aria-pressed', 'true');
+    hearBtn.textContent = SPLASH_STOP_LABEL;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  startupSplash.hidden = false;
+  continueBtn.focus();
+
+  if (hearBtn) {
+    hearBtn.setAttribute('aria-pressed', 'false');
+    hearBtn.textContent = SPLASH_HEAR_LABEL;
+    hearBtn.addEventListener('click', function handleSplashHearClick() {
+      if (splashNarrationUtterance) {
+        stopSplashNarration();
+        return;
+      }
+      startSplashNarration();
+    });
+  }
+
+  continueBtn.addEventListener('click', function handleStartupSplashContinue() {
+    continueBtn.removeEventListener('click', handleStartupSplashContinue);
+    stopSplashNarration();
+    startupSplash.hidden = true;
+    onContinue(!!initialParamlessLoad);
+  });
+}
+
+var initialParamlessLoad = !hasUrlStateParams();
+
+if (!initialParamlessLoad) {
   finalizeStartupOnboardingSequence();
 } else {
-  runParamlessStartupTailPreview(finalizeStartupOnboardingSequenceAfterPreviewDelay);
+  showParamlessStartupSplash(beginParamlessStartupSequence, true);
 }
 
 window.setCurrentExperience = setCurrentExperience;
