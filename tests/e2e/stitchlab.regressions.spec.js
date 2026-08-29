@@ -960,6 +960,99 @@ test.describe('StitchLab regressions', () => {
     ]);
   });
 
+  test('paramless sequence randomization is ordered and yields at least three segments', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function tokenizeSequence(text) {
+        return String(text || '')
+          .split(/[\s,]+/)
+          .map(function(value) { return Number(value); })
+          .filter(function(value) { return isFinite(value) && Math.round(value) !== 0; })
+          .map(function(value) { return Math.round(value); });
+      }
+
+      function isAscending(values) {
+        if (!values || values.length <= 1) return true;
+        for (var i = 1; i < values.length; i++) {
+          if (values[i] < values[i - 1]) return false;
+        }
+        return true;
+      }
+
+      function evaluateMode(sequenceMode) {
+        var failures = [];
+        var samples = [];
+        for (var i = 0; i < 24; i++) {
+          var thread = window.createThread({
+            jump: 1,
+            width: 2,
+            color: '#1982c4',
+            startHole: 1,
+            frameMode: 'outer',
+            jumpSequenceMode: sequenceMode
+          });
+
+          thread.jumpMode = 'sequence';
+          thread.jumpSequenceMode = sequenceMode;
+          var sourceHoleCount = Math.max(3, window.getThreadSourceHoleCount(thread));
+          var jumpLimit = Math.max(1, sourceHoleCount - 1);
+          thread.jumpSequence = window.buildRandomThreadSequence(
+            sourceHoleCount,
+            jumpLimit,
+            sequenceMode,
+            3
+          );
+
+          var numbers = tokenizeSequence(thread.jumpSequence);
+          var segments = (window.computeSegments(thread) || []).length;
+          var ascending = isAscending(numbers);
+          var holesValid = sequenceMode === 'steps'
+            ? true
+            : numbers.every(function(value) {
+              return value >= 1 && value <= sourceHoleCount;
+            });
+
+          samples.push({
+            sequence: thread.jumpSequence,
+            numbers: numbers,
+            segments: segments,
+            ascending: ascending,
+            holesValid: holesValid
+          });
+
+          if (!ascending || !holesValid || segments < 3) {
+            failures.push({
+              sequence: thread.jumpSequence,
+              sequenceMode: sequenceMode,
+              numbers: numbers,
+              sourceHoleCount: sourceHoleCount,
+              segments: segments,
+              ascending: ascending,
+              holesValid: holesValid
+            });
+          }
+        }
+
+        return {
+          failures: failures,
+          samples: samples.slice(0, 6)
+        };
+      }
+
+      var holesProbe = evaluateMode('holes');
+      var stepsProbe = evaluateMode('steps');
+
+      return {
+        holes: holesProbe,
+        steps: stepsProbe
+      };
+    });
+
+    expect(probe.holes.failures, JSON.stringify(probe.holes.samples)).toEqual([]);
+    expect(probe.steps.failures, JSON.stringify(probe.steps.samples)).toEqual([]);
+  });
+
   test('start hole is hidden and ignored for list mode with Holes list type', async ({ page }) => {
     await page.goto('/stitchlab.html');
 

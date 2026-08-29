@@ -62,6 +62,9 @@ Current covered checks:
 - Squarus squares selection snaps "pieces placed" to the max for the selected polyomino set.
 - Squarus seeded piece sequencing is deterministic for fixed seed.
 - Experience switching updates the visible control groups correctly (Stitching, Triangula, Squarus).
+- Onboarding tour uses Stitching-only intro behavior and startup opt-out control behavior.
+- Onboarding autoplay preference and hear-all stop-all flow persist correctly across reloads.
+- Paramless splash continue primes onboarding autoplay narration for webkit-style speech lock.
 - Basic and advanced shared controls remain synchronized (holes, tempo, etc.).
 - Basic palette custom dropper applies the selected thread color.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
@@ -73,6 +76,10 @@ Current covered checks:
 - Slider touchmove events are not canceled by global handlers.
 - Playback remains operable after orientation-style viewport changes.
 - Mobile layout baseline remains usable at phone viewport.
+- List type variants produce the expected stitch routing.
+- Paramless sequence randomization is ordered and yields at least three segments.
+- Start hole is hidden and ignored for list mode with Holes list type.
+- Start hole remains functional for add, multiply, and Steps list modes.
 - Triangula URL state roundtrip persists key controls on reload.
 - Squarus URL state roundtrip persists key controls on reload.
 - Mashrabiya URL state roundtrip persists key controls on reload.
@@ -82,6 +89,8 @@ Current covered checks:
 - Mashrabiya fold 8 classification and fills match expected point IDs and area coverage.
 - Mashrabiya fold 8 and 12 fills are invariant to debug-label toggle.
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
+- About narration uses paragraph text and excludes figure captions.
+- About and onboarding "Hear this" buttons include speaker icon.
 
 ### Run Locally
 
@@ -229,7 +238,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Add random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.  
 1. Enable hole number rotation in Stitching (See details in corresponding backlog TODO item)
 1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
 1. Tips library and modal
@@ -264,13 +272,12 @@ This section describes the practical steps for adding a new experience named zoo
 1. Code Modularization
 1. Autoplay of onboarding hints as tutorial
 1. Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment
+1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
 1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
 
 
 ## TODO Backlog
 
-1. **Random thread generation constraints for all three enabled stitch-by modes** such that a minimum of three stitching segments are guaranteed to exist.
- 
 1. **Enable hole number rotation in Stitching**
      - for all stitch-by modes
      - as a new frame control in the advanced pane only

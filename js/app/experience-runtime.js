@@ -178,6 +178,8 @@ var startupTailPreviewInProgress = false;
 var PARAMLESS_STARTUP_PREVIEW_SONG_PATH = 'assets/audio/SonatainCmajor_3sec_fanfare.mp3';
 var PARAMLESS_STARTUP_PREVIEW_START_SECONDS = 1.05;
 var PARAMLESS_STARTUP_PREVIEW_BPM = 115;
+var PARAMLESS_RANDOM_MIN_SEGMENTS = 3;
+var PARAMLESS_RANDOM_SEQUENCE_MAX_ATTEMPTS = 18;
 
 function seekAudioToStartupPreviewOffset(audioEl) {
   if (!audioEl) return;
@@ -212,18 +214,46 @@ function pickRandomValue(options, fallback) {
   return options[getRandomIntInclusive(0, options.length - 1)];
 }
 
-function buildRandomThreadSequence(sourceHoleCount, jumpLimit, sequenceMode) {
+function getGreatestCommonDivisor(a, b) {
+  var x = Math.abs(Math.round(Number(a)));
+  var y = Math.abs(Math.round(Number(b)));
+  if (!isFinite(x) || !isFinite(y)) return 1;
+  while (y) {
+    var tmp = x % y;
+    x = y;
+    y = tmp;
+  }
+  return x || 1;
+}
+
+function hasMinimumThreadSegments(thread, minimumSegments) {
+  var minimum = parseBoundedInt(minimumSegments, 1, 2000, PARAMLESS_RANDOM_MIN_SEGMENTS);
+  var segments = computeSegments(thread) || [];
+  return segments.length >= minimum;
+}
+
+function buildOrderedRandomSequenceValues(itemMax, minimumSegments) {
+  var safeItemMax = Math.max(1, parseBoundedInt(itemMax, 1, MAX_HOLES, 1));
+  var minSegments = parseBoundedInt(minimumSegments, 1, 2000, PARAMLESS_RANDOM_MIN_SEGMENTS);
+  var minLength = Math.max(4, minSegments + 1);
+  var maxLength = Math.max(minLength, Math.min(8, safeItemMax + minSegments));
+  var length = getRandomIntInclusive(minLength, maxLength);
+  var values = [];
+
+  for (var i = 0; i < length; i++) {
+    values.push(getRandomIntInclusive(1, safeItemMax));
+  }
+
+  values.sort(function(a, b) { return a - b; });
+  return values;
+}
+
+function buildRandomThreadSequence(sourceHoleCount, jumpLimit, sequenceMode, minimumSegments) {
   var usesStepList = sanitizeThreadSequenceMode(sequenceMode, 'holes') === 'steps';
   var itemMax = usesStepList
     ? Math.max(1, jumpLimit)
     : Math.max(1, sourceHoleCount);
-  var sequenceLength = getRandomIntInclusive(3, Math.min(8, itemMax + 2));
-  var values = [];
-
-  for (var i = 0; i < sequenceLength; i++) {
-    values.push(getRandomIntInclusive(1, itemMax));
-  }
-
+  var values = buildOrderedRandomSequenceValues(itemMax, minimumSegments);
   return values.join(',');
 }
 
@@ -275,20 +305,68 @@ function applyRandomizedStitchingStateForParamlessLoad() {
   var randomJumpMode = pickRandomValue(['fixed', 'connect', 'sequence'], 'fixed');
   var sourceHoleCount = Math.max(3, getThreadSourceHoleCount(randomThread));
   var jumpLimit = Math.max(1, sourceHoleCount - 1);
+  var minimumSegments = PARAMLESS_RANDOM_MIN_SEGMENTS;
 
   randomThread.startHole = 1;
-  randomThread.jump = getRandomIntInclusive(1, jumpLimit);
-  if (randomJumpMode === 'connect') {
-    randomThread.connectMultiplier = getRandomIntInclusive(Math.max(2, connectMin), connectMax);
-  } else {
-    randomThread.connectMultiplier = getRandomIntInclusive(connectMin, connectMax);
-  }
   randomThread.jumpMode = randomJumpMode;
   randomThread.jumpFormula = 'skip';
   randomThread.jumpSequence = '';
+  randomThread.jump = getRandomIntInclusive(1, jumpLimit);
+  randomThread.connectMultiplier = getRandomIntInclusive(connectMin, connectMax);
+
+  if (randomJumpMode === 'fixed') {
+    var fixedJumpCandidates = [];
+    for (var jumpValue = 1; jumpValue <= jumpLimit; jumpValue++) {
+      var cycleLength = Math.floor(sourceHoleCount / getGreatestCommonDivisor(sourceHoleCount, jumpValue));
+      if (cycleLength >= minimumSegments) {
+        fixedJumpCandidates.push(jumpValue);
+      }
+    }
+    randomThread.jump = pickRandomValue(fixedJumpCandidates, Math.max(1, jumpLimit));
+  }
+
+  if (randomJumpMode === 'connect') {
+    var connectCandidateMin = Math.max(2, connectMin);
+    var connectCandidateMax = Math.max(connectCandidateMin, connectMax);
+    var connectCandidates = [];
+    for (var connectValue = connectCandidateMin; connectValue <= connectCandidateMax; connectValue++) {
+      randomThread.connectMultiplier = connectValue;
+      if (hasMinimumThreadSegments(randomThread, minimumSegments)) {
+        connectCandidates.push(connectValue);
+      }
+    }
+    randomThread.connectMultiplier = pickRandomValue(connectCandidates, connectCandidateMin);
+  }
 
   if (randomJumpMode === 'sequence') {
-    randomThread.jumpSequence = buildRandomThreadSequence(sourceHoleCount, jumpLimit, randomThread.jumpSequenceMode);
+    var sequenceAttempts = 0;
+    var validatedSequence = '';
+    while (sequenceAttempts < PARAMLESS_RANDOM_SEQUENCE_MAX_ATTEMPTS) {
+      sequenceAttempts += 1;
+      var candidateSequence = buildRandomThreadSequence(
+        sourceHoleCount,
+        jumpLimit,
+        randomThread.jumpSequenceMode,
+        minimumSegments
+      );
+      randomThread.jumpSequence = candidateSequence;
+      if (hasMinimumThreadSegments(randomThread, minimumSegments)) {
+        validatedSequence = candidateSequence;
+        break;
+      }
+    }
+
+    if (!validatedSequence) {
+      // Keep fallback ordered (non-decreasing) and valid for both holes/steps parsing paths.
+      validatedSequence = '1,1,2,3';
+      randomThread.jumpSequence = validatedSequence;
+    }
+
+    if (!hasMinimumThreadSegments(randomThread, minimumSegments)) {
+      // Last-resort guardrail: force a short ordered steps list that produces a stable 3+ segment cycle.
+      randomThread.jumpSequenceMode = 'steps';
+      randomThread.jumpSequence = '1,1,2,3';
+    }
   }
 
   threads = [randomThread];
