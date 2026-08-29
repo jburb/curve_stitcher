@@ -229,7 +229,9 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Add random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.  
 1. Enable hole number rotation in Stitching (See details in corresponding backlog TODO item)
+1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
 1. Tips library and modal
 1. Curve sewing cards viewer
 1. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
@@ -267,10 +269,14 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
+1. **Random thread generation constraints for all three enabled stitch-by modes** such that a minimum of three stitching segments are guaranteed to exist.
+ 
 1. **Enable hole number rotation in Stitching**
      - for all stitch-by modes
      - as a new frame control in the advanced pane only
      - remove "start hole" control for the multiplication stitch-by mode (this broader control serves the same intent while being more mathematically correct)
+
+1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
