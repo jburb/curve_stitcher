@@ -80,6 +80,7 @@ Current covered checks:
 - Paramless sequence randomization is ordered and yields at least three segments.
 - Start hole is hidden and ignored for list mode with Holes list type.
 - Start hole remains functional for add, multiply, and Steps list modes.
+- Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
 - Triangula URL state roundtrip persists key controls on reload.
 - Squarus URL state roundtrip persists key controls on reload.
 - Mashrabiya URL state roundtrip persists key controls on reload.
@@ -238,7 +239,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Enable hole number rotation in Stitching (See details in corresponding backlog TODO item)
 1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
 1. Tips library and modal
 1. Curve sewing cards viewer
@@ -274,14 +274,10 @@ This section describes the practical steps for adding a new experience named zoo
 1. Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment
 1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
 1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
+1. Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.
 
 
 ## TODO Backlog
-
-1. **Enable hole number rotation in Stitching**
-     - for all stitch-by modes
-     - as a new frame control in the advanced pane only
-     - remove "start hole" control for the multiplication stitch-by mode (this broader control serves the same intent while being more mathematically correct), but leave it in-place for addition stitch-by mode.
 
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 
