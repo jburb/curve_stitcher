@@ -983,27 +983,32 @@ test.describe('StitchLab regressions', () => {
       function evaluateMode(sequenceMode) {
         var failures = [];
         var samples = [];
+
+        var originalPickRandomValue = window.pickRandomValue;
+
+        window.pickRandomValue = function(options, fallback) {
+          if (Array.isArray(options) && options.length) {
+            if (options.indexOf('sequence') !== -1 && options.indexOf('connect') !== -1 && options.indexOf('fixed') !== -1) {
+              return 'sequence';
+            }
+            if (options.indexOf('holes') !== -1 && options.indexOf('steps') !== -1) {
+              return sequenceMode;
+            }
+          }
+          return originalPickRandomValue(options, fallback);
+        };
+
         for (var i = 0; i < 24; i++) {
-          var thread = window.createThread({
-            jump: 1,
-            width: 2,
-            color: '#1982c4',
-            startHole: 1,
-            frameMode: 'outer',
-            jumpSequenceMode: sequenceMode
-          });
+          window.hasAppliedParamlessStitchingRandomization = false;
+          window.applyRandomizedStitchingStateForParamlessLoad();
 
-          thread.jumpMode = 'sequence';
-          thread.jumpSequenceMode = sequenceMode;
+          var thread = (window.threads && window.threads[0]) ? window.threads[0] : null;
+          if (!thread || thread.jumpMode !== 'sequence') {
+            failures.push({ reason: 'thread-not-sequence', sequenceMode: sequenceMode, thread: thread });
+            continue;
+          }
+
           var sourceHoleCount = Math.max(3, window.getThreadSourceHoleCount(thread));
-          var jumpLimit = Math.max(1, sourceHoleCount - 1);
-          thread.jumpSequence = window.buildRandomThreadSequence(
-            sourceHoleCount,
-            jumpLimit,
-            sequenceMode,
-            3
-          );
-
           var numbers = tokenizeSequence(thread.jumpSequence);
           var segments = (window.computeSegments(thread) || []).length;
           var ascending = isAscending(numbers);
@@ -1033,6 +1038,8 @@ test.describe('StitchLab regressions', () => {
             });
           }
         }
+
+        window.pickRandomValue = originalPickRandomValue;
 
         return {
           failures: failures,

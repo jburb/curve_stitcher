@@ -180,6 +180,8 @@ var PARAMLESS_STARTUP_PREVIEW_START_SECONDS = 1.05;
 var PARAMLESS_STARTUP_PREVIEW_BPM = 115;
 var PARAMLESS_RANDOM_MIN_SEGMENTS = 3;
 var PARAMLESS_RANDOM_SEQUENCE_MAX_ATTEMPTS = 18;
+var PARAMLESS_MULTIPLY_MIN_HOLES = 16;
+var PARAMLESS_MULTIPLY_MAX_VALUE = 5;
 
 function seekAudioToStartupPreviewOffset(audioEl) {
   if (!audioEl) return;
@@ -303,6 +305,15 @@ function applyRandomizedStitchingStateForParamlessLoad() {
     jumpSequenceMode: pickRandomValue(['holes', 'steps'], 'holes')
   });
   var randomJumpMode = pickRandomValue(['fixed', 'connect', 'sequence'], 'fixed');
+
+  if (randomJumpMode === 'connect') {
+    randomHoleCount = Math.max(PARAMLESS_MULTIPLY_MIN_HOLES, randomHoleCount);
+    holesSlider.value = String(randomHoleCount);
+    if (advancedHolesNumberInput) {
+      advancedHolesNumberInput.value = String(randomHoleCount);
+    }
+  }
+
   var sourceHoleCount = Math.max(3, getThreadSourceHoleCount(randomThread));
   var jumpLimit = Math.max(1, sourceHoleCount - 1);
   var minimumSegments = PARAMLESS_RANDOM_MIN_SEGMENTS;
@@ -327,7 +338,8 @@ function applyRandomizedStitchingStateForParamlessLoad() {
 
   if (randomJumpMode === 'connect') {
     var connectCandidateMin = Math.max(2, connectMin);
-    var connectCandidateMax = Math.max(connectCandidateMin, connectMax);
+    var connectCandidateMax = Math.min(connectMax, PARAMLESS_MULTIPLY_MAX_VALUE);
+    connectCandidateMax = Math.max(connectCandidateMin, connectCandidateMax);
     var connectCandidates = [];
     for (var connectValue = connectCandidateMin; connectValue <= connectCandidateMax; connectValue++) {
       randomThread.connectMultiplier = connectValue;
