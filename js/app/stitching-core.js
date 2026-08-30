@@ -712,7 +712,7 @@ function computeSequence(thread, holeCount) {
     jumpMode = 'fixed';
   }
   var visited = new Array(n).fill(false);
-  var startIndex = parseBoundedInt(thread.startHole, 1, n, 1) - 1;
+  var startIndex = getPhysicalHoleIndexFromLabel(parseBoundedInt(thread.startHole, 1, n, 1), n);
   var current = startIndex;
   var prev = startIndex;
   var seq = [];
@@ -753,7 +753,7 @@ function computeSequence(thread, holeCount) {
       if (label < 1) {
         continue;
       }
-      parsed.push(label - 1);
+      parsed.push(getPhysicalHoleIndexFromLabel(label, n));
     }
     return parsed;
   }
@@ -912,7 +912,10 @@ function computeSegments(thread) {
     ensureThreadConnectConfig(thread);
     var segments = [];
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
-    var startOffset = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1) - 1;
+    var startOffset = getPhysicalHoleIndexFromLabel(
+      parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1),
+      sourceHoleCount
+    );
     for (var i = 0; i < sourceHoleCount; i++) {
       // Multiplication mode honors startHole as ring phase origin.
       var sourceIndex = (startOffset + i) % sourceHoleCount;
@@ -1083,6 +1086,25 @@ function drawThread(thread) {
   }
 }
 
+function getHoleNumberRotationForCount(holeCount) {
+  var count = parseBoundedInt(holeCount, 3, MAX_HOLES, getCurrentStitchHoleCount());
+  return sanitizeHoleNumberRotation(holeNumberRotation, count, 1);
+}
+
+function getPhysicalHoleIndexFromLabel(label, holeCount) {
+  var count = parseBoundedInt(holeCount, 3, MAX_HOLES, getCurrentStitchHoleCount());
+  var normalizedLabel = parseBoundedInt(label, 1, count, 1);
+  var rotation = getHoleNumberRotationForCount(count);
+  return ((rotation - 1) + (normalizedLabel - 1)) % count;
+}
+
+function getHoleLabelFromPhysicalIndex(index, holeCount) {
+  var count = parseBoundedInt(holeCount, 3, MAX_HOLES, getCurrentStitchHoleCount());
+  var normalizedIndex = ((Math.round(Number(index)) % count) + count) % count;
+  var rotation = getHoleNumberRotationForCount(count);
+  return ((normalizedIndex - (rotation - 1) + count) % count) + 1;
+}
+
 function drawHoles() {
   var numbersVisible = shouldShowHoleNumbersNow();
   var holeCount = getCurrentStitchHoleCount();
@@ -1113,7 +1135,7 @@ function drawHoles() {
       label.fillColor = holeLabelColor;
       label.fontSize = ringBaseFontSize;
       label.fontWeight = 'normal';
-      label.content = String(i + 1);
+      label.content = String(getHoleLabelFromPhysicalIndex(i, ringPoints.length));
       ringLabels[i] = label;
 
       var extent = getBoundsExtentAlongDirection(label, outward);

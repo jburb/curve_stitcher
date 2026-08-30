@@ -94,6 +94,12 @@ function applyStateFromCurrentUrl(options) {
       if (advancedHolesNumberInput) {
         advancedHolesNumberInput.value = String(holesFromUrl);
       }
+      holeNumberRotation = sanitizeHoleNumberRotation(
+        getUrlStateParam(params, 'stitchingHoleNumberRotation'),
+        holesFromUrl,
+        holeNumberRotation
+      );
+      syncHoleNumberRotationControls();
 
       selectedThreadIndex = parseBoundedInt(getUrlStateParam(params, 'stitchingSelectedThreadIndex'), 0, threads.length - 1, selectedThreadIndex);
       renderThreadControls();
@@ -285,6 +291,7 @@ function applyRandomizedStitchingStateForParamlessLoad() {
   );
   // Keep startup visuals beginner-readable on random loads.
   showHoleNumbers = true;
+  holeNumberRotation = 1;
   borderEnabled = true;
 
   var threadWidthMin = parseBoundedInt(widthSlider && widthSlider.min, 1, 10, 1);
@@ -388,6 +395,7 @@ function applyRandomizedStitchingStateForParamlessLoad() {
   syncKidControlsFromSelectedThread();
   syncNestedFrameControls();
   syncHoleNumberToggles();
+  syncHoleNumberRotationControls();
   syncBorderControls();
   updateKidControlValues();
   persistStitchingStateCache(buildStitchingStateSnapshotFromRuntime());
@@ -868,6 +876,9 @@ function applyAdvancedControlPolicy(profile) {
   }
   if (advancedHolesNumberInput) {
     setElementDisplay(advancedHolesNumberInput.parentElement, controls.holesNumber !== false, '');
+  }
+  if (advancedHoleRotationInput) {
+    setElementDisplay(advancedHoleRotationInput.parentElement, controls.holesNumber !== false, '');
   }
   if (controls.threads === false) {
     setElementDisplay(advancedThreadsTitle, false, '');
@@ -2965,6 +2976,9 @@ function updateKidControlValues() {
   if (advancedHolesNumberInput) {
     advancedHolesNumberInput.value = holesSlider.value;
   }
+  if (advancedHoleRotationValue) {
+    advancedHoleRotationValue.textContent = String(holeNumberRotation);
+  }
 }
 
 function syncNestedFrameControls() {
@@ -3027,6 +3041,8 @@ function syncJumpBoundsFromHoleCount() {
   var holeCount = getCurrentStitchHoleCount();
   var jumpLimit = Math.max(1, holeCount - 1);
 
+  holeNumberRotation = sanitizeHoleNumberRotation(holeNumberRotation, holeCount, holeNumberRotation);
+
   if (jumpSlider) {
     jumpSlider.max = String(jumpLimit);
   }
@@ -3051,6 +3067,8 @@ function syncJumpBoundsFromHoleCount() {
     threads[selected].startHole = parseBoundedInt(threads[selected].startHole, 1, selectedHoleCount, threads[selected].startHole || 1);
     startHoleInput.value = String(threads[selected].startHole);
   }
+
+  syncHoleNumberRotationControls();
 }
 
 function syncBorderControls() {
@@ -3261,6 +3279,20 @@ function syncHoleNumberToggles() {
   holeNumbersToggleBtn.classList.toggle('active', showHoleNumbers);
   holeNumbersToggleBtn.setAttribute('aria-pressed', showHoleNumbers ? 'true' : 'false');
   holeNumbersToggleBtn.title = showHoleNumbers ? 'Hole numbers on' : 'Hole numbers off';
+}
+
+function syncHoleNumberRotationControls() {
+  var holeCount = getCurrentStitchHoleCount();
+  holeNumberRotation = sanitizeHoleNumberRotation(holeNumberRotation, holeCount, holeNumberRotation);
+  if (advancedHoleRotationInput) {
+    advancedHoleRotationInput.min = '1';
+    advancedHoleRotationInput.max = String(holeCount);
+    advancedHoleRotationInput.step = '1';
+    advancedHoleRotationInput.value = String(holeNumberRotation);
+  }
+  if (advancedHoleRotationValue) {
+    advancedHoleRotationValue.textContent = String(holeNumberRotation);
+  }
 }
 
 function setCurrentShape(shape, shouldDraw) {

@@ -377,6 +377,10 @@
       <div class="advanced-global-row">Border: <input id="advanced-border-enabled" type="checkbox"></div>
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
       <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="144" value="35" aria-label="Holes value"></div>
+      <div class="advanced-global-row">Hole number rotation:
+        <input id="advanced-hole-rotation" type="range" min="1" max="35" step="1" value="1" aria-label="Hole number rotation">
+        <span class="advanced-inline-value" id="advanced-hole-rotation-value">1</span>
+      </div>
     </div>
     <div class="advanced-subsection" id="nested-frame-block">
       <div class="advanced-global-title">Inner Frame</div>
@@ -579,6 +583,8 @@
   var advancedShapeSelect = document.getElementById('advanced-shape');
   var advancedStitchingFrameSubsection = advancedShapeSelect ? advancedShapeSelect.closest('.advanced-subsection') : null;
   var advancedHolesNumberInput = document.getElementById('advanced-holes-number');
+  var advancedHoleRotationInput = document.getElementById('advanced-hole-rotation');
+  var advancedHoleRotationValue = document.getElementById('advanced-hole-rotation-value');
   var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
   var advancedBorderEnabledInput = document.getElementById('advanced-border-enabled');
   var advancedTempoInput = document.getElementById('advanced-tempo');
@@ -779,6 +785,7 @@
   var animationPlaybackState = 'idle';
   var canvasResizeObserver = null;
   var showHoleNumbers = true;
+  var holeNumberRotation = 1;
   var holeNumberLabelsByIndex = Object.create(null);
   var highlightedHoleNumbers = [];
   var acknowledgmentsLinesCache = null;

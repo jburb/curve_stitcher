@@ -405,6 +405,18 @@ function handleAdvancedHolesNumberInput() {
   handleHolesSliderChange();
 }
 
+function handleAdvancedHoleRotationInput(commitValue) {
+  if (!advancedHoleRotationInput) return;
+  var holeCount = getCurrentStitchHoleCount();
+  var nextRotation = sanitizeHoleNumberRotation(advancedHoleRotationInput.value, holeCount, holeNumberRotation);
+  holeNumberRotation = nextRotation;
+  syncHoleNumberRotationControls();
+  if (commitValue) {
+    scheduleUrlStateSync(false);
+  }
+  redrawForPathChange();
+}
+
 function handleAdvancedHolesNumberCommit() {
   if (!advancedHolesNumberInput) return;
   if (advancedHolesNumberInput.value === '') {
@@ -423,6 +435,14 @@ if (advancedHolesNumberInput) {
   advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberInput);
   advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberCommit);
   advancedHolesNumberInput.addEventListener('blur', handleAdvancedHolesNumberCommit);
+}
+if (advancedHoleRotationInput) {
+  advancedHoleRotationInput.addEventListener('input', function() {
+    handleAdvancedHoleRotationInput(false);
+  });
+  advancedHoleRotationInput.addEventListener('change', function() {
+    handleAdvancedHoleRotationInput(true);
+  });
 }
 if (nestedFrameEnabledInput) {
   nestedFrameEnabledInput.addEventListener('change', function() {

@@ -281,7 +281,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. **Enable hole number rotation in Stitching**
      - for all stitch-by modes
      - as a new frame control in the advanced pane only
-     - remove "start hole" control for the multiplication stitch-by mode (this broader control serves the same intent while being more mathematically correct)
+     - remove "start hole" control for the multiplication stitch-by mode (this broader control serves the same intent while being more mathematically correct), but leave it in-place for addition stitch-by mode.
 
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 

@@ -1180,6 +1180,68 @@ test.describe('StitchLab regressions', () => {
     expect(probe.multiplyEdgeSetA).not.toBe(probe.multiplyEdgeSetB);
   });
 
+  test('hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      if (window.holesSlider) {
+        window.holesSlider.value = '10';
+      }
+      if (window.advancedHolesNumberInput) {
+        window.advancedHolesNumberInput.value = '10';
+      }
+      if (typeof window.syncJumpBoundsFromHoleCount === 'function') {
+        window.syncJumpBoundsFromHoleCount();
+      }
+
+      window.holeNumberRotation = 3;
+      if (typeof window.syncHoleNumberRotationControls === 'function') {
+        window.syncHoleNumberRotationControls();
+      }
+
+      function makeThread(options) {
+        options = options || {};
+        return {
+          jump: Number(options.jump || 1),
+          width: 2,
+          color: '#1982c4',
+          solidColor: '#1982c4',
+          startHole: Number(options.startHole || 1),
+          sequence: null,
+          jumpMode: String(options.jumpMode || 'fixed'),
+          jumpFormula: 'skip',
+          jumpSequence: String(options.jumpSequence || ''),
+          jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
+          connectMultiplier: Number(options.connectMultiplier || 2),
+          connectOffset: 0,
+          frameMode: 'outer'
+        };
+      }
+
+      var addSegments = window.computeSegments(makeThread({ jumpMode: 'fixed', jump: 2, startHole: 1 }));
+      var multiplySegments = window.computeSegments(makeThread({ jumpMode: 'connect', connectMultiplier: 2, startHole: 1 }));
+      var holeListSegments = window.computeSegments(makeThread({ jumpMode: 'sequence', jumpSequenceMode: 'holes', jumpSequence: '1,3,5', startHole: 1 }));
+
+      return {
+        rotation: window.holeNumberRotation,
+        sliderMax: window.advancedHoleRotationInput ? Number(window.advancedHoleRotationInput.max) : null,
+        labelForPhysicalIndex2: window.getHoleLabelFromPhysicalIndex(2, 10),
+        label1MapsToIndex: window.getPhysicalHoleIndexFromLabel(1, 10),
+        addFirstFrom: addSegments.length ? addSegments[0][0] : null,
+        multiplyFirstFrom: multiplySegments.length ? multiplySegments[0][0] : null,
+        holeListFirst: holeListSegments.length ? holeListSegments[0] : null
+      };
+    });
+
+    expect(probe.rotation).toBe(3);
+    expect(probe.sliderMax).toBe(10);
+    expect(probe.labelForPhysicalIndex2).toBe(1);
+    expect(probe.label1MapsToIndex).toBe(2);
+    expect(probe.addFirstFrom).toBe(2);
+    expect(probe.multiplyFirstFrom).toBe(2);
+    expect(probe.holeListFirst).toEqual([2, 4]);
+  });
+
   test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
     await page.goto('/stitchlab.html');
 

@@ -7,6 +7,7 @@ var URL_STATE_PARAM_KEYS = Object.freeze({
   musicMuted: 'musicMuted',
   songId: 'song',
   stitchingShowHoleNumbers: 'stitchingShowHoleNumbers',
+  stitchingHoleNumberRotation: 'stitchingHoleNumberRotation',
   stitchingBorderEnabled: 'stitchingBorderEnabled',
   stitchingHoles: 'stitchingHoles',
   stitchingNestedFrameEnabled: 'stitchingNestedFrameEnabled',
@@ -57,6 +58,7 @@ var appState = {
     nestedFrameRatio: DEFAULT_NESTED_FRAME_RATIO,
     selectedThreadIndex: 0,
     showHoleNumbers: true,
+    holeNumberRotation: 1,
     borderEnabled: true,
     threadColors: ['#1982c4'],
     threadState: ''
@@ -354,6 +356,12 @@ function sanitizeNestedFrameRatio(value, fallback) {
   return parsed;
 }
 
+function sanitizeHoleNumberRotation(value, holeCount, fallback) {
+  var count = parseBoundedInt(holeCount, 3, MAX_HOLES, getCurrentStitchHoleCount());
+  var fallbackValue = parseBoundedInt(fallback, 1, count, 1);
+  return parseBoundedInt(value, 1, count, fallbackValue);
+}
+
 function sanitizeThreadFrameMode(value, fallback) {
   var allowed = ['outer', 'inner', 'bridge', 'bridge-reverse', 'bridge-reverse-project'];
   if (allowed.indexOf(value) === -1) {
@@ -490,6 +498,7 @@ function buildStitchingStateSnapshotFromRuntime() {
     nestedFrameRatio: sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO),
     selectedThreadIndex: parseBoundedInt(selectedThreadIndex, 0, maxIndex, 0),
     showHoleNumbers: !!showHoleNumbers,
+    holeNumberRotation: sanitizeHoleNumberRotation(holeNumberRotation, parseBoundedInt(holesSlider && holesSlider.value, 3, MAX_HOLES, DEFAULT_HOLES), 1),
     borderEnabled: !!borderEnabled,
     threadState: serializeStitchingThreadState(sanitizedThreads)
   };
@@ -503,6 +512,7 @@ function normalizeStitchingStateSnapshot(raw, fallback) {
   var normalizedNestedFrameEnabled = !!sanitizeBooleanParam(raw.nestedFrameEnabled, base.nestedFrameEnabled);
   var normalizedNestedFrameRatio = sanitizeNestedFrameRatio(raw.nestedFrameRatio, base.nestedFrameRatio);
   var normalizedShowHoleNumbers = !!sanitizeBooleanParam(raw.showHoleNumbers, base.showHoleNumbers);
+  var normalizedHoleNumberRotation = sanitizeHoleNumberRotation(raw.holeNumberRotation, normalizedHoles, base.holeNumberRotation || 1);
   var normalizedBorderEnabled = !!sanitizeBooleanParam(raw.borderEnabled, base.borderEnabled);
   var parsedThreads = parseStitchingThreadState(raw.threadState, parseStitchingThreadState(base.threadState, [sanitizeThreadDescriptor({}, null)]));
   if (!parsedThreads.length) {
@@ -516,6 +526,7 @@ function normalizeStitchingStateSnapshot(raw, fallback) {
     nestedFrameRatio: normalizedNestedFrameRatio,
     selectedThreadIndex: normalizedSelectedThreadIndex,
     showHoleNumbers: normalizedShowHoleNumbers,
+    holeNumberRotation: normalizedHoleNumberRotation,
     borderEnabled: normalizedBorderEnabled,
     threadState: serializeStitchingThreadState(parsedThreads)
   };
@@ -678,6 +689,7 @@ function restoreStitchingStateFromCache() {
   });
   selectedThreadIndex = parseBoundedInt(normalized.selectedThreadIndex, 0, threads.length - 1, 0);
   showHoleNumbers = !!normalized.showHoleNumbers;
+  holeNumberRotation = sanitizeHoleNumberRotation(normalized.holeNumberRotation, normalized.holes, holeNumberRotation);
   borderEnabled = !!normalized.borderEnabled;
   nestedFrameEnabled = !!normalized.nestedFrameEnabled;
   nestedFrameRatio = sanitizeNestedFrameRatio(normalized.nestedFrameRatio, nestedFrameRatio);
@@ -693,6 +705,7 @@ function restoreStitchingStateFromCache() {
   updateKidControlValues();
   syncNestedFrameControls();
   syncHoleNumberToggles();
+  syncHoleNumberRotationControls();
   syncBorderControls();
 
   persistStitchingStateCache(normalized);
@@ -931,6 +944,7 @@ function syncAppStateFromRuntime() {
   appState.stitching.nestedFrameRatio = sanitizeNestedFrameRatio(nestedFrameRatio, DEFAULT_NESTED_FRAME_RATIO);
   appState.stitching.selectedThreadIndex = Math.max(0, Math.min(threads.length - 1, selectedThreadIndex));
   appState.stitching.showHoleNumbers = !!showHoleNumbers;
+  appState.stitching.holeNumberRotation = sanitizeHoleNumberRotation(holeNumberRotation, appState.stitching.holes, 1);
   appState.stitching.borderEnabled = !!borderEnabled;
   appState.stitching.threadColors = threads.map(function(thread) {
     return sanitizeThreadColor(thread.color, '#1982c4');
@@ -975,6 +989,7 @@ function buildSearchParamsFromAppState() {
   setUrlStateParam(params, 'stitchingShape', sanitizeShape(appState.common.shape, stitchingFrameShape || 'circle'));
   if (appState.experienceId === 'stitching') {
     setUrlStateParam(params, 'stitchingShowHoleNumbers', appState.stitching.showHoleNumbers ? '1' : '0');
+    setUrlStateParam(params, 'stitchingHoleNumberRotation', String(appState.stitching.holeNumberRotation));
     setUrlStateParam(params, 'stitchingBorderEnabled', appState.stitching.borderEnabled ? '1' : '0');
     setUrlStateParam(params, 'stitchingHoles', String(appState.stitching.holes));
     setUrlStateParam(params, 'stitchingNestedFrameEnabled', appState.stitching.nestedFrameEnabled ? '1' : '0');
