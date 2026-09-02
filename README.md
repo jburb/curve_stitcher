@@ -239,12 +239,13 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Use better voice for narration.
 1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
+1. Stitch library (offline-first)
 1. Tips library and modal
 1. Curve sewing cards viewer
 1. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
-1. Stitch library (offline-first)
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Option 
 
@@ -279,7 +280,17 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
+1. **Use better voice for narration**:
+     - Top candidate TTS lib is Piper TTS
+     - Top voice candidates from piper are: aru-medium 09, vctk-medium p282, vctk-medium p318, or hfc_female [medium].
+     - Determine whether to pre-record passages and host their files, or use dynamic engine execution.
+
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
+
+1. **Stitch library (offline-first)**
+	 - Save/load named presets containing shape + global controls + per-thread settings.
+	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
+	 - Leave room for optional future cloud sync/import-export.
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
@@ -294,16 +305,11 @@ This section describes the practical steps for adding a new experience named zoo
 1. **Acknowledgements song discovery**
      - When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options.
 
-1. **Stitch library (offline-first)**
-	 - Save/load named presets containing shape + global controls + per-thread settings.
-	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
-	 - Leave room for optional future cloud sync/import-export.
-
 1. **Experience title bar (animated stitched reveal)**
-	- Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").
+	- ~~Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").~~
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
 	- Trigger the reveal on initial page load and on transition into a new experience/world.
-	- Support experience-specific typography/path styling so each world can have its own font/letterform identity.
+	- ~~Support experience-specific typography/path styling so each world can have its own font/letterform identity.~~
 	- Keep the motion language consistent with current discovery and transition cues (kid-friendly, clear, not visually noisy).
 
 1. **Advanced stitch ribbon motion (Option 4, lowest priority)**
