@@ -286,7 +286,7 @@ test.describe('StitchLab regressions', () => {
     await expect(quickStart).toBeHidden();
   });
 
-  test('paramless splash continue primes onboarding autoplay narration for webkit-style speech lock', async ({ page }) => {
+  test('paramless splash continue routes onboarding autoplay narration through Piper bridge', async ({ page }) => {
     await page.addInitScript(() => {
       window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
     });
@@ -296,8 +296,39 @@ test.describe('StitchLab regressions', () => {
 
     await page.evaluate(() => {
       const synth = window.speechSynthesis;
+      const piperBridge = window.stitchlabPiperTts;
+
+      let piperSpeakCount = 0;
+      let piperPrewarmCount = 0;
+      const originalPiperSpeak = piperBridge && typeof piperBridge.speak === 'function' ? piperBridge.speak.bind(piperBridge) : null;
+      const originalPiperPrewarm = piperBridge && typeof piperBridge.prewarm === 'function' ? piperBridge.prewarm.bind(piperBridge) : null;
+
+      if (piperBridge && originalPiperSpeak) {
+        piperBridge.speak = function(payload) {
+          piperSpeakCount += 1;
+          return originalPiperSpeak(payload);
+        };
+      }
+
+      if (piperBridge && originalPiperPrewarm) {
+        piperBridge.prewarm = function(payload) {
+          piperPrewarmCount += 1;
+          return originalPiperPrewarm(payload);
+        };
+      }
+
       if (!synth || typeof synth.speak !== 'function') {
-        window.__stitchlabSpeechProbe = { unsupported: true };
+        window.__stitchlabSpeechProbe = {
+          unsupported: true,
+          getState: () => ({
+            piperSpeakCount,
+            piperPrewarmCount,
+          }),
+          restore: () => {
+            if (piperBridge && originalPiperSpeak) piperBridge.speak = originalPiperSpeak;
+            if (piperBridge && originalPiperPrewarm) piperBridge.prewarm = originalPiperPrewarm;
+          }
+        };
         return;
       }
 
@@ -341,11 +372,15 @@ test.describe('StitchLab regressions', () => {
         getState: () => ({
           primed,
           audibleSpeakCount,
-          speakCalls: speakCalls.slice()
+          speakCalls: speakCalls.slice(),
+          piperSpeakCount,
+          piperPrewarmCount,
         }),
         restore: () => {
           synth.speak = originalSpeak;
           synth.cancel = originalCancel;
+          if (piperBridge && originalPiperSpeak) piperBridge.speak = originalPiperSpeak;
+          if (piperBridge && originalPiperPrewarm) piperBridge.prewarm = originalPiperPrewarm;
         }
       };
     });
@@ -356,18 +391,8 @@ test.describe('StitchLab regressions', () => {
     await expect.poll(() => {
       return page.evaluate(() => {
         const probe = window.__stitchlabSpeechProbe;
-        if (!probe || probe.unsupported) return null;
-        return probe.getState();
-      });
-    }).toMatchObject({
-      primed: true
-    });
-
-    await expect.poll(() => {
-      return page.evaluate(() => {
-        const probe = window.__stitchlabSpeechProbe;
-        if (!probe || probe.unsupported) return 0;
-        return probe.getState().audibleSpeakCount;
+        if (!probe || typeof probe.getState !== 'function') return 0;
+        return probe.getState().piperSpeakCount || 0;
       });
     }).toBeGreaterThan(0);
 

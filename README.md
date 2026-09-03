@@ -7,18 +7,20 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 
 | Load order | Script | Primary ownership | Notes |
 | --- | --- | --- | --- |
-| 1 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
-| 2 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
-| 3 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
-| 4 | js/app/state-url-persistence.js | URL schema, sanitizers, per-experience state serialization and hydration helpers | Canonical place for state shape and normalization logic. |
-| 5 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
-| 6 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
-| 7 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
-| 8 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
-| 9 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
-| 10 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
-| 11 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
-| 12 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
+| 1 | js/app/piper-bridge.js (module) | Browser-side Piper WASM bridge registration (`window.stitchlabPiperTts`) | Loads only when local WASM/model assets are present. |
+| 2 | js/app/tts.js | Shared narration speech engine adapter (Piper-first with offline-safe fallback) | Central voice/runtime contract for all app TTS entry points. |
+| 3 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
+| 4 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
+| 5 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
+| 6 | js/app/state-url-persistence.js | URL schema, sanitizers, per-experience state serialization and hydration helpers | Canonical place for state shape and normalization logic. |
+| 7 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
+| 8 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
+| 9 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
+| 10 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
+| 11 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
+| 12 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
+| 13 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
+| 14 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
 
 ## Development Notes
 
@@ -97,6 +99,8 @@ Current covered checks:
 
 1. Install dependencies:
 	- `npm install`
+1. Stage Piper WASM runtime + model assets (required for offline Piper voice playback):
+	- `npm run setup:tts:piper`
 2. Install Playwright browser (Chromium):
 	- `npm run test:e2e:install`
 3. Run tests:
@@ -116,6 +120,23 @@ Optional:
   - `test-results/`
 
 This setup does not change runtime app behavior and should not be included in mobile/desktop packaged artifacts.
+
+### Piper TTS Voice Contract
+
+- All app narration now routes through js/app/tts.js and prefers Piper voice `hfc_female [medium]`.
+- For packaged mobile/offline builds, expose a bridge at `window.stitchlabPiperTts` with:
+	- `speak({ text, voiceId, rate, pitch, volume, onEnd, onError })`
+	- Optional: `cancel()` and `prewarm({ voiceId })`
+- If this bridge is absent, StitchLab falls back to Web Speech synthesis to preserve compatibility in plain browser runs.
+
+### Piper WASM Assets
+
+- `npm run setup:tts:piper` performs all staging required for browser-side WASM usage:
+	- Copies `piper-tts-web` runtime bundle to `js/vendor/piper-tts-web.js`.
+	- Copies ONNX and phonemize WASM runtime files to `assets/tts/runtime/`.
+	- Downloads the preferred voice model `en_US-hfc_female-medium` into `assets/tts/models/en/en_US/hfc_female/medium/`.
+- Use `npm run setup:tts:piper:force` to refresh/re-download staged model assets.
+- The bridge in `js/app/piper-bridge.js` activates only when local model assets are present, otherwise narration safely falls back to Web Speech.
 
 ## Adding A New Experience (Example: Zoobaz)
 

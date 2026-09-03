@@ -1,0 +1,11 @@
+{
+  "en_US-hfc_female-medium": {
+    "name": "HFC Female Medium",
+    "key": "en_US-hfc_female-medium",
+    "quality": "medium",
+    "language": {
+      "code": "en_US",
+      "family": "en"
+    }
+  }
+}

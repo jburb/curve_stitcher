@@ -25,6 +25,10 @@ var STOP_ALL_BUTTON_LABEL = '⏹ Stop all';
 var ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS = 520;
 var ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS = 2400;
 
+function getNarrationTtsEngine() {
+  return window.stitchlabTts || null;
+}
+
 function getStitchingIntroTutorialSteps() {
   return [
     {
@@ -648,8 +652,9 @@ function syncOnboardingTourNarrationButtonState(isPlaying) {
 }
 
 function stopOnboardingHintNarration() {
-  if (onboardingHintNarrationUtterance && window.speechSynthesis) {
-    window.speechSynthesis.cancel();
+  var tts = getNarrationTtsEngine();
+  if (onboardingHintNarrationUtterance && tts && typeof tts.cancel === 'function') {
+    tts.cancel();
   }
   onboardingHintNarrationUtterance = null;
   onboardingHintNarrationButton = null;
@@ -657,25 +662,19 @@ function stopOnboardingHintNarration() {
 }
 
 function stopOnboardingTourNarration() {
-  if (onboardingTourNarrationUtterance && window.speechSynthesis) {
-    window.speechSynthesis.cancel();
+  var tts = getNarrationTtsEngine();
+  if (onboardingTourNarrationUtterance && tts && typeof tts.cancel === 'function') {
+    tts.cancel();
   }
   onboardingTourNarrationUtterance = null;
   syncOnboardingTourNarrationButtonState(false);
 }
 
 function prewarmOnboardingNarrationSpeech() {
-  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+  var tts = getNarrationTtsEngine();
+  if (!tts || typeof tts.prewarm !== 'function') return false;
   try {
-    var synth = window.speechSynthesis;
-    // Prime speech synthesis with a silent utterance while user activation is present.
-    var prewarm = new SpeechSynthesisUtterance('');
-    prewarm.volume = 0;
-    prewarm.rate = 1;
-    prewarm.pitch = 1;
-    synth.cancel();
-    synth.speak(prewarm);
-    return true;
+    return !!tts.prewarm();
   } catch (error) {
     return false;
   }
@@ -683,34 +682,37 @@ function prewarmOnboardingNarrationSpeech() {
 
 function speakOnboardingTourNarration(options) {
   options = options || {};
-  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+  var tts = getNarrationTtsEngine();
+  if (!tts || typeof tts.speak !== 'function' || !tts.supportsNarration()) return false;
 
   var narrationText = String(onboardingTourText && onboardingTourText.textContent ? onboardingTourText.textContent : '').replace(/\s+/g, ' ').trim();
   if (!narrationText) return false;
 
   stopOnboardingHintNarration();
-  var utterance = new SpeechSynthesisUtterance(narrationText);
-  utterance.rate = 0.97;
-  utterance.pitch = 1;
-  utterance.onend = function() {
-    onboardingTourNarrationUtterance = null;
-    syncOnboardingTourNarrationButtonState(false);
-    if (options.autoAdvanceOnFinish && onboardingTutorialAutoplayActive) {
-      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS);
+  var utterance = tts.speak({
+    text: narrationText,
+    rate: 0.97,
+    pitch: 1,
+    volume: 1,
+    onend: function() {
+      onboardingTourNarrationUtterance = null;
+      syncOnboardingTourNarrationButtonState(false);
+      if (options.autoAdvanceOnFinish && onboardingTutorialAutoplayActive) {
+        scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS);
+      }
+    },
+    onerror: function() {
+      onboardingTourNarrationUtterance = null;
+      syncOnboardingTourNarrationButtonState(false);
+      if (options.autoAdvanceOnFinish && onboardingTutorialAutoplayActive) {
+        scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
+      }
     }
-  };
-  utterance.onerror = function() {
-    onboardingTourNarrationUtterance = null;
-    syncOnboardingTourNarrationButtonState(false);
-    if (options.autoAdvanceOnFinish && onboardingTutorialAutoplayActive) {
-      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
-    }
-  };
+  });
+  if (!utterance) return false;
 
   onboardingTourNarrationUtterance = utterance;
   syncOnboardingTourNarrationButtonState(true);
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
   return true;
 }
 
@@ -723,7 +725,8 @@ function getOnboardingHintNarrationText(hintElement) {
 
 function toggleOnboardingHintNarration(hintElement, buttonElement) {
   if (!buttonElement) return;
-  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+  var tts = getNarrationTtsEngine();
+  if (!tts || typeof tts.speak !== 'function' || !tts.supportsNarration()) return;
 
   if (onboardingHintNarrationUtterance && onboardingHintNarrationButton === buttonElement) {
     stopOnboardingHintNarration();
@@ -734,31 +737,34 @@ function toggleOnboardingHintNarration(hintElement, buttonElement) {
   if (!narrationText) return;
 
   stopOnboardingHintNarration();
-  var utterance = new SpeechSynthesisUtterance(narrationText);
-  utterance.rate = 0.97;
-  utterance.pitch = 1;
-  utterance.onend = function() {
-    onboardingHintNarrationUtterance = null;
-    onboardingHintNarrationButton = null;
-    resetOnboardingHintNarrationButtons();
-  };
-  utterance.onerror = function() {
-    onboardingHintNarrationUtterance = null;
-    onboardingHintNarrationButton = null;
-    resetOnboardingHintNarrationButtons();
-  };
+  var utterance = tts.speak({
+    text: narrationText,
+    rate: 0.97,
+    pitch: 1,
+    volume: 1,
+    onend: function() {
+      onboardingHintNarrationUtterance = null;
+      onboardingHintNarrationButton = null;
+      resetOnboardingHintNarrationButtons();
+    },
+    onerror: function() {
+      onboardingHintNarrationUtterance = null;
+      onboardingHintNarrationButton = null;
+      resetOnboardingHintNarrationButtons();
+    }
+  });
+  if (!utterance) return;
 
   onboardingHintNarrationUtterance = utterance;
   onboardingHintNarrationButton = buttonElement;
   resetOnboardingHintNarrationButtons();
   syncOnboardingHintNarrationButtonState(buttonElement, true);
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
 }
 
 function toggleOnboardingTourNarration() {
   if (!onboardingTourHearBtn) return;
-  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+  var tts = getNarrationTtsEngine();
+  if (!tts || !tts.supportsNarration()) return;
 
   if (onboardingTourNarrationUtterance) {
     stopOnboardingTourNarration();

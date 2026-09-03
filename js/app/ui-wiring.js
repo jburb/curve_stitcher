@@ -426,8 +426,8 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
   var SPLASH_STOP_LABEL = '⏹ Stop narration';
 
   function stopSplashNarration() {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    if (window.stitchlabTts && typeof window.stitchlabTts.cancel === 'function') {
+      window.stitchlabTts.cancel();
     }
     splashNarrationUtterance = null;
     if (hearBtn) {
@@ -437,31 +437,34 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
   }
 
   function startSplashNarration() {
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance || !hearBtn) return;
+    if (!window.stitchlabTts || !window.stitchlabTts.supportsNarration() || !hearBtn) return;
     stopSplashNarration();
     var splashText = (document.getElementById('startup-splash-text') || {}).textContent || '';
     var narrationText = String(splashText || '').trim();
     if (!narrationText) return;
-    var utterance = new SpeechSynthesisUtterance(narrationText);
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    utterance.onend = function() {
-      if (splashNarrationUtterance !== utterance) return;
-      splashNarrationUtterance = null;
-      hearBtn.setAttribute('aria-pressed', 'false');
-      hearBtn.textContent = SPLASH_HEAR_LABEL;
-    };
-    utterance.onerror = function() {
-      if (splashNarrationUtterance !== utterance) return;
-      splashNarrationUtterance = null;
-      hearBtn.setAttribute('aria-pressed', 'false');
-      hearBtn.textContent = SPLASH_HEAR_LABEL;
-    };
+    var utterance = window.stitchlabTts.speak({
+      text: narrationText,
+      rate: 1,
+      pitch: 1,
+      volume: 1,
+      onend: function() {
+        if (splashNarrationUtterance !== utterance) return;
+        splashNarrationUtterance = null;
+        hearBtn.setAttribute('aria-pressed', 'false');
+        hearBtn.textContent = SPLASH_HEAR_LABEL;
+      },
+      onerror: function() {
+        if (splashNarrationUtterance !== utterance) return;
+        splashNarrationUtterance = null;
+        hearBtn.setAttribute('aria-pressed', 'false');
+        hearBtn.textContent = SPLASH_HEAR_LABEL;
+      }
+    });
+    if (!utterance) return;
+
     splashNarrationUtterance = utterance;
     hearBtn.setAttribute('aria-pressed', 'true');
     hearBtn.textContent = SPLASH_STOP_LABEL;
-    window.speechSynthesis.speak(utterance);
   }
 
   startupSplash.hidden = false;
