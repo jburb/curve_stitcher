@@ -1194,6 +1194,14 @@ function toggleExperienceNarration() {
     return;
   }
 
+  if (window.stitchlabTts && typeof window.stitchlabTts.prewarm === 'function') {
+    try {
+      window.stitchlabTts.prewarm();
+    } catch (_error) {
+      // Ignore warmup failures; playback path retains its own fallback behavior.
+    }
+  }
+
   var experienceId = currentExperienceId;
   var requestToken = ++experienceNarrationRequestToken;
   experienceNarrationRequestInFlight = true;

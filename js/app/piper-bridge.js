@@ -40,6 +40,9 @@ let activeObjectUrl = null;
 let playbackRequestId = 0;
 let lastBridgeError = null;
 let piperApiPromise = null;
+let preparedGenerationByKey = Object.create(null);
+const PIPER_TARGET_CHUNK_CHARS = 260;
+const PIPER_MAX_CHUNK_CHARS = 420;
 
 function withNativeSymbolScope(work) {
   var nativeSymbol = window.__stitchlabNativeSymbol;
@@ -83,6 +86,104 @@ function cleanupActiveAudio() {
     URL.revokeObjectURL(activeObjectUrl);
     activeObjectUrl = null;
   }
+}
+
+function splitTextIntoChunks(text, options) {
+  options = options || {};
+  var preferFastStart = options.preferFastStart !== false;
+  var normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return [];
+
+  var sentenceLike = normalized.match(/[^.!?]+(?:[.!?]+|$)/g) || [normalized];
+  var sentences = [];
+  for (var i = 0; i < sentenceLike.length; i++) {
+    var sentence = String(sentenceLike[i] || '').replace(/\s+/g, ' ').trim();
+    if (!sentence) continue;
+    sentences.push(sentence);
+  }
+
+  var chunks = [];
+  var current = '';
+  var startIndex = 0;
+
+  if (preferFastStart && sentences.length) {
+    // Keep the first chunk as a single complete sentence to minimize start delay.
+    chunks.push(sentences[0]);
+    startIndex = 1;
+  }
+
+  for (var j = startIndex; j < sentences.length; j++) {
+    var nextSentence = sentences[j];
+    var candidate = current ? current + ' ' + nextSentence : nextSentence;
+    if (!current) {
+      current = nextSentence;
+      continue;
+    }
+
+    if (candidate.length <= PIPER_MAX_CHUNK_CHARS) {
+      current = candidate;
+      if (current.length >= PIPER_TARGET_CHUNK_CHARS) {
+        chunks.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    chunks.push(current);
+    current = nextSentence;
+    if (current.length >= PIPER_MAX_CHUNK_CHARS) {
+      chunks.push(current);
+      current = '';
+    }
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
+}
+
+function generateChunk(engine, text, modelId) {
+  return withNativeSymbolScope(function() {
+    return engine.generate(text, modelId, 0);
+  });
+}
+
+function getPreparationKey(text, modelId) {
+  return modelId + '::' + text;
+}
+
+function playGeneratedAudio(file, requestId, payload) {
+  var objectUrl = URL.createObjectURL(file);
+  var audio = new Audio();
+  activeAudio = audio;
+  activeObjectUrl = objectUrl;
+
+  return new Promise((resolve, reject) => {
+    audio.onended = function() {
+      cleanupActiveAudio();
+      resolve();
+    };
+
+    audio.onerror = function() {
+      const error = new Error('Piper audio playback failed.');
+      if (requestId === playbackRequestId && typeof payload.onError === 'function') {
+        payload.onError(error);
+      }
+      cleanupActiveAudio();
+      reject(error);
+    };
+
+    audio.src = objectUrl;
+    audio.play().catch((error) => {
+      if (requestId === playbackRequestId && typeof payload.onError === 'function') {
+        payload.onError(error);
+      }
+      cleanupActiveAudio();
+      reject(error);
+    });
+  });
 }
 
 async function ensureEngine() {
@@ -129,49 +230,43 @@ async function speak(payload) {
   try {
     const engine = await ensureEngine();
     const modelId = normalizeVoiceId(payload.voiceId);
-    const generated = await withNativeSymbolScope(function() {
-      return engine.generate(text, modelId, 0);
-    });
-    if (localRequestId !== playbackRequestId) {
-      return;
+    const chunks = splitTextIntoChunks(text, { preferFastStart: true });
+    const firstChunkText = chunks[0];
+    const firstPreparationKey = getPreparationKey(firstChunkText, modelId);
+    let currentGeneratedPromise = preparedGenerationByKey[firstPreparationKey];
+    if (currentGeneratedPromise) {
+      delete preparedGenerationByKey[firstPreparationKey];
+    } else {
+      currentGeneratedPromise = generateChunk(engine, firstChunkText, modelId);
+    }
+    let currentGenerated = await currentGeneratedPromise;
+    let nextGeneratedPromise = null;
+
+    for (var i = 0; i < chunks.length; i++) {
+      if (localRequestId !== playbackRequestId) {
+        return;
+      }
+
+      if (i + 1 < chunks.length) {
+        nextGeneratedPromise = generateChunk(engine, chunks[i + 1], modelId);
+      } else {
+        nextGeneratedPromise = null;
+      }
+
+      await playGeneratedAudio(currentGenerated.file, localRequestId, payload);
+      if (localRequestId !== playbackRequestId) {
+        return;
+      }
+
+      if (nextGeneratedPromise) {
+        currentGenerated = await nextGeneratedPromise;
+      }
     }
 
-    const objectUrl = URL.createObjectURL(generated.file);
-    const audio = new Audio();
-    activeAudio = audio;
-    activeObjectUrl = objectUrl;
-
-    await new Promise((resolve, reject) => {
-      audio.onended = function() {
-        if (localRequestId !== playbackRequestId) {
-          resolve();
-          return;
-        }
-        cleanupActiveAudio();
-        if (typeof payload.onEnd === 'function') {
-          payload.onEnd();
-        }
-        resolve();
-      };
-
-      audio.onerror = function() {
-        const error = new Error('Piper audio playback failed.');
-        if (localRequestId === playbackRequestId && typeof payload.onError === 'function') {
-          payload.onError(error);
-        }
-        cleanupActiveAudio();
-        reject(error);
-      };
-
-      audio.src = objectUrl;
-      audio.play().catch((error) => {
-        if (localRequestId === playbackRequestId && typeof payload.onError === 'function') {
-          payload.onError(error);
-        }
-        cleanupActiveAudio();
-        reject(error);
-      });
-    });
+    lastBridgeError = null;
+    if (localRequestId === playbackRequestId && typeof payload.onEnd === 'function') {
+      payload.onEnd();
+    }
   } catch (error) {
     lastBridgeError = error;
     console.warn('Piper bridge speak failed.', error);
@@ -198,10 +293,42 @@ async function prewarm(payload) {
   }
 }
 
+async function prepare(payload) {
+  try {
+    const text = String(payload && payload.text ? payload.text : '').replace(/\s+/g, ' ').trim();
+    if (!text) {
+      return prewarm(payload);
+    }
+
+    const modelId = normalizeVoiceId(payload && payload.voiceId);
+    const chunks = splitTextIntoChunks(text, { preferFastStart: true });
+    if (!chunks.length) {
+      return prewarm(payload);
+    }
+
+    await verifyAssetsAvailable();
+    const engine = await ensureEngine();
+    const key = getPreparationKey(chunks[0], modelId);
+    if (!preparedGenerationByKey[key]) {
+      preparedGenerationByKey[key] = generateChunk(engine, chunks[0], modelId)
+        .catch(function(error) {
+          delete preparedGenerationByKey[key];
+          throw error;
+        });
+    }
+
+    await preparedGenerationByKey[key];
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
 window.stitchlabPiperTts = {
   speak,
   cancel,
   prewarm,
+  prepare,
   getStatus() {
     return {
       bridgeScriptUrl: resolveBridgeScriptUrl(),
@@ -210,6 +337,9 @@ window.stitchlabPiperTts = {
       hasEnginePromise: !!enginePromise,
       nativeSymbolForType: window.__stitchlabNativeSymbol ? typeof window.__stitchlabNativeSymbol.for : 'missing',
       globalSymbolForType: typeof Symbol.for,
+      chunkMode: 'sentence-group',
+      targetChunkChars: PIPER_TARGET_CHUNK_CHARS,
+      maxChunkChars: PIPER_MAX_CHUNK_CHARS,
     };
   },
 };

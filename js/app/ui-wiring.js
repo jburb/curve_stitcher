@@ -69,6 +69,9 @@ if (experienceInfoHtmlFrame) {
   experienceInfoHtmlFrame.addEventListener('load', () => {
     enforceExperienceInfoFrameAllowlist();
     attachExperienceInfoAcknowledgmentsBridge();
+    if (typeof scheduleCurrentExperienceAboutNarrationPreparation === 'function') {
+      scheduleCurrentExperienceAboutNarrationPreparation();
+    }
   });
 }
 

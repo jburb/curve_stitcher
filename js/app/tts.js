@@ -122,6 +122,25 @@
     }
   }
 
+  function prepare(options) {
+    options = options || {};
+    var bridge = getPiperBridge();
+    if (bridge && typeof bridge.prepare === 'function') {
+      try {
+        return Promise.resolve(bridge.prepare({
+          text: options.text,
+          voiceId: options.voiceId || PREFERRED_PIPER_VOICE_ID,
+        })).catch(function() {
+          return false;
+        });
+      } catch (_error) {
+        return Promise.resolve(false);
+      }
+    }
+
+    return Promise.resolve(prewarm());
+  }
+
   function speakWithPiperBridge(text, options, requestId, bridge, onPiperFailure) {
     var failureHandled = false;
 
@@ -274,6 +293,7 @@
     preferredVoiceAliases: PREFERRED_PIPER_VOICE_ALIASES.slice(),
     supportsNarration: supportsNarration,
     prewarm: prewarm,
+    prepare: prepare,
     speak: speak,
     cancel: cancel,
     getActiveEngine: function() {

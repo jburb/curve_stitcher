@@ -300,6 +300,8 @@ function normalizeLoadedAboutDocPath(pathValue) {
 var aboutNarrationBridgeCache = Object.create(null);
 var aboutNarrationBridgePendingByRequestId = Object.create(null);
 var aboutNarrationBridgeRequestCounter = 0;
+var aboutNarrationPrepareInFlightByPath = Object.create(null);
+var aboutNarrationPreparedByPath = Object.create(null);
 
 function cacheAboutNarrationBridgeText(pathValue, textValue) {
   var normalizedPath = normalizeLoadedAboutDocPath(pathValue || '');
@@ -307,7 +309,88 @@ function cacheAboutNarrationBridgeText(pathValue, textValue) {
   var normalizedText = String(textValue || '').trim();
   if (!normalizedText) return '';
   aboutNarrationBridgeCache[normalizedPath] = normalizedText;
+  prepareAboutNarrationTextInBackground(normalizedPath, normalizedText);
   return normalizedText;
+}
+
+function prepareAboutNarrationTextInBackground(pathValue, textValue) {
+  var normalizedPath = normalizeAllowedAboutDocPath(pathValue || '') || normalizeLoadedAboutDocPath(pathValue || '');
+  if (!normalizedPath) return;
+  if (aboutNarrationPreparedByPath[normalizedPath]) return;
+  if (aboutNarrationPrepareInFlightByPath[normalizedPath]) return;
+
+  var narrationText = String(textValue || aboutNarrationBridgeCache[normalizedPath] || '').replace(/\s+/g, ' ').trim();
+  if (!narrationText) return;
+
+  var tts = window.stitchlabTts;
+  if (!tts || typeof tts.prepare !== 'function') return;
+
+  aboutNarrationPrepareInFlightByPath[normalizedPath] = Promise.resolve(tts.prepare({ text: narrationText }))
+    .then(function(prepared) {
+      if (prepared) {
+        aboutNarrationPreparedByPath[normalizedPath] = true;
+      }
+    })
+    .catch(function() {
+      // Ignore warmup errors. Playback path still handles fallback.
+    })
+    .finally(function() {
+      delete aboutNarrationPrepareInFlightByPath[normalizedPath];
+    });
+}
+
+function scheduleCurrentExperienceAboutNarrationPreparation() {
+  if (!experienceInfoHtmlFrame) return;
+  var experience = getExperienceById(currentExperienceId);
+  if (!experience) return;
+
+  var expectedPath = normalizeAllowedAboutDocPath(experience.aboutHtmlPath || '');
+  if (!expectedPath) return;
+  if (aboutNarrationPreparedByPath[expectedPath] || aboutNarrationPrepareInFlightByPath[expectedPath]) {
+    return;
+  }
+
+  function runPreparation() {
+    var frameDoc = null;
+    try {
+      frameDoc = experienceInfoHtmlFrame.contentDocument || (experienceInfoHtmlFrame.contentWindow && experienceInfoHtmlFrame.contentWindow.document) || null;
+    } catch (_error) {
+      frameDoc = null;
+    }
+
+    var extractedText = '';
+    if (frameDoc) {
+      extractedText = extractNarrationParagraphsFromDocument(frameDoc);
+    }
+
+    if (extractedText) {
+      aboutNarrationBridgeCache[expectedPath] = extractedText;
+      prepareAboutNarrationTextInBackground(expectedPath, extractedText);
+      return;
+    }
+
+    var cachedText = String(aboutNarrationBridgeCache[expectedPath] || '').trim();
+    if (cachedText) {
+      prepareAboutNarrationTextInBackground(expectedPath, cachedText);
+      return;
+    }
+
+    requestNarrationTextFromAboutFrame(expectedPath)
+      .then(function(textValue) {
+        var normalized = cacheAboutNarrationBridgeText(expectedPath, textValue);
+        if (!normalized) return;
+        prepareAboutNarrationTextInBackground(expectedPath, normalized);
+      })
+      .catch(function() {
+        // Best-effort pre-prepare only.
+      });
+  }
+
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(runPreparation, { timeout: 1200 });
+  } else {
+    window.setTimeout(runPreparation, 0);
+  }
 }
 
 function requestNarrationTextFromAboutFrame(pathValue) {
@@ -383,7 +466,7 @@ var experienceNarrationFetchById = Object.create(null);
 var experienceNarrationRequestToken = 0;
 var experienceNarrationRequestInFlight = false;
 var experienceNarrationLastToggleAtMs = 0;
-var NARRATION_DEBUG = true;
+var NARRATION_DEBUG = false;
 
 function narrationDebugLog(level, message, details) {
   if (!NARRATION_DEBUG || !window.console) return;

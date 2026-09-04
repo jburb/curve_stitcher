@@ -17,6 +17,7 @@ var onboardingHintNarrationButton = null;
 var onboardingTourNarrationUtterance = null;
 var onboardingTutorialAutoplayActive = false;
 var onboardingTutorialAutoplayTimer = null;
+var onboardingTourAutoplayPrepareToken = 0;
 var HEAR_THIS_BUTTON_LABEL = '🔊 Hear this';
 var STOP_BUTTON_LABEL = '⏹ Stop';
 var STOP_NARRATION_BUTTON_LABEL = '⏹ Stop narration';
@@ -716,6 +717,42 @@ function speakOnboardingTourNarration(options) {
   return true;
 }
 
+function getOnboardingTourStepNarrationText(index) {
+  if (typeof index !== 'number' || index < 0 || index >= onboardingTourSteps.length) {
+    return '';
+  }
+  var step = onboardingTourSteps[index];
+  if (!step) return '';
+  return String(step.text || '').replace(/\s+/g, ' ').trim();
+}
+
+function startOnboardingAutoplayNarrationWithPreparation() {
+  var localToken = ++onboardingTourAutoplayPrepareToken;
+  var tts = getNarrationTtsEngine();
+  var narrationText = String(onboardingTourText && onboardingTourText.textContent ? onboardingTourText.textContent : '').replace(/\s+/g, ' ').trim();
+
+  function beginPlayback() {
+    if (localToken !== onboardingTourAutoplayPrepareToken) return;
+    if (!onboardingTutorialAutoplayActive) return;
+    var narrationStarted = speakOnboardingTourNarration({ autoAdvanceOnFinish: true });
+    if (!narrationStarted) {
+      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
+    }
+  }
+
+  if (!tts || typeof tts.prepare !== 'function' || !narrationText || onboardingTourIndex !== 0) {
+    beginPlayback();
+    return;
+  }
+
+  // Kick preparation first, but do not block autoplay speak call.
+  Promise.resolve(tts.prepare({ text: narrationText })).catch(function() {
+    return false;
+  });
+
+  beginPlayback();
+}
+
 function getOnboardingHintNarrationText(hintElement) {
   if (!hintElement) return '';
   var textElement = hintElement.querySelector('.onboarding-hint-text');
@@ -900,6 +937,7 @@ function clearOnboardingTourTarget() {
 function hideOnboardingTour() {
   clearOnboardingTourTarget();
   onboardingTourIndex = -1;
+  onboardingTourAutoplayPrepareToken += 1;
   onboardingTutorialAutoplayActive = false;
   clearOnboardingTutorialAutoplayTimer();
   if (onboardingTour) onboardingTour.hidden = true;
@@ -956,12 +994,10 @@ function showOnboardingTourStep(index) {
   onboardingTour.hidden = false;
   onboardingGuidanceMode = 'tour';
   stopOnboardingTourNarration();
+  onboardingTourAutoplayPrepareToken += 1;
   clearOnboardingTutorialAutoplayTimer();
   if (onboardingTutorialAutoplayActive) {
-    var narrationStarted = speakOnboardingTourNarration({ autoAdvanceOnFinish: true });
-    if (!narrationStarted) {
-      scheduleOnboardingTutorialAutoplayAdvance(ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS);
-    }
+    startOnboardingAutoplayNarrationWithPreparation();
   }
   syncOnboardingTourHearAllButtonState();
   syncOnboardingTourNavigationControls();
@@ -977,6 +1013,15 @@ function startOnboardingTour(options) {
   onboardingHintsEnabledByHelp = false;
   onboardingTutorialAutoplayActive = !!options.autoplay;
   clearOnboardingTutorialAutoplayTimer();
+  if (onboardingTutorialAutoplayActive) {
+    var tts = getNarrationTtsEngine();
+    var firstStepNarration = getOnboardingTourStepNarrationText(0);
+    if (tts && typeof tts.prepare === 'function' && firstStepNarration) {
+      Promise.resolve(tts.prepare({ text: firstStepNarration })).catch(function() {
+        return false;
+      });
+    }
+  }
   syncOnboardingTourOptOutControl();
   hideOnboardingHints();
   showOnboardingTourStep(0);
