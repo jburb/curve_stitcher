@@ -7,7 +7,23 @@ const RECOGNIZED_VOICE_IDS = {
   [LOCAL_VOICE_MODEL_ID]: LOCAL_VOICE_MODEL_ID,
 };
 
-const APP_BASE_URL = new URL('../../', import.meta.url);
+function resolveBridgeScriptUrl() {
+  if (document.currentScript && document.currentScript.src) {
+    return document.currentScript.src;
+  }
+
+  var scripts = document.getElementsByTagName('script');
+  for (var i = scripts.length - 1; i >= 0; i--) {
+    var src = scripts[i] && scripts[i].src;
+    if (src && src.indexOf('/js/app/piper-bridge.js') !== -1) {
+      return src;
+    }
+  }
+
+  return new URL('js/app/piper-bridge.js', window.location.href).toString();
+}
+
+const APP_BASE_URL = new URL('../../', resolveBridgeScriptUrl());
 
 function resolveAssetUrl(relativePath) {
   return new URL(relativePath, APP_BASE_URL).toString();
@@ -25,9 +41,27 @@ let playbackRequestId = 0;
 let lastBridgeError = null;
 let piperApiPromise = null;
 
+function withNativeSymbolScope(work) {
+  var nativeSymbol = window.__stitchlabNativeSymbol;
+  if (!nativeSymbol || typeof nativeSymbol.for !== 'function') {
+    return Promise.resolve().then(work);
+  }
+
+  var originalSymbol = window.Symbol;
+  window.Symbol = nativeSymbol;
+
+  return Promise.resolve()
+    .then(work)
+    .finally(function() {
+      window.Symbol = originalSymbol;
+    });
+}
+
 async function loadPiperApi() {
   if (!piperApiPromise) {
-    piperApiPromise = import('../vendor/piper-tts-web.js');
+    piperApiPromise = withNativeSymbolScope(function() {
+      return import('../vendor/piper-tts-web.js');
+    });
   }
   return piperApiPromise;
 }
@@ -95,7 +129,9 @@ async function speak(payload) {
   try {
     const engine = await ensureEngine();
     const modelId = normalizeVoiceId(payload.voiceId);
-    const generated = await engine.generate(text, modelId, 0);
+    const generated = await withNativeSymbolScope(function() {
+      return engine.generate(text, modelId, 0);
+    });
     if (localRequestId !== playbackRequestId) {
       return;
     }
@@ -168,9 +204,12 @@ window.stitchlabPiperTts = {
   prewarm,
   getStatus() {
     return {
+      bridgeScriptUrl: resolveBridgeScriptUrl(),
       modelId: LOCAL_VOICE_MODEL_ID,
       lastError: lastBridgeError ? String(lastBridgeError && lastBridgeError.message ? lastBridgeError.message : lastBridgeError) : '',
       hasEnginePromise: !!enginePromise,
+      nativeSymbolForType: window.__stitchlabNativeSymbol ? typeof window.__stitchlabNativeSymbol.for : 'missing',
+      globalSymbolForType: typeof Symbol.for,
     };
   },
 };

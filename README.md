@@ -138,6 +138,12 @@ This setup does not change runtime app behavior and should not be included in mo
 - Use `npm run setup:tts:piper:force` to refresh/re-download staged model assets.
 - The bridge in `js/app/piper-bridge.js` activates only when local model assets are present, otherwise narration safely falls back to Web Speech.
 
+### Piper Troubleshooting
+
+- If `window.stitchlabPiperTts` is `undefined`, ensure you opened `stitchlab.html` (not a stale cached page) and hard-refresh after pulling latest changes.
+- If `window.stitchlabPiperTts.getStatus().lastError` is populated, Piper failed and narration will fall back to browser speech.
+- Local `file://` runs can still block WASM/model asset loading in some browsers. Prefer serving over HTTP (for example, `python3 -m http.server 8000` and opening `http://localhost:8000/stitchlab.html`).
+
 ## Adding A New Experience (Example: Zoobaz)
 
 This section describes the practical steps for adding a new experience named zoobaz, using the current architecture and load order.

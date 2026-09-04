@@ -5,6 +5,11 @@
   <link rel="icon" type="image/svg+xml" href="assets/images/icons/stitchlab-stitching-stitchlab_icon_chosen_by_shams.svg" />
   <title>StitchLab</title>
 
+  <script>
+    // Paper.js defines a global Symbol class, so preserve native Symbol for Piper runtime.
+    window.__stitchlabNativeSymbol = window.Symbol;
+  </script>
+
   <!-- Paper.js -->
   <script src="js/paper-full.min.js"></script>
   <script src="js/jszip.min.js"></script>
@@ -29,7 +34,7 @@
   </script>
 
   <link rel="stylesheet" href="main.css">
-  <script type="module" src="js/app/piper-bridge.js"></script>
+  <script src="js/app/piper-bridge.js" defer></script>
   <script src="js/app/tts.js" defer></script>
   <script src="js/app/onboarding.js" defer></script>
   <script src="js/app/experience-library.js" defer></script>

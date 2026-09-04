@@ -122,7 +122,33 @@
     }
   }
 
-  function speakWithPiperBridge(text, options, requestId, bridge) {
+  function speakWithPiperBridge(text, options, requestId, bridge, onPiperFailure) {
+    var failureHandled = false;
+
+    function handlePiperFailure(error) {
+      if (failureHandled) return;
+      failureHandled = true;
+      if (!activeRequest || activeRequest.id !== requestId) return;
+
+      var fallbackStarted = false;
+      if (typeof onPiperFailure === 'function') {
+        try {
+          fallbackStarted = !!onPiperFailure(error || new Error('Piper speech failed.'));
+        } catch (_fallbackError) {
+          fallbackStarted = false;
+        }
+      }
+
+      if (fallbackStarted) {
+        return;
+      }
+
+      clearActiveRequestIfMatches(requestId);
+      if (typeof options.onerror === 'function') {
+        options.onerror(error || new Error('Piper speech failed.'));
+      }
+    }
+
     var payload = {
       text: text,
       voiceId: PREFERRED_PIPER_VOICE_ID,
@@ -136,10 +162,7 @@
         }
       },
       onError: function(error) {
-        clearActiveRequestIfMatches(requestId);
-        if (typeof options.onerror === 'function') {
-          options.onerror(error || new Error('Piper speech failed.'));
-        }
+        handlePiperFailure(error);
       }
     };
 
@@ -152,11 +175,7 @@
           options.onend();
         }
       }).catch(function(error) {
-        if (!activeRequest || activeRequest.id !== requestId) return;
-        clearActiveRequestIfMatches(requestId);
-        if (typeof options.onerror === 'function') {
-          options.onerror(error || new Error('Piper speech failed.'));
-        }
+        handlePiperFailure(error);
       });
     }
   }
@@ -209,7 +228,19 @@
 
     try {
       if (bridge) {
-        speakWithPiperBridge(text, options, requestId, bridge);
+        speakWithPiperBridge(text, options, requestId, bridge, function() {
+          if (!hasWebSpeechSupport()) {
+            return false;
+          }
+
+          if (!activeRequest || activeRequest.id !== requestId) {
+            return false;
+          }
+
+          activeRequest.engine = 'speechSynthesis';
+          speakWithSpeechSynthesis(text, options, requestId);
+          return true;
+        });
       } else if (hasWebSpeechSupport()) {
         speakWithSpeechSynthesis(text, options, requestId);
       } else {
