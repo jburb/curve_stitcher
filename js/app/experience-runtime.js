@@ -1280,7 +1280,11 @@ function getExperienceNarrationScript(experienceId) {
     return experienceNarrationFetchById[requestKey];
   }
 
-  experienceNarrationFetchById[requestKey] = loadNarrationTextFromExperienceInfoFrame(aboutHtmlPath)
+  experienceNarrationFetchById[requestKey] = loadNarrationTextFromAboutPathFetch(aboutHtmlPath)
+    .catch(function() {
+      // Fallback to iframe extraction/bridge only if direct file extraction fails.
+      return loadNarrationTextFromExperienceInfoFrame(aboutHtmlPath);
+    })
     .then(function(text) {
       var normalized = String(text || '').trim();
       if (!normalized) {

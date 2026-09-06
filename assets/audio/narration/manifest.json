@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-06T14:04:59.575Z",
+  "generatedAt": "2026-09-06T17:56:23.815Z",
   "hashAlgorithm": "sha256",
   "textNormalization": "collapse-whitespace-and-trim",
   "piper": {
@@ -36,6 +36,13 @@
       "charCount": 78,
       "preview": "Pick a color from presets, use rainbow, or tap the dropper for a custom color.",
       "file": "clips/0f7c34eb00acd349ee5e488a66a3e7988fd9b9df2c6608e42ceff739dd8583b8.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "0fb1c83a17ce499d7e410fb7cba77ae196bbb4b79295396f34860c0aa5734d6a",
+      "charCount": 45,
+      "preview": "Press Play to animate this triangula pattern.",
+      "file": "clips/0fb1c83a17ce499d7e410fb7cba77ae196bbb4b79295396f34860c0aa5734d6a.wav"
     },
     {
       "source": "js/app/onboarding.js",
@@ -144,6 +151,13 @@
     },
     {
       "source": "js/app/onboarding.js",
+      "textHash": "46def9ede3d40bc93c157876da62f5d51b4157ae4a388d4a83d3b75951a16385",
+      "charCount": 45,
+      "preview": "Press Play to animate this stitching pattern.",
+      "file": "clips/46def9ede3d40bc93c157876da62f5d51b4157ae4a388d4a83d3b75951a16385.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
       "textHash": "4f32bd7f68f1dbb946a49eefd6236aef62199fae8852d627779889efab62607d",
       "charCount": 100,
       "preview": "Open Discovery to browse unlocked experiences, enter experience passphrases, or return to stitch",
@@ -183,6 +197,13 @@
       "charCount": 369,
       "preview": "This is the stitching frame. It will always have at least one thread stitched through its holes.",
       "file": "clips/6f9220dc2fee4f304e2b07e6a3c95b4beb90a55a04a3ac7b77f2f2ee2a4f6b46.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "7499c8d861c731a6934681b75ac39693de902ee80466523fb1589802387f0015",
+      "charCount": 43,
+      "preview": "Press Play to animate this squarus pattern.",
+      "file": "clips/7499c8d861c731a6934681b75ac39693de902ee80466523fb1589802387f0015.wav"
     },
     {
       "source": "js/app/onboarding.js",
@@ -267,6 +288,13 @@
       "charCount": 52,
       "preview": "Set the first hole where the selected thread begins.",
       "file": "clips/8ea4f0fcc90806ce120bcba14948c66767cdd4cefbc282bf5821ba63139753f9.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "91f450b5e4e6a42764f619080db97c61735c1130bec45c90eed3139d92d9beb5",
+      "charCount": 46,
+      "preview": "Press Play to animate this mashrabiya pattern.",
+      "file": "clips/91f450b5e4e6a42764f619080db97c61735c1130bec45c90eed3139d92d9beb5.wav"
     },
     {
       "id": "narration.splash.startup",

@@ -190,6 +190,7 @@ This setup does not change runtime app behavior and should not be included in mo
 - If `window.stitchlabPiperTts` is undefined, hard-refresh `stitchlab.html` after pulling latest changes.
 - If `window.stitchlabPiperTts.getStatus().lastError` is populated, static clip lookup/playback failed and narration should fall back to browser speech.
 - If clips are missing, run `npm run setup:tts:prebuilt` and verify audio files exist under `assets/audio/narration/clips/`.
+- `localhost`, `127.0.0.1`, and `0.0.0.0` are treated as different browser origins; stale cache on one host can make narration appear outdated while another host shows latest behavior.
 
 ## Adding A New Experience (Example: Zoobaz)
 
@@ -354,10 +355,10 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
-1. **Use better voice for narration**:
-	- Top candidate offline voice synthesis tool is Piper (build-time only)
-     - Top voice candidates from piper are: aru-medium 09, vctk-medium p282, vctk-medium p318, or hfc_female [medium].
-     - Determine whether to pre-record passages and host their files, or use dynamic engine execution.
+1. ~~**Use better voice for narration**~~ (completed):
+	- Adopted `hfc_female [medium]` for prebuilt narration clip generation.
+	- Narration now uses pre-generated manifest/clip lookup first with browser speech fallback only on miss/failure.
+	- Voice model is tracked through Git LFS at `assets/audio/narration/voices/en_US-hfc_female-medium.onnx`.
 
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 

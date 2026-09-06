@@ -30,6 +30,30 @@ let lastBridgeError = null;
 const preparedClipUrlByHash = Object.create(null);
 const hashByText = Object.create(null);
 
+function isNarrationDebugEnabled() {
+  try {
+    var query = String(window.location && window.location.search ? window.location.search : '');
+    if (/(\?|&)debugNarration=1(&|$)/.test(query)) return true;
+  } catch (_error) {
+    // ignore
+  }
+  try {
+    return String(window.localStorage && window.localStorage.getItem('stitchlabNarrationDebug') || '') === '1';
+  } catch (_error) {
+    return false;
+  }
+}
+
+function bridgeDebugLog(level, message, details) {
+  if (!isNarrationDebugEnabled() || !window.console) return;
+  var fn = console[level] || console.log;
+  if (typeof details === 'undefined') {
+    fn.call(console, '[NarrationBridge] ' + message);
+  } else {
+    fn.call(console, '[NarrationBridge] ' + message, details);
+  }
+}
+
 function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -136,6 +160,7 @@ async function resolveClipEntry(payload) {
   var manifest = await loadManifest();
   var clipId = payload && payload.clipId ? String(payload.clipId).trim() : '';
   if (clipId && manifest.byId[clipId]) {
+    bridgeDebugLog('log', 'Clip resolved by clipId.', { clipId: clipId });
     return manifest.byId[clipId];
   }
 
@@ -144,7 +169,15 @@ async function resolveClipEntry(payload) {
 
   var textHash = await hashText(text);
   if (!textHash) return null;
-  return manifest.byHash[textHash] || null;
+  var clip = manifest.byHash[textHash] || null;
+  bridgeDebugLog(clip ? 'log' : 'warn', clip ? 'Clip resolved by text hash.' : 'No clip found for text hash.', {
+    textLength: text.length,
+    textHash: textHash,
+    preview: text.slice(0, 160),
+    clipFound: !!clip,
+    clipFile: clip ? clip.file : ''
+  });
+  return clip;
 }
 
 function cachePreparedClipUrl(textHash, objectUrl) {
@@ -205,6 +238,11 @@ async function speak(payload) {
 
   var localRequestId = ++playbackRequestId;
   cleanupActiveAudio();
+  bridgeDebugLog('log', 'Bridge speak request started.', {
+    requestId: localRequestId,
+    textLength: text.length,
+    preview: text.slice(0, 120)
+  });
 
   try {
     var clip = await resolveClipEntry(payload || {});
@@ -232,6 +270,10 @@ async function speak(payload) {
 
       audio.onerror = function() {
         var error = new Error('Prebuilt narration audio playback failed.');
+        bridgeDebugLog('warn', 'Audio element error during narration playback.', {
+          requestId: localRequestId,
+          clipUrl: clipSource
+        });
         if (localRequestId === playbackRequestId && payload && typeof payload.onError === 'function') {
           payload.onError(error);
         }
@@ -241,6 +283,11 @@ async function speak(payload) {
 
       audio.src = clipSource;
       audio.play().catch(function(error) {
+        bridgeDebugLog('warn', 'Audio play() rejected.', {
+          requestId: localRequestId,
+          clipUrl: clipSource,
+          error: String((error && error.message) || error || 'unknown error')
+        });
         if (localRequestId === playbackRequestId && payload && typeof payload.onError === 'function') {
           payload.onError(error);
         }
@@ -250,8 +297,13 @@ async function speak(payload) {
     });
 
     lastBridgeError = null;
+    bridgeDebugLog('log', 'Bridge speak request completed.', { requestId: localRequestId });
   } catch (error) {
     lastBridgeError = error;
+    bridgeDebugLog('warn', 'Bridge speak request failed.', {
+      requestId: localRequestId,
+      error: String((error && error.message) || error || 'unknown error')
+    });
     if (localRequestId === playbackRequestId && payload && typeof payload.onError === 'function') {
       payload.onError(error);
     }

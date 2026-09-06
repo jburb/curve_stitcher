@@ -10,6 +10,30 @@
   var activeRequest = null;
   var requestCounter = 0;
 
+  function isNarrationDebugEnabled() {
+    try {
+      var query = String(global.location && global.location.search ? global.location.search : '');
+      if (/(\?|&)debugNarration=1(&|$)/.test(query)) return true;
+    } catch (_error) {
+      // ignore
+    }
+    try {
+      return String(global.localStorage && global.localStorage.getItem('stitchlabNarrationDebug') || '') === '1';
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function ttsDebugLog(level, message, details) {
+    if (!isNarrationDebugEnabled() || !global.console) return;
+    var fn = global.console[level] || global.console.log;
+    if (typeof details === 'undefined') {
+      fn.call(global.console, '[NarrationTts] ' + message);
+    } else {
+      fn.call(global.console, '[NarrationTts] ' + message, details);
+    }
+  }
+
   function normalizeVoiceKey(value) {
     return String(value || '')
       .toLowerCase()
@@ -149,6 +173,19 @@
       failureHandled = true;
       if (!activeRequest || activeRequest.id !== requestId) return;
 
+      var bridgeStatus = null;
+      try {
+        bridgeStatus = bridge && typeof bridge.getStatus === 'function' ? bridge.getStatus() : null;
+      } catch (_statusError) {
+        bridgeStatus = null;
+      }
+      ttsDebugLog('warn', 'Bridge narration failed; considering fallback.', {
+        requestId: requestId,
+        error: String((error && error.message) || error || 'unknown error'),
+        bridgeStatus: bridgeStatus,
+        textPreview: String(text || '').slice(0, 160)
+      });
+
       var fallbackStarted = false;
       if (typeof onBridgeFailure === 'function') {
         try {
@@ -159,6 +196,7 @@
       }
 
       if (fallbackStarted) {
+        ttsDebugLog('log', 'Fallback to speech synthesis started.', { requestId: requestId });
         return;
       }
 
@@ -249,6 +287,9 @@
       if (bridge) {
         speakWithNarrationBridge(text, options, requestId, bridge, function() {
           if (!hasWebSpeechSupport()) {
+            ttsDebugLog('warn', 'Bridge failed and no speech synthesis support is available.', {
+              requestId: requestId
+            });
             return false;
           }
 
@@ -257,10 +298,16 @@
           }
 
           activeRequest.engine = 'speechSynthesis';
+          ttsDebugLog('warn', 'Switching narration engine to speech synthesis fallback.', {
+            requestId: requestId
+          });
           speakWithSpeechSynthesis(text, options, requestId);
           return true;
         });
       } else if (hasWebSpeechSupport()) {
+        ttsDebugLog('log', 'Bridge unavailable; using speech synthesis directly.', {
+          requestId: requestId
+        });
         speakWithSpeechSynthesis(text, options, requestId);
       } else {
         activeRequest = null;

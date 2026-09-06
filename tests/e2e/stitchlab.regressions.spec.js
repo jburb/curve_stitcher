@@ -57,6 +57,8 @@ function collectExpectedNarrationEntries(workspaceRoot) {
   const onboardingPath = path.join(workspaceRoot, 'js/app/onboarding.js');
   const onboardingSource = fs.readFileSync(onboardingPath, 'utf8');
   const onboardingRegex = /(quickStartText|text)\s*:\s*'((?:\\'|[^'])*)'/g;
+  const onboardingConcatRegex = /text\s*:\s*'((?:\\'|[^'])*)'\s*\+\s*experienceLabel\s*\+\s*'((?:\\'|[^'])*)'/g;
+  const onboardingExperienceLabels = ['stitching', 'triangula', 'squarus', 'mashrabiya'];
   var onboardingMatch = onboardingRegex.exec(onboardingSource);
   while (onboardingMatch) {
     const rawText = decodeEscapedString(onboardingMatch[2] || '');
@@ -68,6 +70,23 @@ function collectExpectedNarrationEntries(workspaceRoot) {
       });
     }
     onboardingMatch = onboardingRegex.exec(onboardingSource);
+  }
+
+  var onboardingConcatMatch = onboardingConcatRegex.exec(onboardingSource);
+  while (onboardingConcatMatch) {
+    const prefix = decodeEscapedString(onboardingConcatMatch[1] || '');
+    const suffix = decodeEscapedString(onboardingConcatMatch[2] || '');
+    for (const experienceLabel of onboardingExperienceLabels) {
+      const rawText = prefix + experienceLabel + suffix;
+      const normalizedText = normalizeNarrationText(rawText);
+      if (normalizedText) {
+        collected.push({
+          source: 'js/app/onboarding.js',
+          text: normalizedText,
+        });
+      }
+    }
+    onboardingConcatMatch = onboardingConcatRegex.exec(onboardingSource);
   }
 
   const libraryPath = path.join(workspaceRoot, 'js/app/experience-library.js');
@@ -1975,6 +1994,149 @@ test.describe('StitchLab regressions', () => {
     expect(narrationProbe.hasNarration).toBe(true);
     expect(narrationProbe.includesParagraphText).toBe(true);
     expect(narrationProbe.includesFigureCaptionText).toBe(false);
+  });
+
+  test('about narration resolves from file even when about panel was never opened', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const narrationProbe = await page.evaluate(async () => {
+      try {
+        const text = await window.getExperienceNarrationScript('stitching');
+        const normalized = String(text || '');
+        return {
+          success: normalized.length > 0,
+          includesParagraphText: normalized.indexOf('Curve stitching is a special mathematical art') >= 0,
+          includesFigureCaptionText: normalized.indexOf('Cardioid Stitching from the Seattle Universal Math Museum (SUMM) - full view.') >= 0,
+          error: ''
+        };
+      } catch (error) {
+        return {
+          success: false,
+          includesParagraphText: false,
+          includesFigureCaptionText: false,
+          error: String((error && error.message) || error || 'unknown')
+        };
+      }
+    });
+
+    expect(narrationProbe.success, narrationProbe.error || 'Expected narration extraction to succeed').toBe(true);
+    expect(narrationProbe.includesParagraphText).toBe(true);
+    expect(narrationProbe.includesFigureCaptionText).toBe(false);
+  });
+
+  test('about narration text hashes resolve to prebuilt manifest clips', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(async () => {
+      function normalize(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim();
+      }
+
+      async function sha256Hex(value) {
+        const encoded = new TextEncoder().encode(value);
+        const digest = await crypto.subtle.digest('SHA-256', encoded);
+        return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      const manifestResponse = await fetch('/assets/audio/narration/manifest.json', { cache: 'no-store' });
+      if (!manifestResponse.ok) {
+        return { ok: false, error: 'manifest-load-failed:' + manifestResponse.status };
+      }
+      const manifest = await manifestResponse.json();
+      const clipHashes = new Set((manifest.clips || []).map((clip) => String((clip && clip.textHash) || '').trim().toLowerCase()).filter(Boolean));
+
+      const experienceIds = Object.keys(window.EXPERIENCE_LIBRARY || {});
+      const results = [];
+      for (const experienceId of experienceIds) {
+        const exp = window.EXPERIENCE_LIBRARY[experienceId] || {};
+        if (!exp.aboutHtmlPath) continue;
+
+        let script = '';
+        let error = '';
+        try {
+          script = await window.getExperienceNarrationScript(experienceId);
+        } catch (err) {
+          error = String((err && err.message) || err || 'unknown');
+        }
+
+        const normalized = normalize(script);
+        const hash = normalized ? await sha256Hex(normalized) : '';
+        results.push({
+          experienceId,
+          aboutPath: String(exp.aboutHtmlPath || ''),
+          error,
+          charCount: normalized.length,
+          hash,
+          hasManifestHash: !!hash && clipHashes.has(hash)
+        });
+      }
+
+      return {
+        ok: true,
+        results,
+        missing: results.filter((entry) => !entry.error && entry.hash && !entry.hasManifestHash),
+        failures: results.filter((entry) => !!entry.error || !entry.hash)
+      };
+    });
+
+    expect(probe.ok, probe.error || 'Expected manifest + narration hash probe to complete').toBe(true);
+    expect(probe.failures, 'About narration extraction failures').toEqual([]);
+    expect(probe.missing, 'About narration hashes missing from manifest').toEqual([]);
+  });
+
+  test('about narration hash remains manifest-aligned after about iframe cache priming', async ({ page }) => {
+    await page.goto('/stitchlab.html?experience=stitching');
+
+    await page.locator('#experience-info-toggle').click();
+    await expect(page.locator('#experience-info-html')).toBeVisible();
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const frame = document.getElementById('experience-info-html');
+        if (!frame) return false;
+        try {
+          const doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+          return !!(doc && doc.querySelector('p'));
+        } catch (_error) {
+          return false;
+        }
+      });
+    }).toBe(true);
+
+    const probe = await page.evaluate(async () => {
+      function normalize(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim();
+      }
+      async function sha256Hex(value) {
+        const encoded = new TextEncoder().encode(value);
+        const digest = await crypto.subtle.digest('SHA-256', encoded);
+        return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      const manifestResponse = await fetch('/assets/audio/narration/manifest.json', { cache: 'no-store' });
+      if (!manifestResponse.ok) {
+        return { ok: false, error: 'manifest-load-failed:' + manifestResponse.status };
+      }
+      const manifest = await manifestResponse.json();
+      const entry = (manifest.clips || []).find((clip) => String((clip && clip.source) || '') === 'docs/about/stitching.html');
+      if (!entry) {
+        return { ok: false, error: 'missing-stitching-about-entry' };
+      }
+
+      const script = await window.getExperienceNarrationScript('stitching');
+      const normalized = normalize(script);
+      const hash = normalized ? await sha256Hex(normalized) : '';
+      return {
+        ok: true,
+        runtimeHash: hash,
+        manifestHash: String(entry.textHash || '').toLowerCase(),
+        runtimeLength: normalized.length,
+        manifestLength: Number(entry.charCount || 0)
+      };
+    });
+
+    expect(probe.ok, probe.error || 'Expected hash probe to complete').toBe(true);
+    expect(probe.runtimeHash).toBe(probe.manifestHash);
+    expect(probe.runtimeLength).toBe(probe.manifestLength);
   });
 
   test('about and onboarding Hear this buttons include speaker icon', async ({ page }) => {

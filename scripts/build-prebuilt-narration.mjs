@@ -216,6 +216,8 @@ async function collectOnboardingTexts() {
   const source = await readFile(filePath, 'utf8');
   const texts = [];
   const regex = /(quickStartText|text)\s*:\s*'((?:\\'|[^'])*)'/g;
+  const concatRegex = /text\s*:\s*'((?:\\'|[^'])*)'\s*\+\s*experienceLabel\s*\+\s*'((?:\\'|[^'])*)'/g;
+  const onboardingExperienceLabels = ['stitching', 'triangula', 'squarus', 'mashrabiya'];
 
   let match;
   while ((match = regex.exec(source)) !== null) {
@@ -226,6 +228,21 @@ async function collectOnboardingTexts() {
       source: 'js/app/onboarding.js',
       text: normalized,
     });
+  }
+
+  let concatMatch;
+  while ((concatMatch = concatRegex.exec(source)) !== null) {
+    const prefix = decodeEscapedString(concatMatch[1] || '');
+    const suffix = decodeEscapedString(concatMatch[2] || '');
+    for (const experienceLabel of onboardingExperienceLabels) {
+      const raw = prefix + experienceLabel + suffix;
+      const normalized = normalizeText(raw);
+      if (!normalized) continue;
+      texts.push({
+        source: 'js/app/onboarding.js',
+        text: normalized,
+      });
+    }
   }
 
   return texts;
