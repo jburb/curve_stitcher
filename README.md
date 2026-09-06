@@ -127,6 +127,12 @@ This setup does not change runtime app behavior and should not be included in mo
 - All app narration routes through js/app/tts.js and first attempts static clip playback through `window.stitchlabPiperTts`.
 - `window.stitchlabPiperTts` resolves clips from `assets/audio/narration/manifest.json` using normalized text SHA-256 keys.
 - If a matching clip is missing (or fails to play), StitchLab automatically falls back to Web Speech synthesis.
+- Runtime flow:
+	- narration text is normalized (`collapse whitespace + trim`)
+	- normalized text is hashed with SHA-256
+	- hash is looked up in the manifest
+	- mapped clip is played from `assets/audio/narration/clips/`
+	- fallback to Web Speech is used only if manifest lookup or clip playback fails
 
 ### Prebuilt Narration Assets
 
@@ -140,6 +146,23 @@ This setup does not change runtime app behavior and should not be included in mo
 - Manifest lookup format:
 	- `textHash` is computed from normalized narration text (collapse whitespace + trim).
 	- each clip entry points to a static file path under `assets/audio/narration/clips/`.
+	- clip entries include `source`, `textHash`, `charCount`, and `preview` for easier auditing.
+
+### Adding Or Updating Narration Audio
+
+- Default incremental behavior (only new blocks):
+	- run `npm run setup:tts:prebuilt`
+	- the generator skips existing clip files by hash filename
+	- only newly introduced narration text hashes generate new `.wav` files
+- Manifest-only refresh (no audio generation):
+	- run `npm run setup:tts:prebuilt:manifest`
+	- useful when validating coverage before generating audio
+- Full rebuild:
+	- run `npm run setup:tts:prebuilt:force`
+	- regenerates all clips regardless of existing files
+- If narration text changes in code/docs:
+	- changed text produces a new SHA-256 hash and therefore a new clip filename
+	- old clip files remain until manually cleaned up
 
 ### Narration Troubleshooting
 

@@ -1,4 +1,84 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+
+function normalizeNarrationText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function sha256Hex(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function decodeEscapedString(source) {
+  return String(source || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\'/g, "'")
+    .replace(/\\\"/g, '"');
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function stripHtmlTags(value) {
+  return String(value || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+}
+
+function collectExpectedNarrationTexts(workspaceRoot) {
+  const collected = [];
+
+  const splashHtmlPath = path.join(workspaceRoot, 'stitchlab.html');
+  const splashHtml = fs.readFileSync(splashHtmlPath, 'utf8');
+  const splashMatch = splashHtml.match(/<p\s+id="startup-splash-text"[^>]*>([\s\S]*?)<\/p>/i);
+  if (splashMatch) {
+    const splashText = normalizeNarrationText(decodeHtmlEntities(stripHtmlTags(splashMatch[1] || '')));
+    if (splashText) collected.push(splashText);
+  }
+
+  const onboardingPath = path.join(workspaceRoot, 'js/app/onboarding.js');
+  const onboardingSource = fs.readFileSync(onboardingPath, 'utf8');
+  const onboardingRegex = /(quickStartText|text)\s*:\s*'((?:\\'|[^'])*)'/g;
+  var onboardingMatch = onboardingRegex.exec(onboardingSource);
+  while (onboardingMatch) {
+    const rawText = decodeEscapedString(onboardingMatch[2] || '');
+    const normalizedText = normalizeNarrationText(rawText);
+    if (normalizedText) collected.push(normalizedText);
+    onboardingMatch = onboardingRegex.exec(onboardingSource);
+  }
+
+  const libraryPath = path.join(workspaceRoot, 'js/app/experience-library.js');
+  const librarySource = fs.readFileSync(libraryPath, 'utf8');
+  const aboutMatches = Array.from(librarySource.matchAll(/aboutHtmlPath\s*:\s*'([^']+)'/g));
+  const aboutPaths = Array.from(new Set(aboutMatches.map((m) => String(m[1] || '').trim()).filter(Boolean)));
+
+  for (const aboutRelPath of aboutPaths) {
+    const aboutAbsPath = path.join(workspaceRoot, aboutRelPath);
+    if (!fs.existsSync(aboutAbsPath)) continue;
+    const html = fs.readFileSync(aboutAbsPath, 'utf8');
+    const paragraphMatches = Array.from(html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi));
+    const parts = paragraphMatches
+      .map((m) => normalizeNarrationText(decodeHtmlEntities(stripHtmlTags(m[1] || ''))))
+      .filter(Boolean);
+    const joined = normalizeNarrationText(parts.join('\n\n'));
+    if (joined) collected.push(joined);
+  }
+
+  return Array.from(new Set(collected));
+}
 
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
@@ -402,6 +482,119 @@ test.describe('StitchLab regressions', () => {
         probe.restore();
       }
     });
+  });
+
+  test('prebuilt narration playback succeeds when clip is available', async ({ page }) => {
+    await page.addInitScript(() => {
+      const originalPlay = HTMLMediaElement.prototype.play;
+      const originalPause = HTMLMediaElement.prototype.pause;
+      const synth = window.speechSynthesis;
+      const originalSynthSpeak = synth && typeof synth.speak === 'function' ? synth.speak.bind(synth) : null;
+
+      let mediaPlayCount = 0;
+      let mediaSrcValues = [];
+      let synthSpeakCount = 0;
+
+      HTMLMediaElement.prototype.play = function() {
+        mediaPlayCount += 1;
+        mediaSrcValues.push(String(this && this.src ? this.src : ''));
+        if (typeof this.onended === 'function') {
+          window.setTimeout(() => this.onended(), 0);
+        }
+        return Promise.resolve();
+      };
+      HTMLMediaElement.prototype.pause = function() {};
+
+      if (synth && originalSynthSpeak) {
+        synth.speak = function(utterance) {
+          synthSpeakCount += 1;
+          if (utterance && typeof utterance.onend === 'function') {
+            window.setTimeout(() => utterance.onend(), 0);
+          }
+        };
+      }
+
+      window.__stitchlabNarrationPlaybackProbe = {
+        getState: () => ({
+          mediaPlayCount,
+          mediaSrcValues: mediaSrcValues.slice(),
+          synthSpeakCount,
+        }),
+        restore: () => {
+          HTMLMediaElement.prototype.play = originalPlay;
+          HTMLMediaElement.prototype.pause = originalPause;
+          if (synth && originalSynthSpeak) {
+            synth.speak = originalSynthSpeak;
+          }
+        },
+      };
+    });
+
+    await page.goto('/stitchlab.html');
+
+    const playbackResult = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        const startupText = String((document.getElementById('startup-splash-text') || {}).textContent || '').trim();
+        const utterance = window.stitchlabTts.speak({
+          text: startupText,
+          onend: function() {
+            resolve({ success: true, engine: utterance && utterance.engine ? utterance.engine : '' });
+          },
+          onerror: function(error) {
+            resolve({ success: false, error: String((error && error.message) || error || 'unknown') });
+          }
+        });
+
+        if (!utterance) {
+          resolve({ success: false, error: 'no-utterance' });
+        }
+      });
+    });
+
+    expect(playbackResult.success).toBe(true);
+    expect(playbackResult.engine).toBe('prebuiltAudio');
+
+    const probe = await page.evaluate(() => {
+      const p = window.__stitchlabNarrationPlaybackProbe;
+      return p && typeof p.getState === 'function' ? p.getState() : null;
+    });
+
+    expect(probe).not.toBeNull();
+    expect(probe.mediaPlayCount).toBeGreaterThan(0);
+    expect(probe.mediaSrcValues.some((src) => src.indexOf('/assets/audio/narration/clips/') !== -1)).toBe(true);
+    expect(probe.synthSpeakCount).toBe(0);
+
+    await page.evaluate(() => {
+      const p = window.__stitchlabNarrationPlaybackProbe;
+      if (p && typeof p.restore === 'function') p.restore();
+    });
+  });
+
+  test('prebuilt narration manifest covers all splash onboarding and about narration texts', async () => {
+    const workspaceRoot = path.resolve(__dirname, '../..');
+    const manifestPath = path.join(workspaceRoot, 'assets/audio/narration/manifest.json');
+    expect(fs.existsSync(manifestPath)).toBe(true);
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const clips = Array.isArray(manifest && manifest.clips) ? manifest.clips : [];
+    const manifestHashes = new Set(
+      clips
+        .map((clip) => String((clip && clip.textHash) || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    const expectedTexts = collectExpectedNarrationTexts(workspaceRoot);
+    expect(expectedTexts.length).toBeGreaterThan(0);
+
+    const missing = [];
+    for (const text of expectedTexts) {
+      const hash = sha256Hex(normalizeNarrationText(text));
+      if (!manifestHashes.has(hash)) {
+        missing.push({ hash, preview: text.slice(0, 80) });
+      }
+    }
+
+    expect(missing, 'Missing narration hashes in manifest').toEqual([]);
   });
 
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
