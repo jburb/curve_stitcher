@@ -6,17 +6,22 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = process.cwd();
-const DEFAULT_MODEL_PATH = 'assets/tts/models/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx';
-const DEFAULT_MANIFEST_PATH = 'assets/tts/prebuilt/manifest.json';
-const DEFAULT_AUDIO_DIR = 'assets/tts/prebuilt/audio';
+const DEFAULT_VOICE = 'en_US-hfc_female-medium';
+const DEFAULT_DATA_DIR = 'assets/audio/narration/voices';
+const DEFAULT_MANIFEST_PATH = 'assets/audio/narration/manifest.json';
+const DEFAULT_AUDIO_DIR = 'assets/audio/narration/clips';
 
 function parseArgs(argv) {
   const args = {
-    modelPath: DEFAULT_MODEL_PATH,
+    python: '',
+    voice: DEFAULT_VOICE,
+    dataDir: DEFAULT_DATA_DIR,
+    modelPath: '',
     manifestPath: DEFAULT_MANIFEST_PATH,
     audioDir: DEFAULT_AUDIO_DIR,
     force: false,
     manifestOnly: false,
+    skipVoiceDownload: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -27,6 +32,25 @@ function parseArgs(argv) {
     }
     if (token === '--manifest-only') {
       args.manifestOnly = true;
+      continue;
+    }
+    if (token === '--python' && argv[i + 1]) {
+      args.python = argv[i + 1];
+      i += 1;
+      continue;
+    }
+    if (token === '--skip-voice-download') {
+      args.skipVoiceDownload = true;
+      continue;
+    }
+    if (token === '--voice' && argv[i + 1]) {
+      args.voice = argv[i + 1];
+      i += 1;
+      continue;
+    }
+    if (token === '--data-dir' && argv[i + 1]) {
+      args.dataDir = argv[i + 1];
+      i += 1;
       continue;
     }
     if (token === '--model' && argv[i + 1]) {
@@ -47,6 +71,71 @@ function parseArgs(argv) {
   }
 
   return args;
+}
+
+function canRunPython(command) {
+  const result = spawnSync(command, ['--version'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.error) return false;
+  return result.status === 0;
+}
+
+function resolvePythonCommand(args) {
+  const candidates = [];
+  function pushCandidate(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) return;
+    if (candidates.indexOf(normalized) !== -1) return;
+    candidates.push(normalized);
+  }
+
+  pushCandidate(args.python);
+  pushCandidate(process.env.PIPER_PYTHON);
+  if (process.env.VIRTUAL_ENV) {
+    pushCandidate(path.join(process.env.VIRTUAL_ENV, 'bin', 'python'));
+  }
+  pushCandidate(path.join(ROOT, '.venv', 'bin', 'python'));
+  pushCandidate('python3');
+  pushCandidate('python');
+
+  for (const candidate of candidates) {
+    if (canRunPython(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    'No usable Python interpreter found for Piper CLI. '
+    + 'Tried: ' + candidates.join(', ') + '. '
+    + 'Pass --python <path> or set PIPER_PYTHON.'
+  );
+}
+
+function hasPythonPiperModule(pythonCommand) {
+  const result = spawnSync(pythonCommand, ['-m', 'piper', '--help'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return result.status === 0;
+}
+
+function ensureVoiceAvailable(pythonCommand, voiceName, dataDirAbsPath) {
+  const args = ['-m', 'piper.download_voices', voiceName, '--data-dir', dataDirAbsPath];
+  const result = spawnSync(pythonCommand, args, {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  if (result.error) {
+    throw new Error('Failed to execute piper voice download: ' + String(result.error.message || result.error));
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      'piper.download_voices failed (' + String(result.status) + '): '
+      + String(result.stderr || result.stdout || '').trim()
+    );
+  }
 }
 
 function normalizeText(value) {
@@ -174,26 +263,43 @@ async function listAudioFiles(absAudioDir) {
   return files;
 }
 
-function runPiperGenerate(modelAbsPath, textValue, outputAbsPath) {
-  const result = spawnSync('piper', ['--model', modelAbsPath, '--output_file', outputAbsPath], {
-    input: textValue + '\n',
+function runPiperGenerate(options) {
+  const args = ['-m', 'piper', '-m', options.modelRef, '-f', options.outputAbsPath];
+  if (options.dataDirAbsPath) {
+    args.push('--data-dir', options.dataDirAbsPath);
+  }
+  args.push('--', options.textValue);
+
+  const result = spawnSync(options.pythonCommand, args, {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
   if (result.error) {
-    throw new Error('Failed to execute piper CLI: ' + String(result.error.message || result.error));
+    throw new Error('Failed to execute piper CLI module: ' + String(result.error.message || result.error));
   }
   if (result.status !== 0) {
-    throw new Error('piper CLI failed (' + String(result.status) + '): ' + String(result.stderr || result.stdout || '').trim());
+    throw new Error('python3 -m piper failed (' + String(result.status) + '): ' + String(result.stderr || result.stdout || '').trim());
   }
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const modelAbsPath = path.join(ROOT, args.modelPath);
+  const pythonCommand = resolvePythonCommand(args);
+  const dataDirAbsPath = path.join(ROOT, args.dataDir);
+  const modelAbsPath = args.modelPath ? path.join(ROOT, args.modelPath) : '';
   const manifestAbsPath = path.join(ROOT, args.manifestPath);
   const audioAbsDir = path.join(ROOT, args.audioDir);
+
+  const modelExists = !!(modelAbsPath && existsSync(modelAbsPath));
+  const modelRef = modelExists
+    ? modelAbsPath
+    : String(args.voice || '').trim();
+  if (!modelRef) {
+    throw new Error('No voice/model reference provided. Use --voice <VOICE_NAME> or --model <MODEL_PATH>.');
+  }
+
+  const useDataDir = !modelExists;
 
   const textCandidates = [];
   textCandidates.push(...await collectStartupSplashText());
@@ -234,8 +340,18 @@ async function main() {
   await mkdir(audioAbsDir, { recursive: true });
 
   if (!args.manifestOnly) {
-    if (!existsSync(modelAbsPath)) {
-      throw new Error('Model file not found: ' + modelAbsPath + '\nRun with --manifest-only, or provide --model <path>.');
+    if (!hasPythonPiperModule(pythonCommand)) {
+      throw new Error(
+        'Python Piper module not found for interpreter ' + pythonCommand + '. '
+        + 'Install with: ' + pythonCommand + ' -m pip install piper-tts'
+      );
+    }
+
+    if (useDataDir) {
+      await mkdir(dataDirAbsPath, { recursive: true });
+      if (!args.skipVoiceDownload) {
+        ensureVoiceAvailable(pythonCommand, modelRef, dataDirAbsPath);
+      }
     }
 
     const currentAudioFiles = await listAudioFiles(audioAbsDir);
@@ -244,7 +360,13 @@ async function main() {
       if (!args.force && currentAudioFiles.has(outFileName)) {
         continue;
       }
-      runPiperGenerate(modelAbsPath, clip._text, clip._absPath);
+      runPiperGenerate({
+        pythonCommand,
+        modelRef,
+        dataDirAbsPath: useDataDir ? dataDirAbsPath : '',
+        outputAbsPath: clip._absPath,
+        textValue: clip._text,
+      });
     }
   }
 
@@ -253,7 +375,11 @@ async function main() {
     generatedAt: new Date().toISOString(),
     hashAlgorithm: 'sha256',
     textNormalization: 'collapse-whitespace-and-trim',
-    voiceModelPath: args.modelPath,
+    piper: {
+      runner: pythonCommand + ' -m piper',
+      modelRef: modelRef,
+      dataDir: useDataDir ? args.dataDir : '',
+    },
     clips: clips.map((clip) => ({
       ...(clip.id ? { id: clip.id } : {}),
       source: clip.source,
@@ -273,6 +399,9 @@ async function main() {
     console.log('Audio generation skipped (--manifest-only).');
   } else {
     console.log('Audio output directory:', path.relative(ROOT, audioAbsDir));
+    if (useDataDir) {
+      console.log('Voice data directory:', path.relative(ROOT, dataDirAbsPath));
+    }
   }
 }
 

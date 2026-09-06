@@ -7,7 +7,7 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 
 | Load order | Script | Primary ownership | Notes |
 | --- | --- | --- | --- |
-| 1 | js/app/piper-bridge.js (module) | Prebuilt narration audio bridge registration (`window.stitchlabPiperTts`) | Resolves narration text to static audio assets via `assets/tts/prebuilt/manifest.json`. |
+| 1 | js/app/piper-bridge.js (module) | Prebuilt narration audio bridge registration (`window.stitchlabPiperTts`) | Resolves narration text to static audio assets via `assets/audio/narration/manifest.json`. |
 | 2 | js/app/tts.js | Shared narration speech adapter (prebuilt-audio first with offline-safe fallback) | Central voice/runtime contract for all app TTS entry points. |
 | 3 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
 | 4 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
@@ -125,26 +125,27 @@ This setup does not change runtime app behavior and should not be included in mo
 ### Prebuilt Narration Audio Contract
 
 - All app narration routes through js/app/tts.js and first attempts static clip playback through `window.stitchlabPiperTts`.
-- `window.stitchlabPiperTts` resolves clips from `assets/tts/prebuilt/manifest.json` using normalized text SHA-256 keys.
+- `window.stitchlabPiperTts` resolves clips from `assets/audio/narration/manifest.json` using normalized text SHA-256 keys.
 - If a matching clip is missing (or fails to play), StitchLab automatically falls back to Web Speech synthesis.
 
 ### Prebuilt Narration Assets
 
 - Build script: `scripts/build-prebuilt-narration.mjs`.
-- Prerequisite for clip generation: install the `piper` CLI and ensure it is on PATH.
+- CLI reference: `https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/CLI.md`
+- Install prerequisite: `pip install piper-tts`
 - Commands:
-	- `npm run setup:tts:prebuilt:manifest` generates only `assets/tts/prebuilt/manifest.json`.
-	- `npm run setup:tts:prebuilt` generates/refreshes WAV clips in `assets/tts/prebuilt/audio/` using local `piper` CLI and the configured model path.
+	- `npm run setup:tts:prebuilt:manifest` generates only `assets/audio/narration/manifest.json`.
+	- `npm run setup:tts:prebuilt` generates/refreshes WAV clips in `assets/audio/narration/clips/` using `python3 -m piper`.
 	- `npm run setup:tts:prebuilt:force` regenerates all clips.
 - Manifest lookup format:
 	- `textHash` is computed from normalized narration text (collapse whitespace + trim).
-	- each clip entry points to a static file path under `assets/tts/prebuilt/audio/`.
+	- each clip entry points to a static file path under `assets/audio/narration/clips/`.
 
 ### Narration Troubleshooting
 
 - If `window.stitchlabPiperTts` is undefined, hard-refresh `stitchlab.html` after pulling latest changes.
 - If `window.stitchlabPiperTts.getStatus().lastError` is populated, static clip lookup/playback failed and narration should fall back to browser speech.
-- If clips are missing, run `npm run setup:tts:prebuilt` and verify audio files exist under `assets/tts/prebuilt/audio/`.
+- If clips are missing, run `npm run setup:tts:prebuilt` and verify audio files exist under `assets/audio/narration/clips/`.
 
 ## Adding A New Experience (Example: Zoobaz)
 

@@ -20,7 +20,7 @@ function resolveAssetUrl(relativePath) {
   return new URL(relativePath, APP_BASE_URL).toString();
 }
 
-const MANIFEST_URL = resolveAssetUrl('assets/tts/prebuilt/manifest.json');
+const MANIFEST_URL = resolveAssetUrl('assets/audio/narration/manifest.json');
 
 let manifestPromise = null;
 let manifestCache = null;
