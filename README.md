@@ -139,16 +139,26 @@ This setup does not change runtime app behavior and should not be included in mo
 - Build script: `scripts/build-prebuilt-narration.mjs`.
 - CLI reference: `https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/CLI.md`
 - Install prerequisite: `pip install piper-tts`
+- Voice model storage: `assets/audio/narration/voices/en_US-hfc_female-medium.onnx` is tracked with Git LFS.
 - Commands:
 	- `npm run setup:tts:prebuilt:manifest` generates only `assets/audio/narration/manifest.json`.
 	- `npm run setup:tts:prebuilt` generates/refreshes WAV clips in `assets/audio/narration/clips/` using `python3 -m piper`.
 	- `npm run setup:tts:prebuilt:force` regenerates all clips.
+	- `npm run setup:tts:model:pull` fetches the ONNX model via Git LFS when needed.
 - Manifest lookup format:
 	- `textHash` is computed from normalized narration text (collapse whitespace + trim).
 	- each clip entry points to a static file path under `assets/audio/narration/clips/`.
 	- clip entries include `source`, `textHash`, `charCount`, and `preview` for easier auditing.
 
 ### Adding Or Updating Narration Audio
+
+- One-time machine setup for LFS model pulls:
+	- install Git LFS (`git lfs version` should succeed)
+	- run `git lfs install`
+- Pull model payload after clone (or when missing):
+	- `npm run setup:tts:model:pull`
+- If build reports an LFS pointer file:
+	- run the model pull command above, then rerun narration generation
 
 - Default incremental behavior (only new blocks):
 	- run `npm run setup:tts:prebuilt`

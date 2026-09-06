@@ -263,6 +263,17 @@ async function listAudioFiles(absAudioDir) {
   return files;
 }
 
+async function isGitLfsPointerFile(absPath) {
+  try {
+    const sample = await readFile(absPath, 'utf8');
+    return /^version https:\/\/git-lfs\.github\.com\/spec\/v1\s*$/m.test(sample)
+      && /^oid sha256:[a-f0-9]{64}\s*$/m.test(sample)
+      && /^size \d+\s*$/m.test(sample);
+  } catch {
+    return false;
+  }
+}
+
 function runPiperGenerate(options) {
   const args = ['-m', 'piper', '-m', options.modelRef, '-f', options.outputAbsPath];
   if (options.dataDirAbsPath) {
@@ -292,6 +303,14 @@ async function main() {
   const audioAbsDir = path.join(ROOT, args.audioDir);
 
   const modelExists = !!(modelAbsPath && existsSync(modelAbsPath));
+  if (modelExists && await isGitLfsPointerFile(modelAbsPath)) {
+    throw new Error(
+      'Model file appears to be a Git LFS pointer and not the real .onnx payload: '
+      + path.relative(ROOT, modelAbsPath) + '. '
+      + 'Run `git lfs pull --include="' + path.relative(ROOT, modelAbsPath) + '"` and try again.'
+    );
+  }
+
   const modelRef = modelExists
     ? modelAbsPath
     : String(args.voice || '').trim();

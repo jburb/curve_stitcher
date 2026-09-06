@@ -7,6 +7,7 @@
     "setup:tts:prebuilt:force": "node scripts/build-prebuilt-narration.mjs --force",
     "setup:tts:prebuilt:prune": "node scripts/prune-prebuilt-narration-clips.mjs",
     "setup:tts:prebuilt:prune:apply": "node scripts/prune-prebuilt-narration-clips.mjs --apply",
+    "setup:tts:model:pull": "git lfs pull --include=\"assets/audio/narration/voices/en_US-hfc_female-medium.onnx\"",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
