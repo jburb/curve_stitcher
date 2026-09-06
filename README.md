@@ -7,18 +7,20 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 
 | Load order | Script | Primary ownership | Notes |
 | --- | --- | --- | --- |
-| 1 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
-| 2 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
-| 3 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
-| 4 | js/app/state-url-persistence.js | URL schema, sanitizers, per-experience state serialization and hydration helpers | Canonical place for state shape and normalization logic. |
-| 5 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
-| 6 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
-| 7 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
-| 8 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
-| 9 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
-| 10 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
-| 11 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
-| 12 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
+| 1 | js/app/piper-bridge.js (module) | Prebuilt narration audio bridge registration (`window.stitchlabPiperTts`) | Resolves narration text to static audio assets via `assets/audio/narration/manifest.json`. |
+| 2 | js/app/tts.js | Shared narration speech adapter (prebuilt-audio first with offline-safe fallback) | Central voice/runtime contract for all app TTS entry points. |
+| 3 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
+| 4 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
+| 5 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
+| 6 | js/app/state-url-persistence.js | URL schema, sanitizers, per-experience state serialization and hydration helpers | Canonical place for state shape and normalization logic. |
+| 7 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
+| 8 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
+| 9 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
+| 10 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
+| 11 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
+| 12 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
+| 13 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
+| 14 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
 
 ## Development Notes
 
@@ -97,6 +99,9 @@ Current covered checks:
 
 1. Install dependencies:
 	- `npm install`
+1. Generate/update prebuilt narration manifest (and optionally audio clips):
+	- `npm run setup:tts:prebuilt:manifest` (manifest only)
+	- `npm run setup:tts:prebuilt` (manifest + audio via local `piper` CLI)
 2. Install Playwright browser (Chromium):
 	- `npm run test:e2e:install`
 3. Run tests:
@@ -116,6 +121,71 @@ Optional:
   - `test-results/`
 
 This setup does not change runtime app behavior and should not be included in mobile/desktop packaged artifacts.
+
+### Prebuilt Narration Audio Contract
+
+- All app narration routes through js/app/tts.js and first attempts static clip playback through `window.stitchlabPiperTts`.
+- `window.stitchlabPiperTts` resolves clips from `assets/audio/narration/manifest.json` using normalized text SHA-256 keys.
+- If a matching clip is missing (or fails to play), StitchLab automatically falls back to Web Speech synthesis.
+- Runtime flow:
+	- narration text is normalized (`collapse whitespace + trim`)
+	- normalized text is hashed with SHA-256
+	- hash is looked up in the manifest
+	- mapped clip is played from `assets/audio/narration/clips/`
+	- fallback to Web Speech is used only if manifest lookup or clip playback fails
+
+### Prebuilt Narration Assets
+
+- Build script: `scripts/build-prebuilt-narration.mjs`.
+- CLI reference: `https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/CLI.md`
+- Install prerequisite: `pip install piper-tts`
+- Voice model is downloaded on demand by Piper into `assets/audio/narration/voices/` when needed.
+- Commands:
+	- `npm run setup:tts:prebuilt:manifest` generates only `assets/audio/narration/manifest.json`.
+	- `npm run setup:tts:prebuilt` generates/refreshes WAV clips in `assets/audio/narration/clips/` using `python3 -m piper`.
+	- `npm run setup:tts:prebuilt:force` regenerates all clips.
+- Manifest lookup format:
+	- `textHash` is computed from normalized narration text (collapse whitespace + trim).
+	- each clip entry points to a static file path under `assets/audio/narration/clips/`.
+	- clip entries include `source`, `textHash`, `charCount`, and `preview` for easier auditing.
+
+### Adding Or Updating Narration Audio
+
+- Voice model setup (download on demand):
+	- install Piper CLI package (`pip install piper-tts`)
+	- run `npm run setup:tts:prebuilt` and Piper will download required voice assets into `assets/audio/narration/voices/` if missing
+
+- Default incremental behavior (only new blocks):
+	- run `npm run setup:tts:prebuilt`
+	- the generator skips existing clip files by hash filename
+	- only newly introduced narration text hashes generate new `.wav` files
+- Manifest-only refresh (no audio generation):
+	- run `npm run setup:tts:prebuilt:manifest`
+	- useful when validating coverage before generating audio
+- Full rebuild:
+	- run `npm run setup:tts:prebuilt:force`
+	- regenerates all clips regardless of existing files
+- If narration text changes in code/docs:
+	- changed text produces a new SHA-256 hash and therefore a new clip filename
+	- old clip files remain until manually cleaned up
+- Orphaned clip cleanup:
+	- `npm run setup:tts:prebuilt:prune` shows clip files that are not referenced by the manifest (dry run)
+	- `npm run setup:tts:prebuilt:prune:apply` deletes those orphaned files
+
+### Narration Integrity Tests
+
+- Playback path test confirms prebuilt clip playback succeeds when a clip exists.
+- Manifest integrity test verifies:
+	- every expected narration text hash exists in the manifest
+	- no stale manifest hashes remain after narration text changes
+	- each manifest `source` still maps to a matching hash in the current source text
+
+### Narration Troubleshooting
+
+- If `window.stitchlabPiperTts` is undefined, hard-refresh `stitchlab.html` after pulling latest changes.
+- If `window.stitchlabPiperTts.getStatus().lastError` is populated, static clip lookup/playback failed and narration should fall back to browser speech.
+- If clips are missing, run `npm run setup:tts:prebuilt` and verify audio files exist under `assets/audio/narration/clips/`.
+- `localhost`, `127.0.0.1`, and `0.0.0.0` are treated as different browser origins; stale cache on one host can make narration appear outdated while another host shows latest behavior.
 
 ## Adding A New Experience (Example: Zoobaz)
 
@@ -280,10 +350,10 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
-1. **Use better voice for narration**:
-     - Top candidate TTS lib is Piper TTS
-     - Top voice candidates from piper are: aru-medium 09, vctk-medium p282, vctk-medium p318, or hfc_female [medium].
-     - Determine whether to pre-record passages and host their files, or use dynamic engine execution.
+1. ~~**Use better voice for narration**~~ (completed):
+	- Adopted `hfc_female [medium]` for prebuilt narration clip generation.
+	- Narration now uses pre-generated manifest/clip lookup first with browser speech fallback only on miss/failure.
+	- Voice model is download-on-demand for local generation and is not tracked in Git.
 
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 

@@ -1156,8 +1156,8 @@ function syncExperienceNarrationState(isPlaying, statusText) {
 function stopExperienceNarration() {
   experienceNarrationRequestToken += 1;
   experienceNarrationRequestInFlight = false;
-  if (window.speechSynthesis) {
-    window.speechSynthesis.cancel();
+  if (window.stitchlabTts && typeof window.stitchlabTts.cancel === 'function') {
+    window.stitchlabTts.cancel();
   }
   experienceNarrationUtterance = null;
   syncExperienceNarrationState(false, '');
@@ -1185,13 +1185,21 @@ function toggleExperienceNarration() {
     stopExperienceNarration();
     return;
   }
-  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+  if (!window.stitchlabTts || !window.stitchlabTts.supportsNarration()) {
     syncExperienceNarrationState(false, 'Narration is unavailable in this browser.');
     return;
   }
   if (experienceNarrationRequestInFlight) {
     narrationDebugLog('log', 'Narration request already in flight; ignoring duplicate toggle.');
     return;
+  }
+
+  if (window.stitchlabTts && typeof window.stitchlabTts.prewarm === 'function') {
+    try {
+      window.stitchlabTts.prewarm();
+    } catch (_error) {
+      // Ignore warmup failures; playback path retains its own fallback behavior.
+    }
   }
 
   var experienceId = currentExperienceId;
@@ -1222,24 +1230,31 @@ function toggleExperienceNarration() {
   });
 
   function speakExperienceNarration(textScript) {
-    var utterance = new SpeechSynthesisUtterance(textScript);
-    utterance.rate = 0.97;
-    utterance.pitch = 1;
-    utterance.onend = function() {
-      experienceNarrationUtterance = null;
-      experienceNarrationRequestInFlight = false;
-      syncExperienceNarrationState(false, 'Narration complete.');
-    };
-    utterance.onerror = function() {
+    var utterance = window.stitchlabTts.speak({
+      text: textScript,
+      rate: 0.97,
+      pitch: 1,
+      volume: 1,
+      onend: function() {
+        experienceNarrationUtterance = null;
+        experienceNarrationRequestInFlight = false;
+        syncExperienceNarrationState(false, 'Narration complete.');
+      },
+      onerror: function() {
+        experienceNarrationUtterance = null;
+        experienceNarrationRequestInFlight = false;
+        syncExperienceNarrationState(false, 'Narration could not play.');
+      }
+    });
+    if (!utterance) {
       experienceNarrationUtterance = null;
       experienceNarrationRequestInFlight = false;
       syncExperienceNarrationState(false, 'Narration could not play.');
-    };
+      return;
+    }
 
     experienceNarrationUtterance = utterance;
     syncExperienceNarrationState(true, 'Narrating...');
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
   }
 }
 
@@ -1265,7 +1280,11 @@ function getExperienceNarrationScript(experienceId) {
     return experienceNarrationFetchById[requestKey];
   }
 
-  experienceNarrationFetchById[requestKey] = loadNarrationTextFromExperienceInfoFrame(aboutHtmlPath)
+  experienceNarrationFetchById[requestKey] = loadNarrationTextFromAboutPathFetch(aboutHtmlPath)
+    .catch(function() {
+      // Fallback to iframe extraction/bridge only if direct file extraction fails.
+      return loadNarrationTextFromExperienceInfoFrame(aboutHtmlPath);
+    })
     .then(function(text) {
       var normalized = String(text || '').trim();
       if (!normalized) {

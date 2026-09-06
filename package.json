@@ -2,6 +2,11 @@
   "name": "curve-stitcher-e2e",
   "private": true,
   "scripts": {
+    "setup:tts:prebuilt": "node scripts/build-prebuilt-narration.mjs",
+    "setup:tts:prebuilt:manifest": "node scripts/build-prebuilt-narration.mjs --manifest-only",
+    "setup:tts:prebuilt:force": "node scripts/build-prebuilt-narration.mjs --force",
+    "setup:tts:prebuilt:prune": "node scripts/prune-prebuilt-narration-clips.mjs",
+    "setup:tts:prebuilt:prune:apply": "node scripts/prune-prebuilt-narration-clips.mjs --apply",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",

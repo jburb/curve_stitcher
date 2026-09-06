@@ -2,3 +2,5 @@ node_modules/
 playwright-report/
 test-results/
 /localStorage.json
+assets/audio/narration/voices/*.onnx
+assets/audio/narration/voices/*.onnx.json

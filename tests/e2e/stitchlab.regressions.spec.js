@@ -1,4 +1,132 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+
+function normalizeNarrationText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function sha256Hex(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function decodeEscapedString(source) {
+  return String(source || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\'/g, "'")
+    .replace(/\\\"/g, '"');
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function stripHtmlTags(value) {
+  return String(value || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+}
+
+function collectExpectedNarrationEntries(workspaceRoot) {
+  const collected = [];
+
+  const splashHtmlPath = path.join(workspaceRoot, 'stitchlab.html');
+  const splashHtml = fs.readFileSync(splashHtmlPath, 'utf8');
+  const splashMatch = splashHtml.match(/<p\s+id="startup-splash-text"[^>]*>([\s\S]*?)<\/p>/i);
+  if (splashMatch) {
+    const splashText = normalizeNarrationText(decodeHtmlEntities(stripHtmlTags(splashMatch[1] || '')));
+    if (splashText) {
+      collected.push({
+        source: 'stitchlab.html#startup-splash-text',
+        text: splashText,
+      });
+    }
+  }
+
+  const onboardingPath = path.join(workspaceRoot, 'js/app/onboarding.js');
+  const onboardingSource = fs.readFileSync(onboardingPath, 'utf8');
+  const onboardingRegex = /(quickStartText|text)\s*:\s*'((?:\\'|[^'])*)'/g;
+  const onboardingConcatRegex = /text\s*:\s*'((?:\\'|[^'])*)'\s*\+\s*experienceLabel\s*\+\s*'((?:\\'|[^'])*)'/g;
+  const onboardingExperienceLabels = ['stitching', 'triangula', 'squarus', 'mashrabiya'];
+  var onboardingMatch = onboardingRegex.exec(onboardingSource);
+  while (onboardingMatch) {
+    const rawText = decodeEscapedString(onboardingMatch[2] || '');
+    const normalizedText = normalizeNarrationText(rawText);
+    if (normalizedText) {
+      collected.push({
+        source: 'js/app/onboarding.js',
+        text: normalizedText,
+      });
+    }
+    onboardingMatch = onboardingRegex.exec(onboardingSource);
+  }
+
+  var onboardingConcatMatch = onboardingConcatRegex.exec(onboardingSource);
+  while (onboardingConcatMatch) {
+    const prefix = decodeEscapedString(onboardingConcatMatch[1] || '');
+    const suffix = decodeEscapedString(onboardingConcatMatch[2] || '');
+    for (const experienceLabel of onboardingExperienceLabels) {
+      const rawText = prefix + experienceLabel + suffix;
+      const normalizedText = normalizeNarrationText(rawText);
+      if (normalizedText) {
+        collected.push({
+          source: 'js/app/onboarding.js',
+          text: normalizedText,
+        });
+      }
+    }
+    onboardingConcatMatch = onboardingConcatRegex.exec(onboardingSource);
+  }
+
+  const libraryPath = path.join(workspaceRoot, 'js/app/experience-library.js');
+  const librarySource = fs.readFileSync(libraryPath, 'utf8');
+  const aboutMatches = Array.from(librarySource.matchAll(/aboutHtmlPath\s*:\s*'([^']+)'/g));
+  const aboutPaths = Array.from(new Set(aboutMatches.map((m) => String(m[1] || '').trim()).filter(Boolean)));
+
+  for (const aboutRelPath of aboutPaths) {
+    const aboutAbsPath = path.join(workspaceRoot, aboutRelPath);
+    if (!fs.existsSync(aboutAbsPath)) continue;
+    const html = fs.readFileSync(aboutAbsPath, 'utf8');
+    const paragraphMatches = Array.from(html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi));
+    const parts = paragraphMatches
+      .map((m) => normalizeNarrationText(decodeHtmlEntities(stripHtmlTags(m[1] || ''))))
+      .filter(Boolean);
+    const joined = normalizeNarrationText(parts.join('\n\n'));
+    if (joined) {
+      collected.push({
+        source: aboutRelPath,
+        text: joined,
+      });
+    }
+  }
+
+  const dedupByHash = new Map();
+  for (const entry of collected) {
+    const normalizedText = normalizeNarrationText(entry.text);
+    if (!normalizedText) continue;
+    const hash = sha256Hex(normalizedText);
+    if (!dedupByHash.has(hash)) {
+      dedupByHash.set(hash, {
+        source: entry.source,
+        text: normalizedText,
+        textHash: hash,
+      });
+    }
+  }
+
+  return Array.from(dedupByHash.values());
+}
 
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
@@ -286,7 +414,7 @@ test.describe('StitchLab regressions', () => {
     await expect(quickStart).toBeHidden();
   });
 
-  test('paramless splash continue primes onboarding autoplay narration for webkit-style speech lock', async ({ page }) => {
+  test('paramless splash continue routes onboarding autoplay narration through Piper bridge', async ({ page }) => {
     await page.addInitScript(() => {
       window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
     });
@@ -296,8 +424,39 @@ test.describe('StitchLab regressions', () => {
 
     await page.evaluate(() => {
       const synth = window.speechSynthesis;
+      const piperBridge = window.stitchlabPiperTts;
+
+      let piperSpeakCount = 0;
+      let piperPrewarmCount = 0;
+      const originalPiperSpeak = piperBridge && typeof piperBridge.speak === 'function' ? piperBridge.speak.bind(piperBridge) : null;
+      const originalPiperPrewarm = piperBridge && typeof piperBridge.prewarm === 'function' ? piperBridge.prewarm.bind(piperBridge) : null;
+
+      if (piperBridge && originalPiperSpeak) {
+        piperBridge.speak = function(payload) {
+          piperSpeakCount += 1;
+          return originalPiperSpeak(payload);
+        };
+      }
+
+      if (piperBridge && originalPiperPrewarm) {
+        piperBridge.prewarm = function(payload) {
+          piperPrewarmCount += 1;
+          return originalPiperPrewarm(payload);
+        };
+      }
+
       if (!synth || typeof synth.speak !== 'function') {
-        window.__stitchlabSpeechProbe = { unsupported: true };
+        window.__stitchlabSpeechProbe = {
+          unsupported: true,
+          getState: () => ({
+            piperSpeakCount,
+            piperPrewarmCount,
+          }),
+          restore: () => {
+            if (piperBridge && originalPiperSpeak) piperBridge.speak = originalPiperSpeak;
+            if (piperBridge && originalPiperPrewarm) piperBridge.prewarm = originalPiperPrewarm;
+          }
+        };
         return;
       }
 
@@ -341,11 +500,15 @@ test.describe('StitchLab regressions', () => {
         getState: () => ({
           primed,
           audibleSpeakCount,
-          speakCalls: speakCalls.slice()
+          speakCalls: speakCalls.slice(),
+          piperSpeakCount,
+          piperPrewarmCount,
         }),
         restore: () => {
           synth.speak = originalSpeak;
           synth.cancel = originalCancel;
+          if (piperBridge && originalPiperSpeak) piperBridge.speak = originalPiperSpeak;
+          if (piperBridge && originalPiperPrewarm) piperBridge.prewarm = originalPiperPrewarm;
         }
       };
     });
@@ -356,18 +519,8 @@ test.describe('StitchLab regressions', () => {
     await expect.poll(() => {
       return page.evaluate(() => {
         const probe = window.__stitchlabSpeechProbe;
-        if (!probe || probe.unsupported) return null;
-        return probe.getState();
-      });
-    }).toMatchObject({
-      primed: true
-    });
-
-    await expect.poll(() => {
-      return page.evaluate(() => {
-        const probe = window.__stitchlabSpeechProbe;
-        if (!probe || probe.unsupported) return 0;
-        return probe.getState().audibleSpeakCount;
+        if (!probe || typeof probe.getState !== 'function') return 0;
+        return probe.getState().piperSpeakCount || 0;
       });
     }).toBeGreaterThan(0);
 
@@ -377,6 +530,175 @@ test.describe('StitchLab regressions', () => {
         probe.restore();
       }
     });
+  });
+
+  test('prebuilt narration playback succeeds when clip is available', async ({ page }) => {
+    await page.addInitScript(() => {
+      const originalPlay = HTMLMediaElement.prototype.play;
+      const originalPause = HTMLMediaElement.prototype.pause;
+      const synth = window.speechSynthesis;
+      const originalSynthSpeak = synth && typeof synth.speak === 'function' ? synth.speak.bind(synth) : null;
+
+      let mediaPlayCount = 0;
+      let mediaSrcValues = [];
+      let synthSpeakCount = 0;
+
+      HTMLMediaElement.prototype.play = function() {
+        mediaPlayCount += 1;
+        mediaSrcValues.push(String(this && this.src ? this.src : ''));
+        if (typeof this.onended === 'function') {
+          window.setTimeout(() => this.onended(), 0);
+        }
+        return Promise.resolve();
+      };
+      HTMLMediaElement.prototype.pause = function() {};
+
+      if (synth && originalSynthSpeak) {
+        synth.speak = function(utterance) {
+          synthSpeakCount += 1;
+          if (utterance && typeof utterance.onend === 'function') {
+            window.setTimeout(() => utterance.onend(), 0);
+          }
+        };
+      }
+
+      window.__stitchlabNarrationPlaybackProbe = {
+        getState: () => ({
+          mediaPlayCount,
+          mediaSrcValues: mediaSrcValues.slice(),
+          synthSpeakCount,
+        }),
+        restore: () => {
+          HTMLMediaElement.prototype.play = originalPlay;
+          HTMLMediaElement.prototype.pause = originalPause;
+          if (synth && originalSynthSpeak) {
+            synth.speak = originalSynthSpeak;
+          }
+        },
+      };
+    });
+
+    await page.goto('/stitchlab.html');
+
+    const playbackResult = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        const startupText = String((document.getElementById('startup-splash-text') || {}).textContent || '').trim();
+        const utterance = window.stitchlabTts.speak({
+          text: startupText,
+          onend: function() {
+            resolve({ success: true, engine: utterance && utterance.engine ? utterance.engine : '' });
+          },
+          onerror: function(error) {
+            resolve({ success: false, error: String((error && error.message) || error || 'unknown') });
+          }
+        });
+
+        if (!utterance) {
+          resolve({ success: false, error: 'no-utterance' });
+        }
+      });
+    });
+
+    expect(playbackResult.success).toBe(true);
+    expect(playbackResult.engine).toBe('prebuiltAudio');
+
+    const probe = await page.evaluate(() => {
+      const p = window.__stitchlabNarrationPlaybackProbe;
+      return p && typeof p.getState === 'function' ? p.getState() : null;
+    });
+
+    expect(probe).not.toBeNull();
+    expect(probe.mediaPlayCount).toBeGreaterThan(0);
+    expect(probe.mediaSrcValues.some((src) => src.indexOf('/assets/audio/narration/clips/') !== -1)).toBe(true);
+    expect(probe.synthSpeakCount).toBe(0);
+
+    await page.evaluate(() => {
+      const p = window.__stitchlabNarrationPlaybackProbe;
+      if (p && typeof p.restore === 'function') p.restore();
+    });
+  });
+
+  test('prebuilt narration manifest covers all splash onboarding and about narration texts', async () => {
+    const workspaceRoot = path.resolve(__dirname, '../..');
+    const manifestPath = path.join(workspaceRoot, 'assets/audio/narration/manifest.json');
+    expect(fs.existsSync(manifestPath)).toBe(true);
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const clips = Array.isArray(manifest && manifest.clips) ? manifest.clips : [];
+    const manifestHashes = new Set();
+    const manifestEntriesByHash = new Map();
+    for (const clip of clips) {
+      const hash = String((clip && clip.textHash) || '').trim().toLowerCase();
+      if (!hash) continue;
+      manifestHashes.add(hash);
+      manifestEntriesByHash.set(hash, clip);
+    }
+
+    const expectedEntries = collectExpectedNarrationEntries(workspaceRoot);
+    expect(expectedEntries.length).toBeGreaterThan(0);
+    const expectedHashes = new Set(expectedEntries.map((entry) => entry.textHash));
+
+    const missingFromManifest = [];
+    for (const entry of expectedEntries) {
+      if (!manifestHashes.has(entry.textHash)) {
+        missingFromManifest.push({
+          source: entry.source,
+          hash: entry.textHash,
+          preview: entry.text.slice(0, 80),
+        });
+      }
+    }
+
+    const extraInManifest = [];
+    for (const hash of manifestHashes) {
+      if (!expectedHashes.has(hash)) {
+        const clip = manifestEntriesByHash.get(hash) || {};
+        extraInManifest.push({
+          source: String(clip.source || ''),
+          hash,
+          preview: String(clip.preview || ''),
+        });
+      }
+    }
+
+    // Detect drift where hash/file remains in manifest but no matching source text exists anymore.
+    expect(missingFromManifest, 'Missing narration hashes in manifest').toEqual([]);
+    expect(extraInManifest, 'Stale or drifted narration hashes found in manifest').toEqual([]);
+
+    const expectedHashesBySource = new Map();
+    for (const entry of expectedEntries) {
+      if (!expectedHashesBySource.has(entry.source)) {
+        expectedHashesBySource.set(entry.source, new Set());
+      }
+      expectedHashesBySource.get(entry.source).add(entry.textHash);
+    }
+
+    const sourceDrift = [];
+    for (const clip of clips) {
+      const hash = String((clip && clip.textHash) || '').trim().toLowerCase();
+      const source = String((clip && clip.source) || '').trim();
+      if (!hash || !source) continue;
+
+      const validHashesForSource = expectedHashesBySource.get(source);
+      if (!validHashesForSource) {
+        sourceDrift.push({
+          source,
+          hash,
+          reason: 'source-not-found-in-current-narration-inputs',
+        });
+        continue;
+      }
+
+      if (!validHashesForSource.has(hash)) {
+        sourceDrift.push({
+          source,
+          hash,
+          reason: 'hash-does-not-match-current-source-text',
+        });
+      }
+    }
+
+    expect(sourceDrift, 'Narration source/hash drift detected in manifest').toEqual([]);
   });
 
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
@@ -1672,6 +1994,149 @@ test.describe('StitchLab regressions', () => {
     expect(narrationProbe.hasNarration).toBe(true);
     expect(narrationProbe.includesParagraphText).toBe(true);
     expect(narrationProbe.includesFigureCaptionText).toBe(false);
+  });
+
+  test('about narration resolves from file even when about panel was never opened', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const narrationProbe = await page.evaluate(async () => {
+      try {
+        const text = await window.getExperienceNarrationScript('stitching');
+        const normalized = String(text || '');
+        return {
+          success: normalized.length > 0,
+          includesParagraphText: normalized.indexOf('Curve stitching is a special mathematical art') >= 0,
+          includesFigureCaptionText: normalized.indexOf('Cardioid Stitching from the Seattle Universal Math Museum (SUMM) - full view.') >= 0,
+          error: ''
+        };
+      } catch (error) {
+        return {
+          success: false,
+          includesParagraphText: false,
+          includesFigureCaptionText: false,
+          error: String((error && error.message) || error || 'unknown')
+        };
+      }
+    });
+
+    expect(narrationProbe.success, narrationProbe.error || 'Expected narration extraction to succeed').toBe(true);
+    expect(narrationProbe.includesParagraphText).toBe(true);
+    expect(narrationProbe.includesFigureCaptionText).toBe(false);
+  });
+
+  test('about narration text hashes resolve to prebuilt manifest clips', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(async () => {
+      function normalize(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim();
+      }
+
+      async function sha256Hex(value) {
+        const encoded = new TextEncoder().encode(value);
+        const digest = await crypto.subtle.digest('SHA-256', encoded);
+        return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      const manifestResponse = await fetch('/assets/audio/narration/manifest.json', { cache: 'no-store' });
+      if (!manifestResponse.ok) {
+        return { ok: false, error: 'manifest-load-failed:' + manifestResponse.status };
+      }
+      const manifest = await manifestResponse.json();
+      const clipHashes = new Set((manifest.clips || []).map((clip) => String((clip && clip.textHash) || '').trim().toLowerCase()).filter(Boolean));
+
+      const experienceIds = Object.keys(window.EXPERIENCE_LIBRARY || {});
+      const results = [];
+      for (const experienceId of experienceIds) {
+        const exp = window.EXPERIENCE_LIBRARY[experienceId] || {};
+        if (!exp.aboutHtmlPath) continue;
+
+        let script = '';
+        let error = '';
+        try {
+          script = await window.getExperienceNarrationScript(experienceId);
+        } catch (err) {
+          error = String((err && err.message) || err || 'unknown');
+        }
+
+        const normalized = normalize(script);
+        const hash = normalized ? await sha256Hex(normalized) : '';
+        results.push({
+          experienceId,
+          aboutPath: String(exp.aboutHtmlPath || ''),
+          error,
+          charCount: normalized.length,
+          hash,
+          hasManifestHash: !!hash && clipHashes.has(hash)
+        });
+      }
+
+      return {
+        ok: true,
+        results,
+        missing: results.filter((entry) => !entry.error && entry.hash && !entry.hasManifestHash),
+        failures: results.filter((entry) => !!entry.error || !entry.hash)
+      };
+    });
+
+    expect(probe.ok, probe.error || 'Expected manifest + narration hash probe to complete').toBe(true);
+    expect(probe.failures, 'About narration extraction failures').toEqual([]);
+    expect(probe.missing, 'About narration hashes missing from manifest').toEqual([]);
+  });
+
+  test('about narration hash remains manifest-aligned after about iframe cache priming', async ({ page }) => {
+    await page.goto('/stitchlab.html?experience=stitching');
+
+    await page.locator('#experience-info-toggle').click();
+    await expect(page.locator('#experience-info-html')).toBeVisible();
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const frame = document.getElementById('experience-info-html');
+        if (!frame) return false;
+        try {
+          const doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+          return !!(doc && doc.querySelector('p'));
+        } catch (_error) {
+          return false;
+        }
+      });
+    }).toBe(true);
+
+    const probe = await page.evaluate(async () => {
+      function normalize(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim();
+      }
+      async function sha256Hex(value) {
+        const encoded = new TextEncoder().encode(value);
+        const digest = await crypto.subtle.digest('SHA-256', encoded);
+        return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      const manifestResponse = await fetch('/assets/audio/narration/manifest.json', { cache: 'no-store' });
+      if (!manifestResponse.ok) {
+        return { ok: false, error: 'manifest-load-failed:' + manifestResponse.status };
+      }
+      const manifest = await manifestResponse.json();
+      const entry = (manifest.clips || []).find((clip) => String((clip && clip.source) || '') === 'docs/about/stitching.html');
+      if (!entry) {
+        return { ok: false, error: 'missing-stitching-about-entry' };
+      }
+
+      const script = await window.getExperienceNarrationScript('stitching');
+      const normalized = normalize(script);
+      const hash = normalized ? await sha256Hex(normalized) : '';
+      return {
+        ok: true,
+        runtimeHash: hash,
+        manifestHash: String(entry.textHash || '').toLowerCase(),
+        runtimeLength: normalized.length,
+        manifestLength: Number(entry.charCount || 0)
+      };
+    });
+
+    expect(probe.ok, probe.error || 'Expected hash probe to complete').toBe(true);
+    expect(probe.runtimeHash).toBe(probe.manifestHash);
+    expect(probe.runtimeLength).toBe(probe.manifestLength);
   });
 
   test('about and onboarding Hear this buttons include speaker icon', async ({ page }) => {

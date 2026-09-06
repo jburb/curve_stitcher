@@ -78,6 +78,97 @@ function extractNarrationParagraphsFromDocument(doc) {
   return extracted;
 }
 
+function extractNarrationParagraphsFromHtmlString(htmlText, sourcePath) {
+  var rawHtml = String(htmlText || '');
+  if (!rawHtml) return '';
+
+  function decodeHtmlEntities(value) {
+    return String(value || '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>');
+  }
+
+  function stripHtmlTags(value) {
+    return String(value || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ');
+  }
+
+  function normalizeText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  var paragraphMatches = Array.from(rawHtml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi));
+  var parts = [];
+  for (var i = 0; i < paragraphMatches.length; i++) {
+    var match = paragraphMatches[i];
+    var clean = normalizeText(decodeHtmlEntities(stripHtmlTags(match[1] || '')));
+    if (clean) parts.push(clean);
+  }
+
+  var extracted = normalizeText(parts.join('\n\n'));
+  narrationDebugLog('log', 'Extracted narration text from html string fallback.', {
+    sourcePath: String(sourcePath || ''),
+    textLength: extracted.length,
+    text: extracted
+  });
+  return extracted;
+}
+
+function loadNarrationTextFromAboutPathFetch(pathValue) {
+  return new Promise(function(resolve, reject) {
+    var resolvedPath = normalizeAllowedAboutDocPath(pathValue);
+    if (!resolvedPath) {
+      narrationDebugLog('warn', 'About fetch source rejected: invalid about path.', { path: pathValue });
+      reject(new Error('Invalid about html path'));
+      return;
+    }
+
+    narrationDebugLog('log', 'Trying narration source: about html fetch.', {
+      path: resolvedPath,
+      cacheMode: 'default'
+    });
+
+    fetch(resolvedPath, { cache: 'default' })
+      .then(function(response) {
+        if (!response || !response.ok) {
+          throw new Error('About doc fetch failed: ' + String((response && response.status) || 0));
+        }
+        narrationDebugLog('log', 'About html fetch succeeded.', {
+          path: resolvedPath,
+          status: response.status,
+          contentType: String((response.headers && response.headers.get && response.headers.get('content-type')) || '')
+        });
+        return response.text();
+      })
+      .then(function(htmlText) {
+        var extracted = extractNarrationParagraphsFromHtmlString(htmlText, resolvedPath);
+        var normalized = cacheAboutNarrationBridgeText(resolvedPath, extracted);
+        if (!normalized) {
+          throw new Error('Narration fetch fallback returned empty text');
+        }
+        narrationDebugLog('log', 'Narration source success: about html fetch.', {
+          path: resolvedPath,
+          textLength: normalized.length,
+          preview: normalized.slice(0, 160)
+        });
+        resolve(normalized);
+      })
+      .catch(function(error) {
+        narrationDebugLog('warn', 'Narration source failed: about html fetch.', {
+          path: resolvedPath,
+          error: String((error && error.message) || error || 'unknown error')
+        });
+        reject(error || new Error('Narration fetch fallback failed'));
+      });
+  });
+}
+
 function loadNarrationTextFromExperienceInfoFrame(pathValue) {
   return new Promise(function(resolve, reject) {
     narrationDebugLog('log', 'Trying narration source: experience info iframe.', { path: pathValue });
@@ -89,7 +180,9 @@ function loadNarrationTextFromExperienceInfoFrame(pathValue) {
     }
     if (!experienceInfoHtmlFrame) {
       narrationDebugLog('warn', 'Experience info iframe source unavailable: iframe element missing.');
-      reject(new Error('Narration info iframe unavailable'));
+      loadNarrationTextFromAboutPathFetch(resolvedPath).then(resolve).catch(function() {
+        reject(new Error('Narration info iframe unavailable'));
+      });
       return;
     }
 
@@ -237,7 +330,13 @@ function loadNarrationTextFromExperienceInfoFrame(pathValue) {
 
     window.setTimeout(function() {
       if (settled) return;
-      settleErr(new Error('Narration info iframe request timed out'));
+      loadNarrationTextFromAboutPathFetch(resolvedPath)
+        .then(function(textValue) {
+          settleOk(textValue);
+        })
+        .catch(function() {
+          settleErr(new Error('Narration info iframe request timed out'));
+        });
     }, 5000);
   });
 }
@@ -300,6 +399,8 @@ function normalizeLoadedAboutDocPath(pathValue) {
 var aboutNarrationBridgeCache = Object.create(null);
 var aboutNarrationBridgePendingByRequestId = Object.create(null);
 var aboutNarrationBridgeRequestCounter = 0;
+var aboutNarrationPrepareInFlightByPath = Object.create(null);
+var aboutNarrationPreparedByPath = Object.create(null);
 
 function cacheAboutNarrationBridgeText(pathValue, textValue) {
   var normalizedPath = normalizeLoadedAboutDocPath(pathValue || '');
@@ -307,7 +408,88 @@ function cacheAboutNarrationBridgeText(pathValue, textValue) {
   var normalizedText = String(textValue || '').trim();
   if (!normalizedText) return '';
   aboutNarrationBridgeCache[normalizedPath] = normalizedText;
+  prepareAboutNarrationTextInBackground(normalizedPath, normalizedText);
   return normalizedText;
+}
+
+function prepareAboutNarrationTextInBackground(pathValue, textValue) {
+  var normalizedPath = normalizeAllowedAboutDocPath(pathValue || '') || normalizeLoadedAboutDocPath(pathValue || '');
+  if (!normalizedPath) return;
+  if (aboutNarrationPreparedByPath[normalizedPath]) return;
+  if (aboutNarrationPrepareInFlightByPath[normalizedPath]) return;
+
+  var narrationText = String(textValue || aboutNarrationBridgeCache[normalizedPath] || '').replace(/\s+/g, ' ').trim();
+  if (!narrationText) return;
+
+  var tts = window.stitchlabTts;
+  if (!tts || typeof tts.prepare !== 'function') return;
+
+  aboutNarrationPrepareInFlightByPath[normalizedPath] = Promise.resolve(tts.prepare({ text: narrationText }))
+    .then(function(prepared) {
+      if (prepared) {
+        aboutNarrationPreparedByPath[normalizedPath] = true;
+      }
+    })
+    .catch(function() {
+      // Ignore warmup errors. Playback path still handles fallback.
+    })
+    .finally(function() {
+      delete aboutNarrationPrepareInFlightByPath[normalizedPath];
+    });
+}
+
+function scheduleCurrentExperienceAboutNarrationPreparation() {
+  if (!experienceInfoHtmlFrame) return;
+  var experience = getExperienceById(currentExperienceId);
+  if (!experience) return;
+
+  var expectedPath = normalizeAllowedAboutDocPath(experience.aboutHtmlPath || '');
+  if (!expectedPath) return;
+  if (aboutNarrationPreparedByPath[expectedPath] || aboutNarrationPrepareInFlightByPath[expectedPath]) {
+    return;
+  }
+
+  function runPreparation() {
+    var frameDoc = null;
+    try {
+      frameDoc = experienceInfoHtmlFrame.contentDocument || (experienceInfoHtmlFrame.contentWindow && experienceInfoHtmlFrame.contentWindow.document) || null;
+    } catch (_error) {
+      frameDoc = null;
+    }
+
+    var extractedText = '';
+    if (frameDoc) {
+      extractedText = extractNarrationParagraphsFromDocument(frameDoc);
+    }
+
+    if (extractedText) {
+      aboutNarrationBridgeCache[expectedPath] = extractedText;
+      prepareAboutNarrationTextInBackground(expectedPath, extractedText);
+      return;
+    }
+
+    var cachedText = String(aboutNarrationBridgeCache[expectedPath] || '').trim();
+    if (cachedText) {
+      prepareAboutNarrationTextInBackground(expectedPath, cachedText);
+      return;
+    }
+
+    requestNarrationTextFromAboutFrame(expectedPath)
+      .then(function(textValue) {
+        var normalized = cacheAboutNarrationBridgeText(expectedPath, textValue);
+        if (!normalized) return;
+        prepareAboutNarrationTextInBackground(expectedPath, normalized);
+      })
+      .catch(function() {
+        // Best-effort pre-prepare only.
+      });
+  }
+
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(runPreparation, { timeout: 1200 });
+  } else {
+    window.setTimeout(runPreparation, 0);
+  }
 }
 
 function requestNarrationTextFromAboutFrame(pathValue) {
@@ -383,7 +565,42 @@ var experienceNarrationFetchById = Object.create(null);
 var experienceNarrationRequestToken = 0;
 var experienceNarrationRequestInFlight = false;
 var experienceNarrationLastToggleAtMs = 0;
-var NARRATION_DEBUG = true;
+var NARRATION_DEBUG = false;
+
+function isNarrationDebugEnabledFromEnvironment() {
+  try {
+    var query = String(window.location && window.location.search ? window.location.search : '');
+    if (/(\?|&)debugNarration=1(&|$)/.test(query)) {
+      return true;
+    }
+  } catch (_error) {
+    // ignore
+  }
+
+  try {
+    return String(window.localStorage && window.localStorage.getItem('stitchlabNarrationDebug') || '') === '1';
+  } catch (_error) {
+    return false;
+  }
+}
+
+function setNarrationDebugEnabled(enabled) {
+  NARRATION_DEBUG = !!enabled;
+  try {
+    if (window.localStorage) {
+      if (NARRATION_DEBUG) {
+        window.localStorage.setItem('stitchlabNarrationDebug', '1');
+      } else {
+        window.localStorage.removeItem('stitchlabNarrationDebug');
+      }
+    }
+  } catch (_error) {
+    // ignore
+  }
+  narrationDebugLog('log', 'Narration debug mode changed.', { enabled: NARRATION_DEBUG });
+}
+
+NARRATION_DEBUG = isNarrationDebugEnabledFromEnvironment();
 
 function narrationDebugLog(level, message, details) {
   if (!NARRATION_DEBUG || !window.console) return;
@@ -394,6 +611,18 @@ function narrationDebugLog(level, message, details) {
     fn.call(console, '[Narration] ' + message, details);
   }
 }
+
+window.stitchlabNarrationDebug = {
+  isEnabled: function() {
+    return !!NARRATION_DEBUG;
+  },
+  enable: function() {
+    setNarrationDebugEnabled(true);
+  },
+  disable: function() {
+    setNarrationDebugEnabled(false);
+  }
+};
 var triangulaColorMode = 'band-1';
 var triangulaConstructionMode = 'shrink-duplicate';
 var triangulaStartCount = 1;
