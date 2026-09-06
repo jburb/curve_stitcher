@@ -163,6 +163,17 @@ This setup does not change runtime app behavior and should not be included in mo
 - If narration text changes in code/docs:
 	- changed text produces a new SHA-256 hash and therefore a new clip filename
 	- old clip files remain until manually cleaned up
+- Orphaned clip cleanup:
+	- `npm run setup:tts:prebuilt:prune` shows clip files that are not referenced by the manifest (dry run)
+	- `npm run setup:tts:prebuilt:prune:apply` deletes those orphaned files
+
+### Narration Integrity Tests
+
+- Playback path test confirms prebuilt clip playback succeeds when a clip exists.
+- Manifest integrity test verifies:
+	- every expected narration text hash exists in the manifest
+	- no stale manifest hashes remain after narration text changes
+	- each manifest `source` still maps to a matching hash in the current source text
 
 ### Narration Troubleshooting
 

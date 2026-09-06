@@ -38,7 +38,7 @@ function stripHtmlTags(value) {
     .replace(/<[^>]+>/g, ' ');
 }
 
-function collectExpectedNarrationTexts(workspaceRoot) {
+function collectExpectedNarrationEntries(workspaceRoot) {
   const collected = [];
 
   const splashHtmlPath = path.join(workspaceRoot, 'stitchlab.html');
@@ -46,7 +46,12 @@ function collectExpectedNarrationTexts(workspaceRoot) {
   const splashMatch = splashHtml.match(/<p\s+id="startup-splash-text"[^>]*>([\s\S]*?)<\/p>/i);
   if (splashMatch) {
     const splashText = normalizeNarrationText(decodeHtmlEntities(stripHtmlTags(splashMatch[1] || '')));
-    if (splashText) collected.push(splashText);
+    if (splashText) {
+      collected.push({
+        source: 'stitchlab.html#startup-splash-text',
+        text: splashText,
+      });
+    }
   }
 
   const onboardingPath = path.join(workspaceRoot, 'js/app/onboarding.js');
@@ -56,7 +61,12 @@ function collectExpectedNarrationTexts(workspaceRoot) {
   while (onboardingMatch) {
     const rawText = decodeEscapedString(onboardingMatch[2] || '');
     const normalizedText = normalizeNarrationText(rawText);
-    if (normalizedText) collected.push(normalizedText);
+    if (normalizedText) {
+      collected.push({
+        source: 'js/app/onboarding.js',
+        text: normalizedText,
+      });
+    }
     onboardingMatch = onboardingRegex.exec(onboardingSource);
   }
 
@@ -74,10 +84,29 @@ function collectExpectedNarrationTexts(workspaceRoot) {
       .map((m) => normalizeNarrationText(decodeHtmlEntities(stripHtmlTags(m[1] || ''))))
       .filter(Boolean);
     const joined = normalizeNarrationText(parts.join('\n\n'));
-    if (joined) collected.push(joined);
+    if (joined) {
+      collected.push({
+        source: aboutRelPath,
+        text: joined,
+      });
+    }
   }
 
-  return Array.from(new Set(collected));
+  const dedupByHash = new Map();
+  for (const entry of collected) {
+    const normalizedText = normalizeNarrationText(entry.text);
+    if (!normalizedText) continue;
+    const hash = sha256Hex(normalizedText);
+    if (!dedupByHash.has(hash)) {
+      dedupByHash.set(hash, {
+        source: entry.source,
+        text: normalizedText,
+        textHash: hash,
+      });
+    }
+  }
+
+  return Array.from(dedupByHash.values());
 }
 
 test.describe('StitchLab regressions', () => {
@@ -577,24 +606,80 @@ test.describe('StitchLab regressions', () => {
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const clips = Array.isArray(manifest && manifest.clips) ? manifest.clips : [];
-    const manifestHashes = new Set(
-      clips
-        .map((clip) => String((clip && clip.textHash) || '').trim().toLowerCase())
-        .filter(Boolean)
-    );
+    const manifestHashes = new Set();
+    const manifestEntriesByHash = new Map();
+    for (const clip of clips) {
+      const hash = String((clip && clip.textHash) || '').trim().toLowerCase();
+      if (!hash) continue;
+      manifestHashes.add(hash);
+      manifestEntriesByHash.set(hash, clip);
+    }
 
-    const expectedTexts = collectExpectedNarrationTexts(workspaceRoot);
-    expect(expectedTexts.length).toBeGreaterThan(0);
+    const expectedEntries = collectExpectedNarrationEntries(workspaceRoot);
+    expect(expectedEntries.length).toBeGreaterThan(0);
+    const expectedHashes = new Set(expectedEntries.map((entry) => entry.textHash));
 
-    const missing = [];
-    for (const text of expectedTexts) {
-      const hash = sha256Hex(normalizeNarrationText(text));
-      if (!manifestHashes.has(hash)) {
-        missing.push({ hash, preview: text.slice(0, 80) });
+    const missingFromManifest = [];
+    for (const entry of expectedEntries) {
+      if (!manifestHashes.has(entry.textHash)) {
+        missingFromManifest.push({
+          source: entry.source,
+          hash: entry.textHash,
+          preview: entry.text.slice(0, 80),
+        });
       }
     }
 
-    expect(missing, 'Missing narration hashes in manifest').toEqual([]);
+    const extraInManifest = [];
+    for (const hash of manifestHashes) {
+      if (!expectedHashes.has(hash)) {
+        const clip = manifestEntriesByHash.get(hash) || {};
+        extraInManifest.push({
+          source: String(clip.source || ''),
+          hash,
+          preview: String(clip.preview || ''),
+        });
+      }
+    }
+
+    // Detect drift where hash/file remains in manifest but no matching source text exists anymore.
+    expect(missingFromManifest, 'Missing narration hashes in manifest').toEqual([]);
+    expect(extraInManifest, 'Stale or drifted narration hashes found in manifest').toEqual([]);
+
+    const expectedHashesBySource = new Map();
+    for (const entry of expectedEntries) {
+      if (!expectedHashesBySource.has(entry.source)) {
+        expectedHashesBySource.set(entry.source, new Set());
+      }
+      expectedHashesBySource.get(entry.source).add(entry.textHash);
+    }
+
+    const sourceDrift = [];
+    for (const clip of clips) {
+      const hash = String((clip && clip.textHash) || '').trim().toLowerCase();
+      const source = String((clip && clip.source) || '').trim();
+      if (!hash || !source) continue;
+
+      const validHashesForSource = expectedHashesBySource.get(source);
+      if (!validHashesForSource) {
+        sourceDrift.push({
+          source,
+          hash,
+          reason: 'source-not-found-in-current-narration-inputs',
+        });
+        continue;
+      }
+
+      if (!validHashesForSource.has(hash)) {
+        sourceDrift.push({
+          source,
+          hash,
+          reason: 'hash-does-not-match-current-source-text',
+        });
+      }
+    }
+
+    expect(sourceDrift, 'Narration source/hash drift detected in manifest').toEqual([]);
   });
 
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
