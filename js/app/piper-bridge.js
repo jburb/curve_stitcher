@@ -1,12 +1,3 @@
-const LOCAL_VOICE_MODEL_ID = 'en_US-hfc_female-medium';
-const RECOGNIZED_VOICE_IDS = {
-  'hfc_female [medium]': LOCAL_VOICE_MODEL_ID,
-  'hfc_female medium': LOCAL_VOICE_MODEL_ID,
-  'hfc_femail [medium]': LOCAL_VOICE_MODEL_ID,
-  'hfc_femail medium': LOCAL_VOICE_MODEL_ID,
-  [LOCAL_VOICE_MODEL_ID]: LOCAL_VOICE_MODEL_ID,
-};
-
 function resolveBridgeScriptUrl() {
   if (document.currentScript && document.currentScript.src) {
     return document.currentScript.src;
@@ -29,248 +20,239 @@ function resolveAssetUrl(relativePath) {
   return new URL(relativePath, APP_BASE_URL).toString();
 }
 
-const ONNX_BASE = resolveAssetUrl('assets/tts/runtime/onnx/');
-const PHONEMIZE_BASE = resolveAssetUrl('assets/tts/runtime/piper/');
-const MODEL_BASE = resolveAssetUrl('assets/tts/models/');
-const REQUIRED_MODEL_JSON_PATH = resolveAssetUrl('assets/tts/models/en/en_US/hfc_female/medium/en_US-hfc_female-medium.onnx.json');
+const MANIFEST_URL = resolveAssetUrl('assets/tts/prebuilt/manifest.json');
 
-let enginePromise = null;
+let manifestPromise = null;
+let manifestCache = null;
 let activeAudio = null;
-let activeObjectUrl = null;
 let playbackRequestId = 0;
 let lastBridgeError = null;
-let piperApiPromise = null;
-let preparedGenerationByKey = Object.create(null);
-const PIPER_TARGET_CHUNK_CHARS = 260;
-const PIPER_MAX_CHUNK_CHARS = 420;
+const preparedClipUrlByHash = Object.create(null);
+const hashByText = Object.create(null);
 
-function withNativeSymbolScope(work) {
-  var nativeSymbol = window.__stitchlabNativeSymbol;
-  if (!nativeSymbol || typeof nativeSymbol.for !== 'function') {
-    return Promise.resolve().then(work);
-  }
-
-  var originalSymbol = window.Symbol;
-  window.Symbol = nativeSymbol;
-
-  return Promise.resolve()
-    .then(work)
-    .finally(function() {
-      window.Symbol = originalSymbol;
-    });
-}
-
-async function loadPiperApi() {
-  if (!piperApiPromise) {
-    piperApiPromise = withNativeSymbolScope(function() {
-      return import('../vendor/piper-tts-web.js');
-    });
-  }
-  return piperApiPromise;
-}
-
-function normalizeVoiceId(requestedVoiceId) {
-  const normalized = String(requestedVoiceId || '').trim().toLowerCase();
-  return RECOGNIZED_VOICE_IDS[normalized] || LOCAL_VOICE_MODEL_ID;
+function normalizeText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
 function cleanupActiveAudio() {
-  if (activeAudio) {
-    activeAudio.onended = null;
-    activeAudio.onerror = null;
-    activeAudio.pause();
-    activeAudio.src = '';
-    activeAudio = null;
-  }
-  if (activeObjectUrl) {
-    URL.revokeObjectURL(activeObjectUrl);
-    activeObjectUrl = null;
-  }
+  if (!activeAudio) return;
+  activeAudio.onended = null;
+  activeAudio.onerror = null;
+  activeAudio.pause();
+  activeAudio.src = '';
+  activeAudio = null;
 }
 
-function splitTextIntoChunks(text, options) {
-  options = options || {};
-  var preferFastStart = options.preferFastStart !== false;
-  var normalized = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!normalized) return [];
+function normalizeManifest(rawManifest) {
+  var manifest = {
+    byHash: Object.create(null),
+    byId: Object.create(null),
+    clipCount: 0,
+  };
 
-  var sentenceLike = normalized.match(/[^.!?]+(?:[.!?]+|$)/g) || [normalized];
-  var sentences = [];
-  for (var i = 0; i < sentenceLike.length; i++) {
-    var sentence = String(sentenceLike[i] || '').replace(/\s+/g, ' ').trim();
-    if (!sentence) continue;
-    sentences.push(sentence);
-  }
+  var clips = rawManifest && Array.isArray(rawManifest.clips) ? rawManifest.clips : [];
+  for (var i = 0; i < clips.length; i++) {
+    var clip = clips[i] || {};
+    var textHash = String(clip.textHash || '').trim().toLowerCase();
+    var filePath = String(clip.file || '').trim();
+    if (!textHash || !filePath) continue;
 
-  var chunks = [];
-  var current = '';
-  var startIndex = 0;
-
-  if (preferFastStart && sentences.length) {
-    // Keep the first chunk as a single complete sentence to minimize start delay.
-    chunks.push(sentences[0]);
-    startIndex = 1;
-  }
-
-  for (var j = startIndex; j < sentences.length; j++) {
-    var nextSentence = sentences[j];
-    var candidate = current ? current + ' ' + nextSentence : nextSentence;
-    if (!current) {
-      current = nextSentence;
-      continue;
-    }
-
-    if (candidate.length <= PIPER_MAX_CHUNK_CHARS) {
-      current = candidate;
-      if (current.length >= PIPER_TARGET_CHUNK_CHARS) {
-        chunks.push(current);
-        current = '';
-      }
-      continue;
-    }
-
-    chunks.push(current);
-    current = nextSentence;
-    if (current.length >= PIPER_MAX_CHUNK_CHARS) {
-      chunks.push(current);
-      current = '';
-    }
-  }
-
-  if (current) {
-    chunks.push(current);
-  }
-
-  return chunks;
-}
-
-function generateChunk(engine, text, modelId) {
-  return withNativeSymbolScope(function() {
-    return engine.generate(text, modelId, 0);
-  });
-}
-
-function getPreparationKey(text, modelId) {
-  return modelId + '::' + text;
-}
-
-function playGeneratedAudio(file, requestId, payload) {
-  var objectUrl = URL.createObjectURL(file);
-  var audio = new Audio();
-  activeAudio = audio;
-  activeObjectUrl = objectUrl;
-
-  return new Promise((resolve, reject) => {
-    audio.onended = function() {
-      cleanupActiveAudio();
-      resolve();
+    var normalized = {
+      id: clip.id ? String(clip.id) : '',
+      textHash: textHash,
+      file: filePath,
+      url: new URL(filePath, MANIFEST_URL).toString(),
     };
 
-    audio.onerror = function() {
-      const error = new Error('Piper audio playback failed.');
-      if (requestId === playbackRequestId && typeof payload.onError === 'function') {
-        payload.onError(error);
-      }
-      cleanupActiveAudio();
-      reject(error);
-    };
+    manifest.byHash[textHash] = normalized;
+    if (normalized.id) {
+      manifest.byId[normalized.id] = normalized;
+    }
+  }
 
-    audio.src = objectUrl;
-    audio.play().catch((error) => {
-      if (requestId === playbackRequestId && typeof payload.onError === 'function') {
-        payload.onError(error);
-      }
-      cleanupActiveAudio();
-      reject(error);
-    });
-  });
+  manifest.clipCount = Object.keys(manifest.byHash).length;
+  return manifest;
 }
 
-async function ensureEngine() {
-  if (enginePromise) return enginePromise;
-
-  enginePromise = Promise.resolve().then(async () => {
-    const piperApi = await loadPiperApi();
-    return new piperApi.PiperWebEngine({
-      onnxRuntime: new piperApi.OnnxWebRuntime({
-        basePath: ONNX_BASE,
-      }),
-      phonemizeRuntime: new piperApi.PhonemizeWebRuntime({
-        basePath: PHONEMIZE_BASE,
-      }),
-      voiceProvider: new piperApi.RemoteVoiceProvider({
-        baseUrl: MODEL_BASE,
-      }),
-    });
-  }).catch((error) => {
-    lastBridgeError = error;
-    throw error;
-  });
-
-  return enginePromise;
+async function loadManifest() {
+  if (manifestCache) return manifestCache;
+  if (!manifestPromise) {
+    manifestPromise = fetch(MANIFEST_URL, { cache: 'no-store' })
+      .then(function(response) {
+        if (!response.ok) {
+          throw new Error('Narration manifest missing at ' + MANIFEST_URL);
+        }
+        return response.json();
+      })
+      .then(function(rawManifest) {
+        manifestCache = normalizeManifest(rawManifest);
+        return manifestCache;
+      })
+      .catch(function(error) {
+        lastBridgeError = error;
+        throw error;
+      });
+  }
+  return manifestPromise;
 }
 
-async function verifyAssetsAvailable() {
-  const response = await fetch(REQUIRED_MODEL_JSON_PATH, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error('Missing local Piper model json at ' + REQUIRED_MODEL_JSON_PATH);
+function fallbackHash(text) {
+  var hash = 2166136261;
+  for (var i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+  return ('00000000' + (hash >>> 0).toString(16)).slice(-8);
+}
+
+async function hashText(text) {
+  var normalized = normalizeText(text);
+  if (!normalized) return '';
+  if (hashByText[normalized]) return hashByText[normalized];
+
+  var hashValue = '';
+  if (window.crypto && window.crypto.subtle && typeof TextEncoder !== 'undefined') {
+    try {
+      var encoded = new TextEncoder().encode(normalized);
+      var digest = await window.crypto.subtle.digest('SHA-256', encoded);
+      var bytes = new Uint8Array(digest);
+      var hex = '';
+      for (var i = 0; i < bytes.length; i++) {
+        hex += bytes[i].toString(16).padStart(2, '0');
+      }
+      hashValue = hex;
+    } catch (_error) {
+      hashValue = fallbackHash(normalized);
+    }
+  } else {
+    hashValue = fallbackHash(normalized);
+  }
+
+  hashByText[normalized] = hashValue;
+  return hashValue;
+}
+
+async function resolveClipEntry(payload) {
+  var manifest = await loadManifest();
+  var clipId = payload && payload.clipId ? String(payload.clipId).trim() : '';
+  if (clipId && manifest.byId[clipId]) {
+    return manifest.byId[clipId];
+  }
+
+  var text = normalizeText(payload && payload.text ? payload.text : '');
+  if (!text) return null;
+
+  var textHash = await hashText(text);
+  if (!textHash) return null;
+  return manifest.byHash[textHash] || null;
+}
+
+function cachePreparedClipUrl(textHash, objectUrl) {
+  var key = String(textHash || '').trim().toLowerCase();
+  if (!key || !objectUrl) return;
+
+  var previous = preparedClipUrlByHash[key];
+  if (previous && previous !== objectUrl) {
+    try {
+      URL.revokeObjectURL(previous);
+    } catch (_error) {
+      // Ignore object URL cleanup failures.
+    }
+  }
+  preparedClipUrlByHash[key] = objectUrl;
+}
+
+async function prepare(payload) {
+  try {
+    var clip = await resolveClipEntry(payload || {});
+    if (!clip) {
+      return false;
+    }
+
+    if (preparedClipUrlByHash[clip.textHash]) {
+      return true;
+    }
+
+    var response = await fetch(clip.url, { cache: 'force-cache' });
+    if (!response.ok) {
+      throw new Error('Narration audio clip missing at ' + clip.url);
+    }
+    var blob = await response.blob();
+    cachePreparedClipUrl(clip.textHash, URL.createObjectURL(blob));
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function prewarm() {
+  try {
+    await loadManifest();
+    return true;
+  } catch (_error) {
+    return false;
   }
 }
 
 async function speak(payload) {
-  const text = String(payload && payload.text ? payload.text : '').replace(/\s+/g, ' ').trim();
+  var text = normalizeText(payload && payload.text ? payload.text : '');
   if (!text) {
-    if (typeof payload.onEnd === 'function') payload.onEnd();
+    if (payload && typeof payload.onEnd === 'function') {
+      payload.onEnd();
+    }
     return;
   }
 
-  const localRequestId = ++playbackRequestId;
+  var localRequestId = ++playbackRequestId;
   cleanupActiveAudio();
 
   try {
-    const engine = await ensureEngine();
-    const modelId = normalizeVoiceId(payload.voiceId);
-    const chunks = splitTextIntoChunks(text, { preferFastStart: true });
-    const firstChunkText = chunks[0];
-    const firstPreparationKey = getPreparationKey(firstChunkText, modelId);
-    let currentGeneratedPromise = preparedGenerationByKey[firstPreparationKey];
-    if (currentGeneratedPromise) {
-      delete preparedGenerationByKey[firstPreparationKey];
-    } else {
-      currentGeneratedPromise = generateChunk(engine, firstChunkText, modelId);
+    var clip = await resolveClipEntry(payload || {});
+    if (!clip) {
+      throw new Error('No prebuilt narration clip found for text.');
     }
-    let currentGenerated = await currentGeneratedPromise;
-    let nextGeneratedPromise = null;
 
-    for (var i = 0; i < chunks.length; i++) {
-      if (localRequestId !== playbackRequestId) {
-        return;
-      }
+    var clipSource = preparedClipUrlByHash[clip.textHash] || clip.url;
+    var audio = new Audio();
+    activeAudio = audio;
 
-      if (i + 1 < chunks.length) {
-        nextGeneratedPromise = generateChunk(engine, chunks[i + 1], modelId);
-      } else {
-        nextGeneratedPromise = null;
-      }
+    await new Promise(function(resolve, reject) {
+      audio.onended = function() {
+        if (localRequestId !== playbackRequestId) {
+          cleanupActiveAudio();
+          resolve();
+          return;
+        }
+        cleanupActiveAudio();
+        if (payload && typeof payload.onEnd === 'function') {
+          payload.onEnd();
+        }
+        resolve();
+      };
 
-      await playGeneratedAudio(currentGenerated.file, localRequestId, payload);
-      if (localRequestId !== playbackRequestId) {
-        return;
-      }
+      audio.onerror = function() {
+        var error = new Error('Prebuilt narration audio playback failed.');
+        if (localRequestId === playbackRequestId && payload && typeof payload.onError === 'function') {
+          payload.onError(error);
+        }
+        cleanupActiveAudio();
+        reject(error);
+      };
 
-      if (nextGeneratedPromise) {
-        currentGenerated = await nextGeneratedPromise;
-      }
-    }
+      audio.src = clipSource;
+      audio.play().catch(function(error) {
+        if (localRequestId === playbackRequestId && payload && typeof payload.onError === 'function') {
+          payload.onError(error);
+        }
+        cleanupActiveAudio();
+        reject(error);
+      });
+    });
 
     lastBridgeError = null;
-    if (localRequestId === playbackRequestId && typeof payload.onEnd === 'function') {
-      payload.onEnd();
-    }
   } catch (error) {
     lastBridgeError = error;
-    console.warn('Piper bridge speak failed.', error);
-    if (localRequestId === playbackRequestId && typeof payload.onError === 'function') {
+    if (localRequestId === playbackRequestId && payload && typeof payload.onError === 'function') {
       payload.onError(error);
     }
     throw error;
@@ -282,48 +264,6 @@ function cancel() {
   cleanupActiveAudio();
 }
 
-async function prewarm(payload) {
-  try {
-    await verifyAssetsAvailable();
-    await ensureEngine();
-    normalizeVoiceId(payload && payload.voiceId);
-    return true;
-  } catch (_error) {
-    return false;
-  }
-}
-
-async function prepare(payload) {
-  try {
-    const text = String(payload && payload.text ? payload.text : '').replace(/\s+/g, ' ').trim();
-    if (!text) {
-      return prewarm(payload);
-    }
-
-    const modelId = normalizeVoiceId(payload && payload.voiceId);
-    const chunks = splitTextIntoChunks(text, { preferFastStart: true });
-    if (!chunks.length) {
-      return prewarm(payload);
-    }
-
-    await verifyAssetsAvailable();
-    const engine = await ensureEngine();
-    const key = getPreparationKey(chunks[0], modelId);
-    if (!preparedGenerationByKey[key]) {
-      preparedGenerationByKey[key] = generateChunk(engine, chunks[0], modelId)
-        .catch(function(error) {
-          delete preparedGenerationByKey[key];
-          throw error;
-        });
-    }
-
-    await preparedGenerationByKey[key];
-    return true;
-  } catch (_error) {
-    return false;
-  }
-}
-
 window.stitchlabPiperTts = {
   speak,
   cancel,
@@ -332,14 +272,12 @@ window.stitchlabPiperTts = {
   getStatus() {
     return {
       bridgeScriptUrl: resolveBridgeScriptUrl(),
-      modelId: LOCAL_VOICE_MODEL_ID,
+      manifestUrl: MANIFEST_URL,
+      manifestLoaded: !!manifestCache,
+      clipCount: manifestCache ? manifestCache.clipCount : 0,
+      preparedClipCount: Object.keys(preparedClipUrlByHash).length,
       lastError: lastBridgeError ? String(lastBridgeError && lastBridgeError.message ? lastBridgeError.message : lastBridgeError) : '',
-      hasEnginePromise: !!enginePromise,
-      nativeSymbolForType: window.__stitchlabNativeSymbol ? typeof window.__stitchlabNativeSymbol.for : 'missing',
-      globalSymbolForType: typeof Symbol.for,
-      chunkMode: 'sentence-group',
-      targetChunkChars: PIPER_TARGET_CHUNK_CHARS,
-      maxChunkChars: PIPER_MAX_CHUNK_CHARS,
+      engine: 'prebuilt-audio',
     };
   },
 };

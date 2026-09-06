@@ -7,8 +7,8 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 
 | Load order | Script | Primary ownership | Notes |
 | --- | --- | --- | --- |
-| 1 | js/app/piper-bridge.js (module) | Browser-side Piper WASM bridge registration (`window.stitchlabPiperTts`) | Loads only when local WASM/model assets are present. |
-| 2 | js/app/tts.js | Shared narration speech engine adapter (Piper-first with offline-safe fallback) | Central voice/runtime contract for all app TTS entry points. |
+| 1 | js/app/piper-bridge.js (module) | Prebuilt narration audio bridge registration (`window.stitchlabPiperTts`) | Resolves narration text to static audio assets via `assets/tts/prebuilt/manifest.json`. |
+| 2 | js/app/tts.js | Shared narration speech adapter (prebuilt-audio first with offline-safe fallback) | Central voice/runtime contract for all app TTS entry points. |
 | 3 | js/app/onboarding.js | Onboarding state, overlays, hint/tour flow, onboarding narration controls | Keeps onboarding-specific UI behavior isolated from core drawing logic. |
 | 4 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
 | 5 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
@@ -99,8 +99,9 @@ Current covered checks:
 
 1. Install dependencies:
 	- `npm install`
-1. Stage Piper WASM runtime + model assets (required for offline Piper voice playback):
-	- `npm run setup:tts:piper`
+1. Generate/update prebuilt narration manifest (and optionally audio clips):
+	- `npm run setup:tts:prebuilt:manifest` (manifest only)
+	- `npm run setup:tts:prebuilt` (manifest + audio via local `piper` CLI)
 2. Install Playwright browser (Chromium):
 	- `npm run test:e2e:install`
 3. Run tests:
@@ -121,28 +122,29 @@ Optional:
 
 This setup does not change runtime app behavior and should not be included in mobile/desktop packaged artifacts.
 
-### Piper TTS Voice Contract
+### Prebuilt Narration Audio Contract
 
-- All app narration now routes through js/app/tts.js and prefers Piper voice `hfc_female [medium]`.
-- For packaged mobile/offline builds, expose a bridge at `window.stitchlabPiperTts` with:
-	- `speak({ text, voiceId, rate, pitch, volume, onEnd, onError })`
-	- Optional: `cancel()` and `prewarm({ voiceId })`
-- If this bridge is absent, StitchLab falls back to Web Speech synthesis to preserve compatibility in plain browser runs.
+- All app narration routes through js/app/tts.js and first attempts static clip playback through `window.stitchlabPiperTts`.
+- `window.stitchlabPiperTts` resolves clips from `assets/tts/prebuilt/manifest.json` using normalized text SHA-256 keys.
+- If a matching clip is missing (or fails to play), StitchLab automatically falls back to Web Speech synthesis.
 
-### Piper WASM Assets
+### Prebuilt Narration Assets
 
-- `npm run setup:tts:piper` performs all staging required for browser-side WASM usage:
-	- Copies `piper-tts-web` runtime bundle to `js/vendor/piper-tts-web.js`.
-	- Copies ONNX and phonemize WASM runtime files to `assets/tts/runtime/`.
-	- Downloads the preferred voice model `en_US-hfc_female-medium` into `assets/tts/models/en/en_US/hfc_female/medium/`.
-- Use `npm run setup:tts:piper:force` to refresh/re-download staged model assets.
-- The bridge in `js/app/piper-bridge.js` activates only when local model assets are present, otherwise narration safely falls back to Web Speech.
+- Build script: `scripts/build-prebuilt-narration.mjs`.
+- Prerequisite for clip generation: install the `piper` CLI and ensure it is on PATH.
+- Commands:
+	- `npm run setup:tts:prebuilt:manifest` generates only `assets/tts/prebuilt/manifest.json`.
+	- `npm run setup:tts:prebuilt` generates/refreshes WAV clips in `assets/tts/prebuilt/audio/` using local `piper` CLI and the configured model path.
+	- `npm run setup:tts:prebuilt:force` regenerates all clips.
+- Manifest lookup format:
+	- `textHash` is computed from normalized narration text (collapse whitespace + trim).
+	- each clip entry points to a static file path under `assets/tts/prebuilt/audio/`.
 
-### Piper Troubleshooting
+### Narration Troubleshooting
 
-- If `window.stitchlabPiperTts` is `undefined`, ensure you opened `stitchlab.html` (not a stale cached page) and hard-refresh after pulling latest changes.
-- If `window.stitchlabPiperTts.getStatus().lastError` is populated, Piper failed and narration will fall back to browser speech.
-- Local `file://` runs can still block WASM/model asset loading in some browsers. Prefer serving over HTTP (for example, `python3 -m http.server 8000` and opening `http://localhost:8000/stitchlab.html`).
+- If `window.stitchlabPiperTts` is undefined, hard-refresh `stitchlab.html` after pulling latest changes.
+- If `window.stitchlabPiperTts.getStatus().lastError` is populated, static clip lookup/playback failed and narration should fall back to browser speech.
+- If clips are missing, run `npm run setup:tts:prebuilt` and verify audio files exist under `assets/tts/prebuilt/audio/`.
 
 ## Adding A New Experience (Example: Zoobaz)
 
@@ -308,7 +310,7 @@ This section describes the practical steps for adding a new experience named zoo
 ## TODO Backlog
 
 1. **Use better voice for narration**:
-     - Top candidate TTS lib is Piper TTS
+	- Top candidate offline voice synthesis tool is Piper (build-time only)
      - Top voice candidates from piper are: aru-medium 09, vctk-medium p282, vctk-medium p318, or hfc_female [medium].
      - Determine whether to pre-record passages and host their files, or use dynamic engine execution.
 

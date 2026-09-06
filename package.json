@@ -2,8 +2,9 @@
   "name": "curve-stitcher-e2e",
   "private": true,
   "scripts": {
-    "setup:tts:piper": "node scripts/setup-piper-wasm.mjs",
-    "setup:tts:piper:force": "node scripts/setup-piper-wasm.mjs --force",
+    "setup:tts:prebuilt": "node scripts/build-prebuilt-narration.mjs",
+    "setup:tts:prebuilt:manifest": "node scripts/build-prebuilt-narration.mjs --manifest-only",
+    "setup:tts:prebuilt:force": "node scripts/build-prebuilt-narration.mjs --force",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
@@ -11,8 +12,5 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"
-  },
-  "dependencies": {
-    "piper-tts-web": "^1.1.2"
   }
 }

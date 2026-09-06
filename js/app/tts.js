@@ -17,7 +17,7 @@
       .trim();
   }
 
-  function getPiperBridge() {
+  function getNarrationBridge() {
     if (global.stitchlabPiperTts && typeof global.stitchlabPiperTts.speak === 'function') {
       return global.stitchlabPiperTts;
     }
@@ -75,7 +75,7 @@
       return;
     }
 
-    if (request.engine === 'piper') {
+    if (request.engine === 'prebuiltAudio') {
       if (request.bridge && typeof request.bridge.cancel === 'function') {
         try {
           request.bridge.cancel();
@@ -90,11 +90,11 @@
   }
 
   function supportsNarration() {
-    return !!getPiperBridge() || hasWebSpeechSupport();
+    return !!getNarrationBridge() || hasWebSpeechSupport();
   }
 
   function prewarm() {
-    var bridge = getPiperBridge();
+    var bridge = getNarrationBridge();
     if (bridge && typeof bridge.prewarm === 'function') {
       try {
         var maybePromise = bridge.prewarm({ voiceId: PREFERRED_PIPER_VOICE_ID });
@@ -124,7 +124,7 @@
 
   function prepare(options) {
     options = options || {};
-    var bridge = getPiperBridge();
+    var bridge = getNarrationBridge();
     if (bridge && typeof bridge.prepare === 'function') {
       try {
         return Promise.resolve(bridge.prepare({
@@ -141,18 +141,18 @@
     return Promise.resolve(prewarm());
   }
 
-  function speakWithPiperBridge(text, options, requestId, bridge, onPiperFailure) {
+  function speakWithNarrationBridge(text, options, requestId, bridge, onBridgeFailure) {
     var failureHandled = false;
 
-    function handlePiperFailure(error) {
+    function handleBridgeFailure(error) {
       if (failureHandled) return;
       failureHandled = true;
       if (!activeRequest || activeRequest.id !== requestId) return;
 
       var fallbackStarted = false;
-      if (typeof onPiperFailure === 'function') {
+      if (typeof onBridgeFailure === 'function') {
         try {
-          fallbackStarted = !!onPiperFailure(error || new Error('Piper speech failed.'));
+          fallbackStarted = !!onBridgeFailure(error || new Error('Narration audio playback failed.'));
         } catch (_fallbackError) {
           fallbackStarted = false;
         }
@@ -164,7 +164,7 @@
 
       clearActiveRequestIfMatches(requestId);
       if (typeof options.onerror === 'function') {
-        options.onerror(error || new Error('Piper speech failed.'));
+        options.onerror(error || new Error('Narration audio playback failed.'));
       }
     }
 
@@ -181,7 +181,7 @@
         }
       },
       onError: function(error) {
-        handlePiperFailure(error);
+        handleBridgeFailure(error);
       }
     };
 
@@ -194,7 +194,7 @@
           options.onend();
         }
       }).catch(function(error) {
-        handlePiperFailure(error);
+        handleBridgeFailure(error);
       });
     }
   }
@@ -237,17 +237,17 @@
     cancel();
 
     var requestId = ++requestCounter;
-    var bridge = getPiperBridge();
+    var bridge = getNarrationBridge();
     var request = {
       id: requestId,
-      engine: bridge ? 'piper' : 'speechSynthesis',
+      engine: bridge ? 'prebuiltAudio' : 'speechSynthesis',
       bridge: bridge
     };
     activeRequest = request;
 
     try {
       if (bridge) {
-        speakWithPiperBridge(text, options, requestId, bridge, function() {
+        speakWithNarrationBridge(text, options, requestId, bridge, function() {
           if (!hasWebSpeechSupport()) {
             return false;
           }
