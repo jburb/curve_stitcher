@@ -139,12 +139,11 @@ This setup does not change runtime app behavior and should not be included in mo
 - Build script: `scripts/build-prebuilt-narration.mjs`.
 - CLI reference: `https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/CLI.md`
 - Install prerequisite: `pip install piper-tts`
-- Voice model storage: `assets/audio/narration/voices/en_US-hfc_female-medium.onnx` is tracked with Git LFS.
+- Voice model is downloaded on demand by Piper into `assets/audio/narration/voices/` when needed.
 - Commands:
 	- `npm run setup:tts:prebuilt:manifest` generates only `assets/audio/narration/manifest.json`.
 	- `npm run setup:tts:prebuilt` generates/refreshes WAV clips in `assets/audio/narration/clips/` using `python3 -m piper`.
 	- `npm run setup:tts:prebuilt:force` regenerates all clips.
-	- `npm run setup:tts:model:pull` fetches the ONNX model via Git LFS when needed.
 - Manifest lookup format:
 	- `textHash` is computed from normalized narration text (collapse whitespace + trim).
 	- each clip entry points to a static file path under `assets/audio/narration/clips/`.
@@ -152,13 +151,9 @@ This setup does not change runtime app behavior and should not be included in mo
 
 ### Adding Or Updating Narration Audio
 
-- One-time machine setup for LFS model pulls:
-	- install Git LFS (`git lfs version` should succeed)
-	- run `git lfs install`
-- Pull model payload after clone (or when missing):
-	- `npm run setup:tts:model:pull`
-- If build reports an LFS pointer file:
-	- run the model pull command above, then rerun narration generation
+- Voice model setup (download on demand):
+	- install Piper CLI package (`pip install piper-tts`)
+	- run `npm run setup:tts:prebuilt` and Piper will download required voice assets into `assets/audio/narration/voices/` if missing
 
 - Default incremental behavior (only new blocks):
 	- run `npm run setup:tts:prebuilt`
@@ -358,7 +353,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. ~~**Use better voice for narration**~~ (completed):
 	- Adopted `hfc_female [medium]` for prebuilt narration clip generation.
 	- Narration now uses pre-generated manifest/clip lookup first with browser speech fallback only on miss/failure.
-	- Voice model is tracked through Git LFS at `assets/audio/narration/voices/en_US-hfc_female-medium.onnx`.
+	- Voice model is download-on-demand for local generation and is not tracked in Git.
 
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 
