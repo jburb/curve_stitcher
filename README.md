@@ -350,8 +350,9 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
-1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
-
+1. **Active thread config values overlay**
+     - to be shown when playback has been initiated by play button, if there are multiple threads.
+ 
 1. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
