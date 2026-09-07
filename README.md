@@ -309,7 +309,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Use better voice for narration.
 1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
 1. Stitch library (offline-first)
 1. Tips library and modal
@@ -317,7 +316,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
 1. Experience title bar (animated stitched reveal)
-1. Advanced stitch ribbon motion (Option 
+1. Advanced stitch ribbon motion (Optional)
 
 ## Recently Completed
 
@@ -346,14 +345,10 @@ This section describes the practical steps for adding a new experience named zoo
 1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
 1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
 1. Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.
+1. Use better voice for narration.
 
 
 ## TODO Backlog
-
-1. ~~**Use better voice for narration**~~ (completed):
-	- Adopted `hfc_female [medium]` for prebuilt narration clip generation.
-	- Narration now uses pre-generated manifest/clip lookup first with browser speech fallback only on miss/failure.
-	- Voice model is download-on-demand for local generation and is not tracked in Git.
 
 1. **Active thread config values overlay** to be shown when playback has been initiated by play button, if there are multiple threads.
 
