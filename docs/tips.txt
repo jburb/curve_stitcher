@@ -14,9 +14,9 @@ Advanced Controls aren't just for Stitching. Unique options can be found there f
 
 It's possible to blend colors where threads overlap. Wherever a thinner thread shares a stitch path over a thicker thread, both colors will be blended together. 
 
-#TODO reference to Boole Sewing Cards viewer, once available
+Need a fresh idea for a thread? Try reopening the app with its base URL: https://jburb.github.io/curve_stitcher/stitchlab.html
 
-#TODO Need a fresh idea for a thread? Try reopening the app with its base URL: [LINK]
+#TODO reference to Boole Sewing Cards viewer, once available
 
 #TODO make exported text file's note feature known as a tip, once available
 
