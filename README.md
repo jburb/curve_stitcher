@@ -351,7 +351,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 1. **Papercuts**
-     - wrong order of some onboarding hints in triangula
+     - ~~wrong order of some onboarding hints in triangula~~
      - missing “fill border” and “construction lines” onboarding hints in mashrabiya
      - “start hole” should not move tge pattern for multiplication threads, and not be enabled or visible for list threads
      - some sentence is not capitalized in Squarus about doc 

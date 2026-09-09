@@ -215,14 +215,14 @@ function getOnboardingGuideContentForExperience(experienceId) {
           selector: '#palette'
         },
         {
-          title: 'Choose Construction',
-          text: 'Increase triangles either by cutting or shrinking and duplicating.',
-          selector: '#triangula-construction-mode'
-        },
-        {
           title: 'Choose Color Scope',
           text: 'Pick which triangle band receives the active color.',
           selector: '#triangula-color-scope'
+        },
+        {
+          title: 'Choose Construction',
+          text: 'Increase triangles either by cutting or shrinking and duplicating.',
+          selector: '#triangula-construction-mode'
         },
         {
           title: 'Set Start Triangles',
