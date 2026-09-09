@@ -321,14 +321,14 @@ function getOnboardingGuideContentForExperience(experienceId) {
           selector: '#mashrabiya-star-color'
         },
         {
-          title: 'Set Petal Color',
-          text: 'Adjust petal tone for contrast.',
-          selector: '#mashrabiya-petal-color'
-        },
-        {
           title: 'Set Star Points Color',
           text: 'Choose color for the outer star points.',
           selector: '#mashrabiya-point-color'
+        },
+        {
+          title: 'Set Petal Color',
+          text: 'Adjust petal tone for contrast.',
+          selector: '#mashrabiya-petal-color'
         }
       ]).concat(getOnboardingTailSteps())
     };
