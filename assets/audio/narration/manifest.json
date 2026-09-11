@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-06T17:56:23.815Z",
+  "generatedAt": "2026-09-11T13:54:56.342Z",
   "hashAlgorithm": "sha256",
   "textNormalization": "collapse-whitespace-and-trim",
   "piper": {
@@ -169,6 +169,13 @@
       "charCount": 70,
       "preview": "Try this: choose square order, set layout and pieces, then press Play.",
       "file": "clips/4f4a421bd617ee73a7cea57493d5e000c93580eb91c784f514dcc8afdd7070b8.wav"
+    },
+    {
+      "source": "docs/about/squarus.html",
+      "textHash": "52998ce5cc2c2cae9db8352508f646f03f38480c2e87ad2bc0eeb4372791b672",
+      "charCount": 1944,
+      "preview": "Welcome to Squarus! Just 4 equal sides are needed to make a square. On its own, the humble squar",
+      "file": "clips/52998ce5cc2c2cae9db8352508f646f03f38480c2e87ad2bc0eeb4372791b672.wav"
     },
     {
       "source": "js/app/onboarding.js",
@@ -422,13 +429,6 @@
       "charCount": 56,
       "preview": "Try this: choose petal fold and colors, then press Play.",
       "file": "clips/e1c16e8d443cc7a5aa094704d69a64790fb632d2dda9ccc1e667171e9956bd23.wav"
-    },
-    {
-      "source": "docs/about/squarus.html",
-      "textHash": "e2d1bd47b06681e72aa9b7793d3d5434a046f034c9b760e9737f60723832fd2c",
-      "charCount": 1944,
-      "preview": "Welcome to Squarus! Just 4 equal sides are needed to make a square. On its own, the humble squar",
-      "file": "clips/e2d1bd47b06681e72aa9b7793d3d5434a046f034c9b760e9737f60723832fd2c.wav"
     },
     {
       "source": "js/app/onboarding.js",
