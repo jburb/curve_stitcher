@@ -1,5 +1,6 @@
 {
     "chat.tools.terminal.autoApprove": {
         "npx playwright": true
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

@@ -352,7 +352,7 @@ This section describes the practical steps for adding a new experience named zoo
 ## TODO Backlog
 1. **Papercuts**
      - ~~wrong order of some onboarding hints in triangula~~
-     - missing “fill border” and “construction lines” onboarding hints in mashrabiya
+     - ~~missing “fill border” and “construction lines” onboarding hints in mashrabiya~~
      - “start hole” should not move the pattern for multiplication threads, and not be enabled or visible for list threads
      - The shorthand labels for inner-to-outer threads used in the thread picker should be updated for better clarity
      - we should ensure that changes from one inner-to-outer thread mode to another, e.g from projected to bridge mode or visa versa, are synced between advanced and basic controls as expected (including a new regression test for the same)
