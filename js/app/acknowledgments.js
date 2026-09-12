@@ -120,7 +120,7 @@ function renderThreadControls() {
       <select id="frame-mode-${index}">
         <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
         <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
-        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Inner -&gt; Outer (Bridge)</option>
+        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Inner -&gt; Outer (Bridged)</option>
         <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Inner -&gt; Outer (Projected)</option>
       </select><br>
       ` : ''}
@@ -242,6 +242,7 @@ function renderThreadControls() {
     if (frameModeInput) {
       frameModeInput.addEventListener('change', e => {
         thread.frameMode = sanitizeThreadFrameMode(e.target.value, thread.frameMode || 'outer');
+        syncKidControlsFromSelectedThread();
         redrawForPathChange();
       });
     }

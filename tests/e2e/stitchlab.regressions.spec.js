@@ -712,6 +712,7 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
 
@@ -732,11 +733,25 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#advanced-holes-number').press('Tab');
     await expect(page.locator('#holes')).toHaveValue('36');
 
-    await page.locator('#kid-tempo-fast').click();
-    await expect(page.locator('#advanced-tempo')).toHaveValue('252');
+    await page.selectOption('#advanced-tempo', '252');
+    await expect(page.locator('#kid-tempo-fast')).toHaveClass(/is-active/);
 
     await page.selectOption('#advanced-tempo', '84');
     await expect(page.locator('#kid-tempo-slow')).toHaveClass(/is-active/);
+
+    await page.locator('#nested-frame-enabled').check();
+    await page.locator('#add-magic-thread').click();
+
+    const activeThreadIndex = await page.evaluate(() => {
+      const idx = Number(window.selectedThreadIndex);
+      return Number.isFinite(idx) && idx >= 0 ? idx : 0;
+    });
+
+    await page.selectOption(`#frame-mode-${activeThreadIndex}`, 'bridge-reverse');
+    await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Bridged)');
+
+    await page.selectOption(`#frame-mode-${activeThreadIndex}`, 'bridge-reverse-project');
+    await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Projected)');
   });
 
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {
