@@ -1390,32 +1390,37 @@ function renderStitchingActiveThreadOverlay(thread, threadIndex, entries) {
     activeThreadOverlayLabel.removeChild(activeThreadOverlayLabel.firstChild);
   }
 
-  var threadKeySpan = document.createElement('span');
-  threadKeySpan.className = 'active-thread-overlay-key';
-  threadKeySpan.textContent = 'Thread:';
-  activeThreadOverlayLabel.appendChild(threadKeySpan);
-
-  activeThreadOverlayLabel.appendChild(document.createTextNode(' '));
-
-  var threadValueSpan = document.createElement('span');
-  threadValueSpan.className = 'active-thread-overlay-value';
-  threadValueSpan.textContent = String(threadIndex + 1);
-  activeThreadOverlayLabel.appendChild(threadValueSpan);
-
-  for (var i = 0; i < entries.length; i++) {
-    activeThreadOverlayLabel.appendChild(document.createTextNode(',  '));
+  function appendPair(key, value) {
+    var pairSpan = document.createElement('span');
+    pairSpan.className = 'active-thread-overlay-pair';
 
     var keySpan = document.createElement('span');
     keySpan.className = 'active-thread-overlay-key';
-    keySpan.textContent = entries[i].key + ':';
-    activeThreadOverlayLabel.appendChild(keySpan);
+    keySpan.textContent = key + ':';
+    pairSpan.appendChild(keySpan);
 
-    activeThreadOverlayLabel.appendChild(document.createTextNode(' '));
+    pairSpan.appendChild(document.createTextNode(' '));
 
     var valueSpan = document.createElement('span');
     valueSpan.className = 'active-thread-overlay-value';
-    valueSpan.textContent = entries[i].value;
-    activeThreadOverlayLabel.appendChild(valueSpan);
+    valueSpan.textContent = value;
+    pairSpan.appendChild(valueSpan);
+
+    activeThreadOverlayLabel.appendChild(pairSpan);
+  }
+
+  function appendSeparator() {
+    var separator = document.createElement('span');
+    separator.className = 'active-thread-overlay-separator';
+    separator.textContent = ', ';
+    activeThreadOverlayLabel.appendChild(separator);
+  }
+
+  appendPair('Thread', String(threadIndex + 1));
+
+  for (var i = 0; i < entries.length; i++) {
+    appendSeparator();
+    appendPair(entries[i].key, entries[i].value);
   }
 }
 
