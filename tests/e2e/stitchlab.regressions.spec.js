@@ -128,6 +128,16 @@ function collectExpectedNarrationEntries(workspaceRoot) {
   return Array.from(dedupByHash.values());
 }
 
+async function suppressStartupOnboarding(page) {
+  await page.addInitScript((key) => {
+    window.localStorage.setItem(key, JSON.stringify({
+      quickStartDismissed: true,
+      tourCompleted: true,
+      startupTutorialOptOut: true
+    }));
+  }, 'stitchlab.onboarding.v1');
+}
+
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
     await page.goto('/stitchlab.html');
@@ -1769,6 +1779,7 @@ test.describe('StitchLab regressions', () => {
       }
     });
 
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
     await page.locator('.shape-btn[data-shape="square"]').click();
@@ -1793,14 +1804,10 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('acknowledgments viewer autoplay lifecycle resets cleanly across reopen', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
-
-    await page.evaluate(() => {
-      var tour = document.getElementById('onboarding-tour');
-      var skip = document.getElementById('onboarding-tour-skip');
-      if (!tour || tour.hidden || !skip) return;
-      skip.click();
-    });
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(page.locator('#onboarding-tour')).toBeHidden();
 
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-acknowledgments-toggle').click();
