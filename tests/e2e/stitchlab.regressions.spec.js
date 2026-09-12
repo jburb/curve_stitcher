@@ -2068,6 +2068,11 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-acknowledgments-toggle').click();
     await expect(page.locator('#acknowledgments-modal')).toHaveClass(/open/);
+    const onboardingTourBeforeAckClose = page.locator('#onboarding-tour');
+    if (await onboardingTourBeforeAckClose.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTourBeforeAckClose).toBeHidden();
+    }
     await page.locator('#acknowledgments-close-btn').click();
 
     await page.waitForTimeout(150);

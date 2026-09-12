@@ -3476,6 +3476,294 @@ function setCurrentShape(shape, shouldDraw) {
   }
 }
 
+function renderThreadControls() {
+  var container = document.getElementById('thread-controls');
+  container.innerHTML = '';
+  var holeCount = getCurrentStitchHoleCount();
+
+  if (!threads.length) {
+    selectedThreadIndex = -1;
+    refreshKidThreadPicker();
+    return;
+  }
+  if (selectedThreadIndex < 0 || selectedThreadIndex >= threads.length) {
+    selectedThreadIndex = 0;
+  }
+
+  threads.forEach((thread, index) => {
+    ensureThreadConnectConfig(thread);
+    thread.frameMode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
+    if (thread.frameMode === 'bridge') {
+      thread.frameMode = 'bridge-reverse-project';
+    }
+    if (thread.color === 'rainbow') {
+      thread.solidColor = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
+    } else {
+      thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+    }
+    var sourceHoleCount = getThreadSourceHoleCount(thread);
+    var jumpLimit = Math.max(1, sourceHoleCount - 1);
+    normalizeThreadHoleDependentValues(thread, sourceHoleCount);
+
+    var threadColorInputValue = thread.color === 'rainbow'
+      ? sanitizeThreadSolidColor(thread.solidColor, '#1982c4')
+      : sanitizeThreadSolidColor(thread.color, '#1982c4');
+
+    var div = document.createElement('div');
+    div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
+
+    var isFixedMode = thread.jumpMode === 'fixed';
+    var isFormulaMode = isExpressionStitchModeEnabled() && thread.jumpMode === 'formula';
+    var isSequenceMode = thread.jumpMode === 'sequence';
+    var isConnectMode = thread.jumpMode === 'connect';
+    var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
+    var hideStartHoleControl = !isFixedMode && !isFormulaMode;
+
+    div.innerHTML = `
+      <strong>Thread ${index + 1}</strong><br>
+      Color: <input type="color" value="${threadColorInputValue}" id="color-${index}"><br>
+      ${nestedFrameEnabled ? `
+      Frame:
+      <select id="frame-mode-${index}">
+        <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
+        <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
+        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Inner -&gt; Outer (Bridged)</option>
+        <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Inner -&gt; Outer (Projected)</option>
+      </select><br>
+      ` : ''}
+      Stitch by:
+      <select id="jump-mode-${index}">
+        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
+        <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
+        <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>List</option>
+        ${isExpressionStitchModeEnabled() ? `<option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>` : ''}
+      </select><br>
+      ${isFixedMode ? `
+      Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
+      <div class="jump-help">Addition wraps with modulo: target hole = ((currentHole + addBy - 1) mod holeCount) + 1.</div>
+      ` : ''}
+      ${isFormulaMode ? `
+      Expression: <input class="formula-expression-input" type="text" value="${thread.jumpFormula || 'targetHole = currentHole + 1'}" id="jump-formula-${index}" placeholder="e.g. targetHole = currentHole + 4"><br>
+      <div class="jump-help">Vars: holeCount, currentHole, previousHole, targetHole, index (step, 0-based)</div>
+      <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
+      <div class="jump-preset-row">
+        <select id="jump-preset-${index}">
+          <option value="">Preset formulas...</option>
+          <option value="targetHole = currentHole + 4">Add-4 cycle (targetHole = currentHole + 4)</option>
+          <option value="targetHole = currentHole + (index mod 5)">Wobble (targetHole = currentHole + (index mod 5))</option>
+          <option value="targetHole = ((currentHole + previousHole) mod holeCount) + 1">Blend current+previous</option>
+          <option value="4">Always hole 4 (constant target)</option>
+        </select>
+        <button type="button" id="use-preset-${index}">Use</button>
+      </div>
+      ` : ''}
+      ${isSequenceMode ? `
+      List type:
+      <select id="jump-sequence-mode-${index}">
+        <option value="holes" ${sequenceMode === 'holes' ? 'selected' : ''}>Holes</option>
+        <option value="steps" ${sequenceMode === 'steps' ? 'selected' : ''}>Steps</option>
+      </select><br>
+      List: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="${sequenceMode === 'steps' ? 'e.g. 2,3,5,8' : 'e.g. 1,1,2,3,5,8'}"><br>
+      <div class="jump-help">Hole sequence: 1,1,2,3... stitches each listed pair in order.</div>
+      <div class="jump-help">Hole sequence stops at the first value above the current hole count.</div>
+      <div class="jump-help">Interval sequence: values are repeated jumps from each current hole.</div>
+      ` : ''}
+      ${!hideStartHoleControl ? `Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>` : ''}
+      ${isConnectMode ? `
+      Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
+      <div class="jump-help">Multiplication wraps with modulo: target hole = ((multiplier * currentHole - 1) mod holeCount) + 1, so values above holeCount loop back into range.</div>
+      ` : ''}
+      Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
+      Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
+      <button id="delete-${index}">Delete</button>
+    `;
+
+    container.appendChild(div);
+
+    div.addEventListener('click', (event) => {
+      if (event.target.closest('input, select, button')) return;
+      selectedThreadIndex = index;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+    });
+
+    document.getElementById(`color-${index}`).addEventListener('input', e => {
+      thread.color = e.target.value;
+      thread.solidColor = sanitizeThreadSolidColor(e.target.value, thread.solidColor || '#1982c4');
+      syncKidControlsFromSelectedThread();
+      redrawAnimationInPlace();
+    });
+
+    var skipNumberInput = document.getElementById(`jump-number-${index}`);
+    if (skipNumberInput) {
+      skipNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.jump = parseBoundedInt(e.target.value, 1, jumpLimit, thread.jump || 1);
+        e.target.value = String(thread.jump);
+        if (index === getKidTargetThreadIndex()) {
+          jumpSlider.value = thread.jump;
+          updateKidControlValues();
+        }
+        redrawForPathChange();
+      });
+      skipNumberInput.addEventListener('change', e => {
+        thread.jump = parseBoundedInt(e.target.value, 1, jumpLimit, thread.jump || 1);
+        e.target.value = String(thread.jump);
+      });
+    }
+
+    var startHoleNumberInput = document.getElementById(`start-hole-number-${index}`);
+    if (startHoleNumberInput) {
+      startHoleNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        var localSourceCount = getThreadSourceHoleCount(thread);
+        thread.startHole = parseBoundedInt(e.target.value, 1, localSourceCount, thread.startHole || 1);
+        e.target.value = String(thread.startHole);
+        redrawForPathChange();
+      });
+      startHoleNumberInput.addEventListener('change', e => {
+        var localSourceCount = getThreadSourceHoleCount(thread);
+        thread.startHole = parseBoundedInt(e.target.value, 1, localSourceCount, thread.startHole || 1);
+        e.target.value = String(thread.startHole);
+      });
+    }
+
+    document.getElementById(`jump-mode-${index}`).addEventListener('change', e => {
+      var nextMode = e.target.value;
+      if (nextMode === 'formula' && !isExpressionStitchModeEnabled()) {
+        nextMode = 'fixed';
+      }
+      thread.jumpMode = nextMode;
+      if (thread.jumpMode === 'sequence') {
+        thread.jumpSequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
+        if (!thread.jumpSequence) {
+          thread.jumpSequence = thread.jumpSequenceMode === 'steps' ? '2,3,5,8' : '1,1,2,3,5,8';
+        }
+      }
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    var frameModeInput = document.getElementById(`frame-mode-${index}`);
+    if (frameModeInput) {
+      frameModeInput.addEventListener('change', e => {
+        thread.frameMode = sanitizeThreadFrameMode(e.target.value, thread.frameMode || 'outer');
+        syncKidControlsFromSelectedThread();
+        redrawForPathChange();
+      });
+    }
+
+    var formulaInput = document.getElementById(`jump-formula-${index}`);
+    if (formulaInput) {
+      formulaInput.addEventListener('input', e => {
+        thread.jumpFormula = e.target.value;
+        if (index === getKidTargetThreadIndex()) {
+          syncKidControlsFromSelectedThread();
+        }
+        if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula') {
+          redrawForPathChange();
+        }
+      });
+    }
+
+    var usePresetBtn = document.getElementById(`use-preset-${index}`);
+    if (usePresetBtn) {
+      usePresetBtn.addEventListener('click', () => {
+        if (!isExpressionStitchModeEnabled()) return;
+        var preset = document.getElementById(`jump-preset-${index}`).value;
+        if (!preset) return;
+        thread.jumpFormula = preset;
+        thread.jumpMode = 'formula';
+        renderThreadControls();
+        redrawForPathChange();
+      });
+    }
+
+    var sequenceInput = document.getElementById(`jump-sequence-${index}`);
+    if (sequenceInput) {
+      sequenceInput.addEventListener('input', e => {
+        thread.jumpSequence = e.target.value;
+        if (thread.jumpMode === 'sequence') {
+          redrawForPathChange();
+        }
+      });
+    }
+
+    var sequenceModeInput = document.getElementById(`jump-sequence-mode-${index}`);
+    if (sequenceModeInput) {
+      sequenceModeInput.addEventListener('change', e => {
+        thread.jumpSequenceMode = sanitizeThreadSequenceMode(e.target.value, 'holes');
+        renderThreadControls();
+        syncKidControlsFromSelectedThread();
+        redrawForPathChange();
+      });
+    }
+
+    var connectMultiplierNumberInput = document.getElementById(`connect-m-number-${index}`);
+    if (connectMultiplierNumberInput) {
+      connectMultiplierNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
+        e.target.value = String(thread.connectMultiplier);
+        if (index === getKidTargetThreadIndex()) {
+          syncKidControlsFromSelectedThread();
+        }
+        redrawForPathChange();
+      });
+      connectMultiplierNumberInput.addEventListener('change', e => {
+        thread.connectMultiplier = parseBoundedInt(e.target.value, 1, 12, thread.connectMultiplier || 1);
+        e.target.value = String(thread.connectMultiplier);
+      });
+    }
+
+    var widthNumberInput = document.getElementById(`width-number-${index}`);
+    if (widthNumberInput) {
+      widthNumberInput.addEventListener('input', e => {
+        if (e.target.value === '') return;
+        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
+        e.target.value = String(thread.width);
+        if (index === getKidTargetThreadIndex()) {
+          widthSlider.value = thread.width;
+          updateKidControlValues();
+        }
+        redrawAnimationInPlace();
+      });
+      widthNumberInput.addEventListener('change', e => {
+        thread.width = parseBoundedInt(e.target.value, 1, 10, thread.width || 1);
+        e.target.value = String(thread.width);
+      });
+    }
+
+    document.getElementById(`rainbow-${index}`).addEventListener('change', e => {
+      if (e.target.checked) {
+        if (thread.color !== 'rainbow') {
+          thread.solidColor = sanitizeThreadSolidColor(thread.color, thread.solidColor || '#1982c4');
+        }
+        thread.color = 'rainbow';
+      } else {
+        thread.color = sanitizeThreadSolidColor(thread.solidColor, '#1982c4');
+      }
+      syncKidControlsFromSelectedThread();
+      redrawAnimationInPlace();
+    });
+
+    document.getElementById(`delete-${index}`).addEventListener('click', () => {
+      threads.splice(index, 1);
+      if (!threads.length) {
+        selectedThreadIndex = -1;
+      } else if (selectedThreadIndex >= threads.length) {
+        selectedThreadIndex = threads.length - 1;
+      }
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+  });
+
+  syncKidControlsFromSelectedThread();
+}
+
 function refreshKidThreadPicker() {
   kidThreadPicker.style.display = threads.length > 1 ? 'inline-flex' : 'none';
   removeLastThreadBtn.style.display = threads.length > 1 ? '' : 'none';

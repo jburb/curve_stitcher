@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-11T23:48:40.425884Z",
+  "generatedAt": "2026-09-12T14:41:27.114Z",
   "hashAlgorithm": "sha256",
   "textNormalization": "collapse-whitespace-and-trim",
   "piper": {
-    "runner": "/usr/bin/python -m piper",
+    "runner": "/home/joshy/source/repos/curve_stitcher/.venv/bin/python -m piper",
     "modelRef": "en_US-hfc_female-medium",
     "dataDir": "assets/audio/narration/voices"
   },
@@ -228,13 +228,6 @@
     },
     {
       "source": "js/app/onboarding.js",
-      "textHash": "78daabad7b6c19c68feb9e49279c6b1f4ba2ce445617e478cee1024753972175",
-      "charCount": 74,
-      "preview": "Enter a formula to compute each stitch step, using the built-in variables.",
-      "file": "clips/78daabad7b6c19c68feb9e49279c6b1f4ba2ce445617e478cee1024753972175.wav"
-    },
-    {
-      "source": "js/app/onboarding.js",
       "textHash": "7c2173fe33ae2c82b1b6c390fae693f8e995b329b6393157b025827b1eec340e",
       "charCount": 51,
       "preview": "Press Play to watch the square arrangement animate.",
@@ -359,6 +352,13 @@
       "charCount": 36,
       "preview": "Adjust pieces placed for complexity.",
       "file": "clips/b227be5398e9d047401ded63d723ccc91dab316276fee055caadd49d187749b2.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "bbabf05334d022b2642b1b88fdc9b7b98c4528a4907bcaa3aafdb15d85d220a9",
+      "charCount": 94,
+      "preview": "Enter a target-hole formula using index, holeCount, currentHole, previousHole, and targetHole.",
+      "file": "clips/bbabf05334d022b2642b1b88fdc9b7b98c4528a4907bcaa3aafdb15d85d220a9.wav"
     },
     {
       "source": "js/app/onboarding.js",
