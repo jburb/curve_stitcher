@@ -1062,6 +1062,11 @@
     max-width: 312px;
     box-sizing: border-box;
   }
+  .formula-expression-input.is-invalid-formula {
+    border-color: #d04a4a;
+    background: #fff6f6;
+    box-shadow: 0 0 0 2px rgba(208, 74, 74, 0.18);
+  }
   .thread-size-icon {
     color: #4f5f77;
     font-size: 1.4em;

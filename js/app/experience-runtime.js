@@ -3253,6 +3253,8 @@ function createThread(config) {
     sequence: null,
     jumpMode: 'fixed',
     jumpFormula: 'currentHole + 1',
+    lastValidJumpFormula: 'currentHole + 1',
+    formulaValidationError: false,
     jumpSequence: '',
     jumpSequenceMode: sanitizeThreadSequenceMode(config.jumpSequenceMode, 'holes'),
     connectMultiplier: 2,
@@ -3261,16 +3263,128 @@ function createThread(config) {
   };
 }
 
+var FORMULA_ROLLBACK_DEFAULT_EXPRESSION = 'currentHole + 2';
+var FORMULA_VALIDATION_DELAY_MS = 320;
+var formulaValidationTimersByThreadKey = Object.create(null);
+
 function sanitizeThreadFormulaExpression(expression, fallback) {
   var fallbackExpression = String(fallback || 'currentHole + 1').trim() || 'currentHole + 1';
-  var normalized = String(expression == null ? '' : expression).trim();
-  if (!normalized) return fallbackExpression;
+  var normalized = String(expression == null ? '' : expression);
+  if (!normalized.trim()) return fallbackExpression;
 
-  var assignmentMatch = normalized.match(/^targetHole\s*=\s*(.+)$/i);
+  var assignmentMatch = normalized.match(/^\s*targetHole\s*=\s*(.+)$/i);
   if (assignmentMatch && assignmentMatch[1]) {
-    normalized = assignmentMatch[1].trim();
+    normalized = assignmentMatch[1];
   }
+  normalized = String(normalized).trim();
   return normalized || fallbackExpression;
+}
+
+function normalizeFormulaMathOperators(expression) {
+  return String(expression || '')
+    .trim()
+    .replace(/[×·]/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\^/g, '**')
+    .replace(/\bmod\b/gi, '%');
+}
+
+function getFormulaValidationThreadKey(thread) {
+  if (!thread) return 'thread-unknown';
+  if (!thread.__formulaValidationThreadKey) {
+    thread.__formulaValidationThreadKey = 'thread-' + String(Date.now()) + '-' + String(Math.random()).slice(2);
+  }
+  return thread.__formulaValidationThreadKey;
+}
+
+function clearPendingFormulaValidationForThread(thread) {
+  var key = getFormulaValidationThreadKey(thread);
+  var timerId = formulaValidationTimersByThreadKey[key];
+  if (!timerId) return;
+  clearTimeout(timerId);
+  delete formulaValidationTimersByThreadKey[key];
+}
+
+function scheduleFormulaValidationFeedback(thread, inputElement, onValidated) {
+  if (!thread) return;
+  var key = getFormulaValidationThreadKey(thread);
+  clearPendingFormulaValidationForThread(thread);
+  formulaValidationTimersByThreadKey[key] = setTimeout(function() {
+    delete formulaValidationTimersByThreadKey[key];
+    var isValid = isFormulaExpressionValid(thread.jumpFormula);
+    thread.formulaValidationError = !isValid;
+    setFormulaInputValidityState(inputElement, isValid);
+    if (typeof onValidated === 'function') {
+      onValidated(isValid);
+    }
+  }, FORMULA_VALIDATION_DELAY_MS);
+}
+
+function isFormulaExpressionValid(expression) {
+  var rhs = sanitizeThreadFormulaExpression(expression, FORMULA_ROLLBACK_DEFAULT_EXPRESSION);
+  var normalized = normalizeFormulaMathOperators(rhs);
+  if (!normalized) return false;
+
+  try {
+    var evaluate = new Function(
+      'index', 'holeCount', 'currentHole', 'previousHole',
+      'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
+      'return (' + normalized + ');'
+    );
+    var resolved = evaluate(
+      0, 12, 1, 1,
+      Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
+      Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
+    );
+    return isFinite(Number(resolved));
+  } catch (error) {
+    return false;
+  }
+}
+
+function setFormulaInputValidityState(inputElement, isValid) {
+  if (!inputElement || !inputElement.classList) return;
+  var valid = !!isValid;
+  inputElement.classList.toggle('is-invalid-formula', !valid);
+  inputElement.setAttribute('aria-invalid', valid ? 'false' : 'true');
+}
+
+function getFormulaRollbackExpression(thread) {
+  if (thread && isFormulaExpressionValid(thread.lastValidJumpFormula)) {
+    return sanitizeThreadFormulaExpression(thread.lastValidJumpFormula, FORMULA_ROLLBACK_DEFAULT_EXPRESSION);
+  }
+  if (thread && isFormulaExpressionValid(thread.jumpFormula)) {
+    return sanitizeThreadFormulaExpression(thread.jumpFormula, FORMULA_ROLLBACK_DEFAULT_EXPRESSION);
+  }
+  return FORMULA_ROLLBACK_DEFAULT_EXPRESSION;
+}
+
+function commitThreadFormulaInput(thread, inputElement) {
+  if (!thread) return true;
+  clearPendingFormulaValidationForThread(thread);
+  var rawValue = inputElement ? inputElement.value : thread.jumpFormula;
+  var normalized = sanitizeThreadFormulaExpression(rawValue, FORMULA_ROLLBACK_DEFAULT_EXPRESSION);
+
+  if (isFormulaExpressionValid(normalized)) {
+    thread.jumpFormula = normalized;
+    thread.lastValidJumpFormula = normalized;
+    thread.formulaValidationError = false;
+    if (inputElement && inputElement.value !== normalized) {
+      inputElement.value = normalized;
+    }
+    setFormulaInputValidityState(inputElement, true);
+    return true;
+  }
+
+  var rollbackExpression = getFormulaRollbackExpression(thread);
+  thread.jumpFormula = rollbackExpression;
+  thread.lastValidJumpFormula = rollbackExpression;
+  thread.formulaValidationError = true;
+  if (inputElement) {
+    inputElement.value = rollbackExpression;
+    setFormulaInputValidityState(inputElement, false);
+  }
+  return false;
 }
 
 function ensureThreadConnectConfig(thread) {
@@ -3672,18 +3786,54 @@ function renderThreadControls() {
 
     var formulaInput = document.getElementById(`jump-formula-${index}`);
     if (formulaInput) {
+      setFormulaInputValidityState(formulaInput, !thread.formulaValidationError && isFormulaExpressionValid(thread.jumpFormula));
       formulaInput.addEventListener('input', e => {
-        thread.jumpFormula = sanitizeThreadFormulaExpression(e.target.value);
-        if (e.target.value !== thread.jumpFormula) {
-          e.target.value = thread.jumpFormula;
+        thread.jumpFormula = e.target.value;
+        setFormulaInputValidityState(e.target, true);
+        if (index === getKidTargetThreadIndex()) {
+          var kidInput = document.getElementById('kid-jump-formula');
+          if (kidInput && kidInput !== document.activeElement) {
+            kidInput.value = thread.jumpFormula;
+            setFormulaInputValidityState(kidInput, true);
+          }
         }
+        scheduleFormulaValidationFeedback(thread, e.target, function(isValid) {
+          if (index === getKidTargetThreadIndex()) {
+            var kidInput = document.getElementById('kid-jump-formula');
+            if (kidInput && kidInput !== document.activeElement) {
+              setFormulaInputValidityState(kidInput, isValid);
+            }
+          }
+          if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula' && isValid) {
+            redrawForPathChange();
+          }
+        });
+      });
+
+      var handleFormulaCommit = () => {
+        var isValidFormula = commitThreadFormulaInput(thread, formulaInput);
         if (index === getKidTargetThreadIndex()) {
           syncKidControlsFromSelectedThread();
         }
+        renderThreadControls();
         if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula') {
           redrawForPathChange();
         }
-      });
+        if (!isValidFormula) {
+          var refreshedAdvancedInput = document.getElementById(`jump-formula-${index}`);
+          if (refreshedAdvancedInput) {
+            setFormulaInputValidityState(refreshedAdvancedInput, false);
+          }
+          if (index === getKidTargetThreadIndex()) {
+            var refreshedKidInput = document.getElementById('kid-jump-formula');
+            if (refreshedKidInput) {
+              setFormulaInputValidityState(refreshedKidInput, false);
+            }
+          }
+        }
+      };
+
+      formulaInput.addEventListener('blur', handleFormulaCommit);
     }
 
     var usePresetBtn = document.getElementById(`use-preset-${index}`);
@@ -3886,6 +4036,7 @@ function syncKidControlsFromSelectedThread() {
   }
   if (kidJumpFormulaInput) {
     kidJumpFormulaInput.value = sanitizeThreadFormulaExpression(threads[index].jumpFormula);
+    setFormulaInputValidityState(kidJumpFormulaInput, !threads[index].formulaValidationError && isFormulaExpressionValid(threads[index].jumpFormula));
   }
   widthSlider.value = threads[index].width;
   syncKidStitchByControl();

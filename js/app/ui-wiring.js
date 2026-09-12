@@ -365,15 +365,46 @@ if (kidJumpFormulaInput) {
     if (targetIndex < 0 || !threads[targetIndex]) return;
     var thread = threads[targetIndex];
     thread.jumpMode = 'formula';
-    thread.jumpFormula = sanitizeThreadFormulaExpression(kidJumpFormulaInput.value);
-    if (kidJumpFormulaInput.value !== thread.jumpFormula) {
-      kidJumpFormulaInput.value = thread.jumpFormula;
-    }
+    thread.jumpFormula = kidJumpFormulaInput.value;
     kidStitchBySelect.value = 'formula';
+    setFormulaInputValidityState(kidJumpFormulaInput, true);
+    var advancedFormulaInput = document.getElementById(`jump-formula-${targetIndex}`);
+    if (advancedFormulaInput && advancedFormulaInput !== document.activeElement) {
+      advancedFormulaInput.value = thread.jumpFormula;
+      setFormulaInputValidityState(advancedFormulaInput, true);
+    }
+    scheduleFormulaValidationFeedback(thread, kidJumpFormulaInput, function(isValid) {
+      var advancedFormulaInput = document.getElementById(`jump-formula-${targetIndex}`);
+      if (advancedFormulaInput && advancedFormulaInput !== document.activeElement) {
+        setFormulaInputValidityState(advancedFormulaInput, isValid);
+      }
+      if (isValid) {
+        redrawForPathChange();
+      }
+    });
     syncBasicMathSliderVisibility();
-    renderThreadControls();
-    redrawForPathChange();
   });
+
+  var commitKidFormulaInput = () => {
+    if (!isExpressionStitchModeEnabled()) return;
+    var targetIndex = getKidTargetThreadIndex();
+    if (targetIndex < 0 || !threads[targetIndex]) return;
+    var thread = threads[targetIndex];
+    thread.jumpMode = 'formula';
+    var isValidFormula = commitThreadFormulaInput(thread, kidJumpFormulaInput);
+    renderThreadControls();
+    syncKidControlsFromSelectedThread();
+    redrawForPathChange();
+    if (!isValidFormula) {
+      setFormulaInputValidityState(kidJumpFormulaInput, false);
+      var refreshedAdvancedInput = document.getElementById(`jump-formula-${targetIndex}`);
+      if (refreshedAdvancedInput) {
+        setFormulaInputValidityState(refreshedAdvancedInput, false);
+      }
+    }
+  };
+
+  kidJumpFormulaInput.addEventListener('blur', commitKidFormulaInput);
 }
 
 function syncExpressionStitchModeOptionVisibility() {

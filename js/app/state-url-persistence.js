@@ -382,6 +382,53 @@ function sanitizeThreadFormulaExpression(value, fallback) {
   return normalized || fallbackExpression;
 }
 
+function normalizeFormulaMathOperatorsForStateUrl(expression) {
+  return String(expression || '')
+    .trim()
+    .replace(/[×·]/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\^/g, '**')
+    .replace(/\bmod\b/gi, '%');
+}
+
+function isThreadFormulaExpressionValidForStateUrl(expression) {
+  var normalized = normalizeFormulaMathOperatorsForStateUrl(
+    sanitizeThreadFormulaExpression(expression, 'currentHole + 2')
+  );
+  if (!normalized) return false;
+
+  try {
+    var evaluate = new Function(
+      'index', 'holeCount', 'currentHole', 'previousHole',
+      'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
+      'return (' + normalized + ');'
+    );
+    var resolved = evaluate(
+      0, 12, 1, 1,
+      Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
+      Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
+    );
+    return isFinite(Number(resolved));
+  } catch (error) {
+    return false;
+  }
+}
+
+function getThreadFormulaExpressionForStateUrl(thread) {
+  var fallbackExpression = 'currentHole + 2';
+  var normalized = sanitizeThreadFormulaExpression(thread && thread.jumpFormula, fallbackExpression);
+  if (isThreadFormulaExpressionValidForStateUrl(normalized)) {
+    return normalized;
+  }
+
+  var lastValid = sanitizeThreadFormulaExpression(thread && thread.lastValidJumpFormula, fallbackExpression);
+  if (isThreadFormulaExpressionValidForStateUrl(lastValid)) {
+    return lastValid;
+  }
+
+  return fallbackExpression;
+}
+
 function sanitizeThreadDescriptor(raw, fallback) {
   fallback = fallback || {
     jump: DEFAULT_SKIP,
@@ -438,7 +485,7 @@ function serializeStitchingThreadState(threadList) {
       c: sanitizeThreadColor(thread.color, '#1982c4'),
       sh: parseBoundedInt(thread.startHole, 1, MAX_HOLES, 1),
       m: sanitizeThreadJumpMode(thread.jumpMode, 'fixed'),
-      f: sanitizeThreadFormulaExpression(thread.jumpFormula || 'currentHole + 1'),
+      f: getThreadFormulaExpressionForStateUrl(thread),
       s: String(thread.jumpSequence || ''),
       sm: sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes'),
       cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),

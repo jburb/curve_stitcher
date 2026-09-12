@@ -1858,6 +1858,132 @@ test.describe('StitchLab regressions', () => {
     expect(probe.formulaFirstPair).not.toEqual(probe.addFirstPair);
   });
 
+  test('formula validity accepts whitespace expression and keeps it valid', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+    const advancedFormulaInput = page.locator('#jump-formula-0');
+
+    const spacedFormula = 'currentHole +  ( index mod 4 )';
+    await kidFormulaInput.fill(spacedFormula);
+    await kidFormulaInput.press('Tab');
+
+    await expect(kidFormulaInput).toHaveValue(spacedFormula);
+    await expect(advancedFormulaInput).toHaveValue(spacedFormula);
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+    await expect(advancedFormulaInput).not.toHaveClass(/is-invalid-formula/);
+  });
+
+  test('formula validity rolls back invalid input to last valid or default fallback', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+
+    await page.evaluate(() => {
+      if (!window.threads || !window.threads.length) return;
+      window.threads[0].jumpMode = 'formula';
+      window.threads[0].jumpFormula = '';
+      delete window.threads[0].lastValidJumpFormula;
+      if (typeof window.renderThreadControls === 'function') {
+        window.renderThreadControls();
+      }
+      if (typeof window.syncKidControlsFromSelectedThread === 'function') {
+        window.syncKidControlsFromSelectedThread();
+      }
+    });
+
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+
+    await kidFormulaInput.fill('currentHole + (');
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 2');
+    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+
+    await kidFormulaInput.fill('currentHole + 5');
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 5');
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await kidFormulaInput.fill('bad(');
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 5');
+    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+  });
+
+  test('formula validity feedback is delayed while typing', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+
+    await kidFormulaInput.fill('currentHole + (');
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await page.waitForTimeout(120);
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await page.waitForTimeout(360);
+    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+  });
+
+  test('invalid formula does not serialize to URL and resolves to fallback on commit', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+
+    await page.evaluate(() => {
+      if (!window.threads || !window.threads.length) return;
+      window.threads[0].jumpMode = 'formula';
+      window.threads[0].jumpFormula = '';
+      window.threads[0].lastValidJumpFormula = '';
+      window.threads[0].formulaValidationError = false;
+      if (typeof window.renderThreadControls === 'function') {
+        window.renderThreadControls();
+      }
+      if (typeof window.syncKidControlsFromSelectedThread === 'function') {
+        window.syncKidControlsFromSelectedThread();
+      }
+      if (typeof window.redrawForPathChange === 'function') {
+        window.redrawForPathChange();
+      }
+    });
+
+    function getFormulaFromUrl() {
+      return page.evaluate(() => {
+        try {
+          var raw = new URL(window.location.href).searchParams.get('stitchingThreadState');
+          if (!raw) return null;
+          var parsed = JSON.parse(decodeURIComponent(raw));
+          if (!Array.isArray(parsed) || !parsed.length) return null;
+          return String(parsed[0].f || '');
+        } catch (error) {
+          return '__parse_error__';
+        }
+      });
+    }
+
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+    await kidFormulaInput.fill('currentHole + (');
+
+    await page.waitForTimeout(420);
+    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+
+    await expect.poll(getFormulaFromUrl).not.toBe('currentHole + (');
+
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 2');
+    await expect.poll(getFormulaFromUrl).toBe('currentHole + 2');
+  });
+
   test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
