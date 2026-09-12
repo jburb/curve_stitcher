@@ -819,7 +819,7 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#animate').click();
     await expect(page.locator('#active-thread-overlay')).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread 1: Frame: Inner, Stitch-by: Adding, Add by: 20');
+    await expect(overlayLabel).toContainText('Thread 1: Frame: Inner, Stitch-by: Adding, Add by: 20, Start hole: 1');
   });
 
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {

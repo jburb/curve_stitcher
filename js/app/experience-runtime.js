@@ -1361,9 +1361,12 @@ function formatStitchingActiveThreadOverlayLine(thread, threadIndex) {
     parts.push('Base add: ' + baseAdd);
     parts.push('Expression: ' + truncateOverlayValue(thread.jumpFormula || 'skip', 44));
   } else {
+    var sourceHoleCount = getThreadSourceHoleCount(thread);
     var addBy = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
+    var startHole = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1);
     parts.push('Stitch-by: Adding');
     parts.push('Add by: ' + addBy);
+    parts.push('Start hole: ' + startHole);
   }
 
   return 'Thread ' + (threadIndex + 1) + ': ' + parts.join(', ');
@@ -1386,9 +1389,8 @@ function syncActiveThreadPlaybackOverlay(threadIndex) {
 
   var experience = getExperienceById('stitching');
   var color = getThemeExperienceTitleColor(experience.strokeColor || '#1f4f94');
-  var fontFamily = experience.titleFontFamily || 'Nunito';
   activeThreadOverlayLabel.style.color = color;
-  activeThreadOverlayLabel.style.fontFamily = '"' + fontFamily + '", "Nunito", sans-serif';
+  activeThreadOverlayLabel.style.fontFamily = '"FoliesBergere", "MadeLikesScript", "Nunito", sans-serif';
 
   var line = formatStitchingActiveThreadOverlayLine(threads[threadIndex], threadIndex);
   activeThreadOverlayLabel.textContent = line;
