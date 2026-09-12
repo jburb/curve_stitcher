@@ -1425,6 +1425,8 @@ function syncActiveThreadPlaybackOverlay(threadIndex) {
   var shouldShow = currentExperienceId === 'stitching'
     && animationPlaybackState === 'playing'
     && !!animationState
+    && Array.isArray(threads)
+    && threads.length > 1
     && threadIndex >= 0
     && threadIndex < threads.length;
 

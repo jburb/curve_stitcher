@@ -758,6 +758,9 @@ test.describe('StitchLab regressions', () => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
+    const overlay = page.locator('#active-thread-overlay');
+    const overlayLabel = page.locator('#active-thread-overlay-label');
+
     await page.evaluate(() => {
       nestedFrameEnabled = false;
       if (nestedFrameEnabledInput) nestedFrameEnabledInput.checked = false;
@@ -778,8 +781,36 @@ test.describe('StitchLab regressions', () => {
     });
 
     await page.locator('#animate').click();
-    const overlayLabel = page.locator('#active-thread-overlay-label');
-    await expect(page.locator('#active-thread-overlay')).toBeVisible();
+    await expect(overlay).toBeHidden();
+
+    await page.evaluate(() => {
+      stopAnimationIfActive();
+      threads = [
+        sanitizeThreadDescriptor({
+          jumpMode: 'connect',
+          connectMultiplier: 3,
+          frameMode: 'outer',
+          startHole: 1,
+          width: 2,
+          color: '#1982c4'
+        }, null),
+        sanitizeThreadDescriptor({
+          jumpMode: 'fixed',
+          jump: 11,
+          frameMode: 'outer',
+          startHole: 1,
+          width: 2,
+          color: '#8ac926'
+        }, null)
+      ];
+      selectedThreadIndex = 0;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    await page.locator('#animate').click();
+    await expect(overlay).toBeVisible();
     await expect(overlayLabel).toContainText('Thread: 1, Stitch-by: Multiplying, Multiply by: 3');
     await expect(overlayLabel).not.toContainText('Frame:');
 
@@ -803,14 +834,24 @@ test.describe('StitchLab regressions', () => {
         syncJumpBoundsFromHoleCount();
       }
 
-      threads = [sanitizeThreadDescriptor({
-        jumpMode: 'fixed',
-        jump: 20,
-        frameMode: 'inner',
-        startHole: 1,
-        width: 2,
-        color: '#1982c4'
-      }, null)];
+      threads = [
+        sanitizeThreadDescriptor({
+          jumpMode: 'fixed',
+          jump: 20,
+          frameMode: 'inner',
+          startHole: 1,
+          width: 2,
+          color: '#1982c4'
+        }, null),
+        sanitizeThreadDescriptor({
+          jumpMode: 'fixed',
+          jump: 7,
+          frameMode: 'outer',
+          startHole: 1,
+          width: 2,
+          color: '#ffca3a'
+        }, null)
+      ];
       selectedThreadIndex = 0;
       renderThreadControls();
       syncKidControlsFromSelectedThread();
@@ -818,7 +859,7 @@ test.describe('StitchLab regressions', () => {
     });
 
     await page.locator('#animate').click();
-    await expect(page.locator('#active-thread-overlay')).toBeVisible();
+    await expect(overlay).toBeVisible();
     await expect(overlayLabel).toContainText('Thread: 1, Frame: Inner, Stitch-by: Adding, Add by: 20, Start hole: 1');
   });
 
