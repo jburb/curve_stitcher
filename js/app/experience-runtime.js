@@ -3182,7 +3182,7 @@ function syncBasicMathSliderVisibility() {
   var isSequenceMode = mode === 'sequence';
   var isFormulaMode = isExpressionStitchModeEnabled() && mode === 'formula';
   var isFixedMode = !isMultiplyMode && !isSequenceMode && !isFormulaMode;
-  var hideStartHole = index >= 0 && threads[index] && isThreadHoleListMode(threads[index]);
+  var hideStartHole = !isFixedMode;
 
   addSliderBlock.style.display = isFixedMode ? '' : 'none';
   multiplySliderBlock.style.display = isMultiplyMode ? '' : 'none';

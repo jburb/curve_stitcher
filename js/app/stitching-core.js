@@ -712,7 +712,10 @@ function computeSequence(thread, holeCount) {
     jumpMode = 'fixed';
   }
   var visited = new Array(n).fill(false);
-  var startIndex = getPhysicalHoleIndexFromLabel(parseBoundedInt(thread.startHole, 1, n, 1), n);
+  var startLabel = jumpMode === 'fixed'
+    ? parseBoundedInt(thread.startHole, 1, n, 1)
+    : 1;
+  var startIndex = getPhysicalHoleIndexFromLabel(startLabel, n);
   var current = startIndex;
   var prev = startIndex;
   var seq = [];
@@ -912,17 +915,13 @@ function computeSegments(thread) {
     ensureThreadConnectConfig(thread);
     var segments = [];
     var multiplier = Math.round(Number(thread.connectMultiplier || 2));
-    var startOffset = getPhysicalHoleIndexFromLabel(
-      parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1),
-      sourceHoleCount
-    );
     for (var i = 0; i < sourceHoleCount; i++) {
-      // Multiplication mode honors startHole as ring phase origin.
-      var sourceIndex = (startOffset + i) % sourceHoleCount;
-      // i is 0-based within the phased ring; convert to 1-based for the multiplication rule.
-      var phaseLabel = i + 1;
-      var mapped = (startOffset + (multiplier * phaseLabel - 1)) % sourceHoleCount;
-      if (mapped < 0) mapped += sourceHoleCount;
+      // Multiplication is defined in hole labels and is independent of start hole.
+      var sourceLabel = i + 1;
+      var targetLabel = ((multiplier * sourceLabel - 1) % sourceHoleCount) + 1;
+      if (targetLabel < 1) targetLabel += sourceHoleCount;
+      var sourceIndex = getPhysicalHoleIndexFromLabel(sourceLabel, sourceHoleCount);
+      var mapped = getPhysicalHoleIndexFromLabel(targetLabel, sourceHoleCount);
       var mappedSegments = mapPair(sourceIndex, mapped);
       for (var m = 0; m < mappedSegments.length; m++) {
         segments.push(mappedSegments[m]);
