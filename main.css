@@ -1058,8 +1058,9 @@
     white-space: nowrap;
   }
   #formula-input-block .formula-expression-input {
-    width: min(100%, 188px);
+    width: min(100%, 180px);
     max-width: 312px;
+    /*padding: 4px 4px 4px 8px;*/
     box-sizing: border-box;
   }
   .formula-expression-input.is-invalid-formula {

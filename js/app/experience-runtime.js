@@ -3669,7 +3669,7 @@ function renderThreadControls() {
       <div class="jump-help">Addition wraps with modulo: target hole = ((currentHole + addBy - 1) mod holeCount) + 1.</div>
       ` : ''}
       ${isFormulaMode ? `
-      🧪 Formula:
+      Formula:
       <div class="formula-input-row">
         <span class="formula-prefix">targetHole =</span>
         <input class="formula-expression-input" type="text" value="${sanitizeThreadFormulaExpression(thread.jumpFormula)}" id="jump-formula-${index}" placeholder="e.g. currentHole + 4">
