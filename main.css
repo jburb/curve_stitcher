@@ -155,6 +155,12 @@
       0 1px 0 rgba(22, 43, 76, 0.2),
       0 1px 2px rgba(18, 35, 66, 0.12);
   }
+  .active-thread-overlay-key {
+    font-weight: 700;
+  }
+  .active-thread-overlay-value {
+    font-weight: 400;
+  }
   .experience-sr-title {
     position: absolute;
     width: 1px;

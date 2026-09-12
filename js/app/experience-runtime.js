@@ -1336,40 +1336,87 @@ function truncateOverlayValue(value, limit) {
   return text.slice(0, maxChars - 1) + '…';
 }
 
-function formatStitchingActiveThreadOverlayLine(thread, threadIndex) {
-  if (!thread) return '';
+function getStitchingActiveThreadOverlayEntries(thread) {
+  if (!thread) return [];
 
-  var parts = [];
+  var entries = [];
   if (nestedFrameEnabled) {
-    parts.push('Frame: ' + getThreadFrameModeDisplayLabel(thread.frameMode));
+    entries.push({ key: 'Frame', value: getThreadFrameModeDisplayLabel(thread.frameMode) });
   }
 
   var mode = sanitizeThreadJumpMode(thread.jumpMode, 'fixed');
   if (mode === 'connect') {
     var multiplyBy = parseBoundedInt(thread.connectMultiplier, 1, 12, 2);
-    parts.push('Stitch-by: Multiplying');
-    parts.push('Multiply by: ' + multiplyBy);
+    entries.push({ key: 'Stitch-by', value: 'Multiplying' });
+    entries.push({ key: 'Multiply by', value: String(multiplyBy) });
   } else if (mode === 'sequence') {
     var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
     var sequenceLabel = sequenceMode === 'steps' ? 'Steps' : 'Holes';
-    parts.push('Stitch-by: List');
-    parts.push('List type: ' + sequenceLabel);
-    parts.push('List: ' + truncateOverlayValue(thread.jumpSequence || '', 56));
+    entries.push({ key: 'Stitch-by', value: 'List' });
+    entries.push({ key: 'List type', value: sequenceLabel });
+    entries.push({ key: 'List', value: truncateOverlayValue(thread.jumpSequence || '', 56) });
   } else if (mode === 'formula' && isExpressionStitchModeEnabled()) {
     var baseAdd = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
-    parts.push('Stitch-by: Expression');
-    parts.push('Base add: ' + baseAdd);
-    parts.push('Expression: ' + truncateOverlayValue(thread.jumpFormula || 'skip', 44));
+    entries.push({ key: 'Stitch-by', value: 'Expression' });
+    entries.push({ key: 'Base add', value: String(baseAdd) });
+    entries.push({ key: 'Expression', value: truncateOverlayValue(thread.jumpFormula || 'skip', 44) });
   } else {
     var sourceHoleCount = getThreadSourceHoleCount(thread);
     var addBy = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
     var startHole = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1);
-    parts.push('Stitch-by: Adding');
-    parts.push('Add by: ' + addBy);
-    parts.push('Start hole: ' + startHole);
+    entries.push({ key: 'Stitch-by', value: 'Adding' });
+    entries.push({ key: 'Add by', value: String(addBy) });
+    entries.push({ key: 'Start hole', value: String(startHole) });
   }
 
-  return 'Thread ' + (threadIndex + 1) + ': ' + parts.join(', ');
+  return entries;
+}
+
+function formatStitchingActiveThreadOverlayLine(thread, threadIndex) {
+  if (!thread) return '';
+  var entries = getStitchingActiveThreadOverlayEntries(thread);
+  if (!entries.length) return '';
+  var threadEntry = 'Thread: ' + (threadIndex + 1);
+  var parts = entries.map(function(entry) {
+    return entry.key + ': ' + entry.value;
+  });
+
+  return threadEntry + ', ' + parts.join(', ');
+}
+
+function renderStitchingActiveThreadOverlay(thread, threadIndex, entries) {
+  if (!activeThreadOverlayLabel) return;
+  while (activeThreadOverlayLabel.firstChild) {
+    activeThreadOverlayLabel.removeChild(activeThreadOverlayLabel.firstChild);
+  }
+
+  var threadKeySpan = document.createElement('span');
+  threadKeySpan.className = 'active-thread-overlay-key';
+  threadKeySpan.textContent = 'Thread:';
+  activeThreadOverlayLabel.appendChild(threadKeySpan);
+
+  activeThreadOverlayLabel.appendChild(document.createTextNode(' '));
+
+  var threadValueSpan = document.createElement('span');
+  threadValueSpan.className = 'active-thread-overlay-value';
+  threadValueSpan.textContent = String(threadIndex + 1);
+  activeThreadOverlayLabel.appendChild(threadValueSpan);
+
+  for (var i = 0; i < entries.length; i++) {
+    activeThreadOverlayLabel.appendChild(document.createTextNode(',  '));
+
+    var keySpan = document.createElement('span');
+    keySpan.className = 'active-thread-overlay-key';
+    keySpan.textContent = entries[i].key + ':';
+    activeThreadOverlayLabel.appendChild(keySpan);
+
+    activeThreadOverlayLabel.appendChild(document.createTextNode(' '));
+
+    var valueSpan = document.createElement('span');
+    valueSpan.className = 'active-thread-overlay-value';
+    valueSpan.textContent = entries[i].value;
+    activeThreadOverlayLabel.appendChild(valueSpan);
+  }
 }
 
 function syncActiveThreadPlaybackOverlay(threadIndex) {
@@ -1392,8 +1439,14 @@ function syncActiveThreadPlaybackOverlay(threadIndex) {
   activeThreadOverlayLabel.style.color = color;
   activeThreadOverlayLabel.style.fontFamily = '"FoliesBergere", "MadeLikesScript", "Nunito", sans-serif';
 
-  var line = formatStitchingActiveThreadOverlayLine(threads[threadIndex], threadIndex);
-  activeThreadOverlayLabel.textContent = line;
+  var thread = threads[threadIndex];
+  var entries = getStitchingActiveThreadOverlayEntries(thread);
+  var line = formatStitchingActiveThreadOverlayLine(thread, threadIndex);
+  if (line) {
+    renderStitchingActiveThreadOverlay(thread, threadIndex, entries);
+  } else {
+    activeThreadOverlayLabel.textContent = '';
+  }
   activeThreadOverlay.hidden = !line;
 }
 

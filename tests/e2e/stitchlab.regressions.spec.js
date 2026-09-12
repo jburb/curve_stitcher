@@ -780,7 +780,7 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#animate').click();
     const overlayLabel = page.locator('#active-thread-overlay-label');
     await expect(page.locator('#active-thread-overlay')).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread 1: Stitch-by: Multiplying, Multiply by: 3');
+    await expect(overlayLabel).toContainText('Thread: 1, Stitch-by: Multiplying, Multiply by: 3');
     await expect(overlayLabel).not.toContainText('Frame:');
 
     await page.evaluate(() => {
@@ -819,7 +819,7 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#animate').click();
     await expect(page.locator('#active-thread-overlay')).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread 1: Frame: Inner, Stitch-by: Adding, Add by: 20, Start hole: 1');
+    await expect(overlayLabel).toContainText('Thread: 1, Frame: Inner, Stitch-by: Adding, Add by: 20, Start hole: 1');
   });
 
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {
@@ -1864,6 +1864,14 @@ test.describe('StitchLab regressions', () => {
 
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
+
+    const onboardingTour = page.locator('#onboarding-tour');
+    if (await onboardingTour.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTour).toBeHidden();
+    }
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(onboardingTour).toBeHidden();
 
     await page.locator('.shape-btn[data-shape="square"]').click();
     await page.locator('#gear').click();
