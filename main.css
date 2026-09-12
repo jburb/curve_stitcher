@@ -1042,15 +1042,20 @@
     margin: 0;
   }
   #formula-input-block {
-    width: 100%;
-    max-width: 312px;
+    width: auto;
+    max-width: none;
+    align-items: center;
+  }
+  #formula-input-block .slider-label {
+    align-self: center;
+    justify-content: center;
   }
   .formula-input-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 100%;
-    max-width: 312px;
+    width: auto;
+    max-width: none;
   }
   .formula-prefix {
     color: #8a93a8;
@@ -1059,8 +1064,8 @@
   }
   #formula-input-block .formula-expression-input {
     width: min(100%, 180px);
-    max-width: 312px;
-    /*padding: 4px 4px 4px 8px;*/
+    max-width: 180px;
+    padding: 4px 4px 4px 8px;
     box-sizing: border-box;
   }
   .formula-expression-input.is-invalid-formula {
