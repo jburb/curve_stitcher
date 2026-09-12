@@ -1320,6 +1320,147 @@ function renderExperienceTitleStatic() {
   experienceTitleLabel.style.fontFamily = '"' + fontFamily + '", "Nunito", sans-serif';
 }
 
+function getThreadFrameModeDisplayLabel(mode) {
+  var normalized = sanitizeThreadFrameMode(mode, 'outer');
+  if (normalized === 'inner') return 'Inner';
+  if (normalized === 'bridge') return 'Outer -> Inner';
+  if (normalized === 'bridge-reverse') return 'Inner -> Outer (Bridged)';
+  if (normalized === 'bridge-reverse-project') return 'Inner -> Outer (Projected)';
+  return 'Outer';
+}
+
+function truncateOverlayValue(value, limit) {
+  var text = String(value || '').replace(/\s+/g, ' ').trim();
+  var maxChars = parseBoundedInt(limit, 12, 240, 64);
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars - 1) + '…';
+}
+
+function getStitchingActiveThreadOverlayEntries(thread) {
+  if (!thread) return [];
+
+  var entries = [];
+  if (nestedFrameEnabled) {
+    entries.push({ key: 'Frame', value: getThreadFrameModeDisplayLabel(thread.frameMode) });
+  }
+
+  var mode = sanitizeThreadJumpMode(thread.jumpMode, 'fixed');
+  if (mode === 'connect') {
+    var multiplyBy = parseBoundedInt(thread.connectMultiplier, 1, 12, 2);
+    entries.push({ key: 'Stitch-by', value: 'Multiplying' });
+    entries.push({ key: 'Multiply by', value: String(multiplyBy) });
+  } else if (mode === 'sequence') {
+    var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
+    var sequenceLabel = sequenceMode === 'steps' ? 'Steps' : 'Holes';
+    entries.push({ key: 'Stitch-by', value: 'List' });
+    entries.push({ key: 'List type', value: sequenceLabel });
+    entries.push({ key: 'List', value: truncateOverlayValue(thread.jumpSequence || '', 56) });
+  } else if (mode === 'formula' && isExpressionStitchModeEnabled()) {
+    var baseAdd = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
+    entries.push({ key: 'Stitch-by', value: 'Expression' });
+    entries.push({ key: 'Base add', value: String(baseAdd) });
+    entries.push({ key: 'Expression', value: truncateOverlayValue(thread.jumpFormula || 'skip', 44) });
+  } else {
+    var sourceHoleCount = getThreadSourceHoleCount(thread);
+    var addBy = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
+    var startHole = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1);
+    entries.push({ key: 'Stitch-by', value: 'Adding' });
+    entries.push({ key: 'Add by', value: String(addBy) });
+    entries.push({ key: 'Start hole', value: String(startHole) });
+  }
+
+  return entries;
+}
+
+function formatStitchingActiveThreadOverlayLine(thread, threadIndex) {
+  if (!thread) return '';
+  var entries = getStitchingActiveThreadOverlayEntries(thread);
+  if (!entries.length) return '';
+  var threadEntry = 'Thread: ' + (threadIndex + 1);
+  var parts = entries.map(function(entry) {
+    return entry.key + ': ' + entry.value;
+  });
+
+  return threadEntry + ', ' + parts.join(', ');
+}
+
+function renderStitchingActiveThreadOverlay(thread, threadIndex, entries) {
+  if (!activeThreadOverlayLabel) return;
+  while (activeThreadOverlayLabel.firstChild) {
+    activeThreadOverlayLabel.removeChild(activeThreadOverlayLabel.firstChild);
+  }
+
+  function appendPair(key, value) {
+    var pairSpan = document.createElement('span');
+    pairSpan.className = 'active-thread-overlay-pair';
+
+    var keySpan = document.createElement('span');
+    keySpan.className = 'active-thread-overlay-key';
+    keySpan.textContent = key + ':';
+    pairSpan.appendChild(keySpan);
+
+    pairSpan.appendChild(document.createTextNode(' '));
+
+    var valueSpan = document.createElement('span');
+    valueSpan.className = 'active-thread-overlay-value';
+    valueSpan.textContent = value;
+    pairSpan.appendChild(valueSpan);
+
+    activeThreadOverlayLabel.appendChild(pairSpan);
+  }
+
+  function appendSeparator() {
+    var separator = document.createElement('span');
+    separator.className = 'active-thread-overlay-separator';
+    separator.textContent = ', ';
+    activeThreadOverlayLabel.appendChild(separator);
+  }
+
+  appendPair('Thread', String(threadIndex + 1));
+
+  for (var i = 0; i < entries.length; i++) {
+    appendSeparator();
+    appendPair(entries[i].key, entries[i].value);
+  }
+}
+
+function syncActiveThreadPlaybackOverlay(threadIndex) {
+  if (!activeThreadOverlay || !activeThreadOverlayLabel) return;
+
+  var shouldShow = currentExperienceId === 'stitching'
+    && animationPlaybackState === 'playing'
+    && !!animationState
+    && Array.isArray(threads)
+    && threads.length > 1
+    && threadIndex >= 0
+    && threadIndex < threads.length;
+
+  if (!shouldShow) {
+    activeThreadOverlay.hidden = true;
+    activeThreadOverlayLabel.textContent = '';
+    return;
+  }
+
+  var experience = getExperienceById('stitching');
+  var color = getThemeExperienceTitleColor(experience.strokeColor || '#1f4f94');
+  activeThreadOverlayLabel.style.color = color;
+  /*if (experienceTitleLabel && experienceTitleLabel.style && experienceTitleLabel.style.fontFamily) {
+    activeThreadOverlayLabel.style.fontFamily = experienceTitleLabel.style.fontFamily;
+  } else {*/ // NOTE: uncomment this if/else to use the experience title label's font family for overlay text, if available
+    activeThreadOverlayLabel.style.fontFamily = '"MadeLikesScript", "Nunito", sans-serif';
+  //}
+
+  var thread = threads[threadIndex];
+  var entries = getStitchingActiveThreadOverlayEntries(thread);
+  var line = formatStitchingActiveThreadOverlayLine(thread, threadIndex);
+  if (line) {
+    renderStitchingActiveThreadOverlay(thread, threadIndex, entries);
+  } else {
+    activeThreadOverlayLabel.textContent = '';
+  }
+  activeThreadOverlay.hidden = !line;
+}
+
 function applyCurrentExperienceInfo() {
   var experience = getExperienceById(currentExperienceId);
   experienceInfoTitle.textContent = experience.infoTitle || ('About ' + (experience.title || 'Experience'));
@@ -1363,6 +1504,8 @@ function setCurrentExperience(experienceId, options) {
   if (previousExperienceId !== currentExperienceId) {
     dismissOnboardingUiForExperienceChange();
   }
+
+  syncActiveThreadPlaybackOverlay(-1);
 
   if (currentExperienceId === 'squarus') {
     if (previousExperienceId !== 'squarus') {
@@ -3544,6 +3687,7 @@ function pauseAnimationIfActive() {
   animationActive = false;
   view.onFrame = null;
   animationPlaybackState = 'paused';
+  syncActiveThreadPlaybackOverlay(-1);
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
   scheduleUrlStateSync(false);
