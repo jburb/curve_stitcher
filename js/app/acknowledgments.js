@@ -110,7 +110,7 @@ function renderThreadControls() {
     var isSequenceMode = thread.jumpMode === 'sequence';
     var isConnectMode = thread.jumpMode === 'connect';
     var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
-    var hideStartHoleControl = !isFixedMode;
+    var hideStartHoleControl = !isFixedMode && !isFormulaMode;
 
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
@@ -133,11 +133,12 @@ function renderThreadControls() {
       </select><br>
       ${isFixedMode ? `
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
+      <div class="jump-help">Addition wraps with modulo: target hole = ((currentHole + addBy - 1) mod holeCount) + 1.</div>
       ` : ''}
       ${isFormulaMode ? `
-      Target expression: <input type="text" value="${thread.jumpFormula || 'targetHole = currentHole + 1'}" id="jump-formula-${index}" placeholder="e.g. targetHole = currentHole + 4"><br>
+      Expression: <input class="formula-expression-input" type="text" value="${thread.jumpFormula || 'targetHole = currentHole + 1'}" id="jump-formula-${index}" placeholder="e.g. targetHole = currentHole + 4"><br>
+      <div class="jump-help">Vars: holeCount, currentHole, previousHole, targetHole, index (step, 0-based)</div>
       <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
-      <div class="jump-help">Vars: index (step, 0-based), holeCount, currentHole, previousHole, targetHole</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
@@ -163,7 +164,7 @@ function renderThreadControls() {
       ${!hideStartHoleControl ? `Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>` : ''}
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      <div class="jump-help">Multiplication uses fixed hole mapping. Start hole does not affect multiplication threads.</div>
+      <div class="jump-help">Multiplication wraps with modulo: target hole = ((multiplier * currentHole - 1) mod holeCount) + 1, so values above holeCount loop back into range.</div>
       ` : ''}
       Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
@@ -250,6 +251,9 @@ function renderThreadControls() {
     if (formulaInput) {
       formulaInput.addEventListener('input', e => {
         thread.jumpFormula = e.target.value;
+        if (index === getKidTargetThreadIndex()) {
+          syncKidControlsFromSelectedThread();
+        }
         if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula') {
           redrawForPathChange();
         }

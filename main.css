@@ -1041,6 +1041,15 @@
     width: auto;
     margin: 0;
   }
+  #formula-input-block {
+    width: 100%;
+    max-width: 312px;
+  }
+  #formula-input-block .formula-expression-input {
+    width: 100%;
+    max-width: 312px;
+    box-sizing: border-box;
+  }
   .thread-size-icon {
     color: #4f5f77;
     font-size: 1.4em;
@@ -1580,6 +1589,10 @@
   .thread-card button {
     margin-top: 2px;
     margin-bottom: 4px;
+  }
+  .thread-card .formula-expression-input {
+    width: min(100%, 296px);
+    box-sizing: border-box;
   }
 
   .thread-card.selected {

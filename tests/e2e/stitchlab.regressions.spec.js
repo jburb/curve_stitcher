@@ -754,6 +754,20 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Projected)');
   });
 
+  test('advanced expression input syncs immediately to basic expression input', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    await expect(page.locator('#formula-input-block')).toBeVisible();
+
+    const nextExpression = 'targetHole = currentHole + (index mod 4)';
+    await page.locator('#jump-formula-0').fill(nextExpression);
+
+    await expect(page.locator('#kid-jump-formula')).toHaveValue(nextExpression);
+  });
+
   test('stitching active-thread overlay shows non-styling playback values', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');

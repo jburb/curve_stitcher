@@ -718,7 +718,7 @@ function computeSequence(thread, holeCount) {
     jumpMode = 'fixed';
   }
   var visited = new Array(n).fill(false);
-  var startLabel = jumpMode === 'fixed'
+  var startLabel = (jumpMode === 'fixed' || jumpMode === 'formula')
     ? parseBoundedInt(thread.startHole, 1, n, 1)
     : 1;
   var startIndex = getPhysicalHoleIndexFromLabel(startLabel, n);
