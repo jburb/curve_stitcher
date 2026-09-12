@@ -1320,6 +1320,81 @@ function renderExperienceTitleStatic() {
   experienceTitleLabel.style.fontFamily = '"' + fontFamily + '", "Nunito", sans-serif';
 }
 
+function getThreadFrameModeDisplayLabel(mode) {
+  var normalized = sanitizeThreadFrameMode(mode, 'outer');
+  if (normalized === 'inner') return 'Inner';
+  if (normalized === 'bridge') return 'Outer -> Inner';
+  if (normalized === 'bridge-reverse') return 'Inner -> Outer (Bridged)';
+  if (normalized === 'bridge-reverse-project') return 'Inner -> Outer (Projected)';
+  return 'Outer';
+}
+
+function truncateOverlayValue(value, limit) {
+  var text = String(value || '').replace(/\s+/g, ' ').trim();
+  var maxChars = parseBoundedInt(limit, 12, 240, 64);
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars - 1) + '…';
+}
+
+function formatStitchingActiveThreadOverlayLine(thread, threadIndex) {
+  if (!thread) return '';
+
+  var parts = [];
+  if (nestedFrameEnabled) {
+    parts.push('Frame: ' + getThreadFrameModeDisplayLabel(thread.frameMode));
+  }
+
+  var mode = sanitizeThreadJumpMode(thread.jumpMode, 'fixed');
+  if (mode === 'connect') {
+    var multiplyBy = parseBoundedInt(thread.connectMultiplier, 1, 12, 2);
+    parts.push('Stitch-by: Multiplying');
+    parts.push('Multiply by: ' + multiplyBy);
+  } else if (mode === 'sequence') {
+    var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
+    var sequenceLabel = sequenceMode === 'steps' ? 'Steps' : 'Holes';
+    parts.push('Stitch-by: List');
+    parts.push('List type: ' + sequenceLabel);
+    parts.push('List: ' + truncateOverlayValue(thread.jumpSequence || '', 56));
+  } else if (mode === 'formula' && isExpressionStitchModeEnabled()) {
+    var baseAdd = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
+    parts.push('Stitch-by: Expression');
+    parts.push('Base add: ' + baseAdd);
+    parts.push('Expression: ' + truncateOverlayValue(thread.jumpFormula || 'skip', 44));
+  } else {
+    var addBy = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
+    parts.push('Stitch-by: Adding');
+    parts.push('Add by: ' + addBy);
+  }
+
+  return 'Thread ' + (threadIndex + 1) + ': ' + parts.join(', ');
+}
+
+function syncActiveThreadPlaybackOverlay(threadIndex) {
+  if (!activeThreadOverlay || !activeThreadOverlayLabel) return;
+
+  var shouldShow = currentExperienceId === 'stitching'
+    && animationPlaybackState === 'playing'
+    && !!animationState
+    && threadIndex >= 0
+    && threadIndex < threads.length;
+
+  if (!shouldShow) {
+    activeThreadOverlay.hidden = true;
+    activeThreadOverlayLabel.textContent = '';
+    return;
+  }
+
+  var experience = getExperienceById('stitching');
+  var color = getThemeExperienceTitleColor(experience.strokeColor || '#1f4f94');
+  var fontFamily = experience.titleFontFamily || 'Nunito';
+  activeThreadOverlayLabel.style.color = color;
+  activeThreadOverlayLabel.style.fontFamily = '"' + fontFamily + '", "Nunito", sans-serif';
+
+  var line = formatStitchingActiveThreadOverlayLine(threads[threadIndex], threadIndex);
+  activeThreadOverlayLabel.textContent = line;
+  activeThreadOverlay.hidden = !line;
+}
+
 function applyCurrentExperienceInfo() {
   var experience = getExperienceById(currentExperienceId);
   experienceInfoTitle.textContent = experience.infoTitle || ('About ' + (experience.title || 'Experience'));
@@ -1363,6 +1438,8 @@ function setCurrentExperience(experienceId, options) {
   if (previousExperienceId !== currentExperienceId) {
     dismissOnboardingUiForExperienceChange();
   }
+
+  syncActiveThreadPlaybackOverlay(-1);
 
   if (currentExperienceId === 'squarus') {
     if (previousExperienceId !== 'squarus') {
@@ -3544,6 +3621,7 @@ function pauseAnimationIfActive() {
   animationActive = false;
   view.onFrame = null;
   animationPlaybackState = 'paused';
+  syncActiveThreadPlaybackOverlay(-1);
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
   scheduleUrlStateSync(false);

@@ -159,6 +159,9 @@
       <span id="experience-title-label" aria-hidden="true">Stitching</span>
       <button id="experience-info-toggle" type="button" aria-label="Learn about this experience" aria-controls="experience-info-panel" aria-expanded="false" title="Learn about this experience">?</button>
     </div>
+    <div id="active-thread-overlay" class="active-thread-overlay" hidden aria-live="polite">
+      <span id="active-thread-overlay-label">Thread 1: Stitch-by: Adding, Add by: 1</span>
+    </div>
     <canvas id="myCanvas" resize width="600" height="600"></canvas>
   </div>
 </div>
@@ -713,6 +716,8 @@
   var experienceInline = document.getElementById('experience-inline');
   var experienceTitleLabel = document.getElementById('experience-title-label');
   var experienceSrTitle = document.getElementById('experience-sr-title');
+  var activeThreadOverlay = document.getElementById('active-thread-overlay');
+  var activeThreadOverlayLabel = document.getElementById('active-thread-overlay-label');
   var experienceInfoToggle = document.getElementById('experience-info-toggle');
   var experienceInfoPanel = document.getElementById('experience-info-panel');
   var experienceInfoTitle = document.getElementById('experience-info-title');

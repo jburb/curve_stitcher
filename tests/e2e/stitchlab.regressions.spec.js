@@ -754,6 +754,74 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Projected)');
   });
 
+  test('stitching active-thread overlay shows non-styling playback values', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.evaluate(() => {
+      nestedFrameEnabled = false;
+      if (nestedFrameEnabledInput) nestedFrameEnabledInput.checked = false;
+      if (nestedFrameRatioSelect) nestedFrameRatioSelect.disabled = true;
+
+      threads = [sanitizeThreadDescriptor({
+        jumpMode: 'connect',
+        connectMultiplier: 3,
+        frameMode: 'outer',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null)];
+      selectedThreadIndex = 0;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    await page.locator('#animate').click();
+    const overlayLabel = page.locator('#active-thread-overlay-label');
+    await expect(page.locator('#active-thread-overlay')).toBeVisible();
+    await expect(overlayLabel).toContainText('Thread 1: Stitch-by: Multiplying, Multiply by: 3');
+    await expect(overlayLabel).not.toContainText('Frame:');
+
+    await page.evaluate(() => {
+      stopAnimationIfActive();
+      nestedFrameEnabled = true;
+      if (nestedFrameEnabledInput) nestedFrameEnabledInput.checked = true;
+      if (nestedFrameRatioSelect) {
+        nestedFrameRatioSelect.disabled = false;
+        nestedFrameRatioSelect.value = '0.5';
+      }
+      nestedFrameRatio = 0.5;
+
+      if (holesSlider) {
+        holesSlider.value = '42';
+      }
+      if (advancedHolesNumberInput) {
+        advancedHolesNumberInput.value = '42';
+      }
+      if (typeof syncJumpBoundsFromHoleCount === 'function') {
+        syncJumpBoundsFromHoleCount();
+      }
+
+      threads = [sanitizeThreadDescriptor({
+        jumpMode: 'fixed',
+        jump: 20,
+        frameMode: 'inner',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null)];
+      selectedThreadIndex = 0;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    await page.locator('#animate').click();
+    await expect(page.locator('#active-thread-overlay')).toBeVisible();
+    await expect(overlayLabel).toContainText('Thread 1: Frame: Inner, Stitch-by: Adding, Add by: 20');
+  });
+
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {
     await page.goto('/stitchlab.html');
 

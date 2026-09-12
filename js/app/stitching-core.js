@@ -123,6 +123,9 @@ function drawSegmentSettleAccent(settle) {
 
 function renderAnimationFrame() {
   if (!animationState) {
+    if (typeof syncActiveThreadPlaybackOverlay === 'function') {
+      syncActiveThreadPlaybackOverlay(-1);
+    }
     drawStatic();
     return;
   }
@@ -154,6 +157,9 @@ function renderAnimationFrame() {
   animationState.activeHolePair = activePair;
   syncHoleNumberHighlightFromAnimationState();
   bringHoleNumbersToFront();
+  if (typeof syncActiveThreadPlaybackOverlay === 'function') {
+    syncActiveThreadPlaybackOverlay(animationState.threadIndex);
+  }
 }
 
 function redrawAnimationInPlace() {
@@ -1213,6 +1219,9 @@ function drawStatic() {
 
   clearHighlightedHoleNumbers();
   bringHoleNumbersToFront();
+  if (typeof syncActiveThreadPlaybackOverlay === 'function') {
+    syncActiveThreadPlaybackOverlay(-1);
+  }
 }
 
 function bringHoleNumbersToFront() {
@@ -1408,6 +1417,9 @@ function stopAnimationIfActive() {
   squarusAnimationState = null;
   mashrabiyaAnimationState = null;
   animationPlaybackState = 'idle';
+  if (typeof syncActiveThreadPlaybackOverlay === 'function') {
+    syncActiveThreadPlaybackOverlay(-1);
+  }
   syncAnimateButtonLabel();
   clearHighlightedHoleNumbers();
   updateMusicPlaybackState();

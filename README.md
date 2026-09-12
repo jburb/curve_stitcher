@@ -68,6 +68,7 @@ Current covered checks:
 - Prebuilt narration playback succeeds via static clips when a matching clip is available.
 - Prebuilt narration manifest covers all splash, onboarding, and about narration texts (including stale-hash drift checks).
 - Basic and advanced shared controls remain synchronized (holes, tempo, and inner-to-outer frame mode labeling).
+- Stitching active-thread overlay shows non-styling playback values for the currently animated thread.
 - Basic palette custom dropper applies the selected thread color.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
 - Acknowledgments viewer opens from About actions.
@@ -314,7 +315,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
 1. Stitch library (offline-first)
 1. Tips library and modal
 1. Curve sewing cards viewer
@@ -351,12 +351,10 @@ This section describes the practical steps for adding a new experience named zoo
 1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
 1. Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.
 1. Use better voice for narration.
+1. Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.
 
 
 ## TODO Backlog
-1. **Active thread config values overlay**
-     - to be shown when playback has been initiated by play button, if there are multiple threads.
- 
 1. **Stitch library (offline-first)**
 	 - Save/load named presets containing shape + global controls + per-thread settings.
 	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
