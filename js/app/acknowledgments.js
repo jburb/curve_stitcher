@@ -135,17 +135,16 @@ function renderThreadControls() {
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
       ` : ''}
       ${isFormulaMode ? `
-      Base add: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} base add value"><br>
-      Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + index) mod holeCount"><br>
+      Target expression: <input type="text" value="${thread.jumpFormula || 'targetHole = currentHole + 1'}" id="jump-formula-${index}" placeholder="e.g. targetHole = currentHole + 4"><br>
       <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
-      <div class="jump-help">Vars: index (step, 0-based), holeCount, currentHole, previousHole, skip</div>
+      <div class="jump-help">Vars: index (step, 0-based), holeCount, currentHole, previousHole, targetHole</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
-          <option value="(skip + index) mod holeCount">Growing spiral ((skip + index) mod holeCount)</option>
-          <option value="skip + (index mod 5)">Wobble (skip + (index mod 5))</option>
-          <option value="skip × ((index mod 3) + 1)">Pulse (skip × ((index mod 3) + 1))</option>
-          <option value="(currentHole mod 7) + skip">Current-based ((currentHole mod 7) + skip)</option>
+          <option value="targetHole = currentHole + 4">Add-4 cycle (targetHole = currentHole + 4)</option>
+          <option value="targetHole = currentHole + (index mod 5)">Wobble (targetHole = currentHole + (index mod 5))</option>
+          <option value="targetHole = ((currentHole + previousHole) mod holeCount) + 1">Blend current+previous</option>
+          <option value="4">Always hole 4 (constant target)</option>
         </select>
         <button type="button" id="use-preset-${index}">Use</button>
       </div>
@@ -488,7 +487,7 @@ kidStitchBySelect.addEventListener('change', () => {
     thread.jumpSequence = String(thread.jumpSequence || (thread.jumpSequenceMode === 'steps' ? '2,3,5,8' : '1,1,2,3,5,8'));
   } else if (choice === 'formula' && isExpressionStitchModeEnabled()) {
     thread.jumpMode = 'formula';
-    thread.jumpFormula = String(thread.jumpFormula || 'skip');
+    thread.jumpFormula = String(thread.jumpFormula || 'targetHole = currentHole + 1');
   } else if (choice === 'add') {
     if (thread.jumpMode === 'connect' || thread.jumpMode === 'sequence' || thread.jumpMode === 'formula') {
       thread.jumpMode = 'fixed';

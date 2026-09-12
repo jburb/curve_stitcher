@@ -266,7 +266,7 @@
   </div>
   <div class="slider-block" id="formula-input-block" style="display:none;">
     <div class="slider-label">🧮 Expression</div>
-    <input id="kid-jump-formula" type="text" placeholder="e.g. (skip + index) mod holeCount" aria-label="Step expression for selected thread">
+    <input id="kid-jump-formula" type="text" placeholder="e.g. targetHole = currentHole + 4" aria-label="Target expression for selected thread">
   </div>
   <div class="slider-block">
     <div class="slider-label"><span class="thread-size-icon" aria-hidden="true">◍</span> Thread Size <span class="slider-value" id="width-value">2</span></div>
@@ -772,7 +772,7 @@
       startHole: 1,
       sequence: null,
       jumpMode: 'fixed',
-      jumpFormula: 'skip',
+      jumpFormula: 'targetHole = currentHole + 1',
       jumpSequence: '',
       jumpSequenceMode: 'holes',
       connectMultiplier: 2,

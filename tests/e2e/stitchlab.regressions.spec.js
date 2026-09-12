@@ -1352,7 +1352,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: String(options.jumpFormula || 'skip'),
+          jumpFormula: String(options.jumpFormula || 'targetHole = currentHole + 1'),
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1537,7 +1537,7 @@ test.describe('StitchLab regressions', () => {
           startHole: startHole,
           sequence: null,
           jumpMode: 'sequence',
-          jumpFormula: 'skip',
+          jumpFormula: 'targetHole = currentHole + 1',
           jumpSequence: '1,1,2,3,5,8',
           jumpSequenceMode: 'holes',
           connectMultiplier: 2,
@@ -1565,7 +1565,7 @@ test.describe('StitchLab regressions', () => {
           startHole: startHole,
           sequence: null,
           jumpMode: 'sequence',
-          jumpFormula: 'skip',
+          jumpFormula: 'targetHole = currentHole + 1',
           jumpSequence: '1,2,3',
           jumpSequenceMode: 'steps',
           connectMultiplier: 2,
@@ -1601,7 +1601,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: 'skip',
+          jumpFormula: 'targetHole = currentHole + 1',
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1684,7 +1684,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: 'skip',
+          jumpFormula: 'targetHole = currentHole + 1',
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1717,6 +1717,133 @@ test.describe('StitchLab regressions', () => {
     expect(probe.holeListFirst).toEqual([2, 4]);
   });
 
+  test('expression mode uses evaluated values as absolute target holes', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function makeFormulaThread(expression) {
+        return window.sanitizeThreadDescriptor({
+          jumpMode: 'formula',
+          jumpFormula: String(expression || ''),
+          frameMode: 'outer',
+          startHole: 1,
+          width: 2,
+          color: '#1982c4'
+        }, null);
+      }
+
+      function setHoleCount(value) {
+        if (window.holesSlider) {
+          window.holesSlider.value = String(value);
+        }
+        if (window.advancedHolesNumberInput) {
+          window.advancedHolesNumberInput.value = String(value);
+        }
+        if (typeof window.syncJumpBoundsFromHoleCount === 'function') {
+          window.syncJumpBoundsFromHoleCount();
+        }
+        if (typeof window.computePoints === 'function') {
+          window.computePoints();
+        }
+      }
+
+      function toLabelPairs(segments, holeCount, maxPairs) {
+        var pairs = [];
+        for (var i = 0; i < segments.length && i < maxPairs; i++) {
+          var seg = segments[i];
+          pairs.push([
+            window.getHoleLabelFromPhysicalIndex(seg[0], holeCount),
+            window.getHoleLabelFromPhysicalIndex(seg[1], holeCount)
+          ]);
+        }
+        return pairs;
+      }
+
+      setHoleCount(12);
+
+      var constantTarget = makeFormulaThread('4');
+      var relativeTarget = makeFormulaThread('targetHole = currentHole + 4');
+
+      var constantSegments = window.computeSegments(constantTarget) || [];
+      var relativeSegments = window.computeSegments(relativeTarget) || [];
+
+      return {
+        constantPairs: toLabelPairs(constantSegments, 12, 4),
+        relativePairs: toLabelPairs(relativeSegments, 12, 4)
+      };
+    });
+
+    expect(probe.constantPairs.slice(0, 2)).toEqual([
+      [1, 4],
+      [4, 1]
+    ]);
+
+    expect(probe.relativePairs.slice(0, 3)).toEqual([
+      [1, 5],
+      [5, 9],
+      [9, 1]
+    ]);
+  });
+
+  test('expression constant target is not interpreted as add-by', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function setHoleCount(value) {
+        if (window.holesSlider) {
+          window.holesSlider.value = String(value);
+        }
+        if (window.advancedHolesNumberInput) {
+          window.advancedHolesNumberInput.value = String(value);
+        }
+        if (typeof window.syncJumpBoundsFromHoleCount === 'function') {
+          window.syncJumpBoundsFromHoleCount();
+        }
+        if (typeof window.computePoints === 'function') {
+          window.computePoints();
+        }
+      }
+
+      function firstLabelPair(thread) {
+        var segments = window.computeSegments(thread) || [];
+        if (!segments.length) return null;
+        return [
+          window.getHoleLabelFromPhysicalIndex(segments[0][0], 12),
+          window.getHoleLabelFromPhysicalIndex(segments[0][1], 12)
+        ];
+      }
+
+      setHoleCount(12);
+
+      var formulaThread = window.sanitizeThreadDescriptor({
+        jumpMode: 'formula',
+        jumpFormula: '4',
+        frameMode: 'outer',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null);
+
+      var addThread = window.sanitizeThreadDescriptor({
+        jumpMode: 'fixed',
+        jump: 4,
+        frameMode: 'outer',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null);
+
+      return {
+        formulaFirstPair: firstLabelPair(formulaThread),
+        addFirstPair: firstLabelPair(addThread)
+      };
+    });
+
+    expect(probe.formulaFirstPair).toEqual([1, 4]);
+    expect(probe.addFirstPair).toEqual([1, 5]);
+    expect(probe.formulaFirstPair).not.toEqual(probe.addFirstPair);
+  });
+
   test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
@@ -1731,7 +1858,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: String(options.jumpFormula || 'skip'),
+          jumpFormula: String(options.jumpFormula || 'targetHole = currentHole + 1'),
           jumpSequence: String(options.jumpSequence || ''),
           connectMultiplier: Number(options.connectMultiplier || 2),
           connectOffset: Number(options.connectOffset || 0),

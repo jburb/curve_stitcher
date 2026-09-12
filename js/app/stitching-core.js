@@ -768,13 +768,19 @@ function computeSequence(thread, holeCount) {
   }
 
   function normalizeFormulaExpression(expression) {
-    if (!expression) return 'skip';
+    if (!expression) return 'targetHole = currentHole + 1';
     return String(expression)
       .trim()
       .replace(/[×·]/g, '*')
       .replace(/÷/g, '/')
       .replace(/\^/g, '**')
       .replace(/\bmod\b/gi, '%');
+  }
+
+  function normalizeTargetHoleLabel(value) {
+    var target = Math.round(Number(value));
+    if (!isFinite(target)) return null;
+    return ((target - 1) % n + n) % n + 1;
   }
 
   var jumpResolver;
@@ -789,25 +795,31 @@ function computeSequence(thread, holeCount) {
       return normalizeJump(stepList[i % stepList.length]);
     };
   } else if (jumpMode === 'formula') {
-    var formula = normalizeFormulaExpression(thread.jumpFormula || 'skip');
+    var formula = normalizeFormulaExpression(thread.jumpFormula || 'targetHole = currentHole + 1');
     jumpResolver = function(index, currentIndex, previousIndex) {
       try {
         var currentHole = getHoleLabelFromPhysicalIndex(currentIndex, n);
         var previousHole = getHoleLabelFromPhysicalIndex(previousIndex, n);
+        var targetHole = currentHole;
         var evaluate = new Function(
-          'index', 'holeCount', 'currentHole', 'previousHole', 'skip', 'jump',
+          'index', 'holeCount', 'currentHole', 'previousHole', 'targetHole',
           'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
           'return (' + formula + ');'
         );
-        return normalizeJump(
-          evaluate(
-            index, n, currentHole, previousHole, thread.jump, thread.jump,
-            Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
-            Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
-          )
+        var resolvedTarget = evaluate(
+          index, n, currentHole, previousHole, targetHole,
+          Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
+          Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
         );
+        var normalizedTarget = normalizeTargetHoleLabel(resolvedTarget);
+        if (!normalizedTarget) {
+          normalizedTarget = normalizeTargetHoleLabel(currentHole + 1);
+        }
+        return getPhysicalHoleIndexFromLabel(normalizedTarget, n);
       } catch (err) {
-        return normalizeJump(thread.jump);
+        var fallbackCurrentHole = getHoleLabelFromPhysicalIndex(currentIndex, n);
+        var fallbackTarget = normalizeTargetHoleLabel(fallbackCurrentHole + 1);
+        return getPhysicalHoleIndexFromLabel(fallbackTarget || 1, n);
       }
     };
   } else {
@@ -816,14 +828,19 @@ function computeSequence(thread, holeCount) {
     };
   }
 
+  var isFormulaTargetMode = jumpMode === 'formula';
   for (var i = 0; i < maxSteps; i++) {
     if (visited[current]) break;
     visited[current] = true;
     seq.push(current);
-    var step = jumpResolver(i, current, prev);
+    var nextValue = jumpResolver(i, current, prev);
     prev = current;
-    current = (current + step) % n;
-    if (current < 0) current += n;
+    if (isFormulaTargetMode) {
+      current = ((Math.round(Number(nextValue)) % n) + n) % n;
+    } else {
+      current = (current + nextValue) % n;
+      if (current < 0) current += n;
+    }
   }
   return seq;
 }

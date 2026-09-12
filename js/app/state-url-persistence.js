@@ -378,7 +378,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     solidColor: '#1982c4',
     startHole: 1,
     jumpMode: 'fixed',
-    jumpFormula: 'skip',
+    jumpFormula: 'targetHole = currentHole + 1',
     jumpSequence: '',
     jumpSequenceMode: 'holes',
     connectMultiplier: 2,
@@ -395,7 +395,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     startHole: parseBoundedInt(raw.sh != null ? raw.sh : raw.startHole, 1, MAX_HOLES, fallback.startHole || 1),
     sequence: null,
     jumpMode: jumpMode,
-    jumpFormula: String(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'skip'))),
+    jumpFormula: String(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'targetHole = currentHole + 1'))),
     jumpSequence: String(raw.s != null ? raw.s : (raw.jumpSequence != null ? raw.jumpSequence : (fallback.jumpSequence || ''))),
     jumpSequenceMode: sanitizeThreadSequenceMode(raw.sm != null ? raw.sm : raw.jumpSequenceMode, fallback.jumpSequenceMode || 'holes'),
     connectMultiplier: parseBoundedInt(raw.cm != null ? raw.cm : raw.connectMultiplier, 1, 12, fallback.connectMultiplier || 2),
@@ -409,7 +409,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
   }
 
   if (thread.jumpMode !== 'formula') {
-    thread.jumpFormula = fallback.jumpFormula || 'skip';
+    thread.jumpFormula = fallback.jumpFormula || 'targetHole = currentHole + 1';
   }
   if (thread.jumpMode !== 'sequence') {
     thread.jumpSequence = '';
@@ -426,7 +426,7 @@ function serializeStitchingThreadState(threadList) {
       c: sanitizeThreadColor(thread.color, '#1982c4'),
       sh: parseBoundedInt(thread.startHole, 1, MAX_HOLES, 1),
       m: sanitizeThreadJumpMode(thread.jumpMode, 'fixed'),
-      f: String(thread.jumpFormula || 'skip'),
+      f: String(thread.jumpFormula || 'targetHole = currentHole + 1'),
       s: String(thread.jumpSequence || ''),
       sm: sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes'),
       cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),
@@ -443,7 +443,7 @@ function serializeStitchingThreadState(threadList) {
       c: '#1982c4',
       sh: 1,
       m: 'fixed',
-      f: 'skip',
+      f: 'targetHole = currentHole + 1',
       s: '',
       sm: 'holes',
       cm: 2,

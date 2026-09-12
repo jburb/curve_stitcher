@@ -329,7 +329,7 @@ function applyRandomizedStitchingStateForParamlessLoad() {
 
   randomThread.startHole = 1;
   randomThread.jumpMode = randomJumpMode;
-  randomThread.jumpFormula = 'skip';
+  randomThread.jumpFormula = 'targetHole = currentHole + 1';
   randomThread.jumpSequence = '';
   randomThread.jump = getRandomIntInclusive(1, jumpLimit);
   randomThread.connectMultiplier = getRandomIntInclusive(connectMin, connectMax);
@@ -1358,10 +1358,8 @@ function getStitchingActiveThreadOverlayEntries(thread) {
     entries.push({ key: 'List type', value: sequenceLabel });
     entries.push({ key: 'List', value: truncateOverlayValue(thread.jumpSequence || '', 56) });
   } else if (mode === 'formula' && isExpressionStitchModeEnabled()) {
-    var baseAdd = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
     entries.push({ key: 'Stitch-by', value: 'Expression' });
-    entries.push({ key: 'Base add', value: String(baseAdd) });
-    entries.push({ key: 'Expression', value: truncateOverlayValue(thread.jumpFormula || 'skip', 44) });
+    entries.push({ key: 'Expression', value: truncateOverlayValue(thread.jumpFormula || 'targetHole = currentHole + 1', 56) });
   } else {
     var sourceHoleCount = getThreadSourceHoleCount(thread);
     var addBy = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
@@ -3254,7 +3252,7 @@ function createThread(config) {
     startHole: parseBoundedInt(config.startHole, 1, MAX_HOLES, 1),
     sequence: null,
     jumpMode: 'fixed',
-    jumpFormula: 'skip',
+    jumpFormula: 'targetHole = currentHole + 1',
     jumpSequence: '',
     jumpSequenceMode: sanitizeThreadSequenceMode(config.jumpSequenceMode, 'holes'),
     connectMultiplier: 2,
@@ -3580,7 +3578,7 @@ function syncKidControlsFromSelectedThread() {
     kidSequenceModeSelect.value = sanitizeThreadSequenceMode(threads[index].jumpSequenceMode, 'holes');
   }
   if (kidJumpFormulaInput) {
-    kidJumpFormulaInput.value = String(threads[index].jumpFormula || 'skip');
+    kidJumpFormulaInput.value = String(threads[index].jumpFormula || 'targetHole = currentHole + 1');
   }
   widthSlider.value = threads[index].width;
   syncKidStitchByControl();

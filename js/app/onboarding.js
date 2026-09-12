@@ -167,7 +167,7 @@ function getDefaultOnboardingGuideContent() {
       },
       {
         title: 'Enter Expression',
-        text: 'Enter a formula for each stitch step using index, holeCount, currentHole, previousHole, and skip.',
+        text: 'Enter a target-hole formula using index, holeCount, currentHole, previousHole, and targetHole.',
         selector: '#kid-jump-formula'
       },
       {
