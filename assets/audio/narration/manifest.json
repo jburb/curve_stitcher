@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-12T14:41:27.114Z",
+  "generatedAt": "2026-09-12T16:11:59.371Z",
   "hashAlgorithm": "sha256",
   "textNormalization": "collapse-whitespace-and-trim",
   "piper": {
@@ -15,6 +15,13 @@
       "charCount": 36,
       "preview": "Drag Holes to change stitch density.",
       "file": "clips/0a077986b0990dcf5efd4a9bffeaf86f163794158f249d24901b1ef38cbcf9a4.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "0a6e879fadfcac605208fd84082be77fe496b2339f6247950f9f60fcde819a4f",
+      "charCount": 108,
+      "preview": "Enter a formula using index, holeCount, currentHole, and previousHole. targetHole is assigned au",
+      "file": "clips/0a6e879fadfcac605208fd84082be77fe496b2339f6247950f9f60fcde819a4f.wav"
     },
     {
       "source": "js/app/onboarding.js",
@@ -352,13 +359,6 @@
       "charCount": 36,
       "preview": "Adjust pieces placed for complexity.",
       "file": "clips/b227be5398e9d047401ded63d723ccc91dab316276fee055caadd49d187749b2.wav"
-    },
-    {
-      "source": "js/app/onboarding.js",
-      "textHash": "bbabf05334d022b2642b1b88fdc9b7b98c4528a4907bcaa3aafdb15d85d220a9",
-      "charCount": 94,
-      "preview": "Enter a target-hole formula using index, holeCount, currentHole, previousHole, and targetHole.",
-      "file": "clips/bbabf05334d022b2642b1b88fdc9b7b98c4528a4907bcaa3aafdb15d85d220a9.wav"
     },
     {
       "source": "js/app/onboarding.js",

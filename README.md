@@ -68,7 +68,7 @@ Current covered checks:
 - Prebuilt narration playback succeeds via static clips when a matching clip is available.
 - Prebuilt narration manifest covers all splash, onboarding, and about narration texts (including stale-hash drift checks).
 - Basic and advanced shared controls remain synchronized (holes, tempo, and inner-to-outer frame mode labeling).
-- Advanced expression input syncs immediately to the basic expression input.
+- Advanced formula input syncs immediately to the basic formula input.
 - Stitching active-thread overlay shows non-styling playback values for the currently animated thread.
 - Basic palette custom dropper applies the selected thread color.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
@@ -88,8 +88,8 @@ Current covered checks:
 - Start hole is hidden and ignored for list modes (Holes and Steps).
 - Start hole affects addition mode threads only and does not affect multiplication edge mapping.
 - Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
-- Expression mode uses evaluated values as absolute target holes.
-- Expression constant target is not interpreted as add-by.
+- Formula mode uses evaluated values as absolute target holes.
+- Formula constant target is not interpreted as add-by.
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
 - Core interaction sweep does not raise runtime reference/type errors.
 - Triangula URL state roundtrip persists key controls on reload.

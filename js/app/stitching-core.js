@@ -768,8 +768,14 @@ function computeSequence(thread, holeCount) {
   }
 
   function normalizeFormulaExpression(expression) {
-    if (!expression) return 'targetHole = currentHole + 1';
-    return String(expression)
+    var rhs = (typeof sanitizeThreadFormulaExpression === 'function')
+      ? sanitizeThreadFormulaExpression(expression, 'currentHole + 1')
+      : String(expression || 'currentHole + 1').trim();
+    var assignmentMatch = rhs.match(/^targetHole\s*=\s*(.+)$/i);
+    if (assignmentMatch && assignmentMatch[1]) {
+      rhs = assignmentMatch[1].trim();
+    }
+    return String(rhs)
       .trim()
       .replace(/[×·]/g, '*')
       .replace(/÷/g, '/')
@@ -795,19 +801,18 @@ function computeSequence(thread, holeCount) {
       return normalizeJump(stepList[i % stepList.length]);
     };
   } else if (jumpMode === 'formula') {
-    var formula = normalizeFormulaExpression(thread.jumpFormula || 'targetHole = currentHole + 1');
+    var formula = normalizeFormulaExpression(thread.jumpFormula || 'currentHole + 1');
     jumpResolver = function(index, currentIndex, previousIndex) {
       try {
         var currentHole = getHoleLabelFromPhysicalIndex(currentIndex, n);
         var previousHole = getHoleLabelFromPhysicalIndex(previousIndex, n);
-        var targetHole = currentHole;
         var evaluate = new Function(
-          'index', 'holeCount', 'currentHole', 'previousHole', 'targetHole',
+          'index', 'holeCount', 'currentHole', 'previousHole',
           'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
           'return (' + formula + ');'
         );
         var resolvedTarget = evaluate(
-          index, n, currentHole, previousHole, targetHole,
+          index, n, currentHole, previousHole,
           Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
           Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
         );

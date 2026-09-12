@@ -370,6 +370,18 @@ function sanitizeThreadFrameMode(value, fallback) {
   return value;
 }
 
+function sanitizeThreadFormulaExpression(value, fallback) {
+  var fallbackExpression = String(fallback || 'currentHole + 1').trim() || 'currentHole + 1';
+  var normalized = String(value == null ? '' : value).trim();
+  if (!normalized) return fallbackExpression;
+
+  var assignmentMatch = normalized.match(/^targetHole\s*=\s*(.+)$/i);
+  if (assignmentMatch && assignmentMatch[1]) {
+    normalized = assignmentMatch[1].trim();
+  }
+  return normalized || fallbackExpression;
+}
+
 function sanitizeThreadDescriptor(raw, fallback) {
   fallback = fallback || {
     jump: DEFAULT_SKIP,
@@ -378,7 +390,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     solidColor: '#1982c4',
     startHole: 1,
     jumpMode: 'fixed',
-    jumpFormula: 'targetHole = currentHole + 1',
+    jumpFormula: 'currentHole + 1',
     jumpSequence: '',
     jumpSequenceMode: 'holes',
     connectMultiplier: 2,
@@ -395,7 +407,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     startHole: parseBoundedInt(raw.sh != null ? raw.sh : raw.startHole, 1, MAX_HOLES, fallback.startHole || 1),
     sequence: null,
     jumpMode: jumpMode,
-    jumpFormula: String(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'targetHole = currentHole + 1'))),
+    jumpFormula: sanitizeThreadFormulaExpression(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'currentHole + 1'))),
     jumpSequence: String(raw.s != null ? raw.s : (raw.jumpSequence != null ? raw.jumpSequence : (fallback.jumpSequence || ''))),
     jumpSequenceMode: sanitizeThreadSequenceMode(raw.sm != null ? raw.sm : raw.jumpSequenceMode, fallback.jumpSequenceMode || 'holes'),
     connectMultiplier: parseBoundedInt(raw.cm != null ? raw.cm : raw.connectMultiplier, 1, 12, fallback.connectMultiplier || 2),
@@ -409,7 +421,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
   }
 
   if (thread.jumpMode !== 'formula') {
-    thread.jumpFormula = fallback.jumpFormula || 'targetHole = currentHole + 1';
+    thread.jumpFormula = sanitizeThreadFormulaExpression(fallback.jumpFormula || 'currentHole + 1');
   }
   if (thread.jumpMode !== 'sequence') {
     thread.jumpSequence = '';
@@ -426,7 +438,7 @@ function serializeStitchingThreadState(threadList) {
       c: sanitizeThreadColor(thread.color, '#1982c4'),
       sh: parseBoundedInt(thread.startHole, 1, MAX_HOLES, 1),
       m: sanitizeThreadJumpMode(thread.jumpMode, 'fixed'),
-      f: String(thread.jumpFormula || 'targetHole = currentHole + 1'),
+      f: sanitizeThreadFormulaExpression(thread.jumpFormula || 'currentHole + 1'),
       s: String(thread.jumpSequence || ''),
       sm: sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes'),
       cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),
@@ -443,7 +455,7 @@ function serializeStitchingThreadState(threadList) {
       c: '#1982c4',
       sh: 1,
       m: 'fixed',
-      f: 'targetHole = currentHole + 1',
+      f: 'currentHole + 1',
       s: '',
       sm: 'holes',
       cm: 2,

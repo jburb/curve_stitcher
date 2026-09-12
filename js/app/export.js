@@ -807,7 +807,7 @@ function buildStitchingGuideText(fileBaseName, options) {
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
     if (mode === 'sequence') return 'Sequence';
-    if (mode === 'formula') return 'Expression';
+    if (mode === 'formula') return 'Formula';
     return 'Addition';
   }
 
@@ -891,7 +891,7 @@ function buildStitchingGuideText(fileBaseName, options) {
       lines.push('  Sequence values: ' + String(paramThread.jumpSequence || ''));
     }
     if (paramThread.jumpMode === 'formula') {
-      lines.push('  Expression: ' + String(paramThread.jumpFormula || 'targetHole = currentHole + 1'));
+      lines.push('  Formula: targetHole = ' + String(paramThread.jumpFormula || 'currentHole + 1'));
     }
   }
 
@@ -942,9 +942,9 @@ function buildStitchingGuideText(fileBaseName, options) {
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'formula') {
-      lines.push('  Rule: evaluate expression per step, normalize to 1..holeCount, then connect currentHole -> targetHole.');
-      lines.push('  Expression: ' + String(thread.jumpFormula || 'targetHole = currentHole + 1'));
-      lines.push('  Variables: index (0-based), holeCount, currentHole (1..holeCount), previousHole (1..holeCount), targetHole.');
+      lines.push('  Rule: evaluate formula per step, normalize to 1..holeCount, then connect currentHole -> targetHole.');
+      lines.push('  Formula: targetHole = ' + String(thread.jumpFormula || 'currentHole + 1'));
+      lines.push('  Variables: index (0-based), holeCount, currentHole (1..holeCount), previousHole (1..holeCount).');
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
     } else {

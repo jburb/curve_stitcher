@@ -312,7 +312,7 @@ kidStitchBySelect.addEventListener('change', () => {
     thread.jumpSequence = String(thread.jumpSequence || (thread.jumpSequenceMode === 'steps' ? '2,3,5,8' : '1,1,2,3,5,8'));
   } else if (choice === 'formula' && isExpressionStitchModeEnabled()) {
     thread.jumpMode = 'formula';
-    thread.jumpFormula = String(thread.jumpFormula || 'targetHole = currentHole + 1');
+    thread.jumpFormula = sanitizeThreadFormulaExpression(thread.jumpFormula);
   } else if (choice === 'add') {
     if (thread.jumpMode === 'connect' || thread.jumpMode === 'sequence' || thread.jumpMode === 'formula') {
       thread.jumpMode = 'fixed';
@@ -365,7 +365,10 @@ if (kidJumpFormulaInput) {
     if (targetIndex < 0 || !threads[targetIndex]) return;
     var thread = threads[targetIndex];
     thread.jumpMode = 'formula';
-    thread.jumpFormula = kidJumpFormulaInput.value;
+    thread.jumpFormula = sanitizeThreadFormulaExpression(kidJumpFormulaInput.value);
+    if (kidJumpFormulaInput.value !== thread.jumpFormula) {
+      kidJumpFormulaInput.value = thread.jumpFormula;
+    }
     kidStitchBySelect.value = 'formula';
     syncBasicMathSliderVisibility();
     renderThreadControls();
@@ -381,7 +384,7 @@ function syncExpressionStitchModeOptionVisibility() {
     if (!expressionOption) {
       expressionOption = document.createElement('option');
       expressionOption.value = 'formula';
-      expressionOption.textContent = 'Expression';
+      expressionOption.textContent = 'Formula';
       kidStitchBySelect.appendChild(expressionOption);
     }
     return;

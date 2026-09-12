@@ -1045,8 +1045,20 @@
     width: 100%;
     max-width: 312px;
   }
-  #formula-input-block .formula-expression-input {
+  .formula-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
+    max-width: 312px;
+  }
+  .formula-prefix {
+    color: #8a93a8;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  #formula-input-block .formula-expression-input {
+    width: min(100%, 188px);
     max-width: 312px;
     box-sizing: border-box;
   }
@@ -1591,8 +1603,12 @@
     margin-bottom: 4px;
   }
   .thread-card .formula-expression-input {
-    width: min(100%, 296px);
+    width: min(100%, 176px);
     box-sizing: border-box;
+  }
+  .thread-card .formula-input-row {
+    max-width: 296px;
+    margin: 2px 0 4px;
   }
 
   .thread-card.selected {

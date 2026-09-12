@@ -754,7 +754,7 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Projected)');
   });
 
-  test('advanced expression input syncs immediately to basic expression input', async ({ page }) => {
+  test('advanced formula input syncs immediately to basic formula input', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
@@ -762,10 +762,10 @@ test.describe('StitchLab regressions', () => {
     await page.selectOption('#jump-mode-0', 'formula');
     await expect(page.locator('#formula-input-block')).toBeVisible();
 
-    const nextExpression = 'targetHole = currentHole + (index mod 4)';
-    await page.locator('#jump-formula-0').fill(nextExpression);
+    const nextFormula = 'currentHole + (index mod 4)';
+    await page.locator('#jump-formula-0').fill(nextFormula);
 
-    await expect(page.locator('#kid-jump-formula')).toHaveValue(nextExpression);
+    await expect(page.locator('#kid-jump-formula')).toHaveValue(nextFormula);
   });
 
   test('stitching active-thread overlay shows non-styling playback values', async ({ page }) => {
@@ -825,7 +825,7 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#animate').click();
     await expect(overlay).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread: 1, Stitch-by: Multiplying, Multiply by: 3');
+    await expect(overlayLabel).toContainText('Thread: 1, Stitch by: Multiplying, Multiply by: 3');
     await expect(overlayLabel).not.toContainText('Frame:');
 
     await page.evaluate(() => {
@@ -874,7 +874,7 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#animate').click();
     await expect(overlay).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread: 1, Frame: Inner, Stitch-by: Adding, Add by: 20, Start hole: 1');
+    await expect(overlayLabel).toContainText('Thread: 1, Frame: Inner, Stitch by: Adding, Add by: 20, Start hole: 1');
   });
 
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {
@@ -1366,7 +1366,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: String(options.jumpFormula || 'targetHole = currentHole + 1'),
+          jumpFormula: String(options.jumpFormula || 'currentHole + 1'),
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1551,7 +1551,7 @@ test.describe('StitchLab regressions', () => {
           startHole: startHole,
           sequence: null,
           jumpMode: 'sequence',
-          jumpFormula: 'targetHole = currentHole + 1',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: '1,1,2,3,5,8',
           jumpSequenceMode: 'holes',
           connectMultiplier: 2,
@@ -1579,7 +1579,7 @@ test.describe('StitchLab regressions', () => {
           startHole: startHole,
           sequence: null,
           jumpMode: 'sequence',
-          jumpFormula: 'targetHole = currentHole + 1',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: '1,2,3',
           jumpSequenceMode: 'steps',
           connectMultiplier: 2,
@@ -1615,7 +1615,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: 'targetHole = currentHole + 1',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1698,7 +1698,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: 'targetHole = currentHole + 1',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1731,7 +1731,7 @@ test.describe('StitchLab regressions', () => {
     expect(probe.holeListFirst).toEqual([2, 4]);
   });
 
-  test('expression mode uses evaluated values as absolute target holes', async ({ page }) => {
+  test('formula mode uses evaluated values as absolute target holes', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
     const probe = await page.evaluate(() => {
@@ -1776,7 +1776,7 @@ test.describe('StitchLab regressions', () => {
       setHoleCount(12);
 
       var constantTarget = makeFormulaThread('4');
-      var relativeTarget = makeFormulaThread('targetHole = currentHole + 4');
+      var relativeTarget = makeFormulaThread('currentHole + 4');
 
       var constantSegments = window.computeSegments(constantTarget) || [];
       var relativeSegments = window.computeSegments(relativeTarget) || [];
@@ -1799,7 +1799,7 @@ test.describe('StitchLab regressions', () => {
     ]);
   });
 
-  test('expression constant target is not interpreted as add-by', async ({ page }) => {
+  test('formula constant target is not interpreted as add-by', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
     const probe = await page.evaluate(() => {
@@ -1872,7 +1872,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: String(options.jumpFormula || 'targetHole = currentHole + 1'),
+          jumpFormula: String(options.jumpFormula || 'currentHole + 1'),
           jumpSequence: String(options.jumpSequence || ''),
           connectMultiplier: Number(options.connectMultiplier || 2),
           connectOffset: Number(options.connectOffset || 0),

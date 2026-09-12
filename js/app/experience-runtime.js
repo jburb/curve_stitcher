@@ -329,7 +329,7 @@ function applyRandomizedStitchingStateForParamlessLoad() {
 
   randomThread.startHole = 1;
   randomThread.jumpMode = randomJumpMode;
-  randomThread.jumpFormula = 'targetHole = currentHole + 1';
+  randomThread.jumpFormula = 'currentHole + 1';
   randomThread.jumpSequence = '';
   randomThread.jump = getRandomIntInclusive(1, jumpLimit);
   randomThread.connectMultiplier = getRandomIntInclusive(connectMin, connectMax);
@@ -1349,22 +1349,22 @@ function getStitchingActiveThreadOverlayEntries(thread) {
   var mode = sanitizeThreadJumpMode(thread.jumpMode, 'fixed');
   if (mode === 'connect') {
     var multiplyBy = parseBoundedInt(thread.connectMultiplier, 1, 12, 2);
-    entries.push({ key: 'Stitch-by', value: 'Multiplying' });
+    entries.push({ key: 'Stitch by', value: 'Multiplying' });
     entries.push({ key: 'Multiply by', value: String(multiplyBy) });
   } else if (mode === 'sequence') {
     var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
     var sequenceLabel = sequenceMode === 'steps' ? 'Steps' : 'Holes';
-    entries.push({ key: 'Stitch-by', value: 'List' });
+    entries.push({ key: 'Stitch by', value: 'List' });
     entries.push({ key: 'List type', value: sequenceLabel });
     entries.push({ key: 'List', value: truncateOverlayValue(thread.jumpSequence || '', 56) });
   } else if (mode === 'formula' && isExpressionStitchModeEnabled()) {
-    entries.push({ key: 'Stitch-by', value: 'Expression' });
-    entries.push({ key: 'Expression', value: truncateOverlayValue(thread.jumpFormula || 'targetHole = currentHole + 1', 56) });
+    entries.push({ key: 'Stitch by', value: 'Formula' });
+    entries.push({ key: 'Formula', value: truncateOverlayValue('targetHole = ' + sanitizeThreadFormulaExpression(thread.jumpFormula), 56) });
   } else {
     var sourceHoleCount = getThreadSourceHoleCount(thread);
     var addBy = parseBoundedInt(thread.jump, 1, Math.max(1, getThreadSourceHoleCount(thread) - 1), DEFAULT_SKIP);
     var startHole = parseBoundedInt(thread.startHole, 1, sourceHoleCount, 1);
-    entries.push({ key: 'Stitch-by', value: 'Adding' });
+    entries.push({ key: 'Stitch by', value: 'Adding' });
     entries.push({ key: 'Add by', value: String(addBy) });
     entries.push({ key: 'Start hole', value: String(startHole) });
   }
@@ -3252,13 +3252,25 @@ function createThread(config) {
     startHole: parseBoundedInt(config.startHole, 1, MAX_HOLES, 1),
     sequence: null,
     jumpMode: 'fixed',
-    jumpFormula: 'targetHole = currentHole + 1',
+    jumpFormula: 'currentHole + 1',
     jumpSequence: '',
     jumpSequenceMode: sanitizeThreadSequenceMode(config.jumpSequenceMode, 'holes'),
     connectMultiplier: 2,
     connectOffset: 0,
     frameMode: sanitizeThreadFrameMode(config.frameMode, 'outer')
   };
+}
+
+function sanitizeThreadFormulaExpression(expression, fallback) {
+  var fallbackExpression = String(fallback || 'currentHole + 1').trim() || 'currentHole + 1';
+  var normalized = String(expression == null ? '' : expression).trim();
+  if (!normalized) return fallbackExpression;
+
+  var assignmentMatch = normalized.match(/^targetHole\s*=\s*(.+)$/i);
+  if (assignmentMatch && assignmentMatch[1]) {
+    normalized = assignmentMatch[1].trim();
+  }
+  return normalized || fallbackExpression;
 }
 
 function ensureThreadConnectConfig(thread) {
@@ -3533,25 +3545,29 @@ function renderThreadControls() {
       ` : ''}
       Stitch by:
       <select id="jump-mode-${index}">
-        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Addition</option>
-        <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplication</option>
+        <option value="fixed" ${thread.jumpMode === 'fixed' ? 'selected' : ''}>Adding</option>
+        <option value="connect" ${thread.jumpMode === 'connect' ? 'selected' : ''}>Multiplying</option>
         <option value="sequence" ${thread.jumpMode === 'sequence' ? 'selected' : ''}>List</option>
-        ${isExpressionStitchModeEnabled() ? `<option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Expression</option>` : ''}
+        ${isExpressionStitchModeEnabled() ? `<option value="formula" ${thread.jumpMode === 'formula' ? 'selected' : ''}>Formula</option>` : ''}
       </select><br>
       ${isFixedMode ? `
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
       <div class="jump-help">Addition wraps with modulo: target hole = ((currentHole + addBy - 1) mod holeCount) + 1.</div>
       ` : ''}
       ${isFormulaMode ? `
-      Expression: <input class="formula-expression-input" type="text" value="${thread.jumpFormula || 'targetHole = currentHole + 1'}" id="jump-formula-${index}" placeholder="e.g. targetHole = currentHole + 4"><br>
-      <div class="jump-help">Vars: holeCount, currentHole, previousHole, targetHole, index (step, 0-based)</div>
+      🧪 Formula:
+      <div class="formula-input-row">
+        <span class="formula-prefix">targetHole =</span>
+        <input class="formula-expression-input" type="text" value="${sanitizeThreadFormulaExpression(thread.jumpFormula)}" id="jump-formula-${index}" placeholder="e.g. currentHole + 4">
+      </div>
+      <div class="jump-help">Variables: holeCount, currentHole, previousHole, index (step, 0-based)</div>
       <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
-          <option value="targetHole = currentHole + 4">Add-4 cycle (targetHole = currentHole + 4)</option>
-          <option value="targetHole = currentHole + (index mod 5)">Wobble (targetHole = currentHole + (index mod 5))</option>
-          <option value="targetHole = ((currentHole + previousHole) mod holeCount) + 1">Blend current+previous</option>
+          <option value="currentHole + 4">Add-4 cycle (currentHole + 4)</option>
+          <option value="currentHole + (index mod 5)">Wobble (currentHole + (index mod 5))</option>
+          <option value="((currentHole + previousHole) mod holeCount) + 1">Blend current+previous</option>
           <option value="4">Always hole 4 (constant target)</option>
         </select>
         <button type="button" id="use-preset-${index}">Use</button>
@@ -3657,7 +3673,10 @@ function renderThreadControls() {
     var formulaInput = document.getElementById(`jump-formula-${index}`);
     if (formulaInput) {
       formulaInput.addEventListener('input', e => {
-        thread.jumpFormula = e.target.value;
+        thread.jumpFormula = sanitizeThreadFormulaExpression(e.target.value);
+        if (e.target.value !== thread.jumpFormula) {
+          e.target.value = thread.jumpFormula;
+        }
         if (index === getKidTargetThreadIndex()) {
           syncKidControlsFromSelectedThread();
         }
@@ -3673,7 +3692,7 @@ function renderThreadControls() {
         if (!isExpressionStitchModeEnabled()) return;
         var preset = document.getElementById(`jump-preset-${index}`).value;
         if (!preset) return;
-        thread.jumpFormula = preset;
+        thread.jumpFormula = sanitizeThreadFormulaExpression(preset);
         thread.jumpMode = 'formula';
         renderThreadControls();
         redrawForPathChange();
@@ -3866,7 +3885,7 @@ function syncKidControlsFromSelectedThread() {
     kidSequenceModeSelect.value = sanitizeThreadSequenceMode(threads[index].jumpSequenceMode, 'holes');
   }
   if (kidJumpFormulaInput) {
-    kidJumpFormulaInput.value = String(threads[index].jumpFormula || 'targetHole = currentHole + 1');
+    kidJumpFormulaInput.value = sanitizeThreadFormulaExpression(threads[index].jumpFormula);
   }
   widthSlider.value = threads[index].width;
   syncKidStitchByControl();
