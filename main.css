@@ -144,9 +144,9 @@
   }
   #active-thread-overlay-label {
     display: block;
-    font-size: 14px;
+    font-size: 18px; /*used to be 14px*/
     line-height: 1.3;
-    font-family: 'FoliesBergere', 'MadeLikesScript', 'Nunito', sans-serif;
+    font-family: 'MadeLikesScript', 'FoliesBergere', 'Nunito', sans-serif;
     color: #1f4f94;
     white-space: normal;
     overflow-wrap: anywhere;

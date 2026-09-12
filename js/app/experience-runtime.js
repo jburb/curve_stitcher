@@ -1444,7 +1444,11 @@ function syncActiveThreadPlaybackOverlay(threadIndex) {
   var experience = getExperienceById('stitching');
   var color = getThemeExperienceTitleColor(experience.strokeColor || '#1f4f94');
   activeThreadOverlayLabel.style.color = color;
-  activeThreadOverlayLabel.style.fontFamily = '"FoliesBergere", "MadeLikesScript", "Nunito", sans-serif';
+  /*if (experienceTitleLabel && experienceTitleLabel.style && experienceTitleLabel.style.fontFamily) {
+    activeThreadOverlayLabel.style.fontFamily = experienceTitleLabel.style.fontFamily;
+  } else {*/ // NOTE: uncomment this if/else to use the experience title label's font family for overlay text, if available
+    activeThreadOverlayLabel.style.fontFamily = '"MadeLikesScript", "Nunito", sans-serif';
+  //}
 
   var thread = threads[threadIndex];
   var entries = getStitchingActiveThreadOverlayEntries(thread);
