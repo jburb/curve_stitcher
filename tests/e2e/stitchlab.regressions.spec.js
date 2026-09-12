@@ -128,6 +128,16 @@ function collectExpectedNarrationEntries(workspaceRoot) {
   return Array.from(dedupByHash.values());
 }
 
+async function suppressStartupOnboarding(page) {
+  await page.addInitScript((key) => {
+    window.localStorage.setItem(key, JSON.stringify({
+      quickStartDismissed: true,
+      tourCompleted: true,
+      startupTutorialOptOut: true
+    }));
+  }, 'stitchlab.onboarding.v1');
+}
+
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
     await page.goto('/stitchlab.html');
@@ -702,6 +712,7 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('basic and advanced shared controls stay in sync', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
 
@@ -722,11 +733,25 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#advanced-holes-number').press('Tab');
     await expect(page.locator('#holes')).toHaveValue('36');
 
-    await page.locator('#kid-tempo-fast').click();
-    await expect(page.locator('#advanced-tempo')).toHaveValue('252');
+    await page.selectOption('#advanced-tempo', '252');
+    await expect(page.locator('#kid-tempo-fast')).toHaveClass(/is-active/);
 
     await page.selectOption('#advanced-tempo', '84');
     await expect(page.locator('#kid-tempo-slow')).toHaveClass(/is-active/);
+
+    await page.locator('#nested-frame-enabled').check();
+    await page.locator('#add-magic-thread').click();
+
+    const activeThreadIndex = await page.evaluate(() => {
+      const idx = Number(window.selectedThreadIndex);
+      return Number.isFinite(idx) && idx >= 0 ? idx : 0;
+    });
+
+    await page.selectOption(`#frame-mode-${activeThreadIndex}`, 'bridge-reverse');
+    await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Bridged)');
+
+    await page.selectOption(`#frame-mode-${activeThreadIndex}`, 'bridge-reverse-project');
+    await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Projected)');
   });
 
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {
@@ -1382,12 +1407,15 @@ test.describe('StitchLab regressions', () => {
     expect(probe.steps.failures, JSON.stringify(probe.steps.samples)).toEqual([]);
   });
 
-  test('start hole is hidden and ignored for list mode with Holes list type', async ({ page }) => {
+  test('start hole is hidden and ignored for list modes', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
     await page.selectOption('#kid-stitch-by', 'sequence');
     await page.selectOption('#kid-sequence-mode', 'holes');
 
+    await expect(page.locator('#start-hole-block')).toBeHidden();
+
+    await page.selectOption('#kid-sequence-mode', 'steps');
     await expect(page.locator('#start-hole-block')).toBeHidden();
 
     const probe = await page.evaluate(() => {
@@ -1416,20 +1444,41 @@ test.describe('StitchLab regressions', () => {
         window.computePoints();
       }
 
-      var a = window.computeSegments(makeThread(1));
-      var b = window.computeSegments(makeThread(9));
+      var holesA = window.computeSegments(makeThread(1));
+      var holesB = window.computeSegments(makeThread(9));
+
+      function makeStepThread(startHole) {
+        return {
+          jump: 1,
+          width: 2,
+          color: '#1982c4',
+          solidColor: '#1982c4',
+          startHole: startHole,
+          sequence: null,
+          jumpMode: 'sequence',
+          jumpFormula: 'skip',
+          jumpSequence: '1,2,3',
+          jumpSequenceMode: 'steps',
+          connectMultiplier: 2,
+          connectOffset: 0,
+          frameMode: 'outer'
+        };
+      }
+
+      var stepsA = window.computeSegments(makeStepThread(1));
+      var stepsB = window.computeSegments(makeStepThread(9));
 
       return {
-        equalSegments: JSON.stringify(a) === JSON.stringify(b),
-        a: a,
-        b: b
+        holesEqualSegments: JSON.stringify(holesA) === JSON.stringify(holesB),
+        stepsEqualSegments: JSON.stringify(stepsA) === JSON.stringify(stepsB)
       };
     });
 
-    expect(probe.equalSegments).toBe(true);
+    expect(probe.holesEqualSegments).toBe(true);
+    expect(probe.stepsEqualSegments).toBe(true);
   });
 
-  test('start hole remains functional for add, multiply, and Steps list modes', async ({ page }) => {
+  test('start hole affects only addition mode threads', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
     const probe = await page.evaluate(() => {
@@ -1465,9 +1514,6 @@ test.describe('StitchLab regressions', () => {
       var mulA = window.computeSegments(makeThread({ jumpMode: 'connect', connectMultiplier: 2, startHole: 1 }));
       var mulB = window.computeSegments(makeThread({ jumpMode: 'connect', connectMultiplier: 2, startHole: 4 }));
 
-      var stepA = window.computeSegments(makeThread({ jumpMode: 'sequence', jumpSequenceMode: 'steps', jumpSequence: '1,2,3', startHole: 1 }));
-      var stepB = window.computeSegments(makeThread({ jumpMode: 'sequence', jumpSequenceMode: 'steps', jumpSequence: '1,2,3', startHole: 4 }));
-
       function differs(x, y) {
         return JSON.stringify(x) !== JSON.stringify(y);
       }
@@ -1486,7 +1532,6 @@ test.describe('StitchLab regressions', () => {
       return {
         addDiffers: differs(addA, addB),
         multiplyDiffers: differs(mulA, mulB),
-        stepListDiffers: differs(stepA, stepB),
         multiplyStartSourceA: mulA.length ? (mulA[0][0] + 1) : null,
         multiplyStartSourceB: mulB.length ? (mulB[0][0] + 1) : null,
         multiplyEdgeSetA: canonicalUndirectedSet(mulA),
@@ -1495,11 +1540,10 @@ test.describe('StitchLab regressions', () => {
     });
 
     expect(probe.addDiffers).toBe(true);
-    expect(probe.multiplyDiffers).toBe(true);
-    expect(probe.stepListDiffers).toBe(true);
+    expect(probe.multiplyDiffers).toBe(false);
     expect(probe.multiplyStartSourceA).toBe(1);
-    expect(probe.multiplyStartSourceB).toBe(4);
-    expect(probe.multiplyEdgeSetA).not.toBe(probe.multiplyEdgeSetB);
+    expect(probe.multiplyStartSourceB).toBe(1);
+    expect(probe.multiplyEdgeSetA).toBe(probe.multiplyEdgeSetB);
   });
 
   test('hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes', async ({ page }) => {
@@ -1750,6 +1794,7 @@ test.describe('StitchLab regressions', () => {
       }
     });
 
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
     await page.locator('.shape-btn[data-shape="square"]').click();
@@ -1774,14 +1819,10 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('acknowledgments viewer autoplay lifecycle resets cleanly across reopen', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
-
-    await page.evaluate(() => {
-      var tour = document.getElementById('onboarding-tour');
-      var skip = document.getElementById('onboarding-tour-skip');
-      if (!tour || tour.hidden || !skip) return;
-      skip.click();
-    });
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(page.locator('#onboarding-tour')).toBeHidden();
 
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-acknowledgments-toggle').click();

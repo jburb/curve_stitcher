@@ -3182,7 +3182,7 @@ function syncBasicMathSliderVisibility() {
   var isSequenceMode = mode === 'sequence';
   var isFormulaMode = isExpressionStitchModeEnabled() && mode === 'formula';
   var isFixedMode = !isMultiplyMode && !isSequenceMode && !isFormulaMode;
-  var hideStartHole = index >= 0 && threads[index] && isThreadHoleListMode(threads[index]);
+  var hideStartHole = !isFixedMode;
 
   addSliderBlock.style.display = isFixedMode ? '' : 'none';
   multiplySliderBlock.style.display = isMultiplyMode ? '' : 'none';
@@ -3353,8 +3353,8 @@ function refreshKidThreadPicker() {
     var mode = sanitizeThreadFrameMode(thread.frameMode, 'outer');
     if (mode === 'inner') return ' I';
     if (mode === 'bridge') return ' O->I';
-    if (mode === 'bridge-reverse') return ' I->O';
-    if (mode === 'bridge-reverse-project') return ' I->R';
+    if (mode === 'bridge-reverse') return ' I->O (Bridged)';
+    if (mode === 'bridge-reverse-project') return ' I->O (Projected)';
     return ' O';
   }
 

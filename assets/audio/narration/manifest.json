@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-11T13:54:56.342Z",
+  "generatedAt": "2026-09-11T23:48:40.425884Z",
   "hashAlgorithm": "sha256",
   "textNormalization": "collapse-whitespace-and-trim",
   "piper": {
-    "runner": "/home/joshy/source/repos/curve_stitcher/.venv/bin/python -m piper",
+    "runner": "/usr/bin/python -m piper",
     "modelRef": "en_US-hfc_female-medium",
     "dataDir": "assets/audio/narration/voices"
   },
@@ -141,6 +141,13 @@
       "charCount": 31,
       "preview": "Pick the polyomino family size.",
       "file": "clips/3c7cbed27d0c43c86a05bb3f4965e2382c32cfa8e0376251506c7257d59f705e.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "3c817f79dba2d5a64190928f7e0c57fa1d2973ecfd3b6a30f4e997a08a46c6a9",
+      "charCount": 99,
+      "preview": "Drag \"Fill Border\" higher or lower to adjust the thickness of the border around the rosette shap",
+      "file": "clips/3c817f79dba2d5a64190928f7e0c57fa1d2973ecfd3b6a30f4e997a08a46c6a9.wav"
     },
     {
       "source": "js/app/onboarding.js",
@@ -310,6 +317,13 @@
       "charCount": 156,
       "preview": "This app is intended to be heard, as well as seen. Please ensure your device volume is unmuted a",
       "file": "clips/92338f3071fa20f4abe9e3096ee62ee6d53024cdd16511f8c5fe38fa1c292144.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "9244bbc07e6f85ce714314e2061338574af943f19f7b57c382f7a902cc64679c",
+      "charCount": 76,
+      "preview": "Enable to see the construction lines even after rosette animation completes.",
+      "file": "clips/9244bbc07e6f85ce714314e2061338574af943f19f7b57c382f7a902cc64679c.wav"
     },
     {
       "source": "js/app/onboarding.js",

@@ -60,14 +60,14 @@ This repository includes dev-only Playwright tests for repeatable regression cov
 Current covered checks:
 - Stitching shape selection persists to URL and survives refresh.
 - SVG export flow opens/closes correctly and does not throw the export failure alert.
-- Export fallback path works when JSZip is unavailable.
 - Squarus squares selection snaps "pieces placed" to the max for the selected polyomino set.
-- Squarus seeded piece sequencing is deterministic for fixed seed.
 - Experience switching updates the visible control groups correctly (Stitching, Triangula, Squarus).
 - Onboarding tour uses Stitching-only intro behavior and startup opt-out control behavior.
 - Onboarding autoplay preference and hear-all stop-all flow persist correctly across reloads.
 - Paramless splash continue primes onboarding autoplay narration for webkit-style speech lock.
-- Basic and advanced shared controls remain synchronized (holes, tempo, etc.).
+- Prebuilt narration playback succeeds via static clips when a matching clip is available.
+- Prebuilt narration manifest covers all splash, onboarding, and about narration texts (including stale-hash drift checks).
+- Basic and advanced shared controls remain synchronized (holes, tempo, and inner-to-outer frame mode labeling).
 - Basic palette custom dropper applies the selected thread color.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
 - Acknowledgments viewer opens from About actions.
@@ -78,21 +78,26 @@ Current covered checks:
 - Slider touchmove events are not canceled by global handlers.
 - Playback remains operable after orientation-style viewport changes.
 - Mobile layout baseline remains usable at phone viewport.
-- List type variants produce the expected stitch routing.
-- Paramless sequence randomization is ordered and yields at least three segments.
-- Start hole is hidden and ignored for list mode with Holes list type.
-- Start hole remains functional for add, multiply, and Steps list modes.
-- Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
-- Triangula URL state roundtrip persists key controls on reload.
-- Squarus URL state roundtrip persists key controls on reload.
-- Mashrabiya URL state roundtrip persists key controls on reload.
-- Runtime load-order contract exposes required global functions.
-- Core interaction sweep does not raise runtime reference/type errors.
 - Mashrabiya debug SVG export closes sequence stitch paths.
 - Mashrabiya fold 8 classification and fills match expected point IDs and area coverage.
 - Mashrabiya fold 8 and 12 fills are invariant to debug-label toggle.
+- List type variants produce the expected stitch routing.
+- Paramless sequence randomization is ordered and yields at least three segments.
+- Start hole is hidden and ignored for list modes (Holes and Steps).
+- Start hole affects addition mode threads only and does not affect multiplication edge mapping.
+- Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
+- Core interaction sweep does not raise runtime reference/type errors.
+- Triangula URL state roundtrip persists key controls on reload.
+- Squarus URL state roundtrip persists key controls on reload.
+- Mashrabiya URL state roundtrip persists key controls on reload.
+- Export fallback path works when JSZip is unavailable.
+- Squarus seeded piece sequencing is deterministic for fixed seed.
+- Runtime load-order contract exposes required global functions.
 - About narration uses paragraph text and excludes figure captions.
+- About narration resolves from file even when the About panel was never opened.
+- About narration text hashes resolve to prebuilt manifest clips across experience About docs.
+- About narration hash remains manifest-aligned after About iframe cache priming.
 - About and onboarding "Hear this" buttons include speaker icon.
 
 ### Run Locally
@@ -309,7 +314,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Papercuts - see TODO.
 1. Active thread config values overlay, shown when playback has been initiated by play button, if there are multiple threads.  
 1. Stitch library (offline-first)
 1. Tips library and modal
@@ -350,14 +354,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 
 ## TODO Backlog
-1. **Papercuts**
-     - ~~wrong order of some onboarding hints in triangula~~
-     - missing “fill border” and “construction lines” onboarding hints in mashrabiya
-     - “start hole” should not move the pattern for multiplication threads, and not be enabled or visible for list threads
-     - The shorthand labels for inner-to-outer threads used in the thread picker should be updated for better clarity
-     - we should ensure that changes from one inner-to-outer thread mode to another, e.g from projected to bridge mode or visa versa, are synced between advanced and basic controls as expected (including a new regression test for the same)
-     - ~~some sentence is not capitalized in Squarus about doc~~
-
 1. **Active thread config values overlay**
      - to be shown when playback has been initiated by play button, if there are multiple threads.
  

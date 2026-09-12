@@ -316,6 +316,11 @@ function getOnboardingGuideContentForExperience(experienceId) {
           selector: '#mashrabiya-fold'
         },
         {
+          title: 'Adjust Border Thickness',
+          text: 'Drag "Fill Border" higher or lower to adjust the thickness of the border around the rosette shapes.',
+          selector: '#mashrabiya-fill-border-width'
+        },
+        {
           title: 'Set Inner Star Color',
           text: 'Pick a color for the central star.',
           selector: '#mashrabiya-star-color'
@@ -329,6 +334,11 @@ function getOnboardingGuideContentForExperience(experienceId) {
           title: 'Set Petal Color',
           text: 'Adjust petal tone for contrast.',
           selector: '#mashrabiya-petal-color'
+        },
+        {
+          title: 'Enable/Disable Construction Lines',
+          text: 'Enable to see the construction lines even after rosette animation completes.',
+          selector: '#mashrabiya-keep-construction-lines'
         }
       ]).concat(getOnboardingTailSteps())
     };

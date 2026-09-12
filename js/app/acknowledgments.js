@@ -110,7 +110,7 @@ function renderThreadControls() {
     var isSequenceMode = thread.jumpMode === 'sequence';
     var isConnectMode = thread.jumpMode === 'connect';
     var sequenceMode = sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes');
-    var isHoleListMode = isThreadHoleListMode(thread);
+    var hideStartHoleControl = !isFixedMode;
 
     div.innerHTML = `
       <strong>Thread ${index + 1}</strong><br>
@@ -120,7 +120,7 @@ function renderThreadControls() {
       <select id="frame-mode-${index}">
         <option value="outer" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'outer' ? 'selected' : ''}>Outer</option>
         <option value="inner" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'inner' ? 'selected' : ''}>Inner</option>
-        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Inner -&gt; Outer (Bridge)</option>
+        <option value="bridge-reverse" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse' ? 'selected' : ''}>Inner -&gt; Outer (Bridged)</option>
         <option value="bridge-reverse-project" ${sanitizeThreadFrameMode(thread.frameMode, 'outer') === 'bridge-reverse-project' ? 'selected' : ''}>Inner -&gt; Outer (Projected)</option>
       </select><br>
       ` : ''}
@@ -161,10 +161,10 @@ function renderThreadControls() {
       <div class="jump-help">Hole sequence stops at the first value above the current hole count.</div>
       <div class="jump-help">Interval sequence: values are repeated jumps from each current hole.</div>
       ` : ''}
-      ${!isHoleListMode ? `Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>` : ''}
+      ${!hideStartHoleControl ? `Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>` : ''}
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      <div class="jump-help">Begin at Start hole and count forward as i = 1..n, then connect to ((start + multiplier × i - 2) mod n) + 1.</div>
+      <div class="jump-help">Multiplication uses fixed hole mapping. Start hole does not affect multiplication threads.</div>
       ` : ''}
       Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
@@ -242,6 +242,7 @@ function renderThreadControls() {
     if (frameModeInput) {
       frameModeInput.addEventListener('change', e => {
         thread.frameMode = sanitizeThreadFrameMode(e.target.value, thread.frameMode || 'outer');
+        syncKidControlsFromSelectedThread();
         redrawForPathChange();
       });
     }
