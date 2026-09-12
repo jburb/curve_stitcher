@@ -790,16 +790,18 @@ function computeSequence(thread, holeCount) {
     };
   } else if (jumpMode === 'formula') {
     var formula = normalizeFormulaExpression(thread.jumpFormula || 'skip');
-    jumpResolver = function(i, currentIndex, previousIndex) {
+    jumpResolver = function(index, currentIndex, previousIndex) {
       try {
+        var currentHole = getHoleLabelFromPhysicalIndex(currentIndex, n);
+        var previousHole = getHoleLabelFromPhysicalIndex(previousIndex, n);
         var evaluate = new Function(
-          'i', 'n', 'current', 'prev', 'skip', 'jump',
+          'index', 'holeCount', 'currentHole', 'previousHole', 'skip', 'jump',
           'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
           'return (' + formula + ');'
         );
         return normalizeJump(
           evaluate(
-            i, n, currentIndex, previousIndex, thread.jump, thread.jump,
+            index, n, currentHole, previousHole, thread.jump, thread.jump,
             Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
             Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
           )

@@ -136,16 +136,16 @@ function renderThreadControls() {
       ` : ''}
       ${isFormulaMode ? `
       Base add: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} base add value"><br>
-      Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + i) mod n"><br>
+      Step expression: <input type="text" value="${thread.jumpFormula || 'skip'}" id="jump-formula-${index}" placeholder="e.g. (skip + index) mod holeCount"><br>
       <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
-      <div class="jump-help">Vars: i (step), n (holes), current, prev, skip</div>
+      <div class="jump-help">Vars: index (step, 0-based), holeCount, currentHole, previousHole, skip</div>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
-          <option value="(skip + i) mod n">Growing spiral ((skip + i) mod n)</option>
-          <option value="skip + (i mod 5)">Wobble (skip + (i mod 5))</option>
-          <option value="skip × ((i mod 3) + 1)">Pulse (skip × ((i mod 3) + 1))</option>
-          <option value="(current mod 7) + skip">Current-based ((current mod 7) + skip)</option>
+          <option value="(skip + index) mod holeCount">Growing spiral ((skip + index) mod holeCount)</option>
+          <option value="skip + (index mod 5)">Wobble (skip + (index mod 5))</option>
+          <option value="skip × ((index mod 3) + 1)">Pulse (skip × ((index mod 3) + 1))</option>
+          <option value="(currentHole mod 7) + skip">Current-based ((currentHole mod 7) + skip)</option>
         </select>
         <button type="button" id="use-preset-${index}">Use</button>
       </div>

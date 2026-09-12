@@ -924,7 +924,7 @@ function buildStitchingGuideText(fileBaseName, options) {
 
     if (thread.jumpMode === 'connect') {
       lines.push('  Rule: start at Start hole and count forward as i = 1..n, then target = ((start + multiplier * i - 2) mod n) + 1.');
-      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
+      lines.push('  holeCount is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
       lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
       lines.push('  Full connections:');
@@ -942,14 +942,15 @@ function buildStitchingGuideText(fileBaseName, options) {
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'formula') {
-      lines.push('  Rule: evaluate expression per step, then connect current -> (current + step) mod n.');
+      lines.push('  Rule: evaluate expression per step, then connect currentHole -> (currentHole + step) mod holeCount.');
       lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
       lines.push('  Base add value: ' + String(thread.jump));
+      lines.push('  Variables: index (0-based), holeCount, currentHole (1..holeCount), previousHole (1..holeCount), skip.');
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
     } else {
-      lines.push('  Rule: next = ((current + add - 1) mod n) + 1.');
-      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
+      lines.push('  Rule: next = ((currentHole + add - 1) mod holeCount) + 1.');
+      lines.push('  holeCount is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Add value: ' + String(thread.jump));
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);

@@ -311,7 +311,9 @@ function applyRandomizedStitchingStateForParamlessLoad() {
     frameMode: pickRandomValue(frameModes, 'outer'),
     jumpSequenceMode: pickRandomValue(['holes', 'steps'], 'holes')
   });
-  var randomJumpMode = pickRandomValue(['fixed', 'connect', 'sequence'], 'fixed');
+  // Keep startup randomization in beginner-friendly deterministic modes only.
+  var randomJumpModeOptions = ['fixed', 'connect', 'sequence'];
+  var randomJumpMode = pickRandomValue(randomJumpModeOptions, 'fixed');
 
   if (randomJumpMode === 'connect') {
     randomHoleCount = Math.max(PARAMLESS_MULTIPLY_MIN_HOLES, randomHoleCount);
