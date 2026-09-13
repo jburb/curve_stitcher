@@ -1902,7 +1902,7 @@ test.describe('StitchLab regressions', () => {
     await kidFormulaInput.fill('currentHole + (');
     await kidFormulaInput.press('Tab');
     await expect(kidFormulaInput).toHaveValue('currentHole + 2');
-    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
 
     await kidFormulaInput.fill('currentHole + 5');
     await kidFormulaInput.press('Tab');
@@ -1912,7 +1912,7 @@ test.describe('StitchLab regressions', () => {
     await kidFormulaInput.fill('bad(');
     await kidFormulaInput.press('Tab');
     await expect(kidFormulaInput).toHaveValue('currentHole + 5');
-    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
   });
 
   test('formula validity feedback is delayed while typing', async ({ page }) => {

@@ -1068,10 +1068,11 @@
     padding: 4px 4px 4px 8px;
     box-sizing: border-box;
   }
-  .formula-expression-input.is-invalid-formula {
-    border-color: #d04a4a;
-    background: #fff6f6;
-    box-shadow: 0 0 0 2px rgba(208, 74, 74, 0.18);
+  #formula-input-block .formula-expression-input.is-invalid-formula,
+  .thread-card .formula-expression-input.is-invalid-formula {
+    border-color: #d04a4a !important;
+    background: #fff6f6 !important;
+    box-shadow: 0 0 0 2px rgba(208, 74, 74, 0.18) !important;
   }
   .thread-size-icon {
     color: #4f5f77;

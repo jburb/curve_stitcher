@@ -3372,19 +3372,18 @@ function commitThreadFormulaInput(thread, inputElement) {
     if (inputElement && inputElement.value !== normalized) {
       inputElement.value = normalized;
     }
-    setFormulaInputValidityState(inputElement, true);
     return true;
   }
 
   var rollbackExpression = getFormulaRollbackExpression(thread);
   thread.jumpFormula = rollbackExpression;
   thread.lastValidJumpFormula = rollbackExpression;
-  thread.formulaValidationError = true;
+  thread.formulaValidationError = false;
   if (inputElement) {
     inputElement.value = rollbackExpression;
-    setFormulaInputValidityState(inputElement, false);
+    setFormulaInputValidityState(inputElement, true);
   }
-  return false;
+  return true;
 }
 
 function ensureThreadConnectConfig(thread) {
@@ -3789,12 +3788,10 @@ function renderThreadControls() {
       setFormulaInputValidityState(formulaInput, !thread.formulaValidationError && isFormulaExpressionValid(thread.jumpFormula));
       formulaInput.addEventListener('input', e => {
         thread.jumpFormula = e.target.value;
-        setFormulaInputValidityState(e.target, true);
         if (index === getKidTargetThreadIndex()) {
           var kidInput = document.getElementById('kid-jump-formula');
           if (kidInput && kidInput !== document.activeElement) {
             kidInput.value = thread.jumpFormula;
-            setFormulaInputValidityState(kidInput, true);
           }
         }
         scheduleFormulaValidationFeedback(thread, e.target, function(isValid) {
@@ -3804,6 +3801,7 @@ function renderThreadControls() {
               setFormulaInputValidityState(kidInput, isValid);
             }
           }
+          setFormulaInputValidityState(e.target, isValid);
           if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula' && isValid) {
             redrawForPathChange();
           }
@@ -3819,16 +3817,14 @@ function renderThreadControls() {
         if (isExpressionStitchModeEnabled() && thread.jumpMode === 'formula') {
           redrawForPathChange();
         }
-        if (!isValidFormula) {
-          var refreshedAdvancedInput = document.getElementById(`jump-formula-${index}`);
-          if (refreshedAdvancedInput) {
-            setFormulaInputValidityState(refreshedAdvancedInput, false);
-          }
-          if (index === getKidTargetThreadIndex()) {
-            var refreshedKidInput = document.getElementById('kid-jump-formula');
-            if (refreshedKidInput) {
-              setFormulaInputValidityState(refreshedKidInput, false);
-            }
+        var refreshedAdvancedInput = document.getElementById(`jump-formula-${index}`);
+        if (refreshedAdvancedInput) {
+          setFormulaInputValidityState(refreshedAdvancedInput, isValidFormula);
+        }
+        if (index === getKidTargetThreadIndex()) {
+          var refreshedKidInput = document.getElementById('kid-jump-formula');
+          if (refreshedKidInput) {
+            setFormulaInputValidityState(refreshedKidInput, isValidFormula);
           }
         }
       };

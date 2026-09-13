@@ -367,17 +367,16 @@ if (kidJumpFormulaInput) {
     thread.jumpMode = 'formula';
     thread.jumpFormula = kidJumpFormulaInput.value;
     kidStitchBySelect.value = 'formula';
-    setFormulaInputValidityState(kidJumpFormulaInput, true);
     var advancedFormulaInput = document.getElementById(`jump-formula-${targetIndex}`);
     if (advancedFormulaInput && advancedFormulaInput !== document.activeElement) {
       advancedFormulaInput.value = thread.jumpFormula;
-      setFormulaInputValidityState(advancedFormulaInput, true);
     }
     scheduleFormulaValidationFeedback(thread, kidJumpFormulaInput, function(isValid) {
       var advancedFormulaInput = document.getElementById(`jump-formula-${targetIndex}`);
       if (advancedFormulaInput && advancedFormulaInput !== document.activeElement) {
         setFormulaInputValidityState(advancedFormulaInput, isValid);
       }
+      setFormulaInputValidityState(kidJumpFormulaInput, isValid);
       if (isValid) {
         redrawForPathChange();
       }
@@ -395,12 +394,10 @@ if (kidJumpFormulaInput) {
     renderThreadControls();
     syncKidControlsFromSelectedThread();
     redrawForPathChange();
-    if (!isValidFormula) {
-      setFormulaInputValidityState(kidJumpFormulaInput, false);
-      var refreshedAdvancedInput = document.getElementById(`jump-formula-${targetIndex}`);
-      if (refreshedAdvancedInput) {
-        setFormulaInputValidityState(refreshedAdvancedInput, false);
-      }
+    setFormulaInputValidityState(kidJumpFormulaInput, isValidFormula);
+    var refreshedAdvancedInput = document.getElementById(`jump-formula-${targetIndex}`);
+    if (refreshedAdvancedInput) {
+      setFormulaInputValidityState(refreshedAdvancedInput, isValidFormula);
     }
   };
 
