@@ -718,7 +718,7 @@ function computeSequence(thread, holeCount) {
     jumpMode = 'fixed';
   }
   var visited = new Array(n).fill(false);
-  var startLabel = jumpMode === 'fixed'
+  var startLabel = (jumpMode === 'fixed' || jumpMode === 'formula')
     ? parseBoundedInt(thread.startHole, 1, n, 1)
     : 1;
   var startIndex = getPhysicalHoleIndexFromLabel(startLabel, n);
@@ -768,13 +768,25 @@ function computeSequence(thread, holeCount) {
   }
 
   function normalizeFormulaExpression(expression) {
-    if (!expression) return 'skip';
-    return String(expression)
+    var rhs = (typeof sanitizeThreadFormulaExpression === 'function')
+      ? sanitizeThreadFormulaExpression(expression, 'currentHole + 1')
+      : String(expression || 'currentHole + 1').trim();
+    var assignmentMatch = rhs.match(/^targetHole\s*=\s*(.+)$/i);
+    if (assignmentMatch && assignmentMatch[1]) {
+      rhs = assignmentMatch[1].trim();
+    }
+    return String(rhs)
       .trim()
       .replace(/[×·]/g, '*')
       .replace(/÷/g, '/')
       .replace(/\^/g, '**')
       .replace(/\bmod\b/gi, '%');
+  }
+
+  function normalizeTargetHoleLabel(value) {
+    var target = Math.round(Number(value));
+    if (!isFinite(target)) return null;
+    return ((target - 1) % n + n) % n + 1;
   }
 
   var jumpResolver;
@@ -789,23 +801,30 @@ function computeSequence(thread, holeCount) {
       return normalizeJump(stepList[i % stepList.length]);
     };
   } else if (jumpMode === 'formula') {
-    var formula = normalizeFormulaExpression(thread.jumpFormula || 'skip');
-    jumpResolver = function(i, currentIndex, previousIndex) {
+    var formula = normalizeFormulaExpression(thread.jumpFormula || 'currentHole + 1');
+    jumpResolver = function(index, currentIndex, previousIndex) {
       try {
+        var currentHole = getHoleLabelFromPhysicalIndex(currentIndex, n);
+        var previousHole = getHoleLabelFromPhysicalIndex(previousIndex, n);
         var evaluate = new Function(
-          'i', 'n', 'current', 'prev', 'skip', 'jump',
+          'index', 'holeCount', 'currentHole', 'previousHole',
           'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
           'return (' + formula + ');'
         );
-        return normalizeJump(
-          evaluate(
-            i, n, currentIndex, previousIndex, thread.jump, thread.jump,
-            Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
-            Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
-          )
+        var resolvedTarget = evaluate(
+          index, n, currentHole, previousHole,
+          Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
+          Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
         );
+        var normalizedTarget = normalizeTargetHoleLabel(resolvedTarget);
+        if (!normalizedTarget) {
+          normalizedTarget = normalizeTargetHoleLabel(currentHole + 1);
+        }
+        return getPhysicalHoleIndexFromLabel(normalizedTarget, n);
       } catch (err) {
-        return normalizeJump(thread.jump);
+        var fallbackCurrentHole = getHoleLabelFromPhysicalIndex(currentIndex, n);
+        var fallbackTarget = normalizeTargetHoleLabel(fallbackCurrentHole + 1);
+        return getPhysicalHoleIndexFromLabel(fallbackTarget || 1, n);
       }
     };
   } else {
@@ -814,14 +833,19 @@ function computeSequence(thread, holeCount) {
     };
   }
 
+  var isFormulaTargetMode = jumpMode === 'formula';
   for (var i = 0; i < maxSteps; i++) {
     if (visited[current]) break;
     visited[current] = true;
     seq.push(current);
-    var step = jumpResolver(i, current, prev);
+    var nextValue = jumpResolver(i, current, prev);
     prev = current;
-    current = (current + step) % n;
-    if (current < 0) current += n;
+    if (isFormulaTargetMode) {
+      current = ((Math.round(Number(nextValue)) % n) + n) % n;
+    } else {
+      current = (current + nextValue) % n;
+      if (current < 0) current += n;
+    }
   }
   return seq;
 }

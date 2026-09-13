@@ -754,6 +754,20 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-thread-active-label')).toContainText('I->O (Projected)');
   });
 
+  test('advanced formula input syncs immediately to basic formula input', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    await expect(page.locator('#formula-input-block')).toBeVisible();
+
+    const nextFormula = 'currentHole + (index mod 4)';
+    await page.locator('#jump-formula-0').fill(nextFormula);
+
+    await expect(page.locator('#kid-jump-formula')).toHaveValue(nextFormula);
+  });
+
   test('stitching active-thread overlay shows non-styling playback values', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
@@ -811,7 +825,7 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#animate').click();
     await expect(overlay).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread: 1, Stitch-by: Multiplying, Multiply by: 3');
+    await expect(overlayLabel).toContainText('Thread: 1, Stitch by: Multiplying, Multiply by: 3');
     await expect(overlayLabel).not.toContainText('Frame:');
 
     await page.evaluate(() => {
@@ -860,7 +874,7 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#animate').click();
     await expect(overlay).toBeVisible();
-    await expect(overlayLabel).toContainText('Thread: 1, Frame: Inner, Stitch-by: Adding, Add by: 20, Start hole: 1');
+    await expect(overlayLabel).toContainText('Thread: 1, Frame: Inner, Stitch by: Adding, Add by: 20, Start hole: 1');
   });
 
   test('basic palette custom dropper applies selected thread color', async ({ page }) => {
@@ -1352,7 +1366,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: String(options.jumpFormula || 'skip'),
+          jumpFormula: String(options.jumpFormula || 'currentHole + 1'),
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1537,7 +1551,7 @@ test.describe('StitchLab regressions', () => {
           startHole: startHole,
           sequence: null,
           jumpMode: 'sequence',
-          jumpFormula: 'skip',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: '1,1,2,3,5,8',
           jumpSequenceMode: 'holes',
           connectMultiplier: 2,
@@ -1565,7 +1579,7 @@ test.describe('StitchLab regressions', () => {
           startHole: startHole,
           sequence: null,
           jumpMode: 'sequence',
-          jumpFormula: 'skip',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: '1,2,3',
           jumpSequenceMode: 'steps',
           connectMultiplier: 2,
@@ -1601,7 +1615,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: 'skip',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1684,7 +1698,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: 'skip',
+          jumpFormula: 'currentHole + 1',
           jumpSequence: String(options.jumpSequence || ''),
           jumpSequenceMode: String(options.jumpSequenceMode || 'holes'),
           connectMultiplier: Number(options.connectMultiplier || 2),
@@ -1717,6 +1731,259 @@ test.describe('StitchLab regressions', () => {
     expect(probe.holeListFirst).toEqual([2, 4]);
   });
 
+  test('formula mode uses evaluated values as absolute target holes', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function makeFormulaThread(expression) {
+        return window.sanitizeThreadDescriptor({
+          jumpMode: 'formula',
+          jumpFormula: String(expression || ''),
+          frameMode: 'outer',
+          startHole: 1,
+          width: 2,
+          color: '#1982c4'
+        }, null);
+      }
+
+      function setHoleCount(value) {
+        if (window.holesSlider) {
+          window.holesSlider.value = String(value);
+        }
+        if (window.advancedHolesNumberInput) {
+          window.advancedHolesNumberInput.value = String(value);
+        }
+        if (typeof window.syncJumpBoundsFromHoleCount === 'function') {
+          window.syncJumpBoundsFromHoleCount();
+        }
+        if (typeof window.computePoints === 'function') {
+          window.computePoints();
+        }
+      }
+
+      function toLabelPairs(segments, holeCount, maxPairs) {
+        var pairs = [];
+        for (var i = 0; i < segments.length && i < maxPairs; i++) {
+          var seg = segments[i];
+          pairs.push([
+            window.getHoleLabelFromPhysicalIndex(seg[0], holeCount),
+            window.getHoleLabelFromPhysicalIndex(seg[1], holeCount)
+          ]);
+        }
+        return pairs;
+      }
+
+      setHoleCount(12);
+
+      var constantTarget = makeFormulaThread('4');
+      var relativeTarget = makeFormulaThread('currentHole + 4');
+
+      var constantSegments = window.computeSegments(constantTarget) || [];
+      var relativeSegments = window.computeSegments(relativeTarget) || [];
+
+      return {
+        constantPairs: toLabelPairs(constantSegments, 12, 4),
+        relativePairs: toLabelPairs(relativeSegments, 12, 4)
+      };
+    });
+
+    expect(probe.constantPairs.slice(0, 2)).toEqual([
+      [1, 4],
+      [4, 1]
+    ]);
+
+    expect(probe.relativePairs.slice(0, 3)).toEqual([
+      [1, 5],
+      [5, 9],
+      [9, 1]
+    ]);
+  });
+
+  test('formula constant target is not interpreted as add-by', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function setHoleCount(value) {
+        if (window.holesSlider) {
+          window.holesSlider.value = String(value);
+        }
+        if (window.advancedHolesNumberInput) {
+          window.advancedHolesNumberInput.value = String(value);
+        }
+        if (typeof window.syncJumpBoundsFromHoleCount === 'function') {
+          window.syncJumpBoundsFromHoleCount();
+        }
+        if (typeof window.computePoints === 'function') {
+          window.computePoints();
+        }
+      }
+
+      function firstLabelPair(thread) {
+        var segments = window.computeSegments(thread) || [];
+        if (!segments.length) return null;
+        return [
+          window.getHoleLabelFromPhysicalIndex(segments[0][0], 12),
+          window.getHoleLabelFromPhysicalIndex(segments[0][1], 12)
+        ];
+      }
+
+      setHoleCount(12);
+
+      var formulaThread = window.sanitizeThreadDescriptor({
+        jumpMode: 'formula',
+        jumpFormula: '4',
+        frameMode: 'outer',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null);
+
+      var addThread = window.sanitizeThreadDescriptor({
+        jumpMode: 'fixed',
+        jump: 4,
+        frameMode: 'outer',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null);
+
+      return {
+        formulaFirstPair: firstLabelPair(formulaThread),
+        addFirstPair: firstLabelPair(addThread)
+      };
+    });
+
+    expect(probe.formulaFirstPair).toEqual([1, 4]);
+    expect(probe.addFirstPair).toEqual([1, 5]);
+    expect(probe.formulaFirstPair).not.toEqual(probe.addFirstPair);
+  });
+
+  test('formula validity accepts whitespace expression and keeps it valid', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+    const advancedFormulaInput = page.locator('#jump-formula-0');
+
+    const spacedFormula = 'currentHole +  ( index mod 4 )';
+    await kidFormulaInput.fill(spacedFormula);
+    await kidFormulaInput.press('Tab');
+
+    await expect(kidFormulaInput).toHaveValue(spacedFormula);
+    await expect(advancedFormulaInput).toHaveValue(spacedFormula);
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+    await expect(advancedFormulaInput).not.toHaveClass(/is-invalid-formula/);
+  });
+
+  test('formula validity rolls back invalid input to last valid or default fallback', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+
+    await page.evaluate(() => {
+      if (!window.threads || !window.threads.length) return;
+      window.threads[0].jumpMode = 'formula';
+      window.threads[0].jumpFormula = '';
+      delete window.threads[0].lastValidJumpFormula;
+      if (typeof window.renderThreadControls === 'function') {
+        window.renderThreadControls();
+      }
+      if (typeof window.syncKidControlsFromSelectedThread === 'function') {
+        window.syncKidControlsFromSelectedThread();
+      }
+    });
+
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+
+    await kidFormulaInput.fill('currentHole + (');
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 2');
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await kidFormulaInput.fill('currentHole + 5');
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 5');
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await kidFormulaInput.fill('bad(');
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 5');
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+  });
+
+  test('formula validity feedback is delayed while typing', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+
+    await kidFormulaInput.fill('currentHole + (');
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await page.waitForTimeout(120);
+    await expect(kidFormulaInput).not.toHaveClass(/is-invalid-formula/);
+
+    await page.waitForTimeout(360);
+    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+  });
+
+  test('invalid formula does not serialize to URL and resolves to fallback on commit', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.selectOption('#jump-mode-0', 'formula');
+
+    await page.evaluate(() => {
+      if (!window.threads || !window.threads.length) return;
+      window.threads[0].jumpMode = 'formula';
+      window.threads[0].jumpFormula = '';
+      window.threads[0].lastValidJumpFormula = '';
+      window.threads[0].formulaValidationError = false;
+      if (typeof window.renderThreadControls === 'function') {
+        window.renderThreadControls();
+      }
+      if (typeof window.syncKidControlsFromSelectedThread === 'function') {
+        window.syncKidControlsFromSelectedThread();
+      }
+      if (typeof window.redrawForPathChange === 'function') {
+        window.redrawForPathChange();
+      }
+    });
+
+    function getFormulaFromUrl() {
+      return page.evaluate(() => {
+        try {
+          var raw = new URL(window.location.href).searchParams.get('stitchingThreadState');
+          if (!raw) return null;
+          var parsed = JSON.parse(decodeURIComponent(raw));
+          if (!Array.isArray(parsed) || !parsed.length) return null;
+          return String(parsed[0].f || '');
+        } catch (error) {
+          return '__parse_error__';
+        }
+      });
+    }
+
+    const kidFormulaInput = page.locator('#kid-jump-formula');
+    await kidFormulaInput.fill('currentHole + (');
+
+    await page.waitForTimeout(420);
+    await expect(kidFormulaInput).toHaveClass(/is-invalid-formula/);
+
+    await expect.poll(getFormulaFromUrl).not.toBe('currentHole + (');
+
+    await kidFormulaInput.press('Tab');
+    await expect(kidFormulaInput).toHaveValue('currentHole + 2');
+    await expect.poll(getFormulaFromUrl).toBe('currentHole + 2');
+  });
+
   test('stitching discovery candidates unlock their corresponding discovery cards', async ({ page }) => {
     await page.goto('/stitchlab.html');
 
@@ -1731,7 +1998,7 @@ test.describe('StitchLab regressions', () => {
           startHole: Number(options.startHole || 1),
           sequence: null,
           jumpMode: String(options.jumpMode || 'fixed'),
-          jumpFormula: String(options.jumpFormula || 'skip'),
+          jumpFormula: String(options.jumpFormula || 'currentHole + 1'),
           jumpSequence: String(options.jumpSequence || ''),
           connectMultiplier: Number(options.connectMultiplier || 2),
           connectOffset: Number(options.connectOffset || 0),
@@ -1927,6 +2194,11 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-acknowledgments-toggle').click();
     await expect(page.locator('#acknowledgments-modal')).toHaveClass(/open/);
+    const onboardingTourBeforeAckClose = page.locator('#onboarding-tour');
+    if (await onboardingTourBeforeAckClose.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTourBeforeAckClose).toBeHidden();
+    }
     await page.locator('#acknowledgments-close-btn').click();
 
     await page.waitForTimeout(150);

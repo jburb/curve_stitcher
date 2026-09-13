@@ -68,6 +68,7 @@ Current covered checks:
 - Prebuilt narration playback succeeds via static clips when a matching clip is available.
 - Prebuilt narration manifest covers all splash, onboarding, and about narration texts (including stale-hash drift checks).
 - Basic and advanced shared controls remain synchronized (holes, tempo, and inner-to-outer frame mode labeling).
+- Advanced formula input syncs immediately to the basic formula input.
 - Stitching active-thread overlay shows non-styling playback values for the currently animated thread.
 - Basic palette custom dropper applies the selected thread color.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
@@ -87,6 +88,8 @@ Current covered checks:
 - Start hole is hidden and ignored for list modes (Holes and Steps).
 - Start hole affects addition mode threads only and does not affect multiplication edge mapping.
 - Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
+- Formula mode uses evaluated values as absolute target holes.
+- Formula constant target is not interpreted as add-by.
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
 - Core interaction sweep does not raise runtime reference/type errors.
 - Triangula URL state roundtrip persists key controls on reload.
@@ -325,6 +328,8 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Recently Completed
 
+1. Improved and re-enabled formula mode
+1. Refactor for cleanliness: moved non-acknowledgments code from the acknowledgments module into proper modules
 1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
 1. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
 1. Stitch motion realism (progressive pull + settle accent, tempo-locked)

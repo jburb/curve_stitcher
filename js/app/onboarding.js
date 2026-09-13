@@ -166,8 +166,8 @@ function getDefaultOnboardingGuideContent() {
         selector: '#kid-jump-sequence'
       },
       {
-        title: 'Enter Expression',
-        text: 'Enter a formula to compute each stitch step, using the built-in variables.',
+        title: 'Enter Formula',
+        text: 'Enter a formula using index, holeCount, currentHole, and previousHole. targetHole is assigned automatically.',
         selector: '#kid-jump-formula'
       },
       {

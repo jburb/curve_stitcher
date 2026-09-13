@@ -265,8 +265,11 @@
     </div>
   </div>
   <div class="slider-block" id="formula-input-block" style="display:none;">
-    <div class="slider-label">🧮 Expression</div>
-    <input id="kid-jump-formula" type="text" placeholder="e.g. (skip + i) mod n" aria-label="Step expression for selected thread">
+    <div class="slider-label">🧪 Formula</div>
+    <div class="formula-input-row">
+      <span class="formula-prefix" aria-hidden="true">targetHole =</span>
+      <input id="kid-jump-formula" class="formula-expression-input" type="text" placeholder="e.g. currentHole + 4" aria-label="Formula for selected thread">
+    </div>
   </div>
   <div class="slider-block">
     <div class="slider-label"><span class="thread-size-icon" aria-hidden="true">◍</span> Thread Size <span class="slider-value" id="width-value">2</span></div>
@@ -561,7 +564,7 @@
   paper.setup('myCanvas');
 
   var featureFlags = {
-    showExpressionStitchMode: false
+    showExpressionStitchMode: true
   };
 
   function isExpressionStitchModeEnabled() {
@@ -772,7 +775,7 @@
       startHole: 1,
       sequence: null,
       jumpMode: 'fixed',
-      jumpFormula: 'skip',
+      jumpFormula: 'targetHole = currentHole + 1',
       jumpSequence: '',
       jumpSequenceMode: 'holes',
       connectMultiplier: 2,

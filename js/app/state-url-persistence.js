@@ -370,6 +370,65 @@ function sanitizeThreadFrameMode(value, fallback) {
   return value;
 }
 
+function sanitizeThreadFormulaExpression(value, fallback) {
+  var fallbackExpression = String(fallback || 'currentHole + 1').trim() || 'currentHole + 1';
+  var normalized = String(value == null ? '' : value).trim();
+  if (!normalized) return fallbackExpression;
+
+  var assignmentMatch = normalized.match(/^targetHole\s*=\s*(.+)$/i);
+  if (assignmentMatch && assignmentMatch[1]) {
+    normalized = assignmentMatch[1].trim();
+  }
+  return normalized || fallbackExpression;
+}
+
+function normalizeFormulaMathOperatorsForStateUrl(expression) {
+  return String(expression || '')
+    .trim()
+    .replace(/[×·]/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\^/g, '**')
+    .replace(/\bmod\b/gi, '%');
+}
+
+function isThreadFormulaExpressionValidForStateUrl(expression) {
+  var normalized = normalizeFormulaMathOperatorsForStateUrl(
+    sanitizeThreadFormulaExpression(expression, 'currentHole + 2')
+  );
+  if (!normalized) return false;
+
+  try {
+    var evaluate = new Function(
+      'index', 'holeCount', 'currentHole', 'previousHole',
+      'abs', 'floor', 'ceil', 'round', 'sqrt', 'pow', 'min', 'max', 'sin', 'cos', 'tan', 'pi',
+      'return (' + normalized + ');'
+    );
+    var resolved = evaluate(
+      0, 12, 1, 1,
+      Math.abs, Math.floor, Math.ceil, Math.round, Math.sqrt, Math.pow,
+      Math.min, Math.max, Math.sin, Math.cos, Math.tan, Math.PI
+    );
+    return isFinite(Number(resolved));
+  } catch (error) {
+    return false;
+  }
+}
+
+function getThreadFormulaExpressionForStateUrl(thread) {
+  var fallbackExpression = 'currentHole + 2';
+  var normalized = sanitizeThreadFormulaExpression(thread && thread.jumpFormula, fallbackExpression);
+  if (isThreadFormulaExpressionValidForStateUrl(normalized)) {
+    return normalized;
+  }
+
+  var lastValid = sanitizeThreadFormulaExpression(thread && thread.lastValidJumpFormula, fallbackExpression);
+  if (isThreadFormulaExpressionValidForStateUrl(lastValid)) {
+    return lastValid;
+  }
+
+  return fallbackExpression;
+}
+
 function sanitizeThreadDescriptor(raw, fallback) {
   fallback = fallback || {
     jump: DEFAULT_SKIP,
@@ -378,7 +437,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     solidColor: '#1982c4',
     startHole: 1,
     jumpMode: 'fixed',
-    jumpFormula: 'skip',
+    jumpFormula: 'currentHole + 1',
     jumpSequence: '',
     jumpSequenceMode: 'holes',
     connectMultiplier: 2,
@@ -395,7 +454,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
     startHole: parseBoundedInt(raw.sh != null ? raw.sh : raw.startHole, 1, MAX_HOLES, fallback.startHole || 1),
     sequence: null,
     jumpMode: jumpMode,
-    jumpFormula: String(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'skip'))),
+    jumpFormula: sanitizeThreadFormulaExpression(raw.f != null ? raw.f : (raw.jumpFormula != null ? raw.jumpFormula : (fallback.jumpFormula || 'currentHole + 1'))),
     jumpSequence: String(raw.s != null ? raw.s : (raw.jumpSequence != null ? raw.jumpSequence : (fallback.jumpSequence || ''))),
     jumpSequenceMode: sanitizeThreadSequenceMode(raw.sm != null ? raw.sm : raw.jumpSequenceMode, fallback.jumpSequenceMode || 'holes'),
     connectMultiplier: parseBoundedInt(raw.cm != null ? raw.cm : raw.connectMultiplier, 1, 12, fallback.connectMultiplier || 2),
@@ -409,7 +468,7 @@ function sanitizeThreadDescriptor(raw, fallback) {
   }
 
   if (thread.jumpMode !== 'formula') {
-    thread.jumpFormula = fallback.jumpFormula || 'skip';
+    thread.jumpFormula = sanitizeThreadFormulaExpression(fallback.jumpFormula || 'currentHole + 1');
   }
   if (thread.jumpMode !== 'sequence') {
     thread.jumpSequence = '';
@@ -426,7 +485,7 @@ function serializeStitchingThreadState(threadList) {
       c: sanitizeThreadColor(thread.color, '#1982c4'),
       sh: parseBoundedInt(thread.startHole, 1, MAX_HOLES, 1),
       m: sanitizeThreadJumpMode(thread.jumpMode, 'fixed'),
-      f: String(thread.jumpFormula || 'skip'),
+      f: getThreadFormulaExpressionForStateUrl(thread),
       s: String(thread.jumpSequence || ''),
       sm: sanitizeThreadSequenceMode(thread.jumpSequenceMode, 'holes'),
       cm: parseBoundedInt(thread.connectMultiplier, 1, 12, 2),
@@ -443,7 +502,7 @@ function serializeStitchingThreadState(threadList) {
       c: '#1982c4',
       sh: 1,
       m: 'fixed',
-      f: 'skip',
+      f: 'currentHole + 1',
       s: '',
       sm: 'holes',
       cm: 2,

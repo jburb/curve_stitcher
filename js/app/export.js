@@ -807,7 +807,7 @@ function buildStitchingGuideText(fileBaseName, options) {
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
     if (mode === 'sequence') return 'Sequence';
-    if (mode === 'formula') return 'Expression';
+    if (mode === 'formula') return 'Formula';
     return 'Addition';
   }
 
@@ -891,7 +891,7 @@ function buildStitchingGuideText(fileBaseName, options) {
       lines.push('  Sequence values: ' + String(paramThread.jumpSequence || ''));
     }
     if (paramThread.jumpMode === 'formula') {
-      lines.push('  Expression: ' + String(paramThread.jumpFormula || 'skip'));
+      lines.push('  Formula: targetHole = ' + String(paramThread.jumpFormula || 'currentHole + 1'));
     }
   }
 
@@ -924,7 +924,7 @@ function buildStitchingGuideText(fileBaseName, options) {
 
     if (thread.jumpMode === 'connect') {
       lines.push('  Rule: start at Start hole and count forward as i = 1..n, then target = ((start + multiplier * i - 2) mod n) + 1.');
-      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
+      lines.push('  holeCount is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Multiplier: ' + String(thread.connectMultiplier));
       lines.push('  Start value: ' + String(parseBoundedInt(thread.startHole, 1, Math.max(1, getThreadSourceHoleCount(thread)), 1)));
       lines.push('  Full connections:');
@@ -942,14 +942,14 @@ function buildStitchingGuideText(fileBaseName, options) {
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
     } else if (thread.jumpMode === 'formula') {
-      lines.push('  Rule: evaluate expression per step, then connect current -> (current + step) mod n.');
-      lines.push('  Expression: ' + String(thread.jumpFormula || 'skip'));
-      lines.push('  Base add value: ' + String(thread.jump));
+      lines.push('  Rule: evaluate formula per step, normalize to 1..holeCount, then connect currentHole -> targetHole.');
+      lines.push('  Formula: targetHole = ' + String(thread.jumpFormula || 'currentHole + 1'));
+      lines.push('  Variables: index (0-based), holeCount, currentHole (1..holeCount), previousHole (1..holeCount).');
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
     } else {
-      lines.push('  Rule: next = ((current + add - 1) mod n) + 1.');
-      lines.push('  n is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
+      lines.push('  Rule: next = ((currentHole + add - 1) mod holeCount) + 1.');
+      lines.push('  holeCount is source ring holes (' + String(getThreadSourceHoleCount(thread)) + ').');
       lines.push('  Add value: ' + String(thread.jump));
       lines.push('  Full connections:');
       appendConnections(lines, segments, thread);
