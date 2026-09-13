@@ -90,6 +90,10 @@ Current covered checks:
 - Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
 - Formula mode uses evaluated values as absolute target holes.
 - Formula constant target is not interpreted as add-by.
+- Formula validity accepts whitespace expressions and preserves valid state.
+- Formula validity rolls back invalid input to the last valid or default fallback value.
+- Formula validity feedback is intentionally delayed while typing.
+- Invalid formula input does not serialize to URL and resolves to fallback on commit.
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
 - Core interaction sweep does not raise runtime reference/type errors.
 - Triangula URL state roundtrip persists key controls on reload.

@@ -1427,8 +1427,10 @@ function renderStitchingActiveThreadOverlay(thread, threadIndex, entries) {
 function syncActiveThreadPlaybackOverlay(threadIndex) {
   if (!activeThreadOverlay || !activeThreadOverlayLabel) return;
 
+  var isPlaybackActiveOrPaused = animationPlaybackState === 'playing' || animationPlaybackState === 'paused';
+
   var shouldShow = currentExperienceId === 'stitching'
-    && animationPlaybackState === 'playing'
+    && isPlaybackActiveOrPaused
     && !!animationState
     && Array.isArray(threads)
     && threads.length > 1
@@ -4141,7 +4143,7 @@ function pauseAnimationIfActive() {
   animationActive = false;
   view.onFrame = null;
   animationPlaybackState = 'paused';
-  syncActiveThreadPlaybackOverlay(-1);
+  syncActiveThreadPlaybackOverlay(animationState ? animationState.threadIndex : -1);
   syncAnimateButtonLabel();
   updateMusicPlaybackState();
   scheduleUrlStateSync(false);
