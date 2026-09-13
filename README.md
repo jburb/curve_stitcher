@@ -357,6 +357,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.
 1. Use better voice for narration.
 1. Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.
+1. Re-enable formula stitch mode with improvements 
 
 
 ## TODO Backlog
