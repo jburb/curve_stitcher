@@ -1721,6 +1721,12 @@
     margin-left: 6px;
   }
 
+  /* Kept in DOM for runtime synchronization hooks; hidden to avoid duplicate visible values beside dropdowns. */
+  #nested-frame-ratio-value,
+  #advanced-tempo-value {
+    display: none;
+  }
+
   .advanced-inline-number {
     width: 62px;
     margin-left: 6px;

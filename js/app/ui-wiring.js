@@ -588,10 +588,6 @@ advancedTempoInput.addEventListener('change', () => {
   applyTempoValue(advancedTempoInput.value);
 });
 
-resetTempoBtn.addEventListener('click', () => {
-  applyDefaultTempo();
-});
-
 kidTempoSlowBtn.addEventListener('click', () => {
   var presets = getKidTempoPresetsForSong(currentSongId);
   applyTempoValue(presets.slow);

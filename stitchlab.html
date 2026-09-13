@@ -402,15 +402,15 @@
       </div>
     </div>
     <div class="advanced-subsection">
-      <div class="advanced-global-title">Stitch Tempo</div>
+      <div class="advanced-global-title">Tempo</div>
       <div class="advanced-global-row">BPM: <select id="advanced-tempo">
         <option value="84">84</option>
         <option value="168">168</option>
         <option value="252">252</option>
         <option value="336">336</option>
         <option value="420">420</option>
-      </select><span class="advanced-inline-value" id="advanced-tempo-value">84</span><button id="reset-tempo" type="button" class="advanced-reset-btn">Reset</button></div>
-      <div class="advanced-global-help">This affects stitch animation when you press play / "Watch it stitch".</div>
+      </select><span class="advanced-inline-value" id="advanced-tempo-value">84</span></div>
+      <div class="advanced-global-help">This sets the speed the animation will run when you press "Play."</div>
     </div>
     <div class="advanced-subsection">
       <div class="advanced-global-title">Export</div>
@@ -597,7 +597,6 @@
   var advancedBorderEnabledInput = document.getElementById('advanced-border-enabled');
   var advancedTempoInput = document.getElementById('advanced-tempo');
   var advancedTempoValue = document.getElementById('advanced-tempo-value');
-  var resetTempoBtn = document.getElementById('reset-tempo');
   var exportSvgBtn = document.getElementById('advanced-export-svg');
   var advancedExportHelp = document.getElementById('advanced-export-help');
   var exportOptionsModal = document.getElementById('export-options-modal');
