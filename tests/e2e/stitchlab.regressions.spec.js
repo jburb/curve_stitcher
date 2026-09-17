@@ -138,6 +138,45 @@ async function suppressStartupOnboarding(page) {
   }, 'stitchlab.onboarding.v1');
 }
 
+async function unlockMashrabiyaExperienceForTest(page, fold) {
+  const targetFold = Number(fold) === 8 ? 8 : 12;
+  const targetKey = targetFold === 8 ? 'rosette8' : 'rosette12';
+  await page.evaluate(async ({ discoveryKey, foldValue }) => {
+    if (typeof window.unlockDiscovery === 'function') {
+      var maybePersistence = window.unlockDiscovery(discoveryKey);
+      if (maybePersistence && typeof maybePersistence.then === 'function') {
+        await maybePersistence;
+      }
+    } else {
+      window.discoveredShapeKeys = window.discoveredShapeKeys || Object.create(null);
+      window.discoveredShapeKeys[discoveryKey] = true;
+    }
+    if (typeof window.setCurrentExperience === 'function') {
+      window.setCurrentExperience('mashrabiya', { suppressUrlSync: true });
+    }
+    window.mashrabiyaFold = foldValue;
+    if (typeof window.syncMashrabiyaControls === 'function') {
+      window.syncMashrabiyaControls();
+    }
+    if (typeof window.redrawForPathChange === 'function') {
+      window.redrawForPathChange();
+    }
+  }, { discoveryKey: targetKey, foldValue: targetFold });
+
+  await expect.poll(() => page.evaluate((discoveryKey) => {
+    var list = (window.getPatternLibrarySnapshot && window.getPatternLibrarySnapshot()) || [];
+    for (var i = 0; i < list.length; i++) {
+      var rec = list[i];
+      if (rec && rec.kind === 'discovery' && rec.discoveryKey === discoveryKey && rec.isDiscovered) {
+        return true;
+      }
+    }
+    return false;
+  }, targetKey)).toBe(true);
+
+  await expect.poll(() => new URL(page.url()).searchParams.get('experience')).toBe('mashrabiya');
+}
+
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
     await page.goto('/stitchlab.html');
@@ -716,6 +755,17 @@ test.describe('StitchLab regressions', () => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
 
+    const tempoPresets = await page.evaluate(() => {
+      if (typeof window.getKidTempoPresetsForSong !== 'function') {
+        return { slow: 84, fast: 252 };
+      }
+      const presets = window.getKidTempoPresetsForSong(window.currentSongId || 'bach') || {};
+      return {
+        slow: Number(presets.slow || 84),
+        fast: Number(presets.fast || 252)
+      };
+    });
+
     await page.evaluate(() => {
       const slider = document.getElementById('holes');
       if (!slider) return;
@@ -733,10 +783,10 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#advanced-holes-number').press('Tab');
     await expect(page.locator('#holes')).toHaveValue('36');
 
-    await page.selectOption('#advanced-tempo', '252');
+    await page.selectOption('#advanced-tempo', String(tempoPresets.fast));
     await expect(page.locator('#kid-tempo-fast')).toHaveClass(/is-active/);
 
-    await page.selectOption('#advanced-tempo', '84');
+    await page.selectOption('#advanced-tempo', String(tempoPresets.slow));
     await expect(page.locator('#kid-tempo-slow')).toHaveClass(/is-active/);
 
     await page.locator('#nested-frame-enabled').check();
@@ -1111,7 +1161,9 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('mashrabiya debug SVG export closes sequence stitch paths', async ({ page }) => {
-    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await unlockMashrabiyaExperienceForTest(page, 12);
 
     const svgProbe = await page.evaluate(() => {
       if (typeof window.buildCurrentDesignSvgString !== 'function') {
@@ -1270,7 +1322,9 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('mashrabiya fold 8 and 12 fills are invariant to debug-label toggle', async ({ page }) => {
-    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await unlockMashrabiyaExperienceForTest(page, 12);
 
     const probe = await page.evaluate(() => {
       function polyArea(vertices) {
@@ -2036,12 +2090,20 @@ test.describe('StitchLab regressions', () => {
           var titleNode = cards[i].querySelector('h4');
           var currentTitle = titleNode ? String(titleNode.textContent || '').replace(/\s+/g, ' ').trim() : '';
           if (currentTitle.indexOf(String(titleText || '')) === -1) continue;
-          var actionBtn = cards[i].querySelector('button');
-          var actionText = actionBtn ? String(actionBtn.textContent || '').trim() : '';
+          var actionButtons = Array.prototype.slice.call(cards[i].querySelectorAll('button'));
+          var travelBtn = null;
+          for (var b = 0; b < actionButtons.length; b++) {
+            var textValue = String(actionButtons[b].textContent || '').trim();
+            if (/^Travel to\s+/i.test(textValue) || /^Locked:\s+/i.test(textValue)) {
+              travelBtn = actionButtons[b];
+              break;
+            }
+          }
+          var actionText = travelBtn ? String(travelBtn.textContent || '').trim() : '';
           return {
             found: true,
             preview: cards[i].classList.contains('is-preview'),
-            unlocked: !cards[i].classList.contains('is-preview') && /^Travel to\s+/i.test(actionText),
+            unlocked: !!travelBtn && !cards[i].classList.contains('is-preview') && /^Travel to\s+/i.test(actionText),
             actionText: actionText
           };
         }
@@ -2152,6 +2214,67 @@ test.describe('StitchLab regressions', () => {
       expect(result.card.preview, `Expected ${result.key} card to leave preview mode`).toBe(false);
       expect(result.card.unlocked, `Expected ${result.key} card action to be travel-enabled`).toBe(true);
     }
+  });
+
+  test('pattern library supports save rename and delete for user patterns', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    await page.locator('#pattern-save-name-input').fill('Test Pattern (User) - 1');
+    await page.locator('#pattern-save-description-input').fill('Pattern library regression test save flow.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 1' }).first();
+    await expect(savedCard).toBeVisible();
+
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    page.once('dialog', async (dialog) => {
+      await dialog.accept('Test Pattern (User) - 2');
+    });
+    await page.locator('#pattern-detail-rename-btn').click();
+    await expect(page.locator('#pattern-detail-title')).toHaveText('Test Pattern (User) - 2');
+
+    page.once('dialog', async (dialog) => {
+      await dialog.accept();
+    });
+    await page.locator('#pattern-detail-delete-btn').click();
+    await expect(detailModal).not.toHaveClass(/open/);
+
+    await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
+  });
+
+  test('locked discovery detail modal keeps load and export disabled', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.evaluate(async () => {
+      window.discoveredShapeKeys = Object.create(null);
+      if (typeof window.initializePatternLibrary === 'function') {
+        await window.initializePatternLibrary();
+      }
+      if (typeof window.renderDiscoveryLibrary === 'function') {
+        window.renderDiscoveryLibrary();
+      }
+    });
+
+    await page.locator('#discovery-toggle').click();
+    const lockedCard = page.locator('.discovery-card.is-preview').filter({ hasText: 'Rosette (12-fold)' }).first();
+    await expect(lockedCard).toBeVisible();
+    await lockedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+    await expect(page.locator('#pattern-detail-load-btn')).toBeDisabled();
+    await expect(page.locator('#pattern-detail-view-export-btn')).toBeDisabled();
+    await expect(page.locator('#pattern-detail-travel-btn')).toBeDisabled();
   });
 
   test('core interaction sweep does not raise runtime reference/type errors', async ({ page }) => {
@@ -2289,7 +2412,14 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('mashrabiya URL state roundtrip persists key controls on reload', async ({ page }) => {
-    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html?version=2&experience=stitching');
+    await unlockMashrabiyaExperienceForTest(page, 12);
+    await page.evaluate(() => {
+      if (typeof window.scheduleUrlStateSync === 'function') {
+        window.scheduleUrlStateSync(true);
+      }
+    });
 
     await page.selectOption('#mashrabiya-fold', '8');
     await page.locator('#mashrabiya-keep-construction-lines').check();

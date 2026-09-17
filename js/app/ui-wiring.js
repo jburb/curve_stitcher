@@ -621,13 +621,187 @@ exportOptionsModal.addEventListener('click', (event) => {
   }
 });
 
+function setPatternSaveFeedback(message, status) {
+  if (!patternSaveFeedback) return;
+  patternSaveFeedback.textContent = message || '';
+  patternSaveFeedback.classList.remove('is-success');
+  patternSaveFeedback.classList.remove('is-error');
+  if (status === 'success') {
+    patternSaveFeedback.classList.add('is-success');
+  } else if (status === 'error') {
+    patternSaveFeedback.classList.add('is-error');
+  }
+}
+
+function openPatternSaveModal() {
+  if (!patternSaveModal) return;
+  if (currentExperienceId !== 'stitching') {
+    alert('Saving user patterns is available only in Stitching.');
+    return;
+  }
+  var previewSvg = (typeof buildCurrentDesignSvgString === 'function')
+    ? buildCurrentDesignSvgString({
+      includeThreads: true,
+      includeGuide: false,
+      includePreview: false,
+      forceStitchingBorder: true,
+      forceStitchingHoleNumbers: true
+    })
+    : '';
+  if (patternSavePreview) {
+    patternSavePreview.innerHTML = previewSvg || '<p>Preview unavailable.</p>';
+  }
+  if (patternSaveNameInput) {
+    patternSaveNameInput.value = '';
+  }
+  if (patternSaveDescriptionInput) {
+    patternSaveDescriptionInput.value = '';
+  }
+  setPatternSaveFeedback('', '');
+  patternSaveModal.classList.add('open');
+  if (patternSaveNameInput) {
+    patternSaveNameInput.focus();
+  }
+}
+
+function closePatternSaveModal() {
+  if (!patternSaveModal) return;
+  patternSaveModal.classList.remove('open');
+}
+
+function closePatternDetailModal() {
+  if (!patternDetailModal) return;
+  patternDetailModal.classList.remove('open');
+  if (typeof setPatternLibraryDetailPatternId === 'function') {
+    setPatternLibraryDetailPatternId('');
+  }
+}
+
+function renderPatternDetailModal(record) {
+  if (!record || !patternDetailModal) return;
+
+  var isDiscovery = record.kind === 'discovery';
+  var isUnlocked = !isDiscovery || !!(record.isDiscovered || (record.discoveryKey && discoveredShapeKeys[record.discoveryKey]));
+  var canLoad = !!(isUnlocked && record.patternUrl && typeof ensurePatternUrlForStitching === 'function' && ensurePatternUrlForStitching(record.patternUrl));
+  var canExport = !!(isUnlocked && record.patternUrl);
+
+  if (patternDetailTitle) {
+    patternDetailTitle.textContent = String(record.patternName || 'Pattern');
+  }
+
+  if (patternDetailStatus) {
+    if (isDiscovery && !isUnlocked) {
+      patternDetailStatus.textContent = 'Locked discovery. Stitch the recipe to unlock this pattern and travel path.';
+    } else if (isDiscovery) {
+      patternDetailStatus.textContent = 'Discovery unlocked.';
+    } else {
+      patternDetailStatus.textContent = 'Saved user pattern.';
+    }
+  }
+
+  if (patternDetailDescription) {
+    patternDetailDescription.textContent = String(record.patternDescription || 'No description.');
+  }
+
+  if (patternDetailPreview) {
+    if (isUnlocked && record.patternPreviewFull) {
+      patternDetailPreview.innerHTML = String(record.patternPreviewFull);
+    } else if (record.patternPreviewSmall) {
+      patternDetailPreview.innerHTML = String(record.patternPreviewSmall);
+    } else {
+      patternDetailPreview.innerHTML = '<p>Preview unavailable until discovery.</p>';
+    }
+  }
+
+  if (patternDetailLoadBtn) {
+    patternDetailLoadBtn.disabled = !canLoad;
+    patternDetailLoadBtn.setAttribute('aria-disabled', canLoad ? 'false' : 'true');
+  }
+
+  if (patternDetailViewExportBtn) {
+    patternDetailViewExportBtn.disabled = !canExport;
+    patternDetailViewExportBtn.setAttribute('aria-disabled', canExport ? 'false' : 'true');
+  }
+
+  if (patternDetailTravelBtn) {
+    if (isDiscovery) {
+      var travelTarget = String(record.experienceName || 'Experience');
+      patternDetailTravelBtn.textContent = isUnlocked ? ('Travel to ' + travelTarget) : ('Locked: ' + travelTarget);
+      patternDetailTravelBtn.disabled = !isUnlocked;
+      patternDetailTravelBtn.setAttribute('aria-disabled', isUnlocked ? 'false' : 'true');
+      patternDetailTravelBtn.style.display = '';
+    } else {
+      patternDetailTravelBtn.style.display = 'none';
+    }
+  }
+
+  var allowEdit = !record.isProtected && record.kind === 'user';
+  if (patternDetailRenameBtn) {
+    patternDetailRenameBtn.style.display = allowEdit ? '' : 'none';
+  }
+  if (patternDetailDeleteBtn) {
+    patternDetailDeleteBtn.style.display = allowEdit ? '' : 'none';
+  }
+}
+
+function openPatternDetailModalById(recordId) {
+  if (typeof getPatternRecordById !== 'function' || !patternDetailModal) return;
+  var record = getPatternRecordById(recordId);
+  if (!record) {
+    alert('Pattern not found.');
+    return;
+  }
+  if (typeof setPatternLibraryDetailPatternId === 'function') {
+    setPatternLibraryDetailPatternId(record.id);
+  }
+  renderPatternDetailModal(record);
+  patternDetailModal.classList.add('open');
+}
+
+window.openPatternDetailModalById = openPatternDetailModalById;
+
 if (kidSaveToggleBtn) {
   kidSaveToggleBtn.addEventListener('click', () => {
-    if (kidSaveModal && kidSaveModal.classList.contains('open')) {
-      closeKidSaveModal();
+    if (patternSaveModal && patternSaveModal.classList.contains('open')) {
+      closePatternSaveModal();
       return;
     }
-    openKidSaveModal();
+    openPatternSaveModal();
+  });
+}
+
+if (patternSaveCancelBtn) {
+  patternSaveCancelBtn.addEventListener('click', () => {
+    closePatternSaveModal();
+  });
+}
+
+if (patternSaveConfirmBtn) {
+  patternSaveConfirmBtn.addEventListener('click', async () => {
+    if (typeof saveUserPatternFromCurrentState !== 'function') {
+      alert('Pattern library is not available.');
+      return;
+    }
+    var requestedName = patternSaveNameInput ? patternSaveNameInput.value : '';
+    var requestedDescription = patternSaveDescriptionInput ? patternSaveDescriptionInput.value : '';
+    try {
+      await saveUserPatternFromCurrentState(requestedName, requestedDescription);
+      setPatternSaveFeedback('Pattern saved.', 'success');
+      renderDiscoveryLibrary();
+      window.setTimeout(function() {
+        closePatternSaveModal();
+      }, 180);
+    } catch (error) {
+      setPatternSaveFeedback((error && error.message) ? error.message : 'Save failed.', 'error');
+    }
+  });
+}
+
+if (patternSaveModal) {
+  patternSaveModal.addEventListener('click', (event) => {
+    if (event.target === patternSaveModal) {
+      closePatternSaveModal();
+    }
   });
 }
 
@@ -639,12 +813,32 @@ if (kidSaveCancelBtn) {
 
 if (kidSaveImageOptionBtn) {
   kidSaveImageOptionBtn.addEventListener('click', () => {
+    var patternId = (typeof getPatternLibraryPendingExportPatternId === 'function')
+      ? getPatternLibraryPendingExportPatternId()
+      : '';
+    if (patternId && typeof getPatternRecordById === 'function') {
+      var pattern = getPatternRecordById(patternId);
+      if (pattern && pattern.patternUrl) {
+        runKidFriendlySaveSelection('image', { patternUrl: pattern.patternUrl });
+        return;
+      }
+    }
     runKidFriendlySaveSelection('image');
   });
 }
 
 if (kidSaveMakeOptionBtn) {
   kidSaveMakeOptionBtn.addEventListener('click', () => {
+    var patternId = (typeof getPatternLibraryPendingExportPatternId === 'function')
+      ? getPatternLibraryPendingExportPatternId()
+      : '';
+    if (patternId && typeof getPatternRecordById === 'function') {
+      var pattern = getPatternRecordById(patternId);
+      if (pattern && pattern.patternUrl) {
+        runKidFriendlySaveSelection('make', { patternUrl: pattern.patternUrl });
+        return;
+      }
+    }
     runKidFriendlySaveSelection('make');
   });
 }
@@ -652,8 +846,151 @@ if (kidSaveMakeOptionBtn) {
 if (kidSaveModal) {
   kidSaveModal.addEventListener('click', (event) => {
     if (event.target === kidSaveModal) {
+      if (typeof setPatternLibraryPendingExportPatternId === 'function') {
+        setPatternLibraryPendingExportPatternId('');
+      }
       closeKidSaveModal();
     }
+  });
+}
+
+if (patternDetailCloseBtn) {
+  patternDetailCloseBtn.addEventListener('click', () => {
+    closePatternDetailModal();
+  });
+}
+
+if (patternDetailModal) {
+  patternDetailModal.addEventListener('click', (event) => {
+    if (event.target === patternDetailModal) {
+      closePatternDetailModal();
+    }
+  });
+}
+
+if (patternDetailLoadBtn) {
+  patternDetailLoadBtn.addEventListener('click', () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || !record.patternUrl) return;
+    if (typeof ensurePatternUrlForStitching === 'function' && !ensurePatternUrlForStitching(record.patternUrl)) {
+      alert('Saved pattern URL is invalid for Stitching load.');
+      return;
+    }
+    window.location.href = record.patternUrl;
+  });
+}
+
+if (patternDetailViewExportBtn) {
+  patternDetailViewExportBtn.addEventListener('click', () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || !record.patternUrl) return;
+    if (typeof setPatternLibraryPendingExportPatternId === 'function') {
+      setPatternLibraryPendingExportPatternId(record.id);
+    }
+    openKidSaveModal();
+  });
+}
+
+if (patternDetailTravelBtn) {
+  patternDetailTravelBtn.addEventListener('click', () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || record.kind !== 'discovery') return;
+    var unlocked = !!(record.isDiscovered || (record.discoveryKey && discoveredShapeKeys[record.discoveryKey]));
+    if (!unlocked) return;
+    var experienceId = resolveExperienceId(record.experienceName);
+    if (!experienceId) {
+      alert(record.experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
+      return;
+    }
+    if (!isExperienceAccessible(experienceId)) {
+      alert(record.experienceName + ' is currently gated while nested-frame rosette support is under development.');
+      return;
+    }
+    if ((record.discoveryKey === 'rosette8' || record.discoveryKey === 'rosette12') && experienceId === 'mashrabiya') {
+      mashrabiyaFold = (record.discoveryKey === 'rosette8') ? 8 : 12;
+      persistMashrabiyaStateCache();
+    }
+    setCurrentExperience(experienceId);
+    redrawForPathChange();
+    closePatternDetailModal();
+    discoveryPanel.classList.remove('open');
+    syncDiscoveryToggleButton();
+  });
+}
+
+if (patternDetailRenameBtn) {
+  patternDetailRenameBtn.addEventListener('click', async () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function' || typeof renameUserPattern !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || record.kind !== 'user' || record.isProtected) return;
+    var nextName = window.prompt('Rename pattern', String(record.patternName || ''));
+    if (nextName === null) return;
+    try {
+      var updated = await renameUserPattern(record.id, nextName);
+      renderPatternDetailModal(updated);
+      renderDiscoveryLibrary();
+    } catch (error) {
+      alert((error && error.message) ? error.message : 'Rename failed.');
+    }
+  });
+}
+
+if (patternDetailDeleteBtn) {
+  patternDetailDeleteBtn.addEventListener('click', async () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function' || typeof deleteUserPattern !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || record.kind !== 'user' || record.isProtected) return;
+    var confirmed = window.confirm('Delete this saved pattern?');
+    if (!confirmed) return;
+    try {
+      await deleteUserPattern(record.id);
+      closePatternDetailModal();
+      renderDiscoveryLibrary();
+    } catch (error) {
+      alert((error && error.message) ? error.message : 'Delete failed.');
+    }
+  });
+}
+
+if (patternLibraryExportBtn) {
+  patternLibraryExportBtn.addEventListener('click', async () => {
+    if (typeof exportPatternLibraryToJsonFile !== 'function') return;
+    try {
+      await exportPatternLibraryToJsonFile();
+    } catch (error) {
+      alert((error && error.message) ? error.message : 'Library export failed.');
+    }
+  });
+}
+
+if (patternLibraryImportBtn && patternLibraryImportInput) {
+  patternLibraryImportBtn.addEventListener('click', () => {
+    patternLibraryImportInput.click();
+  });
+
+  patternLibraryImportInput.addEventListener('change', async () => {
+    var file = patternLibraryImportInput.files && patternLibraryImportInput.files[0];
+    if (!file) return;
+    try {
+      var text = await file.text();
+      if (typeof importPatternLibraryFromJsonText !== 'function') {
+        throw new Error('Pattern library import is unavailable.');
+      }
+      var result = await importPatternLibraryFromJsonText(text);
+      renderDiscoveryLibrary();
+      alert('Library import complete. Added: ' + String(result.importedCount) + ', updated: ' + String(result.updatedCount) + '.');
+    } catch (error) {
+      alert((error && error.message) ? error.message : 'Library import failed.');
+    }
+    patternLibraryImportInput.value = '';
   });
 }
 
@@ -774,6 +1111,14 @@ window.addEventListener('message', function(event) {
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
+  if (patternDetailModal && patternDetailModal.classList.contains('open')) {
+    closePatternDetailModal();
+    return;
+  }
+  if (patternSaveModal && patternSaveModal.classList.contains('open')) {
+    closePatternSaveModal();
+    return;
+  }
   if (acknowledgmentsModal && acknowledgmentsModal.classList.contains('open')) {
     closeAcknowledgmentsViewer();
     return;
@@ -1293,9 +1638,11 @@ renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);
 clearSessionScopedCachesOnLoad();
+var startupRequestedExperienceId = null;
 if (hasUrlStateParams()) {
   var initialParams = new URLSearchParams(window.location.search || '');
-  var initialExperience = resolveExperienceId(getUrlStateParam(initialParams, 'experienceId')) || 'stitching';
+  startupRequestedExperienceId = resolveExperienceId(getUrlStateParam(initialParams, 'experienceId'));
+  var initialExperience = startupRequestedExperienceId || 'stitching';
   setCurrentExperience(initialExperience, { suppressUrlSync: true });
   if (initialExperience === 'stitching') {
     var initialUrlStitchingShape = sanitizeShape(getUrlStateParam(initialParams, 'stitchingShape'), '');
@@ -1318,6 +1665,25 @@ syncBorderControls();
 syncMusicToggleButton();
 syncKidControlsFromSelectedThread();
 renderDiscoveryLibrary();
+var shouldDelayInitialUrlSyncForMashrabiya = hasUrlStateParams() && startupRequestedExperienceId === 'mashrabiya';
+if (typeof initializePatternLibrary === 'function') {
+  initializePatternLibrary()
+    .then(function() {
+      renderDiscoveryLibrary();
+      if (shouldDelayInitialUrlSyncForMashrabiya && currentExperienceId !== 'mashrabiya') {
+        applyStateFromCurrentUrl({ forceUrlSync: false, initialLoad: true });
+      }
+      if (shouldDelayInitialUrlSyncForMashrabiya) {
+        scheduleUrlStateSync(true);
+      }
+    })
+    .catch(function(error) {
+      console.warn('Pattern library init failed:', error);
+      if (shouldDelayInitialUrlSyncForMashrabiya) {
+        scheduleUrlStateSync(true);
+      }
+    });
+}
 syncAdvancedToggleButton();
 syncDiscoveryToggleButton();
 fitCanvasToStage();
@@ -1331,6 +1697,9 @@ syncExportUiCopy();
 
 function finalizeStartupOnboardingSequence() {
   initializeOnboarding();
+  if (shouldDelayInitialUrlSyncForMashrabiya && currentExperienceId !== 'mashrabiya') {
+    return;
+  }
   scheduleUrlStateSync(true);
 }
 

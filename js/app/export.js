@@ -43,6 +43,84 @@ function openKidSaveModal() {
 function closeKidSaveModal() {
   if (!kidSaveModal) return;
   kidSaveModal.classList.remove('open');
+  if (typeof setPatternLibraryPendingExportPatternId === 'function') {
+    setPatternLibraryPendingExportPatternId('');
+  }
+  syncKidSaveToggleButton();
+}
+
+function runExportInIsolatedPatternFrame(patternUrl, work) {
+  return new Promise(function(resolve, reject) {
+    var targetUrl = String(patternUrl || '').trim();
+    if (!targetUrl) {
+      reject(new Error('Pattern URL is missing.'));
+      return;
+    }
+
+    var frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.width = '1px';
+    frame.style.height = '1px';
+    frame.style.opacity = '0';
+    frame.style.pointerEvents = 'none';
+    frame.style.left = '-9999px';
+    frame.style.top = '-9999px';
+
+    var timer = null;
+
+    function cleanup() {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (frame && frame.parentNode) {
+        frame.parentNode.removeChild(frame);
+      }
+    }
+
+    frame.onload = function() {
+      try {
+        var frameWindow = frame.contentWindow;
+        if (!frameWindow) {
+          cleanup();
+          reject(new Error('Failed to access export frame.'));
+          return;
+        }
+        Promise.resolve(work(frameWindow))
+          .then(function(result) {
+            cleanup();
+            resolve(result);
+          })
+          .catch(function(error) {
+            cleanup();
+            reject(error);
+          });
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    };
+
+    frame.onerror = function() {
+      cleanup();
+      reject(new Error('Unable to load saved pattern URL for export.'));
+    };
+
+    timer = window.setTimeout(function() {
+      cleanup();
+      reject(new Error('Saved pattern export timed out while loading URL state.'));
+    }, 10000);
+
+    frame.src = targetUrl;
+    document.body.appendChild(frame);
+  });
+}
+
+async function runKidFriendlySaveSelection(mode, options) {
+  options = options || {};
+  if (!kidSaveModal) return;
+  var targetPatternUrl = String(options.patternUrl || '').trim();
+  kidSaveModal.classList.remove('open');
   syncKidSaveToggleButton();
 }
 
@@ -97,6 +175,49 @@ async function runKidFriendlySaveSelection(mode) {
   };
 
   try {
+    if (targetPatternUrl) {
+      await runExportInIsolatedPatternFrame(targetPatternUrl, function(frameWindow) {
+        if (!frameWindow || typeof frameWindow.normalizeExportBaseName !== 'function' || typeof frameWindow.ensureExportBaseNameHasExperiencePrefix !== 'function') {
+          throw new Error('Saved pattern export helpers are unavailable in export frame.');
+        }
+
+        var frameBaseName = frameWindow.ensureExportBaseNameHasExperiencePrefix(
+          frameWindow.normalizeExportBaseName(baseName)
+        );
+        var frameOptions = {
+          includeThreads: false,
+          includeGuide: normalizedMode === 'make',
+          includePreview: true,
+          forceStitchingBorder: true,
+          forceStitchingHoleNumbers: true
+        };
+
+        if (normalizedMode === 'image') {
+          if (typeof frameWindow.downloadPreviewImage !== 'function') {
+            throw new Error('Saved pattern preview export is unavailable.');
+          }
+          return frameWindow.downloadPreviewImage(frameBaseName, { appendPreviewSuffix: false });
+        }
+
+        if (typeof frameWindow.JSZip === 'undefined') {
+          if (typeof frameWindow.downloadCurrentDesignSvg !== 'function' || typeof frameWindow.downloadStitchingGuide !== 'function' || typeof frameWindow.downloadPreviewImage !== 'function') {
+            throw new Error('Saved pattern maker export helpers are unavailable.');
+          }
+          frameWindow.downloadCurrentDesignSvg(frameBaseName, frameOptions);
+          frameWindow.downloadStitchingGuide(frameBaseName, frameOptions);
+          frameWindow.downloadPreviewImage(frameBaseName);
+          return;
+        }
+
+        if (typeof frameWindow.downloadExportZipBundle !== 'function') {
+          throw new Error('Saved pattern ZIP export is unavailable.');
+        }
+        return frameWindow.downloadExportZipBundle(frameBaseName, frameOptions);
+      });
+      closeKidSaveModal();
+      return;
+    }
+
     if (normalizedMode === 'image') {
       downloadPreviewImage(baseName, { appendPreviewSuffix: false });
     } else if (typeof JSZip === 'undefined') {

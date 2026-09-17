@@ -3,7 +3,6 @@ function applyStateFromCurrentUrl(options) {
   var params = new URLSearchParams(window.location.search || '');
   var requestedExperience = resolveExperienceId(getUrlStateParam(params, 'experienceId'));
   var hasExplicitExperienceParam = !!resolveExperienceId(getUrlStateParam(params, 'experienceId'));
-  var allowExperienceUrlDiscoveryUnlock = options.initialLoad === true;
 
   if (!requestedExperience) {
     requestedExperience = currentExperienceId;
@@ -11,20 +10,6 @@ function applyStateFromCurrentUrl(options) {
 
   try {
     withUrlSyncSuspended(function() {
-    if (allowExperienceUrlDiscoveryUnlock && hasExplicitExperienceParam) {
-      var unlockKey = getDiscoveryKeyForExperience(requestedExperience);
-      if (requestedExperience === 'mashrabiya') {
-        var requestedMashrabiyaFoldForUnlock = sanitizeMashrabiyaFold(
-          getUrlStateParam(params, 'mashrabiyaFold'),
-          mashrabiyaFold
-        );
-        unlockKey = requestedMashrabiyaFoldForUnlock === 8 ? 'rosette8' : 'rosette12';
-      }
-      if (unlockKey) {
-        unlockDiscovery(unlockKey);
-      }
-    }
-
     if (hasExplicitExperienceParam) {
       setCurrentExperience(requestedExperience, { suppressUrlSync: true });
       requestedExperience = currentExperienceId;
@@ -2413,104 +2398,174 @@ function renderSongPicker() {
 function renderDiscoveryLibrary() {
   discoveryCards.innerHTML = '';
 
-  var keys = Object.keys(DISCOVERY_LIBRARY);
-  var unlockedKeys = [];
-  var lockedKeys = [];
+  var allRecords = (typeof getPatternLibrarySnapshot === 'function') ? getPatternLibrarySnapshot() : [];
+  var discoveryRecords = [];
+  var userRecords = [];
 
-  for (var index = 0; index < keys.length; index++) {
-    if (discoveredShapeKeys[keys[index]]) {
-      unlockedKeys.push(keys[index]);
-    } else {
-      lockedKeys.push(keys[index]);
+  if (allRecords.length) {
+    for (var r = 0; r < allRecords.length; r++) {
+      if (allRecords[r].kind === 'discovery') {
+        discoveryRecords.push(allRecords[r]);
+      } else {
+        userRecords.push(allRecords[r]);
+      }
+    }
+  } else {
+    var keys = Object.keys(DISCOVERY_LIBRARY);
+    for (var k = 0; k < keys.length; k++) {
+      var discoveryKey = keys[k];
+      var config = DISCOVERY_LIBRARY[discoveryKey];
+      if (!config) continue;
+      discoveryRecords.push({
+        id: 'fallback-' + discoveryKey,
+        kind: 'discovery',
+        isProtected: true,
+        discoveryKey: discoveryKey,
+        patternName: String(config.title || discoveryKey),
+        patternDescription: String(config.passphrase || ''),
+        experienceName: String(config.experienceName || ''),
+        isDiscovered: !!discoveredShapeKeys[discoveryKey]
+      });
     }
   }
 
-  var orderedKeys = unlockedKeys.concat(lockedKeys);
-
-  for (var i = 0; i < orderedKeys.length; i++) {
-    var key = orderedKeys[i];
-    var isUnlocked = !!discoveredShapeKeys[key];
-
-    var config = DISCOVERY_LIBRARY[key];
-    var card = document.createElement('div');
-    card.className = 'discovery-card' + (isUnlocked ? '' : ' is-preview');
-
-    var title = document.createElement('h4');
-    var iconPath = getDiscoveryIconPath(key, isUnlocked);
-    if (iconPath) {
-      var iconChip = document.createElement('span');
-      iconChip.className = 'discovery-card-icon-chip' + (isUnlocked ? ' is-unlocked' : ' is-preview');
-      iconChip.setAttribute('aria-hidden', 'true');
-
-      var iconImage = document.createElement('img');
-      iconImage.className = 'discovery-card-icon' + (isUnlocked ? ' is-unlocked' : ' is-preview');
-      iconImage.src = iconPath;
-      iconImage.alt = '';
-      iconImage.setAttribute('aria-hidden', 'true');
-      iconChip.appendChild(iconImage);
-      title.appendChild(iconChip);
-    }
-
-    var titleLabel = document.createElement('span');
-    titleLabel.textContent = config.title;
-    title.appendChild(titleLabel);
-    card.appendChild(title);
-
-    var text = document.createElement('p');
-    var previewShapeName = String(config.previewShapeName || config.title || 'shape');
-    var previewExperienceName = String(config.experienceName || 'experience');
-    var previewShapeForArticle = previewShapeName.replace(/^[^A-Za-z]+/, '');
-    var previewArticle = (/^[AEIOUaeiou]/.test(previewShapeForArticle)) ? 'an' : 'a';
-    text.textContent = isUnlocked
-      ? config.description
-      : ('Stitch ' + previewArticle + ' ' + previewShapeName + ' to unlock travel to ' + previewExperienceName + '.');
-    card.appendChild(text);
-
-    if (config.passphrase) {
-      var passphrase = document.createElement('p');
-      passphrase.className = 'discovery-passphrase';
-      passphrase.textContent = isUnlocked
-        ? ('Passphrase: ' + config.passphrase)
-        : getDiscoveryPassphrasePreview(config);
-      card.appendChild(passphrase);
-    }
-
-    var action = document.createElement('button');
-    action.type = 'button';
-    action.className = 'advanced-reset-btn';
-    action.textContent = isUnlocked
-      ? ('Travel to ' + config.experienceName)
-      : ('Locked: ' + config.experienceName);
-    action.disabled = !isUnlocked;
-    action.setAttribute('aria-disabled', isUnlocked ? 'false' : 'true');
-    action.addEventListener('click', function(experienceName, songId, discoveryKey) {
-      return function() {
-        var experienceId = resolveExperienceId(experienceName);
-        if (!experienceId) {
-          alert(experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
-          return;
-        }
-
-        if (!isExperienceAccessible(experienceId)) {
-          alert(experienceName + ' is currently gated while nested-frame rosette support is under development.');
-          return;
-        }
-
-        if ((discoveryKey === 'rosette8' || discoveryKey === 'rosette12') && experienceId === 'mashrabiya') {
-          mashrabiyaFold = (discoveryKey === 'rosette8') ? 8 : 12;
-          persistMashrabiyaStateCache();
-        }
-
-        setCurrentExperience(experienceId);
-        redrawForPathChange();
-        discoveryPanel.classList.remove('open');
-        syncDiscoveryToggleButton();
-      };
-    }(config.experienceName, config.songId, key));
-    card.appendChild(action);
-
-    discoveryCards.appendChild(card);
+  function isDiscoveryUnlocked(record) {
+    if (!record || record.kind !== 'discovery') return true;
+    if (record.discoveryKey && discoveredShapeKeys[record.discoveryKey]) return true;
+    return !!record.isDiscovered;
   }
+
+  function appendSection(titleText, records) {
+    var section = document.createElement('section');
+    section.className = 'pattern-library-section';
+
+    var heading = document.createElement('h4');
+    heading.className = 'pattern-library-section-title';
+    heading.textContent = titleText;
+    section.appendChild(heading);
+
+    var row = document.createElement('div');
+    row.className = 'pattern-library-row';
+
+    for (var i = 0; i < records.length; i++) {
+      var record = records[i];
+      var isDiscovery = record.kind === 'discovery';
+      var unlocked = isDiscoveryUnlocked(record);
+      var card = document.createElement('div');
+      card.className = 'discovery-card ' + (isDiscovery ? 'is-discovery-pattern' : 'is-user-saved') + (unlocked ? '' : ' is-preview');
+
+      var badge = document.createElement('div');
+      badge.className = 'discovery-card-badge';
+      badge.textContent = isDiscovery ? 'Discovery Pattern' : 'Your Saved Pattern';
+      card.appendChild(badge);
+
+      var title = document.createElement('h4');
+      var iconPath = isDiscovery && record.discoveryKey ? getDiscoveryIconPath(record.discoveryKey, unlocked) : '';
+      if (iconPath) {
+        var iconChip = document.createElement('span');
+        iconChip.className = 'discovery-card-icon-chip' + (unlocked ? ' is-unlocked' : ' is-preview');
+        iconChip.setAttribute('aria-hidden', 'true');
+
+        var iconImage = document.createElement('img');
+        iconImage.className = 'discovery-card-icon' + (unlocked ? ' is-unlocked' : ' is-preview');
+        iconImage.src = iconPath;
+        iconImage.alt = '';
+        iconImage.setAttribute('aria-hidden', 'true');
+        iconChip.appendChild(iconImage);
+        title.appendChild(iconChip);
+      }
+
+      var titleLabel = document.createElement('span');
+      titleLabel.textContent = String(record.patternName || 'Pattern');
+      title.appendChild(titleLabel);
+      card.appendChild(title);
+
+      var text = document.createElement('p');
+      if (isDiscovery) {
+        var shapeConfig = record.discoveryKey ? DISCOVERY_LIBRARY[record.discoveryKey] : null;
+        var previewShapeName = String(shapeConfig && shapeConfig.previewShapeName || record.patternName || 'shape');
+        var previewExperienceName = String(record.experienceName || shapeConfig && shapeConfig.experienceName || 'experience');
+        var previewShapeForArticle = previewShapeName.replace(/^[^A-Za-z]+/, '');
+        var previewArticle = (/^[AEIOUaeiou]/.test(previewShapeForArticle)) ? 'an' : 'a';
+        text.textContent = unlocked
+          ? ('Travel unlocked for ' + previewExperienceName + '.')
+          : ('Stitch ' + previewArticle + ' ' + previewShapeName + ' to unlock travel to ' + previewExperienceName + '.');
+      } else {
+        text.textContent = 'Saved from Stitching URL state.';
+      }
+      card.appendChild(text);
+
+      if (record.patternDescription) {
+        var passphrase = document.createElement('p');
+        passphrase.className = 'discovery-passphrase';
+        passphrase.textContent = String(record.patternDescription);
+        card.appendChild(passphrase);
+      }
+
+      var actions = document.createElement('div');
+      actions.className = 'discovery-card-actions';
+
+      var viewButton = document.createElement('button');
+      viewButton.type = 'button';
+      viewButton.className = 'advanced-reset-btn';
+      viewButton.textContent = '🔍 View Pattern';
+      viewButton.addEventListener('click', function(recordId) {
+        return function() {
+          if (typeof openPatternDetailModalById === 'function') {
+            openPatternDetailModalById(recordId);
+          }
+        };
+      }(record.id));
+      actions.appendChild(viewButton);
+
+      if (isDiscovery) {
+        var travelButton = document.createElement('button');
+        travelButton.type = 'button';
+        travelButton.className = 'advanced-reset-btn';
+        travelButton.textContent = unlocked
+          ? ('Travel to ' + String(record.experienceName || 'Experience'))
+          : ('Locked: ' + String(record.experienceName || 'Experience'));
+        travelButton.disabled = !unlocked;
+        travelButton.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+        travelButton.addEventListener('click', function(discoveryRecord) {
+          return function() {
+            var experienceName = String(discoveryRecord.experienceName || '');
+            var discoveryKey = String(discoveryRecord.discoveryKey || '');
+            var experienceId = resolveExperienceId(experienceName);
+            if (!experienceId) {
+              alert(experienceName + ' experience is not available yet, but this travel path is now reserved in the discovery library.');
+              return;
+            }
+
+            if (!isExperienceAccessible(experienceId)) {
+              alert(experienceName + ' is currently gated while nested-frame rosette support is under development.');
+              return;
+            }
+
+            if ((discoveryKey === 'rosette8' || discoveryKey === 'rosette12') && experienceId === 'mashrabiya') {
+              mashrabiyaFold = (discoveryKey === 'rosette8') ? 8 : 12;
+              persistMashrabiyaStateCache();
+            }
+
+            setCurrentExperience(experienceId);
+            redrawForPathChange();
+            discoveryPanel.classList.remove('open');
+            syncDiscoveryToggleButton();
+          };
+        }(record));
+        actions.appendChild(travelButton);
+      }
+
+      card.appendChild(actions);
+      row.appendChild(card);
+    }
+
+    section.appendChild(row);
+    discoveryCards.appendChild(section);
+  }
+
+  appendSection('Discovered And Discoverable', discoveryRecords);
+  appendSection('Saved In Stitching', userRecords);
 
   renderSongPicker();
   syncDiscoveryToggleButton();
@@ -2585,9 +2640,9 @@ function unlockSong(songId) {
 
 function unlockDiscovery(shapeKey) {
   if (!shapeKey || !DISCOVERY_LIBRARY[shapeKey]) return;
-  if (discoveredShapeKeys[shapeKey]) return;
 
   var config = DISCOVERY_LIBRARY[shapeKey];
+  var alreadyDiscovered = !!discoveredShapeKeys[shapeKey];
   discoveredShapeKeys[shapeKey] = true;
   unlockSong(config.songId);
 
@@ -2608,10 +2663,25 @@ function unlockDiscovery(shapeKey) {
     setCurrentSong(config.songId, { suppressUrlSync: true });
   }
 
-  hasUnseenDiscoveries = true;
-  renderDiscoveryLibrary();
-  showDiscoveryToast('New discovery unlocked: ' + config.title);
-  animateDiscoveryUnlock(shapeKey);
+  if (!alreadyDiscovered) {
+    hasUnseenDiscoveries = true;
+  }
+  var persistPromise = null;
+  if (typeof upsertDiscoveryPatternFromCurrentState === 'function') {
+    persistPromise = upsertDiscoveryPatternFromCurrentState(shapeKey)
+      .catch(function(error) {
+        console.warn('Failed to persist discovery pattern:', error);
+      })
+      .finally(function() {
+        renderDiscoveryLibrary();
+      });
+  }
+  if (!alreadyDiscovered) {
+    renderDiscoveryLibrary();
+    showDiscoveryToast('New discovery unlocked: ' + config.title);
+    animateDiscoveryUnlock(shapeKey);
+  }
+  return persistPromise;
 }
 
 function getDiscoveryCandidateThreads() {

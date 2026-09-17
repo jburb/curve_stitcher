@@ -35,6 +35,7 @@
   <script src="js/app/experience-library.js" defer></script>
   <script src="js/app/narration.js" defer></script>
   <script src="js/app/state-url-persistence.js" defer></script>
+  <script src="js/app/pattern-library.js" defer></script>
   <script src="js/app/experience-runtime.js" defer></script>
   <script src="js/app/stitching-core.js" defer></script>
   <script src="js/app/triangula.js" defer></script>
@@ -137,16 +138,11 @@
   <div class="discovery-return-row" id="discovery-return-row" hidden>
     <button id="back-to-stitching" class="discovery-back-btn" type="button" title="Return to Stitching" aria-label="Return to Stitching">🧵 Return to Stitching</button>
   </div>
-  <!--<div class="discovery-subtitle">Discovered shapes and the worlds they lead to.</div>-->
-
-  <form id="discovery-passphrase-form" class="discovery-passphrase-entry" aria-label="Discovery passphrase entry">
-    <label for="discovery-passphrase-input">Speak a discovery passphrase</label>
-    <div class="discovery-passphrase-row">
-      <input id="discovery-passphrase-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type a passphrase" />
-      <button id="discovery-passphrase-submit" class="advanced-reset-btn" type="submit">Unlock</button>
-    </div>
-    <p id="discovery-passphrase-feedback" class="discovery-passphrase-feedback" role="status" aria-live="polite"></p>
-  </form>
+  <div class="discovery-library-tools">
+    <button id="pattern-library-export-btn" type="button" class="advanced-reset-btn">Export Library JSON</button>
+    <button id="pattern-library-import-btn" type="button" class="advanced-reset-btn">Import Library JSON</button>
+    <input id="pattern-library-import-input" type="file" accept="application/json" hidden>
+  </div>
 
   <div id="discovery-cards"></div>
 </div>
@@ -535,6 +531,49 @@
   </div>
 </div>
 
+<div id="pattern-save-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pattern-save-title">
+  <div class="modal-card pattern-save-card">
+    <h4 id="pattern-save-title">Save to Pattern Library</h4>
+    <div class="pattern-preview-wrap">
+      <div id="pattern-save-preview" class="pattern-preview-frame" aria-label="Pattern preview"></div>
+    </div>
+    <div class="modal-row">
+      <label for="pattern-save-name-input">Pattern name</label>
+      <input id="pattern-save-name-input" type="text" maxlength="512" placeholder="My Stitch Pattern">
+      <div class="modal-help">Required. Unique name. Allowed: letters, numbers, spaces, underscores, parentheses, dashes.</div>
+    </div>
+    <div class="modal-row">
+      <label for="pattern-save-description-input">Description (optional)</label>
+      <textarea id="pattern-save-description-input" rows="4" maxlength="4000" placeholder="Write notes about this pattern..."></textarea>
+      <div class="modal-help">Up to 4000 characters.</div>
+    </div>
+    <p id="pattern-save-feedback" class="discovery-passphrase-feedback" role="status" aria-live="polite"></p>
+    <div class="modal-actions">
+      <button id="pattern-save-cancel-btn" type="button" class="modal-btn">Cancel</button>
+      <button id="pattern-save-confirm-btn" type="button" class="modal-btn primary">Save Pattern</button>
+    </div>
+  </div>
+</div>
+
+<div id="pattern-detail-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pattern-detail-title">
+  <div class="modal-card pattern-detail-card">
+    <div class="pattern-detail-header">
+      <h4 id="pattern-detail-title">Pattern</h4>
+      <button id="pattern-detail-close-btn" type="button" class="modal-btn">Close</button>
+    </div>
+    <div id="pattern-detail-status" class="pattern-detail-status"></div>
+    <div id="pattern-detail-preview" class="pattern-preview-frame" aria-label="Saved pattern preview"></div>
+    <div id="pattern-detail-description" class="pattern-detail-description"></div>
+    <div class="pattern-detail-actions">
+      <button id="pattern-detail-view-export-btn" type="button" class="modal-btn primary">Export...</button>
+      <button id="pattern-detail-load-btn" type="button" class="modal-btn">Load Pattern</button>
+      <button id="pattern-detail-travel-btn" type="button" class="modal-btn">Travel</button>
+      <button id="pattern-detail-rename-btn" type="button" class="modal-btn">Rename</button>
+      <button id="pattern-detail-delete-btn" type="button" class="modal-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
 <div id="acknowledgments-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="acknowledgments-title" aria-describedby="acknowledgments-line-text">
   <div class="modal-card acknowledgments-card">
     <div class="acknowledgments-header">
@@ -613,6 +652,27 @@
   var kidSaveImageOptionBtn = document.getElementById('kid-save-image-option');
   var kidSaveMakeOptionBtn = document.getElementById('kid-save-make-option');
   var kidSaveCancelBtn = document.getElementById('kid-save-cancel-btn');
+  var patternSaveModal = document.getElementById('pattern-save-modal');
+  var patternSavePreview = document.getElementById('pattern-save-preview');
+  var patternSaveNameInput = document.getElementById('pattern-save-name-input');
+  var patternSaveDescriptionInput = document.getElementById('pattern-save-description-input');
+  var patternSaveFeedback = document.getElementById('pattern-save-feedback');
+  var patternSaveCancelBtn = document.getElementById('pattern-save-cancel-btn');
+  var patternSaveConfirmBtn = document.getElementById('pattern-save-confirm-btn');
+  var patternDetailModal = document.getElementById('pattern-detail-modal');
+  var patternDetailTitle = document.getElementById('pattern-detail-title');
+  var patternDetailStatus = document.getElementById('pattern-detail-status');
+  var patternDetailPreview = document.getElementById('pattern-detail-preview');
+  var patternDetailDescription = document.getElementById('pattern-detail-description');
+  var patternDetailCloseBtn = document.getElementById('pattern-detail-close-btn');
+  var patternDetailViewExportBtn = document.getElementById('pattern-detail-view-export-btn');
+  var patternDetailLoadBtn = document.getElementById('pattern-detail-load-btn');
+  var patternDetailTravelBtn = document.getElementById('pattern-detail-travel-btn');
+  var patternDetailRenameBtn = document.getElementById('pattern-detail-rename-btn');
+  var patternDetailDeleteBtn = document.getElementById('pattern-detail-delete-btn');
+  var patternLibraryExportBtn = document.getElementById('pattern-library-export-btn');
+  var patternLibraryImportBtn = document.getElementById('pattern-library-import-btn');
+  var patternLibraryImportInput = document.getElementById('pattern-library-import-input');
   var canvasContainer = document.getElementById('canvas-container');
   var canvasStage = document.getElementById('canvas-stage');
   var shapeButtons = Array.prototype.slice.call(document.querySelectorAll('.shape-btn'));
