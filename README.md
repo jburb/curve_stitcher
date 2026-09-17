@@ -386,7 +386,7 @@ This section describes the practical steps for adding a new experience named zoo
 	   - Let discovered patterns be set off from user-saved patterns visually, and ensure that they are visible even before they are discovered/have a URL saved for them, while preserving the common design language of the cards for both sets.
 	   - Disable the concept of unlocking experiences/discovery cards via passphrase, and show the entire passphrase by default as a hint provided via patternDescription, rather than a truncated passphrase whose full form is revealed upon pattern discovery.
 	   - Let the non-stitching experiences currently unlocked by discoveries continue to be locked until their candidate stitchings are discovered, and in this new paradigm automatically saved to the persistence layer.
-	 - Enable pattern library import-export, via  library export/import buttons in the pattern library pane.
+	 - Allow for future import and export of the user's full pattern library, via library export/import buttons in the pattern library pane. Method of library serialization/deserialization TBD. 
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
