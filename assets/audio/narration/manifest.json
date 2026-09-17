@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-17T09:09:51.557Z",
+  "generatedAt": "2026-09-17T09:58:56.187Z",
   "hashAlgorithm": "sha256",
   "textNormalization": "collapse-whitespace-and-trim",
   "piper": {
@@ -270,13 +270,6 @@
     },
     {
       "source": "js/app/onboarding.js",
-      "textHash": "8887beae60fbe0a906a59b7070bd3c3f519f3f54a2748500b456ea4302f95319",
-      "charCount": 68,
-      "preview": "Tap Save to download a picture, or a ZIP with picture + maker files.",
-      "file": "clips/8887beae60fbe0a906a59b7070bd3c3f519f3f54a2748500b456ea4302f95319.wav"
-    },
-    {
-      "source": "js/app/onboarding.js",
       "textHash": "89973f135ded1813bee34b1f44454a0a4f6f39f5352297bd8c3befc7b144aa3d",
       "charCount": 85,
       "preview": "Enter the number by which hole numbers will be multiplied to choose connecting holes.",
@@ -324,6 +317,13 @@
       "charCount": 67,
       "preview": "Choose the type of math to use to calculate the stitch connections.",
       "file": "clips/938c35c3ecd7fa0e938af1cbf6527ba7e9a5e714ffe8246422ccc9abc3d72bda.wav"
+    },
+    {
+      "source": "js/app/onboarding.js",
+      "textHash": "956ab60f314e2d2a03717054c4251fc33bbf2bbcb6df9198c4b1e26780a98c3b",
+      "charCount": 88,
+      "preview": "Save your stitching pattern to the pattern library, so you can re-stitch it at any time.",
+      "file": "clips/956ab60f314e2d2a03717054c4251fc33bbf2bbcb6df9198c4b1e26780a98c3b.wav"
     },
     {
       "source": "js/app/onboarding.js",

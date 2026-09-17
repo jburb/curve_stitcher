@@ -2473,6 +2473,12 @@ function renderDiscoveryLibrary() {
         iconImage.setAttribute('aria-hidden', 'true');
         iconChip.appendChild(iconImage);
         title.appendChild(iconChip);
+      } else if (record.patternPreviewSmall) {
+        var inlineIconChip = document.createElement('span');
+        inlineIconChip.className = 'discovery-card-icon-chip' + (unlocked ? ' is-unlocked' : ' is-preview');
+        inlineIconChip.setAttribute('aria-hidden', 'true');
+        inlineIconChip.innerHTML = String(record.patternPreviewSmall);
+        title.appendChild(inlineIconChip);
       }
 
       var titleLabel = document.createElement('span');

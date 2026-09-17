@@ -1263,10 +1263,11 @@
 
   /* --- ADVANCED PANEL --- */
   #discovery-panel {
+    --discovery-pane-width: min(70vw, 980px);
     position: absolute;
     top: 0;
-    left: -320px;
-    width: 300px;
+    left: calc(-1 * var(--discovery-pane-width) - 20px);
+    width: var(--discovery-pane-width);
     height: 100%;
     box-sizing: border-box;
     background: #fafafa;
@@ -1278,6 +1279,13 @@
   }
   #discovery-panel.open {
     left: 0;
+  }
+
+  @media (max-width: 720px) {
+    #discovery-panel {
+      --discovery-pane-width: calc(100vw - 16px);
+      left: calc(-1 * var(--discovery-pane-width) - 20px);
+    }
   }
   .discovery-library-tools {
     display: grid;
@@ -1351,6 +1359,11 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    display: block;
+  }
+  .discovery-card-icon-chip svg {
+    width: 100%;
+    height: 100%;
     display: block;
   }
   .discovery-card-icon.is-preview {
@@ -1967,19 +1980,21 @@
     margin: 0 0 10px;
   }
   .pattern-preview-frame {
-    width: 100%;
+    width: min(100%, var(--pattern-preview-max-width, 600px));
     min-height: 220px;
-    max-height: min(56vh, 460px);
+    max-height: min(56vh, var(--pattern-preview-max-height, 600px));
     overflow: auto;
     border: 1px solid #d8e3f7;
     border-radius: 10px;
     background: #ffffff;
     box-sizing: border-box;
     padding: 8px;
+    margin-left: auto;
+    margin-right: auto;
   }
   .pattern-preview-frame svg {
     width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
   }
   .pattern-detail-card {

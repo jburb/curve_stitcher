@@ -633,6 +633,38 @@ function setPatternSaveFeedback(message, status) {
   }
 }
 
+function getPatternPreviewViewportSize() {
+  var canvas = document.getElementById('myCanvas');
+  if (!canvas || !canvas.getBoundingClientRect) {
+    return {
+      width: 600,
+      height: 600
+    };
+  }
+  var bounds = canvas.getBoundingClientRect();
+  var width = Math.max(220, Math.round(Number(bounds.width) || 0));
+  var height = Math.max(220, Math.round(Number(bounds.height) || 0));
+  return {
+    width: width,
+    height: height
+  };
+}
+
+function applyPatternPreviewFrameSizing(frameElement) {
+  if (!frameElement || !frameElement.style) return;
+  var size = getPatternPreviewViewportSize();
+  frameElement.style.setProperty('--pattern-preview-max-width', String(size.width) + 'px');
+  frameElement.style.setProperty('--pattern-preview-max-height', String(size.height) + 'px');
+
+  var svg = frameElement.querySelector('svg');
+  if (!svg || !svg.style) return;
+  svg.style.width = '100%';
+  svg.style.height = '100%';
+  svg.style.maxWidth = '100%';
+  svg.style.maxHeight = '100%';
+  svg.style.display = 'block';
+}
+
 function openPatternSaveModal() {
   if (!patternSaveModal) return;
   if (currentExperienceId !== 'stitching') {
@@ -650,6 +682,7 @@ function openPatternSaveModal() {
     : '';
   if (patternSavePreview) {
     patternSavePreview.innerHTML = previewSvg || '<p>Preview unavailable.</p>';
+    applyPatternPreviewFrameSizing(patternSavePreview);
   }
   if (patternSaveNameInput) {
     patternSaveNameInput.value = '';
@@ -711,6 +744,7 @@ function renderPatternDetailModal(record) {
     } else {
       patternDetailPreview.innerHTML = '<p>Preview unavailable until discovery.</p>';
     }
+    applyPatternPreviewFrameSizing(patternDetailPreview);
   }
 
   if (patternDetailLoadBtn) {
