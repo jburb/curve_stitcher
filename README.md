@@ -371,10 +371,14 @@ This section describes the practical steps for adding a new experience named zoo
 	   - patternName: mandatory, a user-specified string, enforce uniqueness, allow whitespace, with reasonable string-length and valid-char limitations.
 	   - patternDescription: optional, a user-specified string, allow whitespace, allow for longer text here and all chars, in case the user wants to document more thoughts on a given pattern at save-time.
 	   - patternPreview: a scaled down SVG, consisting of the image that would be drawn for the saved pattern when a user asks to save a maker picture of it with threads included, and comparable in size to the "discovery-card-icon" images we already use for discovery candidates e.g. "Triangula", "Squarus" etc.
-	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB), in a manner that allows for a single set of functions and objects to be reused in three deployment targets: 1: webapp/browser-based (our current default), 2: webapp packaged for desktop, via a yet to be implemented Tauri packaging flow, and 3: webapp packaged as mobile(tablet) app, via a yet to be implemented Capacitor packaging flow.
+	 - Start with local persistence, offline by default e.g. via IndexedDB if it is cross-browser supported, implemented in a manner that allows for a single set of functions and objects to be reused in three deployment targets: 1: webapp/browser-based (our current default), 2: webapp packaged for desktop, via a yet to be implemented Tauri packaging flow, and 3: webapp packaged as mobile(tablet) app, via a yet to be implemented Capacitor packaging flow.
 	 - Enable pattern library import-export.
 	 - As far as UI/UX, implement this pattern library as an extension of the existing discovery pane. Specifically:
-	   - 
+	   - Let the saved patterns be listed as a horizontally-scrollable list of cards in the discovery pane, comparable to the existing discovery cards.
+	   - Re-implement discovered patterns as special instances of saved patterns, which are saved automatically upon the existing discovery candidate stitched event, and using predetermined patternName, patternDescription, and patternPreview images instead of user-specified or new values for any of these. For discovered patterns, use the existing passphrases as the patternDescription, and the discovery candidate name as patternName.
+	   - Let discovered patterns be set off from user-saved patterns visually, and ensure that they are visible even before they are discovered/have a URL saved for them, while preserving the common design language of the cards for both sets.
+	   - Disable the concept of unlocking experiences/discovery cards via passphrase, and show the entire passphrase by default as a hint provided via patternDescription, rather than a truncated passphrase whose full form is revealed upon pattern discovery.
+	   - Let the non-stitching experiences currently unlocked by discoveries continue to be locked until their candidate stitchings are discovered, and in this new paradigm automatically saved to the persistence layer.
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
