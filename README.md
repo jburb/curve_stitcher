@@ -365,10 +365,12 @@ This section describes the practical steps for adding a new experience named zoo
 
 
 ## TODO Backlog
-1. **Stitch library (offline-first)**
-	 - Save/load named presets containing shape + global controls + per-thread settings.
-	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB).
-	 - Leave room for optional future cloud sync/import-export.
+1. **Stitched pattern library (offline-first)**
+	 - Allow the user to save patterns created in the default ("Stitching") experience, in a manner allowing any saved pattern to be loaded as the active app state in Stitching. I believe our model of state management via URL params will allow for this easily by storing the URL to some persistence layer e.g. IndexedDB in the case of browser-based app usage, or SQLite in the case of desktop/mobile-packaged app usage.
+	 - For any saved pattern, in addition to storing whatever is required to reload the pattern (believed to be the URL thanks to our state management via URL params), we should store the following:
+	   - patternName: user-specified string, mandatory, enforce uniqueness, 
+	 - Start with local persistence (offline by default, e.g. localStorage or IndexedDB), in a manner that allows for a single set of functions and objects to be reused in three deployment targets: 1: webapp/browser-based (our current default), 2: webapp packaged for desktop, via a yet to be implemented Tauri packaging flow, and 3: webapp packaged as mobile(tablet) app, via a yet to be implemented Capacitor packaging flow.
+	 - Enable pattern library import-export.
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
