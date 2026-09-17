@@ -2497,7 +2497,7 @@ function renderDiscoveryLibrary() {
           ? ('Travel unlocked for ' + previewExperienceName + '.')
           : ('Stitch ' + previewArticle + ' ' + previewShapeName + ' to unlock travel to ' + previewExperienceName + '.');
       } else {
-        text.textContent = 'Saved from Stitching URL state.';
+        text.textContent = 'Saved from Stitching.';
       }
       card.appendChild(text);
 
@@ -2570,8 +2570,8 @@ function renderDiscoveryLibrary() {
     discoveryCards.appendChild(section);
   }
 
-  appendSection('Discovered And Discoverable', discoveryRecords);
-  appendSection('Saved In Stitching', userRecords);
+  appendSection('Discoverable Patterns', discoveryRecords);
+  appendSection('Saved Patterns', userRecords);
 
   renderSongPicker();
   syncDiscoveryToggleButton();
