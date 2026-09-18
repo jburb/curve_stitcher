@@ -64,9 +64,13 @@ function runExportInIsolatedPatternFrame(patternUrl, work) {
     }
 
     var frame = document.createElement('iframe');
+    var sourceCanvas = document.getElementById('myCanvas');
+    var sourceRect = sourceCanvas && sourceCanvas.getBoundingClientRect ? sourceCanvas.getBoundingClientRect() : null;
+    var frameWidth = Math.max(720, Math.round(sourceRect && sourceRect.width ? sourceRect.width : 900));
+    var frameHeight = Math.max(720, Math.round(sourceRect && sourceRect.height ? sourceRect.height : 900));
     frame.style.position = 'fixed';
-    frame.style.width = '1px';
-    frame.style.height = '1px';
+    frame.style.width = String(frameWidth) + 'px';
+    frame.style.height = String(frameHeight) + 'px';
     frame.style.opacity = '0';
     frame.style.pointerEvents = 'none';
     frame.style.left = '-9999px';
@@ -92,7 +96,38 @@ function runExportInIsolatedPatternFrame(patternUrl, work) {
           reject(new Error('Failed to access export frame.'));
           return;
         }
-        Promise.resolve(work(frameWindow))
+
+        function afterRenderSettles(callback) {
+          var nextFrame = frameWindow.requestAnimationFrame || window.requestAnimationFrame;
+          if (typeof nextFrame !== 'function') {
+            callback();
+            return;
+          }
+          nextFrame(function() {
+            nextFrame(function() {
+              callback();
+            });
+          });
+        }
+
+        function flushFrameLayoutAndDraw() {
+          try {
+            if (typeof frameWindow.fitCanvasToStage === 'function') {
+              frameWindow.fitCanvasToStage();
+            }
+            if (typeof frameWindow.redrawForPathChange === 'function') {
+              frameWindow.redrawForPathChange();
+            }
+          } catch (error) {
+            // Continue even if these hooks are unavailable in frame.
+          }
+        }
+
+        flushFrameLayoutAndDraw();
+        afterRenderSettles(function() {
+          flushFrameLayoutAndDraw();
+          afterRenderSettles(function() {
+            Promise.resolve(work(frameWindow))
           .then(function(result) {
             cleanup();
             resolve(result);
@@ -101,6 +136,8 @@ function runExportInIsolatedPatternFrame(patternUrl, work) {
             cleanup();
             reject(error);
           });
+          });
+        });
       } catch (error) {
         cleanup();
         reject(error);

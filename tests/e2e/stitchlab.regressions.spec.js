@@ -2271,8 +2271,12 @@ test.describe('StitchLab regressions', () => {
         win.URL.createObjectURL = function(blob) {
           try {
             if (win.top) {
-              win.top.__patternDetailExportBlobProbe = win.top.__patternDetailExportBlobProbe || { count: 0 };
+              win.top.__patternDetailExportBlobProbe = win.top.__patternDetailExportBlobProbe || { count: 0, files: [] };
               win.top.__patternDetailExportBlobProbe.count += 1;
+              win.top.__patternDetailExportBlobProbe.files.push({
+                size: Number(blob && blob.size || 0),
+                type: String(blob && blob.type || '')
+              });
             }
           } catch (error) {
             // Ignore cross-context probe failures.
@@ -2283,7 +2287,7 @@ test.describe('StitchLab regressions', () => {
       }
 
       installBlobProbe(window);
-      window.__patternDetailExportBlobProbe = window.__patternDetailExportBlobProbe || { count: 0 };
+      window.__patternDetailExportBlobProbe = window.__patternDetailExportBlobProbe || { count: 0, files: [] };
     });
 
     await suppressStartupOnboarding(page);
@@ -2334,6 +2338,20 @@ test.describe('StitchLab regressions', () => {
       var probe = window.__patternDetailExportBlobProbe || { count: 0 };
       return Number(probe.count || 0);
     })).toBeGreaterThan(0);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { files: [] };
+      var files = Array.isArray(probe.files) ? probe.files : [];
+      if (!files.length) return { size: 0, type: '' };
+      return files[files.length - 1];
+    })).toMatchObject({ type: 'image/png' });
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { files: [] };
+      var files = Array.isArray(probe.files) ? probe.files : [];
+      if (!files.length) return 0;
+      return Number(files[files.length - 1].size || 0);
+    })).toBeGreaterThan(3500);
 
     expect(alertMessages).toEqual([]);
   });
