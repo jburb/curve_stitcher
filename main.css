@@ -1291,7 +1291,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin: 0 0 12px;
+    margin: 12px 0 0;
   }
   .discovery-library-tools .advanced-reset-btn {
     width: 100%;
@@ -1385,9 +1385,31 @@
     font-size: 11px;
     line-height: 1.35;
   }
+  .discovery-hint-label {
+    margin: 2px 0 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #4b5f84;
+    text-transform: uppercase;
+  }
   .discovery-card .advanced-reset-btn {
     font-size: 12px;
     margin-top: 0;
+  }
+  .discovery-card .advanced-reset-btn.discovery-travel-btn.is-unlocked {
+    border-width: 2px;
+    border-color: #6f9740;
+    background: #89bb52;
+    color: #1b2a16;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26), 0 0 0 2px rgba(137, 187, 82, 0.3);
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .discovery-card .advanced-reset-btn.discovery-travel-btn.is-unlocked:hover {
+    border-color: #5f8f35;
+    background: #7caf49;
+    color: #14220f;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 0 0 2px rgba(124, 175, 73, 0.34);
   }
   .discovery-card-actions {
     margin-top: auto;
@@ -2028,8 +2050,20 @@
   .pattern-detail-actions {
     margin-top: 10px;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
+  }
+  .pattern-detail-actions .modal-btn {
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  #pattern-detail-modal.stacked-behind-export {
+    z-index: 79;
+  }
+  #kid-save-modal {
+    z-index: 90;
   }
 
   :root {

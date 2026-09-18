@@ -36,6 +36,9 @@ function closeExportOptionsModal() {
 
 function openKidSaveModal() {
   if (!kidSaveModal) return;
+  if (typeof patternDetailModal !== 'undefined' && patternDetailModal && patternDetailModal.classList.contains('open')) {
+    patternDetailModal.classList.add('stacked-behind-export');
+  }
   kidSaveModal.classList.add('open');
   syncKidSaveToggleButton();
 }
@@ -43,6 +46,9 @@ function openKidSaveModal() {
 function closeKidSaveModal() {
   if (!kidSaveModal) return;
   kidSaveModal.classList.remove('open');
+  if (typeof patternDetailModal !== 'undefined' && patternDetailModal) {
+    patternDetailModal.classList.remove('stacked-behind-export');
+  }
   if (typeof setPatternLibraryPendingExportPatternId === 'function') {
     setPatternLibraryPendingExportPatternId('');
   }

@@ -705,6 +705,7 @@ function closePatternSaveModal() {
 function closePatternDetailModal() {
   if (!patternDetailModal) return;
   patternDetailModal.classList.remove('open');
+  patternDetailModal.classList.remove('stacked-behind-export');
   if (typeof setPatternLibraryDetailPatternId === 'function') {
     setPatternLibraryDetailPatternId('');
   }
@@ -771,6 +772,7 @@ function renderPatternDetailModal(record) {
 
   var allowEdit = !record.isProtected && record.kind === 'user';
   if (patternDetailRenameBtn) {
+    patternDetailRenameBtn.textContent = 'Edit';
     patternDetailRenameBtn.style.display = allowEdit ? '' : 'none';
   }
   if (patternDetailDeleteBtn) {
@@ -960,18 +962,27 @@ if (patternDetailTravelBtn) {
 
 if (patternDetailRenameBtn) {
   patternDetailRenameBtn.addEventListener('click', async () => {
-    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function' || typeof renameUserPattern !== 'function') return;
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function' || typeof renameUserPattern !== 'function' || typeof updateUserPatternDescription !== 'function') return;
     var patternId = getPatternLibraryDetailPatternId();
     var record = getPatternRecordById(patternId);
     if (!record || record.kind !== 'user' || record.isProtected) return;
-    var nextName = window.prompt('Rename pattern', String(record.patternName || ''));
+    var nextName = window.prompt('Pattern name', String(record.patternName || ''));
     if (nextName === null) return;
+    var currentDescription = String(record.patternDescription || '');
+    var nextDescription = window.prompt('Pattern description (optional)', currentDescription);
+    if (nextDescription === null) return;
     try {
-      var updated = await renameUserPattern(record.id, nextName);
+      var updated = record;
+      if (String(nextName) !== String(record.patternName || '')) {
+        updated = await renameUserPattern(record.id, nextName);
+      }
+      if (String(nextDescription) !== currentDescription) {
+        updated = await updateUserPatternDescription(record.id, nextDescription);
+      }
       renderPatternDetailModal(updated);
       renderDiscoveryLibrary();
     } catch (error) {
-      alert((error && error.message) ? error.message : 'Rename failed.');
+      alert((error && error.message) ? error.message : 'Pattern update failed.');
     }
   });
 }

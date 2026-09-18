@@ -2497,11 +2497,18 @@ function renderDiscoveryLibrary() {
           ? ('Travel unlocked for ' + previewExperienceName + '.')
           : ('Stitch ' + previewArticle + ' ' + previewShapeName + ' to unlock travel to ' + previewExperienceName + '.');
       } else {
-        text.textContent = 'Saved from Stitching.';
+        text.textContent = record.patternDescription
+          ? String(record.patternDescription)
+          : 'Saved from Stitching.';
       }
       card.appendChild(text);
 
-      if (record.patternDescription) {
+      if (isDiscovery && record.patternDescription) {
+        var hintLabel = document.createElement('div');
+        hintLabel.className = 'discovery-hint-label';
+        hintLabel.textContent = 'Hint:';
+        card.appendChild(hintLabel);
+
         var passphrase = document.createElement('p');
         passphrase.className = 'discovery-passphrase';
         passphrase.textContent = String(record.patternDescription);
@@ -2527,7 +2534,7 @@ function renderDiscoveryLibrary() {
       if (isDiscovery) {
         var travelButton = document.createElement('button');
         travelButton.type = 'button';
-        travelButton.className = 'advanced-reset-btn';
+        travelButton.className = 'advanced-reset-btn' + (unlocked ? ' discovery-travel-btn is-unlocked' : '');
         travelButton.textContent = unlocked
           ? ('Travel to ' + String(record.experienceName || 'Experience'))
           : ('Locked: ' + String(record.experienceName || 'Experience'));

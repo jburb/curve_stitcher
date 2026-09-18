@@ -2236,10 +2236,22 @@ test.describe('StitchLab regressions', () => {
     const detailModal = page.locator('#pattern-detail-modal');
     await expect(detailModal).toHaveClass(/open/);
 
-    page.once('dialog', async (dialog) => {
-      await dialog.accept('Test Pattern (User) - 2');
-    });
+    let editDialogCount = 0;
+    const editDialogHandler = async (dialog) => {
+      editDialogCount += 1;
+      if (editDialogCount === 1) {
+        await dialog.accept('Test Pattern (User) - 2');
+        return;
+      }
+      if (editDialogCount === 2) {
+        await dialog.accept('Pattern library regression test save flow. updated');
+        return;
+      }
+      await dialog.dismiss();
+    };
+    page.on('dialog', editDialogHandler);
     await page.locator('#pattern-detail-rename-btn').click();
+    page.off('dialog', editDialogHandler);
     await expect(page.locator('#pattern-detail-title')).toHaveText('Test Pattern (User) - 2');
 
     page.once('dialog', async (dialog) => {

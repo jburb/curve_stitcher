@@ -652,6 +652,25 @@
     return cloneRecord(record);
   }
 
+  async function updateUserPatternDescription(recordId, nextDescription) {
+    await initializePatternLibrary();
+    var existing = await patternLibraryState.adapter.getById(recordId);
+    if (!existing) {
+      throw new Error('Pattern not found.');
+    }
+    if (existing.kind !== 'user' || existing.isProtected) {
+      throw new Error('Protected patterns cannot be edited.');
+    }
+
+    var record = sanitizeIncomingRecord(existing, 'user');
+    record.patternDescription = normalizePatternDescription(nextDescription);
+    record.updatedAt = nowIso();
+
+    await patternLibraryState.adapter.upsert(record);
+    await loadPatternLibraryRecords();
+    return cloneRecord(record);
+  }
+
   async function deleteUserPattern(recordId) {
     await initializePatternLibrary();
     var existing = await patternLibraryState.adapter.getById(recordId);
@@ -840,6 +859,7 @@
   window.saveUserPatternFromCurrentState = saveUserPatternFromCurrentState;
   window.upsertDiscoveryPatternFromCurrentState = upsertDiscoveryPatternFromCurrentState;
   window.renameUserPattern = renameUserPattern;
+  window.updateUserPatternDescription = updateUserPatternDescription;
   window.deleteUserPattern = deleteUserPattern;
   window.exportPatternLibraryToJsonFile = exportPatternLibraryToJsonFile;
   window.importPatternLibraryFromJsonText = importPatternLibraryFromJsonText;
