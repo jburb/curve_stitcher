@@ -366,7 +366,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 1. **Stitched pattern library (offline-first)**
-	 - Allow the user to save patterns created in the default ("Stitching") experience, in a manner allowing any saved pattern to be loaded as the active app state in Stitching. I believe our model of state management via URL params will allow for this easily by storing the URL to some persistence layer e.g. IndexedDB in the case of browser-based app usage, or SQLite in the case of desktop/mobile-packaged app usage.
+	 ~~- Allow the user to save patterns created in the default ("Stitching") experience, in a manner allowing any saved pattern to be loaded as the active app state in Stitching. I believe our model of state management via URL params will allow for this easily by storing the URL to some persistence layer e.g. IndexedDB in the case of browser-based app usage, or SQLite in the case of desktop/mobile-packaged app usage.
 	 - For any saved pattern, in addition to storing whatever is required to reload the pattern (believed to be the URL thanks to our state management via URL params), we should store the following:
 	   - patternName: mandatory, a user-specified string, enforce uniqueness, allow whitespace, with reasonable string-length and valid-char limitations.
 	   - patternDescription: optional, a user-specified string, allow whitespace, allow for longer text here and all chars, in case the user wants to document more thoughts on a given pattern at save-time.
@@ -386,7 +386,7 @@ This section describes the practical steps for adding a new experience named zoo
 	   - Let discovered patterns be set off from user-saved patterns visually, and ensure that they are visible even before they are discovered/have a URL saved for them, while preserving the common design language of the cards for both sets.
 	   - Disable the concept of unlocking experiences/discovery cards via passphrase, and show the entire passphrase by default as a hint provided via patternDescription, rather than a truncated passphrase whose full form is revealed upon pattern discovery.
 	   - Let the non-stitching experiences currently unlocked by discoveries continue to be locked until their candidate stitchings are discovered, and in this new paradigm automatically saved to the persistence layer.
-	 - Allow for future import and export of the user's full pattern library, via library export/import buttons in the pattern library pane. Method of library serialization/deserialization TBD. 
+	 - Allow for future import and export of the user's full pattern library, via library export/import buttons in the pattern library pane. Method of library serialization/deserialization TBD.~~
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
