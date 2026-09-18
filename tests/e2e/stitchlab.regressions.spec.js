@@ -2263,6 +2263,73 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
   });
 
+  test('pattern detail load restores saved stitching state to app controls', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('.shape-btn[data-shape="triangle"]').click();
+    await page.evaluate(() => {
+      function setRangeValue(id, value) {
+        var slider = document.getElementById(id);
+        if (!slider) return;
+        slider.value = String(value);
+        var inputEvt = document.createEvent('Event');
+        inputEvt.initEvent('input', true, true);
+        slider.dispatchEvent(inputEvt);
+        var changeEvt = document.createEvent('Event');
+        changeEvt.initEvent('change', true, true);
+        slider.dispatchEvent(changeEvt);
+      }
+      setRangeValue('holes', 27);
+      setRangeValue('jump', 7);
+    });
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill('Load Restore Pattern');
+    await page.locator('#pattern-save-description-input').fill('Load should restore triangle, 27 holes, and add 7.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('.shape-btn[data-shape="square"]').click();
+    await page.evaluate(() => {
+      function setRangeValue(id, value) {
+        var slider = document.getElementById(id);
+        if (!slider) return;
+        slider.value = String(value);
+        var inputEvt = document.createEvent('Event');
+        inputEvt.initEvent('input', true, true);
+        slider.dispatchEvent(inputEvt);
+        var changeEvt = document.createEvent('Event');
+        changeEvt.initEvent('change', true, true);
+        slider.dispatchEvent(changeEvt);
+      }
+      setRangeValue('holes', 45);
+      setRangeValue('jump', 3);
+    });
+
+    await expect(page.locator('.shape-btn[data-shape="square"]')).toHaveClass(/active/);
+    await expect(page.locator('#holes')).toHaveValue('45');
+    await expect(page.locator('#jump')).toHaveValue('3');
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Load Restore Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+    await page.locator('#pattern-detail-load-btn').click();
+
+    await expect(detailModal).not.toHaveClass(/open/);
+    await expect(page.locator('.shape-btn[data-shape="triangle"]')).toHaveClass(/active/);
+    await expect(page.locator('#holes')).toHaveValue('27');
+    await expect(page.locator('#jump')).toHaveValue('7');
+    await expect.poll(() => new URL(page.url()).searchParams.get('stitchingShape')).toBe('triangle');
+    await expect.poll(() => new URL(page.url()).searchParams.get('stitchingHoles')).toBe('27');
+  });
+
   test('pattern detail export flow prompts for filename and creates a download blob', async ({ page }) => {
     await page.addInitScript(() => {
       function installBlobProbe(win) {
