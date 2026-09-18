@@ -122,14 +122,6 @@ function runExportInIsolatedPatternFrame(patternUrl, work) {
   });
 }
 
-async function runKidFriendlySaveSelection(mode, options) {
-  options = options || {};
-  if (!kidSaveModal) return;
-  var targetPatternUrl = String(options.patternUrl || '').trim();
-  kidSaveModal.classList.remove('open');
-  syncKidSaveToggleButton();
-}
-
 async function runExportFromModalSelection() {
   var isTriangulaExport = currentExperienceId === 'triangula';
   var isSquarusExport = currentExperienceId === 'squarus';
@@ -164,7 +156,9 @@ async function runExportFromModalSelection() {
   closeExportOptionsModal();
 }
 
-async function runKidFriendlySaveSelection(mode) {
+async function runKidFriendlySaveSelection(mode, options) {
+  options = options || {};
+  var targetPatternUrl = String(options.patternUrl || '').trim();
   var normalizedMode = mode === 'make' ? 'make' : 'image';
   var proposedName = normalizeExportBaseName(getTimestampLabel());
   var requestedName = window.prompt('What would you like to call it?', proposedName);
@@ -199,26 +193,68 @@ async function runKidFriendlySaveSelection(mode) {
         };
 
         if (normalizedMode === 'image') {
-          if (typeof frameWindow.downloadPreviewImage !== 'function') {
+          if (typeof frameWindow.createPreviewImageBlob !== 'function') {
             throw new Error('Saved pattern preview export is unavailable.');
           }
-          return frameWindow.downloadPreviewImage(frameBaseName, { appendPreviewSuffix: false });
+          return frameWindow.createPreviewImageBlob().then(function(previewBlob) {
+            if (!previewBlob) {
+              throw new Error('Saved pattern preview export returned no image data.');
+            }
+            triggerBlobDownload(previewBlob, frameBaseName + '.png');
+          });
         }
 
         if (typeof frameWindow.JSZip === 'undefined') {
-          if (typeof frameWindow.downloadCurrentDesignSvg !== 'function' || typeof frameWindow.downloadStitchingGuide !== 'function' || typeof frameWindow.downloadPreviewImage !== 'function') {
+          if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
             throw new Error('Saved pattern maker export helpers are unavailable.');
           }
-          frameWindow.downloadCurrentDesignSvg(frameBaseName, frameOptions);
-          frameWindow.downloadStitchingGuide(frameBaseName, frameOptions);
-          frameWindow.downloadPreviewImage(frameBaseName);
-          return;
+          var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
+          if (!svgBlob) {
+            throw new Error('Saved pattern maker export returned no SVG data.');
+          }
+          triggerBlobDownload(svgBlob, frameBaseName + '.svg');
+
+          var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
+          if (guideBlob) {
+            triggerBlobDownload(guideBlob, frameWindow.getExportGuideFileName(frameBaseName));
+          }
+
+          return frameWindow.createPreviewImageBlob().then(function(previewBlob) {
+            if (previewBlob) {
+              triggerBlobDownload(previewBlob, frameBaseName + '-preview.png');
+            }
+          });
         }
 
-        if (typeof frameWindow.downloadExportZipBundle !== 'function') {
-          throw new Error('Saved pattern ZIP export is unavailable.');
+        if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
+          throw new Error('Saved pattern ZIP export helpers are unavailable.');
         }
-        return frameWindow.downloadExportZipBundle(frameBaseName, frameOptions);
+
+        if (typeof frameWindow.JSZip === 'undefined') {
+          throw new Error('Saved pattern ZIP export library is unavailable.');
+        }
+
+        return (async function() {
+          var zip = new frameWindow.JSZip();
+          var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
+          if (!svgBlob) {
+            throw new Error('Saved pattern ZIP export returned no SVG data.');
+          }
+          zip.file(frameBaseName + '.svg', svgBlob);
+
+          var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
+          if (guideBlob) {
+            zip.file(frameWindow.getExportGuideFileName(frameBaseName), guideBlob);
+          }
+
+          var previewBlob = await frameWindow.createPreviewImageBlob();
+          if (previewBlob) {
+            zip.file(frameBaseName + '-preview.png', previewBlob);
+          }
+
+          var zipBlob = await zip.generateAsync({ type: 'blob' });
+          triggerBlobDownload(zipBlob, frameBaseName + '.zip');
+        })();
       });
       closeKidSaveModal();
       return;

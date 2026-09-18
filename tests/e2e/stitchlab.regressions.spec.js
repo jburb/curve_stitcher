@@ -2263,6 +2263,81 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
   });
 
+  test('pattern detail export flow prompts for filename and creates a download blob', async ({ page }) => {
+    await page.addInitScript(() => {
+      function installBlobProbe(win) {
+        if (!win || !win.URL || win.URL.__stitchlabBlobProbeInstalled) return;
+        var originalCreateObjectURL = win.URL.createObjectURL.bind(win.URL);
+        win.URL.createObjectURL = function(blob) {
+          try {
+            if (win.top) {
+              win.top.__patternDetailExportBlobProbe = win.top.__patternDetailExportBlobProbe || { count: 0 };
+              win.top.__patternDetailExportBlobProbe.count += 1;
+            }
+          } catch (error) {
+            // Ignore cross-context probe failures.
+          }
+          return originalCreateObjectURL(blob);
+        };
+        win.URL.__stitchlabBlobProbeInstalled = true;
+      }
+
+      installBlobProbe(window);
+      window.__patternDetailExportBlobProbe = window.__patternDetailExportBlobProbe || { count: 0 };
+    });
+
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const onboardingTour = page.locator('#onboarding-tour');
+    if (await onboardingTour.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTour).toBeHidden();
+    }
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(onboardingTour).toBeHidden();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    await page.locator('#pattern-save-name-input').fill('Detail Export Probe Pattern');
+    await page.locator('#pattern-save-description-input').fill('Probe export from detail modal.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Detail Export Probe Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    const alertMessages = [];
+    page.on('dialog', async (dialog) => {
+      if (dialog.type() === 'prompt') {
+        await dialog.accept('detail_export_probe_name');
+        return;
+      }
+      alertMessages.push(dialog.message());
+      await dialog.dismiss();
+    });
+
+    await page.locator('#pattern-detail-view-export-btn').click();
+    const kidSaveModal = page.locator('#kid-save-modal');
+    await expect(kidSaveModal).toHaveClass(/open/);
+    await page.locator('#kid-save-image-option').click();
+    await expect(kidSaveModal).not.toHaveClass(/open/);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { count: 0 };
+      return Number(probe.count || 0);
+    })).toBeGreaterThan(0);
+
+    expect(alertMessages).toEqual([]);
+  });
+
   test('locked discovery detail modal keeps load and export disabled', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
