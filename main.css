@@ -1321,7 +1321,7 @@
     overflow-x: hidden;
     border: 1px solid var(--ui-pane-card-border, #d7e0f3);
     border-radius: 10px;
-    padding: 8px;
+    padding: 0 8px 8px;
     background: var(--ui-pane-card-surface, #ffffff);
   }
   .pattern-library-section-title {
@@ -1333,7 +1333,8 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 1px 0 6px;
+    margin: 0 -8px;
+    padding: 8px 8px 6px;
     background: var(--ui-pane-card-surface, #ffffff);
   }
   .pattern-library-row {

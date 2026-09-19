@@ -95,6 +95,10 @@ Current covered checks:
 - Formula validity feedback is intentionally delayed while typing.
 - Invalid formula input does not serialize to URL and resolves to fallback on commit.
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
+- Pattern library supports save, edit (rename + description), and delete for user-saved patterns.
+- Pattern detail load restores a saved Stitching pattern state back into active app controls.
+- Pattern detail export flow prompts for filename and creates a valid PNG download blob.
+- Locked discovery detail modal keeps load/export/travel actions disabled until unlocked.
 - Core interaction sweep does not raise runtime reference/type errors.
 - Triangula URL state roundtrip persists key controls on reload.
 - Squarus URL state roundtrip persists key controls on reload.
