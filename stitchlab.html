@@ -568,8 +568,29 @@
       <button id="pattern-detail-load-btn" type="button" class="modal-btn">Load</button>
       <button id="pattern-detail-view-export-btn" type="button" class="modal-btn">Export</button>
       <button id="pattern-detail-travel-btn" type="button" class="modal-btn">Travel</button>
-      <button id="pattern-detail-rename-btn" type="button" class="modal-btn">Edit</button>
+      <button id="pattern-detail-rename-btn" type="button" class="modal-btn">Edit Details</button>
       <button id="pattern-detail-delete-btn" type="button" class="modal-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="pattern-edit-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pattern-edit-title">
+  <div class="modal-card pattern-edit-card">
+    <h4 id="pattern-edit-title">Edit Pattern Details</h4>
+    <div class="modal-row">
+      <label for="pattern-edit-name-input">Pattern name</label>
+      <input id="pattern-edit-name-input" type="text" maxlength="512" placeholder="My Stitch Pattern">
+      <div class="modal-help">Required. Unique name. Allowed: letters, numbers, spaces, underscores, parentheses, dashes.</div>
+    </div>
+    <div class="modal-row">
+      <label for="pattern-edit-description-input">Description (optional)</label>
+      <textarea id="pattern-edit-description-input" rows="4" maxlength="4000" placeholder="Write notes about this pattern..."></textarea>
+      <div class="modal-help">Up to 4000 characters.</div>
+    </div>
+    <p id="pattern-edit-feedback" class="discovery-passphrase-feedback" role="status" aria-live="polite"></p>
+    <div class="modal-actions">
+      <button id="pattern-edit-cancel-btn" type="button" class="modal-btn">Cancel</button>
+      <button id="pattern-edit-confirm-btn" type="button" class="modal-btn primary">Save Details</button>
     </div>
   </div>
 </div>
@@ -670,6 +691,12 @@
   var patternDetailTravelBtn = document.getElementById('pattern-detail-travel-btn');
   var patternDetailRenameBtn = document.getElementById('pattern-detail-rename-btn');
   var patternDetailDeleteBtn = document.getElementById('pattern-detail-delete-btn');
+  var patternEditModal = document.getElementById('pattern-edit-modal');
+  var patternEditNameInput = document.getElementById('pattern-edit-name-input');
+  var patternEditDescriptionInput = document.getElementById('pattern-edit-description-input');
+  var patternEditFeedback = document.getElementById('pattern-edit-feedback');
+  var patternEditCancelBtn = document.getElementById('pattern-edit-cancel-btn');
+  var patternEditConfirmBtn = document.getElementById('pattern-edit-confirm-btn');
   var patternLibraryExportBtn = document.getElementById('pattern-library-export-btn');
   var patternLibraryImportBtn = document.getElementById('pattern-library-import-btn');
   var patternLibraryImportInput = document.getElementById('pattern-library-import-input');

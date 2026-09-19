@@ -712,6 +712,39 @@ function closePatternDetailModal() {
   }
 }
 
+function setPatternEditFeedback(message, status) {
+  if (!patternEditFeedback) return;
+  patternEditFeedback.textContent = message || '';
+  patternEditFeedback.classList.remove('is-success');
+  patternEditFeedback.classList.remove('is-error');
+  if (status === 'success') {
+    patternEditFeedback.classList.add('is-success');
+  } else if (status === 'error') {
+    patternEditFeedback.classList.add('is-error');
+  }
+}
+
+function openPatternEditModal(record) {
+  if (!patternEditModal || !record) return;
+  if (patternEditNameInput) {
+    patternEditNameInput.value = String(record.patternName || '');
+  }
+  if (patternEditDescriptionInput) {
+    patternEditDescriptionInput.value = String(record.patternDescription || '');
+  }
+  setPatternEditFeedback('', '');
+  patternEditModal.classList.add('open');
+  if (patternEditNameInput) {
+    patternEditNameInput.focus();
+    patternEditNameInput.select();
+  }
+}
+
+function closePatternEditModal() {
+  if (!patternEditModal) return;
+  patternEditModal.classList.remove('open');
+}
+
 function renderPatternDetailModal(record) {
   if (!record || !patternDetailModal) return;
 
@@ -773,7 +806,7 @@ function renderPatternDetailModal(record) {
 
   var allowEdit = !record.isProtected && record.kind === 'user';
   if (patternDetailRenameBtn) {
-    patternDetailRenameBtn.textContent = 'Edit';
+    patternDetailRenameBtn.textContent = 'Edit Details';
     patternDetailRenameBtn.style.display = allowEdit ? '' : 'none';
   }
   if (patternDetailDeleteBtn) {
@@ -856,7 +889,11 @@ if (kidSaveImageOptionBtn) {
     if (patternId && typeof getPatternRecordById === 'function') {
       var pattern = getPatternRecordById(patternId);
       if (pattern && pattern.patternUrl) {
-        runKidFriendlySaveSelection('image', { patternUrl: pattern.patternUrl });
+        runKidFriendlySaveSelection('image', {
+          patternUrl: pattern.patternUrl,
+          patternDescription: String(pattern.patternDescription || ''),
+          patternName: String(pattern.patternName || '')
+        });
         return;
       }
     }
@@ -872,7 +909,11 @@ if (kidSaveMakeOptionBtn) {
     if (patternId && typeof getPatternRecordById === 'function') {
       var pattern = getPatternRecordById(patternId);
       if (pattern && pattern.patternUrl) {
-        runKidFriendlySaveSelection('make', { patternUrl: pattern.patternUrl });
+        runKidFriendlySaveSelection('make', {
+          patternUrl: pattern.patternUrl,
+          patternDescription: String(pattern.patternDescription || ''),
+          patternName: String(pattern.patternName || '')
+        });
         return;
       }
     }
@@ -963,15 +1004,39 @@ if (patternDetailTravelBtn) {
 
 if (patternDetailRenameBtn) {
   patternDetailRenameBtn.addEventListener('click', async () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || record.kind !== 'user' || record.isProtected) return;
+    openPatternEditModal(record);
+  });
+}
+
+if (patternEditCancelBtn) {
+  patternEditCancelBtn.addEventListener('click', () => {
+    closePatternEditModal();
+  });
+}
+
+if (patternEditModal) {
+  patternEditModal.addEventListener('click', (event) => {
+    if (event.target === patternEditModal) {
+      closePatternEditModal();
+    }
+  });
+}
+
+if (patternEditConfirmBtn) {
+  patternEditConfirmBtn.addEventListener('click', async () => {
     if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function' || typeof renameUserPattern !== 'function' || typeof updateUserPatternDescription !== 'function') return;
     var patternId = getPatternLibraryDetailPatternId();
     var record = getPatternRecordById(patternId);
     if (!record || record.kind !== 'user' || record.isProtected) return;
-    var nextName = window.prompt('Pattern name', String(record.patternName || ''));
-    if (nextName === null) return;
+
+    var nextName = patternEditNameInput ? patternEditNameInput.value : String(record.patternName || '');
+    var nextDescription = patternEditDescriptionInput ? patternEditDescriptionInput.value : String(record.patternDescription || '');
     var currentDescription = String(record.patternDescription || '');
-    var nextDescription = window.prompt('Pattern description (optional)', currentDescription);
-    if (nextDescription === null) return;
+
     try {
       var updated = record;
       if (String(nextName) !== String(record.patternName || '')) {
@@ -982,8 +1047,9 @@ if (patternDetailRenameBtn) {
       }
       renderPatternDetailModal(updated);
       renderDiscoveryLibrary();
+      closePatternEditModal();
     } catch (error) {
-      alert((error && error.message) ? error.message : 'Pattern update failed.');
+      setPatternEditFeedback((error && error.message) ? error.message : 'Pattern update failed.', 'error');
     }
   });
 }

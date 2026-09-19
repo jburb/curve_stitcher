@@ -1326,7 +1326,7 @@
   }
   .pattern-library-section-title {
     margin: 0;
-    font-size: 12px;
+    font-size: 15px;
     color: var(--ui-pane-section-title, #3d5379);
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -2054,6 +2054,9 @@
   .pattern-detail-card {
     width: min(840px, 100%);
   }
+  .pattern-edit-card {
+    width: min(840px, 100%);
+  }
   .pattern-detail-header {
     display: flex;
     align-items: center;
@@ -2374,12 +2377,14 @@
   }
 
   html[data-theme="dark"] #pattern-save-modal.modal-backdrop,
-  html[data-theme="dark"] #pattern-detail-modal.modal-backdrop {
+  html[data-theme="dark"] #pattern-detail-modal.modal-backdrop,
+  html[data-theme="dark"] #pattern-edit-modal.modal-backdrop {
     background: rgba(6, 10, 16, 0.76);
   }
 
   html[data-theme="dark"] #pattern-save-modal .modal-card,
-  html[data-theme="dark"] #pattern-detail-modal .modal-card {
+  html[data-theme="dark"] #pattern-detail-modal .modal-card,
+  html[data-theme="dark"] #pattern-edit-modal .modal-card {
     background: #1f2936;
     border-color: #3f4f66;
     color: #dce7f8;
@@ -2387,25 +2392,29 @@
   }
 
   html[data-theme="dark"] #pattern-save-modal .modal-card h4,
-  html[data-theme="dark"] #pattern-detail-modal .modal-card h4 {
+  html[data-theme="dark"] #pattern-detail-modal .modal-card h4,
+  html[data-theme="dark"] #pattern-edit-modal .modal-card h4 {
     color: #e7f0ff;
   }
 
   html[data-theme="dark"] #pattern-save-modal .modal-btn,
-  html[data-theme="dark"] #pattern-detail-modal .modal-btn {
+  html[data-theme="dark"] #pattern-detail-modal .modal-btn,
+  html[data-theme="dark"] #pattern-edit-modal .modal-btn {
     border-color: #5a6f8f;
     background: #2f3f55;
     color: #e4eeff;
   }
 
   html[data-theme="dark"] #pattern-save-modal .modal-btn:hover,
-  html[data-theme="dark"] #pattern-detail-modal .modal-btn:hover {
+  html[data-theme="dark"] #pattern-detail-modal .modal-btn:hover,
+  html[data-theme="dark"] #pattern-edit-modal .modal-btn:hover {
     background: #39506f;
     border-color: #6a82a6;
   }
 
   html[data-theme="dark"] #pattern-save-modal .modal-btn.primary,
-  html[data-theme="dark"] #pattern-detail-modal .modal-btn.primary {
+  html[data-theme="dark"] #pattern-detail-modal .modal-btn.primary,
+  html[data-theme="dark"] #pattern-edit-modal .modal-btn.primary {
     border-color: #324968;
     background: #324968;
     color: #f8fbff;

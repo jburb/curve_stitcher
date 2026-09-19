@@ -329,9 +329,9 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Enable thread re-ordering from advanced pane.
 1. Tips library and modal
 1. Curve sewing cards viewer
-1. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
@@ -372,28 +372,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 
 ## TODO Backlog
-1. **Stitched pattern library (offline-first)**
-	 ~~- Allow the user to save patterns created in the default ("Stitching") experience, in a manner allowing any saved pattern to be loaded as the active app state in Stitching. I believe our model of state management via URL params will allow for this easily by storing the URL to some persistence layer e.g. IndexedDB in the case of browser-based app usage, or SQLite in the case of desktop/mobile-packaged app usage.
-	 - For any saved pattern, in addition to storing whatever is required to reload the pattern (believed to be the URL thanks to our state management via URL params), we should store the following:
-	   - patternName: mandatory, a user-specified string, enforce uniqueness, allow whitespace, with reasonable string-length and valid-char limitations.
-	   - patternDescription: optional, a user-specified string, allow whitespace, allow for longer text here and all chars, in case the user wants to document more thoughts on a given pattern at save-time.
-	   - patternPreviewFull: the image that would be drawn for the saved pattern when a user asks to save a maker picture of it with threads included.
-	   - patternPreviewSmall: a scaled down SVG, consisting of the image that would be drawn for the saved pattern when a user asks to save a maker picture of it with threads included, and comparable in size to the "discovery-card-icon" images we already use for discovery candidates e.g. "Triangula", "Squarus" etc.
-	 - This gives us a schema of patternUrl, patternName, patternDescription, patternPreviewFull and patternPreviewSmall.
-	 - Start with local persistence, offline by default e.g. via IndexedDB if it is cross-browser supported, implemented in a manner that allows for a single set of functions and objects to be reused in three deployment targets: 1: webapp/browser-based (our current default), 2: webapp packaged for desktop, via a yet to be implemented Tauri packaging flow, and 3: webapp packaged as mobile(tablet) app, via a yet to be implemented Capacitor packaging flow.
-	 - As far as UI/UX, implement this pattern library as an extension of the existing discovery pane, and a repurposing of the existing save flow from the top bar. Specifically:
-	   - Let the user save a pattern by clicking or tapping the existing kid-save-toggle icon, which should trigger a modal that shows the full SVG which would be used for patternPreviewFull population, and allows the user to enter patternName (required) and patternDescription (optional).
-	   - Preserve our existing export workflow, but do not trigger it from kid-save-toggle icon anymore.
-	   - Let the saved patterns be listed as a horizontally-scrollable grid of cards in the discovery pane, comparable in their dimensions and design to the existing discovery cards. 
-	   - Allow a user to load a saved pattern via the following flow:
-	     - 1. User selects a saved pattern card via click/tap of an "View Pattern" button on the card with kid-friendly magnifying glass icon.
-		 - 2. "View Pattern" interaction opens a saved pattern detail modal, which will show the full preview of the pattern via loading the SVG presisted as patternPreviewFull, the patternName as a header, and the patternDescription as a vertically scrollable footer. This modal should also enable the user to load the pattern (using the URL), export picture or maker-zip files (here we reuse the pre-existing kid export modal) of the pattern, or to close the modal itself, via respective buttons for those three actions. 
-		 - 3. If the user chooses to load the pattern, the app is reloaded via the patternUrl. If the user chooses to close the pattern detail modal, the pattern library remains open until closed as normal for it/discovery pane.
-	   - Re-implement discovered patterns as special instances of saved patterns, which are saved automatically upon the existing discovery candidate stitched event, and using predetermined patternName, patternDescription, and patternPreview images instead of user-specified or new values for any of these. For discovered patterns, use the existing passphrases as the patternDescription, the discovery candidate name as patternName, and the existing discovery-card-icon as the patternPreviewSmall, and use the actual maker SVG of the pattern by which the user made the discovery as the image for patternPreviewFull (with threads included in it).
-	   - Let discovered patterns be set off from user-saved patterns visually, and ensure that they are visible even before they are discovered/have a URL saved for them, while preserving the common design language of the cards for both sets.
-	   - Disable the concept of unlocking experiences/discovery cards via passphrase, and show the entire passphrase by default as a hint provided via patternDescription, rather than a truncated passphrase whose full form is revealed upon pattern discovery.
-	   - Let the non-stitching experiences currently unlocked by discoveries continue to be locked until their candidate stitchings are discovered, and in this new paradigm automatically saved to the persistence layer.
-	 - Allow for future import and export of the user's full pattern library, via library export/import buttons in the pattern library pane. Method of library serialization/deserialization TBD.~~
+1. **Enable thread re-ordering from advanced pane.**
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
@@ -402,9 +381,6 @@ This section describes the practical steps for adding a new experience named zoo
      - to be opened from stitching about doc modal?
      - must include the Cambridge lib attribution
 
-1. **Export notes**
-     - Enable exported text file to include personal note, if specified by user on zip export should’ve forward compatible with stitch library plan)
- 
 1. **Acknowledgements song discovery**
      - When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options.
 

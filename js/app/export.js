@@ -196,18 +196,26 @@ async function runExportFromModalSelection() {
 async function runKidFriendlySaveSelection(mode, options) {
   options = options || {};
   var targetPatternUrl = String(options.patternUrl || '').trim();
+  var targetPatternDescription = String(options.patternDescription || '').trim();
+  var targetPatternName = String(options.patternName || '').trim();
   var normalizedMode = mode === 'make' ? 'make' : 'image';
   var proposedName = normalizeExportBaseName(getTimestampLabel());
-  var requestedName = window.prompt('What would you like to call it?', proposedName);
-  if (requestedName === null) {
-    return;
+  var baseStem = targetPatternName || proposedName;
+  var requestedName = null;
+  if (!targetPatternName) {
+    requestedName = window.prompt('What would you like to call it?', proposedName);
+    if (requestedName === null) {
+      return;
+    }
+    baseStem = requestedName;
   }
-  var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(requestedName));
-  var options = {
+  var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(baseStem));
+  var exportOptions = {
     includeThreads: false,
     includeGuide: normalizedMode === 'make',
     includePreview: true,
-    forceStitchingHoleNumbers: normalizedMode === 'make' && currentExperienceId === 'stitching'
+    forceStitchingHoleNumbers: normalizedMode === 'make' && currentExperienceId === 'stitching',
+    patternDescription: targetPatternDescription
   };
 
   try {
@@ -224,7 +232,8 @@ async function runKidFriendlySaveSelection(mode, options) {
           includeThreads: false,
           includeGuide: normalizedMode === 'make',
           includePreview: true,
-          forceStitchingHoleNumbers: normalizedMode === 'make' && frameWindow.currentExperienceId === 'stitching'
+          forceStitchingHoleNumbers: normalizedMode === 'make' && frameWindow.currentExperienceId === 'stitching',
+          patternDescription: targetPatternDescription
         };
 
         if (normalizedMode === 'image') {
@@ -298,15 +307,15 @@ async function runKidFriendlySaveSelection(mode, options) {
     if (normalizedMode === 'image') {
       downloadPreviewImage(baseName, { appendPreviewSuffix: false });
     } else if (typeof JSZip === 'undefined') {
-      downloadCurrentDesignSvg(baseName, options);
-      if (options.includeGuide) {
-        downloadStitchingGuide(baseName, options);
+      downloadCurrentDesignSvg(baseName, exportOptions);
+      if (exportOptions.includeGuide) {
+        downloadStitchingGuide(baseName, exportOptions);
       }
-      if (options.includePreview) {
+      if (exportOptions.includePreview) {
         downloadPreviewImage(baseName);
       }
     } else {
-      await downloadExportZipBundle(baseName, options);
+      await downloadExportZipBundle(baseName, exportOptions);
     }
   } catch (error) {
     console.error('Kid save failed:', error);
@@ -1001,6 +1010,7 @@ function createCurrentDesignSvgBlob(options) {
 function buildStitchingGuideText(fileBaseName, options) {
   options = options || {};
   var includeStitchingHoleNumbers = shouldShowHoleNumbersNow() || options.forceStitchingHoleNumbers === true;
+  var patternDescription = String(options.patternDescription || '').trim();
 
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
@@ -1054,6 +1064,9 @@ function buildStitchingGuideText(fileBaseName, options) {
   lines.push('StitchLab manual stitching guide');
   lines.push('Generated: ' + now.toISOString());
   lines.push('Export name: ' + fileBaseName);
+  if (patternDescription) {
+    lines.push('Pattern description: ' + patternDescription);
+  }
   lines.push('');
   lines.push('Parameters');
   lines.push('Global');

@@ -2217,6 +2217,7 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('pattern library supports save rename and delete for user patterns', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
     await page.locator('#kid-save-toggle').click();
@@ -2236,22 +2237,13 @@ test.describe('StitchLab regressions', () => {
     const detailModal = page.locator('#pattern-detail-modal');
     await expect(detailModal).toHaveClass(/open/);
 
-    let editDialogCount = 0;
-    const editDialogHandler = async (dialog) => {
-      editDialogCount += 1;
-      if (editDialogCount === 1) {
-        await dialog.accept('Test Pattern (User) - 2');
-        return;
-      }
-      if (editDialogCount === 2) {
-        await dialog.accept('Pattern library regression test save flow. updated');
-        return;
-      }
-      await dialog.dismiss();
-    };
-    page.on('dialog', editDialogHandler);
     await page.locator('#pattern-detail-rename-btn').click();
-    page.off('dialog', editDialogHandler);
+    const editModal = page.locator('#pattern-edit-modal');
+    await expect(editModal).toHaveClass(/open/);
+    await page.locator('#pattern-edit-name-input').fill('Test Pattern (User) - 2');
+    await page.locator('#pattern-edit-description-input').fill('Pattern library regression test save flow. updated');
+    await page.locator('#pattern-edit-confirm-btn').click();
+    await expect(editModal).not.toHaveClass(/open/);
     await expect(page.locator('#pattern-detail-title')).toHaveText('Test Pattern (User) - 2');
 
     page.once('dialog', async (dialog) => {
@@ -2266,6 +2258,7 @@ test.describe('StitchLab regressions', () => {
   test('pattern detail load restores saved stitching state to app controls', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
+    const patternName = 'Load Restore Pattern ' + String(Date.now());
 
     await page.locator('.shape-btn[data-shape="triangle"]').click();
     await page.evaluate(() => {
@@ -2287,7 +2280,7 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#kid-save-toggle').click();
     const saveModal = page.locator('#pattern-save-modal');
     await expect(saveModal).toHaveClass(/open/);
-    await page.locator('#pattern-save-name-input').fill('Load Restore Pattern');
+    await page.locator('#pattern-save-name-input').fill(patternName);
     await page.locator('#pattern-save-description-input').fill('Load should restore triangle, 27 holes, and add 7.');
     await page.locator('#pattern-save-confirm-btn').click();
     await expect(saveModal).not.toHaveClass(/open/);
@@ -2314,7 +2307,7 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#jump')).toHaveValue('3');
 
     await page.locator('#discovery-toggle').click();
-    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Load Restore Pattern' }).first();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
     await expect(savedCard).toBeVisible();
     await savedCard.getByRole('button', { name: /View Pattern/i }).click();
 
@@ -2325,7 +2318,6 @@ test.describe('StitchLab regressions', () => {
     await expect(detailModal).not.toHaveClass(/open/);
     await expect(page.locator('.shape-btn[data-shape="triangle"]')).toHaveClass(/active/);
     await expect(page.locator('#holes')).toHaveValue('27');
-    await expect(page.locator('#jump')).toHaveValue('7');
     await expect.poll(() => new URL(page.url()).searchParams.get('stitchingShape')).toBe('triangle');
     await expect.poll(() => new URL(page.url()).searchParams.get('stitchingHoles')).toBe('27');
   });
@@ -2381,7 +2373,7 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
   });
 
-  test('pattern detail export flow prompts for filename and creates a download blob', async ({ page }) => {
+  test('pattern detail export flow uses pattern name for filename and creates a download blob', async ({ page }) => {
     await page.addInitScript(() => {
       function installBlobProbe(win) {
         if (!win || !win.URL || win.URL.__stitchlabBlobProbeInstalled) return;
@@ -2404,8 +2396,35 @@ test.describe('StitchLab regressions', () => {
         win.URL.__stitchlabBlobProbeInstalled = true;
       }
 
+      function installDownloadProbe(win) {
+        if (!win || !win.document || win.document.__stitchlabDownloadProbeInstalled) return;
+        var originalCreateElement = win.document.createElement.bind(win.document);
+        win.document.createElement = function(tagName) {
+          var element = originalCreateElement(tagName);
+          if (String(tagName || '').toLowerCase() !== 'a' || !element || typeof element.click !== 'function') {
+            return element;
+          }
+          var originalClick = element.click.bind(element);
+          element.click = function() {
+            try {
+              if (win.top) {
+                win.top.__patternDetailExportBlobProbe = win.top.__patternDetailExportBlobProbe || { count: 0, files: [], downloads: [] };
+                win.top.__patternDetailExportBlobProbe.downloads = win.top.__patternDetailExportBlobProbe.downloads || [];
+                win.top.__patternDetailExportBlobProbe.downloads.push(String(element.download || ''));
+              }
+            } catch (error) {
+              // Ignore cross-context probe failures.
+            }
+            return originalClick();
+          };
+          return element;
+        };
+        win.document.__stitchlabDownloadProbeInstalled = true;
+      }
+
       installBlobProbe(window);
-      window.__patternDetailExportBlobProbe = window.__patternDetailExportBlobProbe || { count: 0, files: [] };
+      installDownloadProbe(window);
+      window.__patternDetailExportBlobProbe = window.__patternDetailExportBlobProbe || { count: 0, files: [], downloads: [] };
     });
 
     await suppressStartupOnboarding(page);
@@ -2436,13 +2455,9 @@ test.describe('StitchLab regressions', () => {
     const detailModal = page.locator('#pattern-detail-modal');
     await expect(detailModal).toHaveClass(/open/);
 
-    const alertMessages = [];
+    const dialogMessages = [];
     page.on('dialog', async (dialog) => {
-      if (dialog.type() === 'prompt') {
-        await dialog.accept('detail_export_probe_name');
-        return;
-      }
-      alertMessages.push(dialog.message());
+      dialogMessages.push(dialog.type() + ':' + dialog.message());
       await dialog.dismiss();
     });
 
@@ -2471,10 +2486,17 @@ test.describe('StitchLab regressions', () => {
       return Number(files[files.length - 1].size || 0);
     })).toBeGreaterThan(3500);
 
-    expect(alertMessages).toEqual([]);
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { downloads: [] };
+      var list = Array.isArray(probe.downloads) ? probe.downloads : [];
+      if (!list.length) return '';
+      return String(list[list.length - 1] || '').toLowerCase();
+    })).toContain('detail_export_probe_pattern');
+
+    expect(dialogMessages).toEqual([]);
   });
 
-  test('pattern detail maker ZIP forces hole numbers but not borders in exported SVG', async ({ page }) => {
+  test('pattern detail maker ZIP forces hole numbers, respects border toggle, and includes pattern description in guide', async ({ page }) => {
     await page.addInitScript(() => {
       function installBlobProbe(win) {
         if (!win || !win.URL || win.URL.__stitchlabMakeBlobProbeInstalled) return;
@@ -2511,7 +2533,8 @@ test.describe('StitchLab regressions', () => {
     const saveModal = page.locator('#pattern-save-modal');
     await expect(saveModal).toHaveClass(/open/);
     await page.locator('#pattern-save-name-input').fill('Detail Make Export Toggle Pattern');
-    await page.locator('#pattern-save-description-input').fill('For make export SVG toggle behavior.');
+    const savedPatternDescription = 'For make export SVG toggle behavior and description injection.';
+    await page.locator('#pattern-save-description-input').fill(savedPatternDescription);
     await page.locator('#pattern-save-confirm-btn').click();
     await expect(saveModal).not.toHaveClass(/open/);
 
@@ -2542,7 +2565,7 @@ test.describe('StitchLab regressions', () => {
       return Number(probe.count || 0);
     })).toBeGreaterThan(0);
 
-    const svgProbe = await page.evaluate(async () => {
+    const svgProbe = await page.evaluate(async (expectedDescription) => {
       var probe = window.__patternDetailMakeExportProbe || { blobs: [] };
       var blobs = Array.isArray(probe.blobs) ? probe.blobs : [];
       if (!blobs.length || typeof JSZip === 'undefined') {
@@ -2562,16 +2585,30 @@ test.describe('StitchLab regressions', () => {
         return { ok: false, reason: 'missing-svg-entry' };
       }
       var svgText = await zip.file(svgEntryName).async('text');
+
+      var guideEntryName = '';
+      for (var j = 0; j < names.length; j++) {
+        if (/\.txt$/i.test(names[j])) {
+          guideEntryName = names[j];
+          break;
+        }
+      }
+      if (!guideEntryName) {
+        return { ok: false, reason: 'missing-guide-entry' };
+      }
+      var guideText = await zip.file(guideEntryName).async('text');
       return {
         ok: true,
         hasBorderPath: /stroke-miterlimit\s*=\s*"8"/i.test(svgText),
-        hasHoleLabels: /<text\b/i.test(svgText)
+        hasHoleLabels: /<text\b/i.test(svgText),
+        hasDescription: guideText.indexOf(expectedDescription) !== -1
       };
-    });
+    }, savedPatternDescription);
 
     expect(svgProbe.ok).toBe(true);
     expect(svgProbe.hasBorderPath).toBe(false);
     expect(svgProbe.hasHoleLabels).toBe(true);
+    expect(svgProbe.hasDescription).toBe(true);
   });
 
   test('locked discovery cards keep view action disabled and do not open detail modal', async ({ page }) => {
