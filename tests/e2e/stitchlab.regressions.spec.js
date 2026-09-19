@@ -138,6 +138,45 @@ async function suppressStartupOnboarding(page) {
   }, 'stitchlab.onboarding.v1');
 }
 
+async function unlockMashrabiyaExperienceForTest(page, fold) {
+  const targetFold = Number(fold) === 8 ? 8 : 12;
+  const targetKey = targetFold === 8 ? 'rosette8' : 'rosette12';
+  await page.evaluate(async ({ discoveryKey, foldValue }) => {
+    if (typeof window.unlockDiscovery === 'function') {
+      var maybePersistence = window.unlockDiscovery(discoveryKey);
+      if (maybePersistence && typeof maybePersistence.then === 'function') {
+        await maybePersistence;
+      }
+    } else {
+      window.discoveredShapeKeys = window.discoveredShapeKeys || Object.create(null);
+      window.discoveredShapeKeys[discoveryKey] = true;
+    }
+    if (typeof window.setCurrentExperience === 'function') {
+      window.setCurrentExperience('mashrabiya', { suppressUrlSync: true });
+    }
+    window.mashrabiyaFold = foldValue;
+    if (typeof window.syncMashrabiyaControls === 'function') {
+      window.syncMashrabiyaControls();
+    }
+    if (typeof window.redrawForPathChange === 'function') {
+      window.redrawForPathChange();
+    }
+  }, { discoveryKey: targetKey, foldValue: targetFold });
+
+  await expect.poll(() => page.evaluate((discoveryKey) => {
+    var list = (window.getPatternLibrarySnapshot && window.getPatternLibrarySnapshot()) || [];
+    for (var i = 0; i < list.length; i++) {
+      var rec = list[i];
+      if (rec && rec.kind === 'discovery' && rec.discoveryKey === discoveryKey && rec.isDiscovered) {
+        return true;
+      }
+    }
+    return false;
+  }, targetKey)).toBe(true);
+
+  await expect.poll(() => new URL(page.url()).searchParams.get('experience')).toBe('mashrabiya');
+}
+
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
     await page.goto('/stitchlab.html');
@@ -716,6 +755,17 @@ test.describe('StitchLab regressions', () => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();
 
+    const tempoPresets = await page.evaluate(() => {
+      if (typeof window.getKidTempoPresetsForSong !== 'function') {
+        return { slow: 84, fast: 252 };
+      }
+      const presets = window.getKidTempoPresetsForSong(window.currentSongId || 'bach') || {};
+      return {
+        slow: Number(presets.slow || 84),
+        fast: Number(presets.fast || 252)
+      };
+    });
+
     await page.evaluate(() => {
       const slider = document.getElementById('holes');
       if (!slider) return;
@@ -733,10 +783,10 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#advanced-holes-number').press('Tab');
     await expect(page.locator('#holes')).toHaveValue('36');
 
-    await page.selectOption('#advanced-tempo', '252');
+    await page.selectOption('#advanced-tempo', String(tempoPresets.fast));
     await expect(page.locator('#kid-tempo-fast')).toHaveClass(/is-active/);
 
-    await page.selectOption('#advanced-tempo', '84');
+    await page.selectOption('#advanced-tempo', String(tempoPresets.slow));
     await expect(page.locator('#kid-tempo-slow')).toHaveClass(/is-active/);
 
     await page.locator('#nested-frame-enabled').check();
@@ -1111,7 +1161,9 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('mashrabiya debug SVG export closes sequence stitch paths', async ({ page }) => {
-    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await unlockMashrabiyaExperienceForTest(page, 12);
 
     const svgProbe = await page.evaluate(() => {
       if (typeof window.buildCurrentDesignSvgString !== 'function') {
@@ -1270,7 +1322,9 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('mashrabiya fold 8 and 12 fills are invariant to debug-label toggle', async ({ page }) => {
-    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await unlockMashrabiyaExperienceForTest(page, 12);
 
     const probe = await page.evaluate(() => {
       function polyArea(vertices) {
@@ -2036,12 +2090,20 @@ test.describe('StitchLab regressions', () => {
           var titleNode = cards[i].querySelector('h4');
           var currentTitle = titleNode ? String(titleNode.textContent || '').replace(/\s+/g, ' ').trim() : '';
           if (currentTitle.indexOf(String(titleText || '')) === -1) continue;
-          var actionBtn = cards[i].querySelector('button');
-          var actionText = actionBtn ? String(actionBtn.textContent || '').trim() : '';
+          var actionButtons = Array.prototype.slice.call(cards[i].querySelectorAll('button'));
+          var travelBtn = null;
+          for (var b = 0; b < actionButtons.length; b++) {
+            var textValue = String(actionButtons[b].textContent || '').trim();
+            if (/^Travel to\s+/i.test(textValue) || /^Locked:\s+/i.test(textValue)) {
+              travelBtn = actionButtons[b];
+              break;
+            }
+          }
+          var actionText = travelBtn ? String(travelBtn.textContent || '').trim() : '';
           return {
             found: true,
             preview: cards[i].classList.contains('is-preview'),
-            unlocked: !cards[i].classList.contains('is-preview') && /^Travel to\s+/i.test(actionText),
+            unlocked: !!travelBtn && !cards[i].classList.contains('is-preview') && /^Travel to\s+/i.test(actionText),
             actionText: actionText
           };
         }
@@ -2152,6 +2214,608 @@ test.describe('StitchLab regressions', () => {
       expect(result.card.preview, `Expected ${result.key} card to leave preview mode`).toBe(false);
       expect(result.card.unlocked, `Expected ${result.key} card action to be travel-enabled`).toBe(true);
     }
+  });
+
+  test('pattern library supports save rename and delete for user patterns', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    await page.locator('#pattern-save-name-input').fill('Test Pattern (User) - 1');
+    await page.locator('#pattern-save-description-input').fill('Pattern library regression test save flow.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.evaluate(() => {
+      var btn = document.getElementById('discovery-toggle');
+      if (btn) btn.click();
+    });
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 1' }).first();
+    await expect(savedCard).toBeVisible();
+
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    await page.locator('#pattern-detail-rename-btn').click();
+    const editModal = page.locator('#pattern-edit-modal');
+    await expect(editModal).toHaveClass(/open/);
+    await page.locator('#pattern-edit-name-input').fill('Test Pattern (User) - 2');
+    await page.locator('#pattern-edit-description-input').fill('Pattern library regression test save flow. updated');
+    await page.locator('#pattern-edit-confirm-btn').click();
+    await expect(editModal).not.toHaveClass(/open/);
+    await expect(page.locator('#pattern-detail-title')).toHaveText('Test Pattern (User) - 2');
+
+    page.once('dialog', async (dialog) => {
+      await dialog.accept();
+    });
+    await page.locator('#pattern-detail-delete-btn').click();
+    await expect(detailModal).not.toHaveClass(/open/);
+
+    await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
+  });
+
+  test('pattern library import restores exported user pattern records', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    var patternName = 'Import Regression Pattern ' + String(Date.now());
+    var patternDescription = 'Created for library import regression coverage.';
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill(patternName);
+    await page.locator('#pattern-save-description-input').fill(patternDescription);
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
+    await expect(savedCard).toBeVisible();
+
+    const importPayload = await page.evaluate(({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function') return null;
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i] && records[i].patternName === targetName) {
+          match = records[i];
+          break;
+        }
+      }
+      if (!match) return null;
+      return {
+        schema: 'stitchlab.patternLibrary',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        records: [match]
+      };
+    }, { targetName: patternName });
+    expect(importPayload).not.toBeNull();
+
+    await page.evaluate(({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function' || typeof window.deleteUserPattern !== 'function') return;
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i] && records[i].patternName === targetName && records[i].kind === 'user') {
+          match = records[i];
+          break;
+        }
+      }
+      if (!match) return;
+      return window.deleteUserPattern(match.id).then(function() {
+        if (typeof window.renderDiscoveryLibrary === 'function') {
+          window.renderDiscoveryLibrary();
+        }
+      });
+    }, { targetName: patternName });
+
+    await expect(page.locator('.discovery-card').filter({ hasText: patternName })).toHaveCount(0);
+
+    const dialogMessages = [];
+    page.on('dialog', async (dialog) => {
+      dialogMessages.push(dialog.message());
+      await dialog.accept();
+    });
+
+    const jsonText = JSON.stringify(importPayload, null, 2);
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.locator('#pattern-library-import-btn').click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({
+      name: 'stitchlab-pattern-library-import.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(jsonText, 'utf8')
+    });
+
+    await expect(savedCard).toBeVisible();
+    await expect.poll(() => dialogMessages.length).toBeGreaterThan(0);
+    expect(dialogMessages[dialogMessages.length - 1]).toContain('Library import complete. Added: 1, updated: 0.');
+  });
+
+  test('pattern library import accepts file-origin pattern URLs from exported JSON', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    var patternName = 'Import File Origin Pattern ' + String(Date.now());
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill(patternName);
+    await page.locator('#pattern-save-description-input').fill('Import should accept file-origin URLs.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.evaluate(() => {
+      var btn = document.getElementById('discovery-toggle');
+      if (btn) btn.click();
+    });
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
+    await expect(savedCard).toBeVisible();
+
+    const importPayload = await page.evaluate(({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function') return null;
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i] && records[i].patternName === targetName && records[i].kind === 'user') {
+          match = records[i];
+          break;
+        }
+      }
+      if (!match) return null;
+
+      var fileOriginUrl = 'file:///tmp/stitchlab.html';
+      try {
+        var parsed = new URL(String(match.patternUrl || ''), window.location.href);
+        fileOriginUrl += String(parsed.search || '');
+      } catch (error) {
+        fileOriginUrl += '?version=2&experience=stitching';
+      }
+
+      var nextRecord = JSON.parse(JSON.stringify(match));
+      nextRecord.patternUrl = fileOriginUrl;
+
+      return {
+        schema: 'stitchlab.patternLibrary',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        records: [nextRecord]
+      };
+    }, { targetName: patternName });
+    expect(importPayload).not.toBeNull();
+
+    await page.evaluate(({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function' || typeof window.deleteUserPattern !== 'function') return;
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i] && records[i].patternName === targetName && records[i].kind === 'user') {
+          match = records[i];
+          break;
+        }
+      }
+      if (!match) return;
+      return window.deleteUserPattern(match.id).then(function() {
+        if (typeof window.renderDiscoveryLibrary === 'function') {
+          window.renderDiscoveryLibrary();
+        }
+      });
+    }, { targetName: patternName });
+
+    await expect(page.locator('.discovery-card').filter({ hasText: patternName })).toHaveCount(0);
+
+    const dialogMessages = [];
+    page.on('dialog', async (dialog) => {
+      dialogMessages.push(dialog.message());
+      await dialog.accept();
+    });
+
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.locator('#pattern-library-import-btn').click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({
+      name: 'stitchlab-pattern-library-file-origin-import.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(importPayload, null, 2), 'utf8')
+    });
+
+    await expect(savedCard).toBeVisible();
+    await expect.poll(() => dialogMessages.length).toBeGreaterThan(0);
+    expect(dialogMessages[dialogMessages.length - 1]).toContain('Library import complete. Added: 1, updated: 0.');
+  });
+
+  test('pattern detail load restores saved stitching state to app controls', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    const patternName = 'Load Restore Pattern ' + String(Date.now());
+
+    await page.locator('.shape-btn[data-shape="triangle"]').click();
+    await page.evaluate(() => {
+      function setRangeValue(id, value) {
+        var slider = document.getElementById(id);
+        if (!slider) return;
+        slider.value = String(value);
+        var inputEvt = document.createEvent('Event');
+        inputEvt.initEvent('input', true, true);
+        slider.dispatchEvent(inputEvt);
+        var changeEvt = document.createEvent('Event');
+        changeEvt.initEvent('change', true, true);
+        slider.dispatchEvent(changeEvt);
+      }
+      setRangeValue('holes', 27);
+      setRangeValue('jump', 7);
+    });
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill(patternName);
+    await page.locator('#pattern-save-description-input').fill('Load should restore triangle, 27 holes, and add 7.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('.shape-btn[data-shape="square"]').click();
+    await page.evaluate(() => {
+      function setRangeValue(id, value) {
+        var slider = document.getElementById(id);
+        if (!slider) return;
+        slider.value = String(value);
+        var inputEvt = document.createEvent('Event');
+        inputEvt.initEvent('input', true, true);
+        slider.dispatchEvent(inputEvt);
+        var changeEvt = document.createEvent('Event');
+        changeEvt.initEvent('change', true, true);
+        slider.dispatchEvent(changeEvt);
+      }
+      setRangeValue('holes', 45);
+      setRangeValue('jump', 3);
+    });
+
+    await expect(page.locator('.shape-btn[data-shape="square"]')).toHaveClass(/active/);
+    await expect(page.locator('#holes')).toHaveValue('45');
+    await expect(page.locator('#jump')).toHaveValue('3');
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+    await page.locator('#pattern-detail-load-btn').click();
+
+    await expect(detailModal).not.toHaveClass(/open/);
+    await expect(page.locator('.shape-btn[data-shape="triangle"]')).toHaveClass(/active/);
+    await expect(page.locator('#holes')).toHaveValue('27');
+    await expect.poll(() => new URL(page.url()).searchParams.get('stitchingShape')).toBe('triangle');
+    await expect.poll(() => new URL(page.url()).searchParams.get('stitchingHoles')).toBe('27');
+  });
+
+  test('pattern save preview and saved load respect border and hole-number toggles', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#gear').click();
+    await page.locator('#advanced-border-enabled').uncheck();
+    await page.locator('#advanced-hole-numbers').uncheck();
+
+    await expect(page.locator('#advanced-border-enabled')).not.toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    const previewProbe = await page.evaluate(() => {
+      var preview = document.getElementById('pattern-save-preview');
+      var markup = String(preview && preview.innerHTML || '');
+      return {
+        hasHoleLabelText: /<text\b/i.test(markup),
+        hasBorderPath: /stroke-miterlimit\s*=\s*"8"/i.test(markup)
+      };
+    });
+
+    expect(previewProbe.hasHoleLabelText).toBe(false);
+    expect(previewProbe.hasBorderPath).toBe(false);
+
+    await page.locator('#pattern-save-name-input').fill('Toggle Fidelity Pattern');
+    await page.locator('#pattern-save-description-input').fill('Saved state should preserve disabled border and hole numbers.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#advanced-border-enabled').check();
+    await page.locator('#advanced-hole-numbers').check();
+    await expect(page.locator('#advanced-border-enabled')).toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).toBeChecked();
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Toggle Fidelity Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+    await page.locator('#pattern-detail-load-btn').click();
+
+    await expect(detailModal).not.toHaveClass(/open/);
+    await expect(page.locator('#advanced-border-enabled')).not.toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
+  });
+
+  test('pattern detail export flow uses pattern name for filename and creates a download blob', async ({ page }) => {
+    await page.addInitScript(() => {
+      function installBlobProbe(win) {
+        if (!win || !win.URL || win.URL.__stitchlabBlobProbeInstalled) return;
+        var originalCreateObjectURL = win.URL.createObjectURL.bind(win.URL);
+        win.URL.createObjectURL = function(blob) {
+          try {
+            if (win.top) {
+              win.top.__patternDetailExportBlobProbe = win.top.__patternDetailExportBlobProbe || { count: 0, files: [] };
+              win.top.__patternDetailExportBlobProbe.count += 1;
+              win.top.__patternDetailExportBlobProbe.files.push({
+                size: Number(blob && blob.size || 0),
+                type: String(blob && blob.type || '')
+              });
+            }
+          } catch (error) {
+            // Ignore cross-context probe failures.
+          }
+          return originalCreateObjectURL(blob);
+        };
+        win.URL.__stitchlabBlobProbeInstalled = true;
+      }
+
+      function installDownloadProbe(win) {
+        if (!win || !win.document || win.document.__stitchlabDownloadProbeInstalled) return;
+        var originalCreateElement = win.document.createElement.bind(win.document);
+        win.document.createElement = function(tagName) {
+          var element = originalCreateElement(tagName);
+          if (String(tagName || '').toLowerCase() !== 'a' || !element || typeof element.click !== 'function') {
+            return element;
+          }
+          var originalClick = element.click.bind(element);
+          element.click = function() {
+            try {
+              if (win.top) {
+                win.top.__patternDetailExportBlobProbe = win.top.__patternDetailExportBlobProbe || { count: 0, files: [], downloads: [] };
+                win.top.__patternDetailExportBlobProbe.downloads = win.top.__patternDetailExportBlobProbe.downloads || [];
+                win.top.__patternDetailExportBlobProbe.downloads.push(String(element.download || ''));
+              }
+            } catch (error) {
+              // Ignore cross-context probe failures.
+            }
+            return originalClick();
+          };
+          return element;
+        };
+        win.document.__stitchlabDownloadProbeInstalled = true;
+      }
+
+      installBlobProbe(window);
+      installDownloadProbe(window);
+      window.__patternDetailExportBlobProbe = window.__patternDetailExportBlobProbe || { count: 0, files: [], downloads: [] };
+    });
+
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const onboardingTour = page.locator('#onboarding-tour');
+    if (await onboardingTour.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTour).toBeHidden();
+    }
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(onboardingTour).toBeHidden();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    await page.locator('#pattern-save-name-input').fill('Detail Export Probe Pattern');
+    await page.locator('#pattern-save-description-input').fill('Probe export from detail modal.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Detail Export Probe Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    const dialogMessages = [];
+    page.on('dialog', async (dialog) => {
+      dialogMessages.push(dialog.type() + ':' + dialog.message());
+      await dialog.dismiss();
+    });
+
+    await page.locator('#pattern-detail-view-export-btn').click();
+    const kidSaveModal = page.locator('#kid-save-modal');
+    await expect(kidSaveModal).toHaveClass(/open/);
+    await page.locator('#kid-save-image-option').click();
+    await expect(kidSaveModal).not.toHaveClass(/open/);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { count: 0 };
+      return Number(probe.count || 0);
+    })).toBeGreaterThan(0);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { files: [] };
+      var files = Array.isArray(probe.files) ? probe.files : [];
+      if (!files.length) return { size: 0, type: '' };
+      return files[files.length - 1];
+    })).toMatchObject({ type: 'image/png' });
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { files: [] };
+      var files = Array.isArray(probe.files) ? probe.files : [];
+      if (!files.length) return 0;
+      return Number(files[files.length - 1].size || 0);
+    })).toBeGreaterThan(3500);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailExportBlobProbe || { downloads: [] };
+      var list = Array.isArray(probe.downloads) ? probe.downloads : [];
+      if (!list.length) return '';
+      return String(list[list.length - 1] || '').toLowerCase();
+    })).toContain('detail_export_probe_pattern');
+
+    expect(dialogMessages).toEqual([]);
+  });
+
+  test('pattern detail maker ZIP forces hole numbers, respects border toggle, and includes pattern description in guide', async ({ page }) => {
+    await page.addInitScript(() => {
+      function installBlobProbe(win) {
+        if (!win || !win.URL || win.URL.__stitchlabMakeBlobProbeInstalled) return;
+        var originalCreateObjectURL = win.URL.createObjectURL.bind(win.URL);
+        win.URL.createObjectURL = function(blob) {
+          try {
+            if (win.top) {
+              win.top.__patternDetailMakeExportProbe = win.top.__patternDetailMakeExportProbe || { count: 0, blobs: [] };
+              win.top.__patternDetailMakeExportProbe.count += 1;
+              win.top.__patternDetailMakeExportProbe.blobs.push(blob);
+            }
+          } catch (error) {
+            // Ignore cross-context probe failures.
+          }
+          return originalCreateObjectURL(blob);
+        };
+        win.URL.__stitchlabMakeBlobProbeInstalled = true;
+      }
+
+      installBlobProbe(window);
+      window.__patternDetailMakeExportProbe = window.__patternDetailMakeExportProbe || { count: 0, blobs: [] };
+    });
+
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#gear').click();
+    await page.locator('#advanced-border-enabled').uncheck();
+    await page.locator('#advanced-hole-numbers').uncheck();
+    await expect(page.locator('#advanced-border-enabled')).not.toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill('Detail Make Export Toggle Pattern');
+    const savedPatternDescription = 'For make export SVG toggle behavior and description injection.';
+    await page.locator('#pattern-save-description-input').fill(savedPatternDescription);
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Detail Make Export Toggle Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    page.on('dialog', async (dialog) => {
+      if (dialog.type() === 'prompt') {
+        await dialog.accept('detail_make_toggle_probe');
+        return;
+      }
+      await dialog.dismiss();
+    });
+
+    await page.locator('#pattern-detail-view-export-btn').click();
+    const kidSaveModal = page.locator('#kid-save-modal');
+    await expect(kidSaveModal).toHaveClass(/open/);
+    await page.locator('#kid-save-make-option').click();
+    await expect(kidSaveModal).not.toHaveClass(/open/);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailMakeExportProbe || { count: 0 };
+      return Number(probe.count || 0);
+    })).toBeGreaterThan(0);
+
+    const svgProbe = await page.evaluate(async (expectedDescription) => {
+      var probe = window.__patternDetailMakeExportProbe || { blobs: [] };
+      var blobs = Array.isArray(probe.blobs) ? probe.blobs : [];
+      if (!blobs.length || typeof JSZip === 'undefined') {
+        return { ok: false, reason: 'missing-blobs-or-jszip' };
+      }
+      var blob = blobs[blobs.length - 1];
+      var zip = await JSZip.loadAsync(blob);
+      var svgEntryName = '';
+      var names = Object.keys(zip.files || {});
+      for (var i = 0; i < names.length; i++) {
+        if (/\.svg$/i.test(names[i])) {
+          svgEntryName = names[i];
+          break;
+        }
+      }
+      if (!svgEntryName) {
+        return { ok: false, reason: 'missing-svg-entry' };
+      }
+      var svgText = await zip.file(svgEntryName).async('text');
+
+      var guideEntryName = '';
+      for (var j = 0; j < names.length; j++) {
+        if (/\.txt$/i.test(names[j])) {
+          guideEntryName = names[j];
+          break;
+        }
+      }
+      if (!guideEntryName) {
+        return { ok: false, reason: 'missing-guide-entry' };
+      }
+      var guideText = await zip.file(guideEntryName).async('text');
+      return {
+        ok: true,
+        hasBorderPath: /stroke-miterlimit\s*=\s*"8"/i.test(svgText),
+        hasHoleLabels: /<text\b/i.test(svgText),
+        hasDescription: guideText.indexOf(expectedDescription) !== -1
+      };
+    }, savedPatternDescription);
+
+    expect(svgProbe.ok).toBe(true);
+    expect(svgProbe.hasBorderPath).toBe(false);
+    expect(svgProbe.hasHoleLabels).toBe(true);
+    expect(svgProbe.hasDescription).toBe(true);
+  });
+
+  test('locked discovery cards keep view action disabled and do not open detail modal', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const onboardingTour = page.locator('#onboarding-tour');
+    if (await onboardingTour.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTour).toBeHidden();
+    }
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(onboardingTour).toBeHidden();
+
+    await page.evaluate(async () => {
+      window.discoveredShapeKeys = Object.create(null);
+      if (typeof window.initializePatternLibrary === 'function') {
+        await window.initializePatternLibrary();
+      }
+      if (typeof window.renderDiscoveryLibrary === 'function') {
+        window.renderDiscoveryLibrary();
+      }
+    });
+
+    await page.locator('#discovery-toggle').click();
+    const lockedCard = page.locator('.discovery-card.is-preview').filter({ hasText: 'Rosette (12-fold)' }).first();
+    await expect(lockedCard).toBeVisible();
+    const detailModal = page.locator('#pattern-detail-modal');
+    const viewButton = lockedCard.getByRole('button', { name: /View Pattern/i });
+    await expect(viewButton).toBeDisabled();
+    await expect(detailModal).not.toHaveClass(/open/);
   });
 
   test('core interaction sweep does not raise runtime reference/type errors', async ({ page }) => {
@@ -2289,7 +2953,14 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('mashrabiya URL state roundtrip persists key controls on reload', async ({ page }) => {
-    await page.goto('/stitchlab.html?version=2&experience=mashrabiya');
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html?version=2&experience=stitching');
+    await unlockMashrabiyaExperienceForTest(page, 12);
+    await page.evaluate(() => {
+      if (typeof window.scheduleUrlStateSync === 'function') {
+        window.scheduleUrlStateSync(true);
+      }
+    });
 
     await page.selectOption('#mashrabiya-fold', '8');
     await page.locator('#mashrabiya-keep-construction-lines').check();

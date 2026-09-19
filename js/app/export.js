@@ -36,6 +36,9 @@ function closeExportOptionsModal() {
 
 function openKidSaveModal() {
   if (!kidSaveModal) return;
+  if (typeof patternDetailModal !== 'undefined' && patternDetailModal && patternDetailModal.classList.contains('open')) {
+    patternDetailModal.classList.add('stacked-behind-export');
+  }
   kidSaveModal.classList.add('open');
   syncKidSaveToggleButton();
 }
@@ -43,7 +46,117 @@ function openKidSaveModal() {
 function closeKidSaveModal() {
   if (!kidSaveModal) return;
   kidSaveModal.classList.remove('open');
+  if (typeof patternDetailModal !== 'undefined' && patternDetailModal) {
+    patternDetailModal.classList.remove('stacked-behind-export');
+  }
+  if (typeof setPatternLibraryPendingExportPatternId === 'function') {
+    setPatternLibraryPendingExportPatternId('');
+  }
   syncKidSaveToggleButton();
+}
+
+function runExportInIsolatedPatternFrame(patternUrl, work) {
+  return new Promise(function(resolve, reject) {
+    var targetUrl = String(patternUrl || '').trim();
+    if (!targetUrl) {
+      reject(new Error('Pattern URL is missing.'));
+      return;
+    }
+
+    var frame = document.createElement('iframe');
+    var sourceCanvas = document.getElementById('myCanvas');
+    var sourceRect = sourceCanvas && sourceCanvas.getBoundingClientRect ? sourceCanvas.getBoundingClientRect() : null;
+    var frameWidth = Math.max(720, Math.round(sourceRect && sourceRect.width ? sourceRect.width : 900));
+    var frameHeight = Math.max(720, Math.round(sourceRect && sourceRect.height ? sourceRect.height : 900));
+    frame.style.position = 'fixed';
+    frame.style.width = String(frameWidth) + 'px';
+    frame.style.height = String(frameHeight) + 'px';
+    frame.style.opacity = '0';
+    frame.style.pointerEvents = 'none';
+    frame.style.left = '-9999px';
+    frame.style.top = '-9999px';
+
+    var timer = null;
+
+    function cleanup() {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (frame && frame.parentNode) {
+        frame.parentNode.removeChild(frame);
+      }
+    }
+
+    frame.onload = function() {
+      try {
+        var frameWindow = frame.contentWindow;
+        if (!frameWindow) {
+          cleanup();
+          reject(new Error('Failed to access export frame.'));
+          return;
+        }
+
+        function afterRenderSettles(callback) {
+          var nextFrame = frameWindow.requestAnimationFrame || window.requestAnimationFrame;
+          if (typeof nextFrame !== 'function') {
+            callback();
+            return;
+          }
+          nextFrame(function() {
+            nextFrame(function() {
+              callback();
+            });
+          });
+        }
+
+        function flushFrameLayoutAndDraw() {
+          try {
+            if (typeof frameWindow.fitCanvasToStage === 'function') {
+              frameWindow.fitCanvasToStage();
+            }
+            if (typeof frameWindow.redrawForPathChange === 'function') {
+              frameWindow.redrawForPathChange();
+            }
+          } catch (error) {
+            // Continue even if these hooks are unavailable in frame.
+          }
+        }
+
+        flushFrameLayoutAndDraw();
+        afterRenderSettles(function() {
+          flushFrameLayoutAndDraw();
+          afterRenderSettles(function() {
+            Promise.resolve(work(frameWindow))
+          .then(function(result) {
+            cleanup();
+            resolve(result);
+          })
+          .catch(function(error) {
+            cleanup();
+            reject(error);
+          });
+          });
+        });
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    };
+
+    frame.onerror = function() {
+      cleanup();
+      reject(new Error('Unable to load saved pattern URL for export.'));
+    };
+
+    timer = window.setTimeout(function() {
+      cleanup();
+      reject(new Error('Saved pattern export timed out while loading URL state.'));
+    }, 10000);
+
+    frame.src = targetUrl;
+    document.body.appendChild(frame);
+  });
 }
 
 async function runExportFromModalSelection() {
@@ -80,35 +193,129 @@ async function runExportFromModalSelection() {
   closeExportOptionsModal();
 }
 
-async function runKidFriendlySaveSelection(mode) {
+async function runKidFriendlySaveSelection(mode, options) {
+  options = options || {};
+  var targetPatternUrl = String(options.patternUrl || '').trim();
+  var targetPatternDescription = String(options.patternDescription || '').trim();
+  var targetPatternName = String(options.patternName || '').trim();
   var normalizedMode = mode === 'make' ? 'make' : 'image';
   var proposedName = normalizeExportBaseName(getTimestampLabel());
-  var requestedName = window.prompt('What would you like to call it?', proposedName);
-  if (requestedName === null) {
-    return;
+  var baseStem = targetPatternName || proposedName;
+  var requestedName = null;
+  if (!targetPatternName) {
+    requestedName = window.prompt('What would you like to call it?', proposedName);
+    if (requestedName === null) {
+      return;
+    }
+    baseStem = requestedName;
   }
-  var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(requestedName));
-  var options = {
+  var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(baseStem));
+  var exportOptions = {
     includeThreads: false,
     includeGuide: normalizedMode === 'make',
     includePreview: true,
-    forceStitchingBorder: normalizedMode === 'make' && currentExperienceId === 'stitching',
-    forceStitchingHoleNumbers: normalizedMode === 'make' && currentExperienceId === 'stitching'
+    forceStitchingHoleNumbers: normalizedMode === 'make' && currentExperienceId === 'stitching',
+    patternDescription: targetPatternDescription
   };
 
   try {
+    if (targetPatternUrl) {
+      await runExportInIsolatedPatternFrame(targetPatternUrl, function(frameWindow) {
+        if (!frameWindow || typeof frameWindow.normalizeExportBaseName !== 'function' || typeof frameWindow.ensureExportBaseNameHasExperiencePrefix !== 'function') {
+          throw new Error('Saved pattern export helpers are unavailable in export frame.');
+        }
+
+        var frameBaseName = frameWindow.ensureExportBaseNameHasExperiencePrefix(
+          frameWindow.normalizeExportBaseName(baseName)
+        );
+        var frameOptions = {
+          includeThreads: false,
+          includeGuide: normalizedMode === 'make',
+          includePreview: true,
+          forceStitchingHoleNumbers: normalizedMode === 'make' && frameWindow.currentExperienceId === 'stitching',
+          patternDescription: targetPatternDescription
+        };
+
+        if (normalizedMode === 'image') {
+          if (typeof frameWindow.createPreviewImageBlob !== 'function') {
+            throw new Error('Saved pattern preview export is unavailable.');
+          }
+          return frameWindow.createPreviewImageBlob().then(function(previewBlob) {
+            if (!previewBlob) {
+              throw new Error('Saved pattern preview export returned no image data.');
+            }
+            triggerBlobDownload(previewBlob, frameBaseName + '.png');
+          });
+        }
+
+        if (typeof frameWindow.JSZip === 'undefined') {
+          if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
+            throw new Error('Saved pattern maker export helpers are unavailable.');
+          }
+          var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
+          if (!svgBlob) {
+            throw new Error('Saved pattern maker export returned no SVG data.');
+          }
+          triggerBlobDownload(svgBlob, frameBaseName + '.svg');
+
+          var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
+          if (guideBlob) {
+            triggerBlobDownload(guideBlob, frameWindow.getExportGuideFileName(frameBaseName));
+          }
+
+          return frameWindow.createPreviewImageBlob().then(function(previewBlob) {
+            if (previewBlob) {
+              triggerBlobDownload(previewBlob, frameBaseName + '-preview.png');
+            }
+          });
+        }
+
+        if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
+          throw new Error('Saved pattern ZIP export helpers are unavailable.');
+        }
+
+        if (typeof frameWindow.JSZip === 'undefined') {
+          throw new Error('Saved pattern ZIP export library is unavailable.');
+        }
+
+        return (async function() {
+          var zip = new frameWindow.JSZip();
+          var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
+          if (!svgBlob) {
+            throw new Error('Saved pattern ZIP export returned no SVG data.');
+          }
+          zip.file(frameBaseName + '.svg', svgBlob);
+
+          var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
+          if (guideBlob) {
+            zip.file(frameWindow.getExportGuideFileName(frameBaseName), guideBlob);
+          }
+
+          var previewBlob = await frameWindow.createPreviewImageBlob();
+          if (previewBlob) {
+            zip.file(frameBaseName + '-preview.png', previewBlob);
+          }
+
+          var zipBlob = await zip.generateAsync({ type: 'blob' });
+          triggerBlobDownload(zipBlob, frameBaseName + '.zip');
+        })();
+      });
+      closeKidSaveModal();
+      return;
+    }
+
     if (normalizedMode === 'image') {
       downloadPreviewImage(baseName, { appendPreviewSuffix: false });
     } else if (typeof JSZip === 'undefined') {
-      downloadCurrentDesignSvg(baseName, options);
-      if (options.includeGuide) {
-        downloadStitchingGuide(baseName, options);
+      downloadCurrentDesignSvg(baseName, exportOptions);
+      if (exportOptions.includeGuide) {
+        downloadStitchingGuide(baseName, exportOptions);
       }
-      if (options.includePreview) {
+      if (exportOptions.includePreview) {
         downloadPreviewImage(baseName);
       }
     } else {
-      await downloadExportZipBundle(baseName, options);
+      await downloadExportZipBundle(baseName, exportOptions);
     }
   } catch (error) {
     console.error('Kid save failed:', error);
@@ -803,6 +1010,7 @@ function createCurrentDesignSvgBlob(options) {
 function buildStitchingGuideText(fileBaseName, options) {
   options = options || {};
   var includeStitchingHoleNumbers = shouldShowHoleNumbersNow() || options.forceStitchingHoleNumbers === true;
+  var patternDescription = String(options.patternDescription || '').trim();
 
   function getReadableStitchMode(mode) {
     if (mode === 'connect') return 'Multiplication';
@@ -856,6 +1064,9 @@ function buildStitchingGuideText(fileBaseName, options) {
   lines.push('StitchLab manual stitching guide');
   lines.push('Generated: ' + now.toISOString());
   lines.push('Export name: ' + fileBaseName);
+  if (patternDescription) {
+    lines.push('Pattern description: ' + patternDescription);
+  }
   lines.push('');
   lines.push('Parameters');
   lines.push('Global');

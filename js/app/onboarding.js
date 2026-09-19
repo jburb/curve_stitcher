@@ -49,12 +49,12 @@ function getOnboardingTailSteps() {
   return [
     {
       title: 'Save Your Pattern',
-      text: 'Tap Save to download a picture, or a ZIP with picture + maker files.',
+      text: 'Save your stitching pattern to the pattern library, so you can re-stitch it at any time.',
       selector: '#kid-save-toggle'
     },
     {
       title: 'Discovery Library',
-      text: 'Open Discovery to browse unlocked experiences, enter experience passphrases, or return to stitching.',
+      text: 'Open Discovery to browse saved patterns, view discovery hints, or return to stitching.',
       selector: '#discovery-toggle'
     },
     {
