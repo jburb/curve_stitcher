@@ -1363,9 +1363,19 @@
     margin: 0 0 5px;
     font-size: 14px;
     color: #2f4368;
+    display: block;
+  }
+  .discovery-card-title-label {
+    display: block;
+    min-width: 0;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .discovery-card-preview-row {
     display: flex;
+    justify-content: flex-start;
     align-items: center;
-    gap: 8px;
+    margin: 1px 0 7px;
   }
   .discovery-card-icon-chip {
     width: 52px;
@@ -1392,6 +1402,10 @@
     width: 100%;
     height: 100%;
     display: block;
+  }
+  .discovery-card.is-user-saved .discovery-card-icon-chip svg {
+    transform: scale(1.22);
+    transform-origin: center;
   }
   .discovery-card-icon.is-preview {
     filter: var(--ui-discovery-preview-icon-filter, contrast(1.5) brightness(0.62));
@@ -1459,31 +1473,6 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 6px;
-  }
-  .discovery-card-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    align-self: flex-start;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    padding: 3px 7px;
-    border-radius: 999px;
-    border: 1px solid #d2def3;
-    background: #f5f9ff;
-    color: #35527f;
-    margin-bottom: 6px;
-  }
-  .discovery-card.is-user-saved .discovery-card-badge {
-    background: #eef8f2;
-    border-color: #c9e4d1;
-    color: #285f3d;
-  }
-  .discovery-card.is-discovery-pattern .discovery-card-badge {
-    background: #f5f3ff;
-    border-color: #d4cff7;
-    color: #4c3d9a;
   }
   .discovery-card.is-preview {
     background: var(--ui-discovery-preview-bg, #f2f4f8);

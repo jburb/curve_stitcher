@@ -2454,15 +2454,17 @@ function renderDiscoveryLibrary() {
       var card = document.createElement('div');
       card.className = 'discovery-card ' + (isDiscovery ? 'is-discovery-pattern' : 'is-user-saved') + (unlocked ? '' : ' is-preview');
 
-      var badge = document.createElement('div');
-      badge.className = 'discovery-card-badge';
-      badge.textContent = isDiscovery ? 'Discovery Pattern' : 'Your Saved Pattern';
-      card.appendChild(badge);
-
       var title = document.createElement('h4');
+      var titleLabel = document.createElement('span');
+      titleLabel.className = 'discovery-card-title-label';
+      titleLabel.textContent = String(record.patternName || 'Pattern');
+      title.appendChild(titleLabel);
+      card.appendChild(title);
+
       var iconPath = isDiscovery && record.discoveryKey ? getDiscoveryIconPath(record.discoveryKey, unlocked) : '';
+      var iconChip = null;
       if (iconPath) {
-        var iconChip = document.createElement('span');
+        iconChip = document.createElement('span');
         iconChip.className = 'discovery-card-icon-chip' + (unlocked ? ' is-unlocked' : ' is-preview');
         iconChip.setAttribute('aria-hidden', 'true');
 
@@ -2472,19 +2474,20 @@ function renderDiscoveryLibrary() {
         iconImage.alt = '';
         iconImage.setAttribute('aria-hidden', 'true');
         iconChip.appendChild(iconImage);
-        title.appendChild(iconChip);
       } else if (record.patternPreviewSmall) {
-        var inlineIconChip = document.createElement('span');
+        iconChip = document.createElement('span');
+        var inlineIconChip = iconChip;
         inlineIconChip.className = 'discovery-card-icon-chip' + (unlocked ? ' is-unlocked' : ' is-preview');
         inlineIconChip.setAttribute('aria-hidden', 'true');
         inlineIconChip.innerHTML = String(record.patternPreviewSmall);
-        title.appendChild(inlineIconChip);
       }
 
-      var titleLabel = document.createElement('span');
-      titleLabel.textContent = String(record.patternName || 'Pattern');
-      title.appendChild(titleLabel);
-      card.appendChild(title);
+      if (iconChip) {
+        var iconRow = document.createElement('div');
+        iconRow.className = 'discovery-card-preview-row';
+        iconRow.appendChild(iconChip);
+        card.appendChild(iconRow);
+      }
 
       var text = document.createElement('p');
       if (isDiscovery) {
