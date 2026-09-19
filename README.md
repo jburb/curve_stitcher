@@ -13,14 +13,15 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 | 4 | js/app/experience-library.js | Experience metadata/config catalog | Source of experience labels/content metadata used by runtime and UI. |
 | 5 | js/app/narration.js | About-page narration extraction, iframe allowlist, narration bridge helpers | Handles doc-path safety and narration text exchange. |
 | 6 | js/app/state-url-persistence.js | URL schema, sanitizers, per-experience state serialization and hydration helpers | Canonical place for state shape and normalization logic. |
-| 7 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
-| 8 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
-| 9 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
-| 10 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
-| 11 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
-| 12 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
-| 13 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
-| 14 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
+| 7 | js/app/pattern-library.js | Pattern library persistence and schema normalization (IndexedDB runtime adapter + deploy-target bridge surface) | Owns save/load records, discovery seeding/upserts, and import/export JSON payloads. |
+| 8 | js/app/experience-runtime.js | Global runtime orchestration, theme/audio state, experience switching, shared visibility rules | Owns cross-experience lifecycle coordination. |
+| 9 | js/app/stitching-core.js | Stitching geometry, point computation, frame fitting, thread drawing, animation rendering | Canonical stitching render/animation engine. |
+| 10 | js/app/triangula.js | Triangula geometry, timeline, static/animated rendering | Experience-specific implementation. |
+| 11 | js/app/squarus.js | Squarus polyomino generation, sequencing, layout/animation helpers | Experience-specific implementation. |
+| 12 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
+| 13 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
+| 14 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
+| 15 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
 
 ## Development Notes
 
@@ -97,8 +98,10 @@ Current covered checks:
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
 - Pattern library supports save, edit (rename + description), and delete for user-saved patterns.
 - Pattern detail load restores a saved Stitching pattern state back into active app controls.
+- Pattern save preview and saved load both respect border and hole-number toggle settings.
 - Pattern detail export flow prompts for filename and creates a valid PNG download blob.
-- Locked discovery detail modal keeps load/export/travel actions disabled until unlocked.
+- Pattern detail maker ZIP export forces hole numbers while still respecting the border toggle for SVG output.
+- Locked discovery cards keep the View Pattern action disabled and do not open detail modal until unlocked.
 - Core interaction sweep does not raise runtime reference/type errors.
 - Triangula URL state roundtrip persists key controls on reload.
 - Squarus URL state roundtrip persists key controls on reload.
@@ -326,7 +329,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Stitch library (offline-first)
 1. Tips library and modal
 1. Curve sewing cards viewer
 1. Enable exported text file to include personal note, if specified by user on zip export should've forward compatible with stitch library plan)
@@ -366,6 +368,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Use better voice for narration.
 1. Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.
 1. Re-enable formula stitch mode with improvements 
+1. Stitch library (offline-first)
 
 
 ## TODO Backlog
