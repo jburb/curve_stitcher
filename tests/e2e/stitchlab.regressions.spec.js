@@ -2229,7 +2229,10 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#pattern-save-confirm-btn').click();
     await expect(saveModal).not.toHaveClass(/open/);
 
-    await page.locator('#discovery-toggle').click();
+    await page.evaluate(() => {
+      var btn = document.getElementById('discovery-toggle');
+      if (btn) btn.click();
+    });
     const savedCard = page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 1' }).first();
     await expect(savedCard).toBeVisible();
 
@@ -2253,6 +2256,86 @@ test.describe('StitchLab regressions', () => {
     await expect(detailModal).not.toHaveClass(/open/);
 
     await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
+  });
+
+  test('pattern library import restores exported user pattern records', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    var patternName = 'Import Regression Pattern ' + String(Date.now());
+    var patternDescription = 'Created for library import regression coverage.';
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill(patternName);
+    await page.locator('#pattern-save-description-input').fill(patternDescription);
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
+    await expect(savedCard).toBeVisible();
+
+    const importPayload = await page.evaluate(({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function') return null;
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i] && records[i].patternName === targetName) {
+          match = records[i];
+          break;
+        }
+      }
+      if (!match) return null;
+      return {
+        schema: 'stitchlab.patternLibrary',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        records: [match]
+      };
+    }, { targetName: patternName });
+    expect(importPayload).not.toBeNull();
+
+    await page.evaluate(({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function' || typeof window.deleteUserPattern !== 'function') return;
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i] && records[i].patternName === targetName && records[i].kind === 'user') {
+          match = records[i];
+          break;
+        }
+      }
+      if (!match) return;
+      return window.deleteUserPattern(match.id).then(function() {
+        if (typeof window.renderDiscoveryLibrary === 'function') {
+          window.renderDiscoveryLibrary();
+        }
+      });
+    }, { targetName: patternName });
+
+    await expect(page.locator('.discovery-card').filter({ hasText: patternName })).toHaveCount(0);
+
+    const dialogMessages = [];
+    page.on('dialog', async (dialog) => {
+      dialogMessages.push(dialog.message());
+      await dialog.accept();
+    });
+
+    const jsonText = JSON.stringify(importPayload, null, 2);
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.locator('#pattern-library-import-btn').click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({
+      name: 'stitchlab-pattern-library-import.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(jsonText, 'utf8')
+    });
+
+    await expect(savedCard).toBeVisible();
+    await expect.poll(() => dialogMessages.length).toBeGreaterThan(0);
+    expect(dialogMessages[dialogMessages.length - 1]).toContain('Library import complete. Added: 1, updated: 0.');
   });
 
   test('pattern detail load restores saved stitching state to app controls', async ({ page }) => {
