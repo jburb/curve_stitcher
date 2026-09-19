@@ -1263,7 +1263,7 @@
 
   /* --- ADVANCED PANEL --- */
   #discovery-panel {
-    --discovery-pane-width: 50vw;
+    --discovery-pane-width: 66vw;
     position: absolute;
     top: 0;
     left: calc(-1 * var(--discovery-pane-width) - 20px);
@@ -1305,8 +1305,8 @@
   }
   #discovery-cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 14px;
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
@@ -1321,7 +1321,7 @@
     overflow-x: hidden;
     border: 1px solid var(--ui-pane-card-border, #d7e0f3);
     border-radius: 10px;
-    padding: 0 8px 8px;
+    padding: 0 6px 8px;
     background: var(--ui-pane-card-surface, #ffffff);
   }
   .pattern-library-section-title {
@@ -1333,8 +1333,8 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    margin: 0 -8px;
-    padding: 8px 8px 6px;
+    margin: 0 -6px;
+    padding: 8px 6px 6px;
     background: var(--ui-pane-card-surface, #ffffff);
   }
   .pattern-library-row {
@@ -2371,6 +2371,24 @@
     border-color: #3f4f66;
     color: #dce7f8;
     box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] #pattern-save-modal.modal-backdrop,
+  html[data-theme="dark"] #pattern-detail-modal.modal-backdrop {
+    background: rgba(6, 10, 16, 0.76);
+  }
+
+  html[data-theme="dark"] #pattern-save-modal .modal-card,
+  html[data-theme="dark"] #pattern-detail-modal .modal-card {
+    background: #1f2936;
+    border-color: #3f4f66;
+    color: #dce7f8;
+    box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] #pattern-save-modal .modal-card h4,
+  html[data-theme="dark"] #pattern-detail-modal .modal-card h4 {
+    color: #e7f0ff;
   }
 
   html[data-theme="dark"] .modal-card.acknowledgments-card h4 {
