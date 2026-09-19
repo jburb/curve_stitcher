@@ -79,7 +79,6 @@
   function ensurePatternUrlForStitching(urlText) {
     var safe = String(urlText || '').trim();
     if (!safe) return false;
-    if (!isSameOriginUrl(safe)) return false;
     var params = parseQueryFromUrl(safe);
     var experienceId = (typeof resolveExperienceId === 'function')
       ? resolveExperienceId(getUrlStateParam(params, 'experienceId'))
@@ -88,6 +87,20 @@
       experienceId = 'stitching';
     }
     return experienceId === 'stitching';
+  }
+
+  function normalizeImportedPatternUrlForCurrentOrigin(urlText) {
+    var safe = String(urlText || '').trim();
+    if (!safe) return '';
+    try {
+      var parsed = new URL(safe, window.location.href);
+      var local = new URL(window.location.href);
+      local.hash = '';
+      local.search = parsed.search || '';
+      return local.toString();
+    } catch (error) {
+      return normalizePatternUrl(safe);
+    }
   }
 
   function normalizePatternUrl(urlText) {
@@ -776,6 +789,13 @@
       if (protectedImport) {
         next.kind = 'discovery';
         next.isProtected = true;
+      }
+
+      if (next.kind === 'user') {
+        if (!ensurePatternUrlForStitching(next.patternUrl || '')) {
+          continue;
+        }
+        next.patternUrl = normalizeImportedPatternUrlForCurrentOrigin(next.patternUrl || '');
       }
 
       var existingByIdMatch = existingById[next.id] || null;

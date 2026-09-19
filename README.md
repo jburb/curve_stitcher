@@ -98,6 +98,7 @@ Current covered checks:
 - Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
 - Pattern library supports save, edit details (rename + description), and delete for user-saved patterns.
 - Pattern library import restores exported user pattern records.
+- Pattern library import accepts file-origin pattern URLs from exported JSON and remaps them for local use.
 - Pattern detail load restores a saved Stitching pattern state back into active app controls.
 - Pattern save preview and saved load both respect border and hole-number toggle settings.
 - Pattern detail export flow uses the pattern name for filename and creates a valid PNG download blob.
