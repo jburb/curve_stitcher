@@ -72,6 +72,10 @@ Current covered checks:
 - Advanced formula input syncs immediately to the basic formula input.
 - Stitching active-thread overlay shows non-styling playback values for the currently animated thread.
 - Basic palette custom dropper applies the selected thread color.
+- Advanced thread-card drag reorders stack, keeps kid thread picker order synced, and persists via URL/reload.
+- First thread card can be dragged downward to reorder.
+- Thread-card reordering is disabled when there is only one thread.
+- Kid thread picker selection changes active thread only and does not reorder the thread stack.
 - Acknowledgments viewer opens from about controls and cycles styles by line.
 - Acknowledgments viewer opens from About actions.
 - Acknowledgments autoplay lifecycle resets cleanly across close/reopen.
@@ -331,7 +335,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Enable thread re-ordering from advanced pane.
 1. Tips library and modal
 1. Curve sewing cards viewer
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
@@ -340,6 +343,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Recently Completed
 
+1. Enable thread re-ordering from advanced pane (including first-card downward drag and in-drag visual lift feedback; picker remains select-only)
 1. Improved and re-enabled formula mode
 1. Refactor for cleanliness: moved non-acknowledgments code from the acknowledgments module into proper modules
 1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
@@ -374,8 +378,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 
 ## TODO Backlog
-1. **Enable thread re-ordering from advanced pane.**
-
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
 

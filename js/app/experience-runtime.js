@@ -173,6 +173,9 @@ var PARAMLESS_RANDOM_MIN_SEGMENTS = 3;
 var PARAMLESS_RANDOM_SEQUENCE_MAX_ATTEMPTS = 18;
 var PARAMLESS_MULTIPLY_MIN_HOLES = 16;
 var PARAMLESS_MULTIPLY_MAX_VALUE = 5;
+var THREAD_CARD_REORDER_MOVE_THRESHOLD = 3;
+var threadCardReorderSession = null;
+var suppressThreadCardSelectionClick = false;
 
 function seekAudioToStartupPreviewOffset(audioEl) {
   if (!audioEl) return;
@@ -3693,6 +3696,177 @@ function setCurrentShape(shape, shouldDraw) {
   }
 }
 
+function isThreadCardInteractiveTarget(target) {
+  if (!target || typeof target.closest !== 'function') return false;
+  return !!target.closest('input, select, button, textarea, label, a');
+}
+
+function endThreadCardReorderSession(event) {
+  if (!threadCardReorderSession) return;
+  var hasPointerId = event && typeof event.pointerId === 'number';
+  if (hasPointerId && threadCardReorderSession.pointerId !== null && event.pointerId !== threadCardReorderSession.pointerId) {
+    return;
+  }
+
+  var session = threadCardReorderSession;
+  threadCardReorderSession = null;
+
+  document.removeEventListener('pointermove', handleThreadCardReorderPointerMove);
+  document.removeEventListener('pointerup', endThreadCardReorderSession);
+  document.removeEventListener('pointercancel', endThreadCardReorderSession);
+  document.removeEventListener('mousemove', handleThreadCardReorderMouseMove);
+  document.removeEventListener('mouseup', endThreadCardReorderSession);
+  document.removeEventListener('touchmove', handleThreadCardReorderTouchMove);
+  document.removeEventListener('touchend', endThreadCardReorderSession);
+  document.removeEventListener('touchcancel', endThreadCardReorderSession);
+
+  if (!session.container || !session.draggedCard || !session.isDragging) {
+    return;
+  }
+
+  session.container.classList.remove('thread-card-reorder-active');
+  session.draggedCard.classList.remove('thread-card-reorder-dragging');
+  session.draggedCard.style.removeProperty('--thread-card-drag-offset');
+
+  var reorderedOriginalIndices = Array.from(session.container.querySelectorAll('.thread-card'))
+    .map(function(card) {
+      return parseInt(card.dataset.threadIndexOriginal, 10);
+    })
+    .filter(function(indexValue) {
+      return isFinite(indexValue) && indexValue >= 0 && indexValue < threads.length;
+    });
+
+  if (reorderedOriginalIndices.length !== threads.length) {
+    return;
+  }
+
+  var orderChanged = false;
+  for (var i = 0; i < reorderedOriginalIndices.length; i++) {
+    if (reorderedOriginalIndices[i] !== i) {
+      orderChanged = true;
+      break;
+    }
+  }
+  if (!orderChanged) {
+    return;
+  }
+
+  var previousThreads = threads.slice();
+  var previousSelectedThreadIndex = selectedThreadIndex;
+  threads = reorderedOriginalIndices.map(function(originalIndex) {
+    return previousThreads[originalIndex];
+  });
+  selectedThreadIndex = reorderedOriginalIndices.indexOf(previousSelectedThreadIndex);
+  if (selectedThreadIndex < 0) {
+    selectedThreadIndex = 0;
+  }
+
+  suppressThreadCardSelectionClick = true;
+  renderThreadControls();
+  syncKidControlsFromSelectedThread();
+  redrawForPathChange();
+}
+
+function handleThreadCardReorderMove(clientY, event) {
+  if (!threadCardReorderSession) return;
+  var hasPointerId = event && typeof event.pointerId === 'number';
+  if (hasPointerId && threadCardReorderSession.pointerId !== null && event.pointerId !== threadCardReorderSession.pointerId) {
+    return;
+  }
+  var session = threadCardReorderSession;
+  if (!session.container || !session.draggedCard) return;
+  if (!isFinite(clientY)) return;
+
+  var deltaY = clientY - session.startY;
+  if (!session.isDragging && Math.abs(deltaY) < THREAD_CARD_REORDER_MOVE_THRESHOLD) {
+    return;
+  }
+
+  if (!session.isDragging) {
+    session.isDragging = true;
+    session.container.classList.add('thread-card-reorder-active');
+    session.draggedCard.classList.add('thread-card-reorder-dragging');
+  }
+
+  session.draggedCard.style.setProperty('--thread-card-drag-offset', String(deltaY) + 'px');
+
+  if (event && typeof event.preventDefault === 'function') {
+    event.preventDefault();
+  }
+
+  var containerRect = session.container.getBoundingClientRect();
+  var clampedY = Math.max(containerRect.top + 1, Math.min(containerRect.bottom - 1, clientY));
+  var cards = Array.from(session.container.querySelectorAll('.thread-card'));
+  var insertBefore = null;
+
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    if (card === session.draggedCard) continue;
+    var cardRect = card.getBoundingClientRect();
+    var activationY = cardRect.top + (cardRect.height * 0.35);
+    if (clampedY < activationY) {
+      insertBefore = card;
+      break;
+    }
+  }
+
+  if (!insertBefore) {
+    if (session.container.lastElementChild !== session.draggedCard) {
+      session.container.appendChild(session.draggedCard);
+    }
+    return;
+  }
+
+  if (insertBefore !== session.draggedCard && insertBefore !== session.draggedCard.nextElementSibling) {
+    session.container.insertBefore(session.draggedCard, insertBefore);
+  }
+}
+
+function handleThreadCardReorderPointerMove(event) {
+  handleThreadCardReorderMove(event && event.clientY, event);
+}
+
+function handleThreadCardReorderMouseMove(event) {
+  handleThreadCardReorderMove(event && event.clientY, event);
+}
+
+function handleThreadCardReorderTouchMove(event) {
+  var touch = event && event.touches && event.touches.length ? event.touches[0] : null;
+  handleThreadCardReorderMove(touch ? touch.clientY : null, event);
+}
+
+function beginThreadCardReorder(event, cardElement) {
+  if (!cardElement || threads.length <= 1) return;
+  if (isThreadCardInteractiveTarget(event.target)) return;
+  if (typeof event.button === 'number' && event.button !== 0) return;
+  if (event && typeof event.preventDefault === 'function' && event.cancelable) {
+    event.preventDefault();
+  }
+  endThreadCardReorderSession();
+
+  var pointerId = (typeof event.pointerId === 'number') ? event.pointerId : null;
+  var touchPoint = event && event.touches && event.touches.length ? event.touches[0] : null;
+  var startY = isFinite(event && event.clientY) ? event.clientY : (touchPoint ? touchPoint.clientY : null);
+  if (!isFinite(startY)) return;
+
+  threadCardReorderSession = {
+    pointerId: pointerId,
+    startY: startY,
+    container: threadControlsContainer,
+    draggedCard: cardElement,
+    isDragging: false
+  };
+
+  document.addEventListener('pointermove', handleThreadCardReorderPointerMove);
+  document.addEventListener('pointerup', endThreadCardReorderSession);
+  document.addEventListener('pointercancel', endThreadCardReorderSession);
+  document.addEventListener('mousemove', handleThreadCardReorderMouseMove);
+  document.addEventListener('mouseup', endThreadCardReorderSession);
+  document.addEventListener('touchmove', handleThreadCardReorderTouchMove, { passive: false });
+  document.addEventListener('touchend', endThreadCardReorderSession);
+  document.addEventListener('touchcancel', endThreadCardReorderSession);
+}
+
 function renderThreadControls() {
   var container = document.getElementById('thread-controls');
   container.innerHTML = '';
@@ -3728,6 +3902,11 @@ function renderThreadControls() {
 
     var div = document.createElement('div');
     div.className = 'thread-card' + (index === selectedThreadIndex ? ' selected' : '');
+    div.dataset.threadIndexOriginal = String(index);
+    if (threads.length > 1) {
+      div.classList.add('reorder-enabled');
+      div.setAttribute('draggable', 'false');
+    }
 
     var isFixedMode = thread.jumpMode === 'fixed';
     var isFormulaMode = isExpressionStitchModeEnabled() && thread.jumpMode === 'formula';
@@ -3737,7 +3916,7 @@ function renderThreadControls() {
     var hideStartHoleControl = !isFixedMode && !isFormulaMode;
 
     div.innerHTML = `
-      <strong>Thread ${index + 1}</strong><br>
+      <strong>Thread ${index + 1}${threads.length > 1 ? ' <span class="thread-card-reorder-hint">(Tap/click + drag to reorder.)</span>' : ''}</strong><br>
       Color: <input type="color" value="${threadColorInputValue}" id="color-${index}"><br>
       ${nestedFrameEnabled ? `
       Frame:
@@ -3801,7 +3980,28 @@ function renderThreadControls() {
 
     container.appendChild(div);
 
+    div.addEventListener('pointerdown', (event) => {
+      beginThreadCardReorder(event, div);
+    });
+
+    div.addEventListener('mousedown', (event) => {
+      beginThreadCardReorder(event, div);
+    });
+
+    div.addEventListener('touchstart', (event) => {
+      beginThreadCardReorder(event, div);
+    }, { passive: true });
+
+    div.addEventListener('dragstart', (event) => {
+      event.preventDefault();
+    });
+
     div.addEventListener('click', (event) => {
+      if (suppressThreadCardSelectionClick) {
+        suppressThreadCardSelectionClick = false;
+        event.preventDefault();
+        return;
+      }
       if (event.target.closest('input, select, button')) return;
       selectedThreadIndex = index;
       renderThreadControls();

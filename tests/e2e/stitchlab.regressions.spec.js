@@ -177,6 +177,63 @@ async function unlockMashrabiyaExperienceForTest(page, fold) {
   await expect.poll(() => new URL(page.url()).searchParams.get('experience')).toBe('mashrabiya');
 }
 
+async function dragThreadCardFromTo(page, fromIndex, toIndex, options) {
+  options = options || {};
+  await page.evaluate(({ from, to, dropMode }) => {
+    const cards = Array.from(document.querySelectorAll('#thread-controls .thread-card'));
+    const source = cards[from];
+    const target = cards[to];
+    if (!source || !target) {
+      throw new Error('Thread card(s) missing for drag operation');
+    }
+
+    const sourceRect = source.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const startX = sourceRect.left + sourceRect.width / 2;
+    const startY = sourceRect.top + 14;
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = dropMode === 'after'
+      ? (targetRect.top + targetRect.height - 4)
+      : (targetRect.top + 2);
+    const steps = 8;
+
+    source.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: startX,
+      clientY: startY
+    }));
+
+    for (let i = 1; i <= steps; i += 1) {
+      const progress = i / steps;
+      const x = startX + (endX - startX) * progress;
+      const y = startY + (endY - startY) * progress;
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 1,
+        pointerType: 'mouse',
+        button: 0,
+        clientX: x,
+        clientY: y
+      }));
+    }
+
+    document.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: endX,
+      clientY: endY
+    }));
+  }, { from: fromIndex, to: toIndex, dropMode: options.drop === 'after' ? 'after' : 'before' });
+}
+
 test.describe('StitchLab regressions', () => {
   test('stitching shape selection persists to URL and survives refresh', async ({ page }) => {
     await page.goto('/stitchlab.html');
@@ -1010,6 +1067,142 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#jump-sequence-0').fill('2,3,5,8');
     await expect(advancedPanel).toHaveClass(/open/);
+  });
+
+  test('advanced thread-card drag reorders stack, keeps picker order synced, and persists via URL', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.evaluate(() => {
+      window.threads = [
+        window.sanitizeThreadDescriptor({ color: '#ff595e', solidColor: '#ff595e', jump: 3, jumpMode: 'fixed', width: 2 }, null),
+        window.sanitizeThreadDescriptor({ color: '#8ac926', solidColor: '#8ac926', jump: 7, jumpMode: 'fixed', width: 2 }, null),
+        window.sanitizeThreadDescriptor({ color: '#1982c4', solidColor: '#1982c4', jump: 11, jumpMode: 'fixed', width: 2 }, null)
+      ];
+      window.selectedThreadIndex = 1;
+      window.renderThreadControls();
+      window.syncKidControlsFromSelectedThread();
+      window.redrawForPathChange();
+    });
+
+    await expect(page.locator('#thread-controls .thread-card')).toHaveCount(3);
+    await dragThreadCardFromTo(page, 2, 0);
+
+    await expect.poll(() => {
+      return page.evaluate(() => window.threads.map((thread) => String(thread.color || '').toLowerCase()));
+    }).toEqual(['#1982c4', '#ff595e', '#8ac926']);
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const options = Array.from(document.querySelectorAll('#kid-thread-menu .kid-thread-option'));
+        return options.map((option) => {
+          const swatch = option.querySelector('.thread-swatch');
+          return (swatch && swatch.style && swatch.style.background) ? String(swatch.style.background).toLowerCase() : '';
+        });
+      });
+    }).toEqual(['rgb(25, 130, 196)', 'rgb(255, 89, 94)', 'rgb(138, 201, 38)']);
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        const encoded = new URL(window.location.href).searchParams.get('stitchingThreadState');
+        if (!encoded) return [];
+        const parsed = JSON.parse(decodeURIComponent(encoded));
+        return Array.isArray(parsed) ? parsed.map((entry) => String(entry.c || '').toLowerCase()) : [];
+      });
+    }).toEqual(['#1982c4', '#ff595e', '#8ac926']);
+
+    await page.reload();
+    await expect.poll(() => {
+      return page.evaluate(() => window.threads.map((thread) => String(thread.color || '').toLowerCase()));
+    }).toEqual(['#1982c4', '#ff595e', '#8ac926']);
+  });
+
+  test('first thread card can be dragged downward to reorder', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.evaluate(() => {
+      window.threads = [
+        window.sanitizeThreadDescriptor({ color: '#ff595e', solidColor: '#ff595e', jump: 3, jumpMode: 'fixed', width: 2 }, null),
+        window.sanitizeThreadDescriptor({ color: '#8ac926', solidColor: '#8ac926', jump: 7, jumpMode: 'fixed', width: 2 }, null),
+        window.sanitizeThreadDescriptor({ color: '#1982c4', solidColor: '#1982c4', jump: 11, jumpMode: 'fixed', width: 2 }, null)
+      ];
+      window.selectedThreadIndex = 0;
+      window.renderThreadControls();
+      window.syncKidControlsFromSelectedThread();
+      window.redrawForPathChange();
+    });
+
+    await dragThreadCardFromTo(page, 0, 1, { drop: 'after' });
+
+    await expect.poll(() => {
+      return page.evaluate(() => window.threads.map((thread) => String(thread.color || '').toLowerCase()));
+    }).toEqual(['#8ac926', '#ff595e', '#1982c4']);
+  });
+
+  test('thread-card reorder is disabled when only one thread exists', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    await page.locator('#gear').click();
+
+    await page.evaluate(() => {
+      window.threads = [
+        window.sanitizeThreadDescriptor({ color: '#ff595e', solidColor: '#ff595e', jump: 3, jumpMode: 'fixed', width: 2 }, null)
+      ];
+      window.selectedThreadIndex = 0;
+      window.renderThreadControls();
+      window.syncKidControlsFromSelectedThread();
+      window.redrawForPathChange();
+    });
+
+    await expect(page.locator('#thread-controls .thread-card')).toHaveCount(1);
+    await expect(page.locator('#thread-controls .thread-card').first()).not.toHaveClass(/reorder-enabled/);
+
+    const singleCard = page.locator('#thread-controls .thread-card').first();
+    const cardBox = await singleCard.boundingBox();
+    if (!cardBox) {
+      throw new Error('Single thread card bounds unavailable');
+    }
+    await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + 12);
+    await page.mouse.down();
+    await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height - 6, { steps: 6 });
+    await page.mouse.up();
+
+    await expect.poll(() => {
+      return page.evaluate(() => window.threads.map((thread) => String(thread.color || '').toLowerCase()));
+    }).toEqual(['#ff595e']);
+  });
+
+  test('kid thread picker selection does not reorder thread stack', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.evaluate(() => {
+      window.threads = [
+        window.sanitizeThreadDescriptor({ color: '#ff595e', solidColor: '#ff595e', jump: 3, jumpMode: 'fixed', width: 2 }, null),
+        window.sanitizeThreadDescriptor({ color: '#8ac926', solidColor: '#8ac926', jump: 7, jumpMode: 'fixed', width: 2 }, null),
+        window.sanitizeThreadDescriptor({ color: '#1982c4', solidColor: '#1982c4', jump: 11, jumpMode: 'fixed', width: 2 }, null)
+      ];
+      window.selectedThreadIndex = 0;
+      window.renderThreadControls();
+      window.syncKidControlsFromSelectedThread();
+      window.redrawForPathChange();
+    });
+
+    await page.locator('#kid-thread-toggle').click();
+    await page.locator('#kid-thread-menu .kid-thread-option').nth(2).click();
+
+    await expect.poll(() => {
+      return page.evaluate(() => ({
+        selectedThreadIndex: window.selectedThreadIndex,
+        order: window.threads.map((thread) => String(thread.color || '').toLowerCase())
+      }));
+    }).toEqual({
+      selectedThreadIndex: 2,
+      order: ['#ff595e', '#8ac926', '#1982c4']
+    });
   });
 
   test('advanced pane stays open for top and lower control bars, closes on canvas click', async ({ page }) => {
