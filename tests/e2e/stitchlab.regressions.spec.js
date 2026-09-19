@@ -2330,6 +2330,57 @@ test.describe('StitchLab regressions', () => {
     await expect.poll(() => new URL(page.url()).searchParams.get('stitchingHoles')).toBe('27');
   });
 
+  test('pattern save preview and saved load respect border and hole-number toggles', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#gear').click();
+    await page.locator('#advanced-border-enabled').uncheck();
+    await page.locator('#advanced-hole-numbers').uncheck();
+
+    await expect(page.locator('#advanced-border-enabled')).not.toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    const previewProbe = await page.evaluate(() => {
+      var preview = document.getElementById('pattern-save-preview');
+      var markup = String(preview && preview.innerHTML || '');
+      return {
+        hasHoleLabelText: /<text\b/i.test(markup),
+        hasBorderPath: /stroke-miterlimit\s*=\s*"8"/i.test(markup)
+      };
+    });
+
+    expect(previewProbe.hasHoleLabelText).toBe(false);
+    expect(previewProbe.hasBorderPath).toBe(false);
+
+    await page.locator('#pattern-save-name-input').fill('Toggle Fidelity Pattern');
+    await page.locator('#pattern-save-description-input').fill('Saved state should preserve disabled border and hole numbers.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#advanced-border-enabled').check();
+    await page.locator('#advanced-hole-numbers').check();
+    await expect(page.locator('#advanced-border-enabled')).toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).toBeChecked();
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Toggle Fidelity Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+    await page.locator('#pattern-detail-load-btn').click();
+
+    await expect(detailModal).not.toHaveClass(/open/);
+    await expect(page.locator('#advanced-border-enabled')).not.toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
+  });
+
   test('pattern detail export flow prompts for filename and creates a download blob', async ({ page }) => {
     await page.addInitScript(() => {
       function installBlobProbe(win) {
@@ -2423,9 +2474,117 @@ test.describe('StitchLab regressions', () => {
     expect(alertMessages).toEqual([]);
   });
 
-  test('locked discovery detail modal keeps load and export disabled', async ({ page }) => {
+  test('pattern detail maker ZIP forces hole numbers but not borders in exported SVG', async ({ page }) => {
+    await page.addInitScript(() => {
+      function installBlobProbe(win) {
+        if (!win || !win.URL || win.URL.__stitchlabMakeBlobProbeInstalled) return;
+        var originalCreateObjectURL = win.URL.createObjectURL.bind(win.URL);
+        win.URL.createObjectURL = function(blob) {
+          try {
+            if (win.top) {
+              win.top.__patternDetailMakeExportProbe = win.top.__patternDetailMakeExportProbe || { count: 0, blobs: [] };
+              win.top.__patternDetailMakeExportProbe.count += 1;
+              win.top.__patternDetailMakeExportProbe.blobs.push(blob);
+            }
+          } catch (error) {
+            // Ignore cross-context probe failures.
+          }
+          return originalCreateObjectURL(blob);
+        };
+        win.URL.__stitchlabMakeBlobProbeInstalled = true;
+      }
+
+      installBlobProbe(window);
+      window.__patternDetailMakeExportProbe = window.__patternDetailMakeExportProbe || { count: 0, blobs: [] };
+    });
+
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
+
+    await page.locator('#gear').click();
+    await page.locator('#advanced-border-enabled').uncheck();
+    await page.locator('#advanced-hole-numbers').uncheck();
+    await expect(page.locator('#advanced-border-enabled')).not.toBeChecked();
+    await expect(page.locator('#advanced-hole-numbers')).not.toBeChecked();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill('Detail Make Export Toggle Pattern');
+    await page.locator('#pattern-save-description-input').fill('For make export SVG toggle behavior.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: 'Detail Make Export Toggle Pattern' }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    page.on('dialog', async (dialog) => {
+      if (dialog.type() === 'prompt') {
+        await dialog.accept('detail_make_toggle_probe');
+        return;
+      }
+      await dialog.dismiss();
+    });
+
+    await page.locator('#pattern-detail-view-export-btn').click();
+    const kidSaveModal = page.locator('#kid-save-modal');
+    await expect(kidSaveModal).toHaveClass(/open/);
+    await page.locator('#kid-save-make-option').click();
+    await expect(kidSaveModal).not.toHaveClass(/open/);
+
+    await expect.poll(() => page.evaluate(() => {
+      var probe = window.__patternDetailMakeExportProbe || { count: 0 };
+      return Number(probe.count || 0);
+    })).toBeGreaterThan(0);
+
+    const svgProbe = await page.evaluate(async () => {
+      var probe = window.__patternDetailMakeExportProbe || { blobs: [] };
+      var blobs = Array.isArray(probe.blobs) ? probe.blobs : [];
+      if (!blobs.length || typeof JSZip === 'undefined') {
+        return { ok: false, reason: 'missing-blobs-or-jszip' };
+      }
+      var blob = blobs[blobs.length - 1];
+      var zip = await JSZip.loadAsync(blob);
+      var svgEntryName = '';
+      var names = Object.keys(zip.files || {});
+      for (var i = 0; i < names.length; i++) {
+        if (/\.svg$/i.test(names[i])) {
+          svgEntryName = names[i];
+          break;
+        }
+      }
+      if (!svgEntryName) {
+        return { ok: false, reason: 'missing-svg-entry' };
+      }
+      var svgText = await zip.file(svgEntryName).async('text');
+      return {
+        ok: true,
+        hasBorderPath: /stroke-miterlimit\s*=\s*"8"/i.test(svgText),
+        hasHoleLabels: /<text\b/i.test(svgText)
+      };
+    });
+
+    expect(svgProbe.ok).toBe(true);
+    expect(svgProbe.hasBorderPath).toBe(false);
+    expect(svgProbe.hasHoleLabels).toBe(true);
+  });
+
+  test('locked discovery cards keep view action disabled and do not open detail modal', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const onboardingTour = page.locator('#onboarding-tour');
+    if (await onboardingTour.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTour).toBeHidden();
+    }
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(onboardingTour).toBeHidden();
 
     await page.evaluate(async () => {
       window.discoveredShapeKeys = Object.create(null);
@@ -2440,13 +2599,10 @@ test.describe('StitchLab regressions', () => {
     await page.locator('#discovery-toggle').click();
     const lockedCard = page.locator('.discovery-card.is-preview').filter({ hasText: 'Rosette (12-fold)' }).first();
     await expect(lockedCard).toBeVisible();
-    await lockedCard.getByRole('button', { name: /View Pattern/i }).click();
-
     const detailModal = page.locator('#pattern-detail-modal');
-    await expect(detailModal).toHaveClass(/open/);
-    await expect(page.locator('#pattern-detail-load-btn')).toBeDisabled();
-    await expect(page.locator('#pattern-detail-view-export-btn')).toBeDisabled();
-    await expect(page.locator('#pattern-detail-travel-btn')).toBeDisabled();
+    const viewButton = lockedCard.getByRole('button', { name: /View Pattern/i });
+    await expect(viewButton).toBeDisabled();
+    await expect(detailModal).not.toHaveClass(/open/);
   });
 
   test('core interaction sweep does not raise runtime reference/type errors', async ({ page }) => {

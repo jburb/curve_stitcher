@@ -154,9 +154,7 @@
     return buildCurrentDesignSvgString({
       includeThreads: true,
       includeGuide: false,
-      includePreview: false,
-      forceStitchingBorder: true,
-      forceStitchingHoleNumbers: true
+      includePreview: false
     });
   }
 
@@ -541,6 +539,11 @@
   async function saveUserPatternFromCurrentState(name, description) {
     await initializePatternLibrary();
     assertStitchingExperienceForUserSave();
+
+    // Persist latest runtime toggles/controls into URL before capturing patternUrl.
+    if (typeof scheduleUrlStateSync === 'function') {
+      scheduleUrlStateSync(true);
+    }
 
     var nameValidation = validatePatternName(name);
     if (!nameValidation.ok) {

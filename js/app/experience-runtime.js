@@ -2525,13 +2525,17 @@ function renderDiscoveryLibrary() {
       viewButton.type = 'button';
       viewButton.className = 'advanced-reset-btn';
       viewButton.textContent = '🔍 View Pattern';
-      viewButton.addEventListener('click', function(recordId) {
+      var canViewDetail = !isDiscovery || unlocked;
+      viewButton.disabled = !canViewDetail;
+      viewButton.setAttribute('aria-disabled', canViewDetail ? 'false' : 'true');
+      viewButton.addEventListener('click', function(recordId, canOpenDetail) {
         return function() {
+          if (!canOpenDetail) return;
           if (typeof openPatternDetailModalById === 'function') {
             openPatternDetailModalById(recordId);
           }
         };
-      }(record.id));
+      }(record.id, canViewDetail));
       actions.appendChild(viewButton);
 
       if (isDiscovery) {

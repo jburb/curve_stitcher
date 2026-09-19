@@ -207,7 +207,6 @@ async function runKidFriendlySaveSelection(mode, options) {
     includeThreads: false,
     includeGuide: normalizedMode === 'make',
     includePreview: true,
-    forceStitchingBorder: normalizedMode === 'make' && currentExperienceId === 'stitching',
     forceStitchingHoleNumbers: normalizedMode === 'make' && currentExperienceId === 'stitching'
   };
 
@@ -225,8 +224,7 @@ async function runKidFriendlySaveSelection(mode, options) {
           includeThreads: false,
           includeGuide: normalizedMode === 'make',
           includePreview: true,
-          forceStitchingBorder: true,
-          forceStitchingHoleNumbers: true
+          forceStitchingHoleNumbers: normalizedMode === 'make' && frameWindow.currentExperienceId === 'stitching'
         };
 
         if (normalizedMode === 'image') {

@@ -161,6 +161,7 @@ removeLastThreadBtn.addEventListener('click', () => {
 holeNumbersToggleBtn.addEventListener('click', () => {
   showHoleNumbers = !showHoleNumbers;
   syncHoleNumberToggles();
+  scheduleUrlStateSync(false);
   // Labels only; keep animation continuity.
   redrawAnimationInPlace();
 });
@@ -287,12 +288,14 @@ if (nestedFrameRatioSelect) {
 advancedHoleNumbersToggle.addEventListener('change', () => {
   showHoleNumbers = advancedHoleNumbersToggle.checked;
   syncHoleNumberToggles();
+  scheduleUrlStateSync(false);
   // Labels only; keep animation continuity.
   redrawAnimationInPlace();
 });
 advancedBorderEnabledInput.addEventListener('change', () => {
   borderEnabled = advancedBorderEnabledInput.checked;
   syncBorderControls();
+  scheduleUrlStateSync(false);
   // Border is style-only and should not reset animation progress.
   redrawAnimationInPlace();
 });
@@ -675,9 +678,7 @@ function openPatternSaveModal() {
     ? buildCurrentDesignSvgString({
       includeThreads: true,
       includeGuide: false,
-      includePreview: false,
-      forceStitchingBorder: true,
-      forceStitchingHoleNumbers: true
+      includePreview: false
     })
     : '';
   if (patternSavePreview) {
