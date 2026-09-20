@@ -383,7 +383,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 1. **Curve sewing cards viewer**
      - to be opened from stitching about doc modal?
-     - must include the Cambridge lib attribution: "Reproduced by kind permission of the Syndic of Cambridge University Library", and attribution to author (Edith Sommervell and M.E.Boole in this case)
+     - must include the Cambridge lib attribution: "Reproduced by kind permission of the Syndic of Cambridge University Library", and attribution to author (Edith L. Somervell and M.E.Boole in this case)
 
 1. **Acknowledgements song discovery**
      - When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options.
