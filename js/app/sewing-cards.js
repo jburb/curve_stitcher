@@ -100,13 +100,18 @@ function commitSewingPdfSrc(pageNumber) {
   }
 
   // Mobile PDF viewers can ignore fragment-only page changes in iframes.
-  // A staged reload sequence is more reliable across Firefox/Chromium/Safari mobile.
-  sewingPdfFrame.src = 'about:blank';
-  logSewingPdfDebug('mobile-reset-blank', {
-    sequence: currentSequence,
-    page: safePage
+  // Apply the target PDF immediately, then reapply at relaxed intervals to avoid churn.
+  var initialMobileSrc = buildSewingPdfSrc(safePage, {
+    cacheBustToken: String(currentSequence) + '-initial-' + String(Date.now())
   });
-  var reloadDelays = [45, 210, 470, 920];
+  sewingPdfFrame.src = initialMobileSrc;
+  logSewingPdfDebug('mobile-initial-apply', {
+    sequence: currentSequence,
+    page: safePage,
+    src: initialMobileSrc
+  });
+
+  var reloadDelays = [650, 1500];
   for (var i = 0; i < reloadDelays.length; i++) {
     (function(attemptIndex) {
       logSewingPdfDebug('mobile-reload-scheduled', {
@@ -127,7 +132,7 @@ function commitSewingPdfSrc(pageNumber) {
           return;
         }
         var mobileSrc = buildSewingPdfSrc(safePage, {
-          cacheBustToken: String(currentSequence) + '-' + String(attemptIndex) + '-' + String(Date.now())
+          cacheBustToken: String(currentSequence) + '-retry-' + String(attemptIndex) + '-' + String(Date.now())
         });
         sewingPdfFrame.src = mobileSrc;
         logSewingPdfDebug('mobile-reload-applied', {
