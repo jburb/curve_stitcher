@@ -382,7 +382,8 @@ This section describes the practical steps for adding a new experience named zoo
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
 
 1. **Curve sewing cards viewer**
-     - to be opened from stitching about doc modal?
+     - to be opened from stitching about doc modal.
+	 - should include the 
      - must include the Cambridge lib attribution: "Reproduced by kind permission of the Syndic of Cambridge University Library", and attribution to author (Edith L. Somervell and M.E.Boole in this case)
 
 1. **Acknowledgements song discovery**
