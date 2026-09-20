@@ -301,6 +301,184 @@
   #experience-acknowledgments-toggle:hover {
     background: #f5f8ff;
   }
+  #experience-sewing-cards-toggle {
+    border: 1px solid #b9cef2;
+    background: #f0f5ff;
+    color: #2f5fb3;
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #experience-sewing-cards-toggle:hover {
+    background: #f5f8ff;
+  }
+  .sewing-cards-card {
+    width: min(1380px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    padding: 14px;
+    font-family: 'FoliesBergere', 'Nunito', sans-serif;
+  }
+  .sewing-cards-card h4,
+  .sewing-cards-card h5,
+  .sewing-cards-card label,
+  .sewing-cards-card select,
+  .sewing-cards-card button,
+  .sewing-cards-card span,
+  .sewing-cards-card figcaption,
+  .sewing-cards-card p {
+    font-family: 'FoliesBergere', 'Nunito', sans-serif;
+  }
+  .sewing-cards-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .sewing-cards-header h4 {
+    margin: 0;
+  }
+  .sewing-cards-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .sewing-cards-panel,
+  .sewing-pdf-panel {
+    border: 1px solid #d8dfec;
+    border-radius: 11px;
+    background: #f8fbff;
+    padding: 10px;
+  }
+  .sewing-cards-panel-header,
+  .sewing-pdf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .sewing-cards-panel-header label {
+    font-size: 12px;
+    color: #405b88;
+    font-weight: 700;
+  }
+  #sewing-cards-series-select {
+    border: 1px solid #cfd9ef;
+    background: #fff;
+    color: #2f4368;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .sewing-cards-stage-wrap {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .sewing-cards-figure {
+    margin: 0;
+    border: 1px solid #d8dfec;
+    border-radius: 10px;
+    padding: 8px;
+    background: #fff;
+  }
+  .sewing-cards-image {
+    width: 100%;
+    height: auto;
+    max-width: 2000px;
+    max-height: min(58vh, 2000px);
+    object-fit: contain;
+    display: block;
+    border-radius: 8px;
+    background: #0d0d11;
+  }
+  .sewing-cards-caption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #425f8f;
+    text-align: center;
+  }
+  .sewing-cards-thumbnails {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 6px;
+    max-height: 180px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+  .sewing-cards-thumb {
+    border: 1px solid #cfdaef;
+    border-radius: 8px;
+    background: #fff;
+    padding: 2px;
+    cursor: pointer;
+  }
+  .sewing-cards-thumb[aria-selected="true"] {
+    border-color: #2f5fb3;
+    box-shadow: 0 0 0 2px rgba(47, 95, 179, 0.28);
+  }
+  .sewing-cards-thumbnail-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+    background: #111;
+  }
+  .sewing-cards-attribution {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: #4a668f;
+    line-height: 1.35;
+    text-align: center;
+  }
+  .sewing-cards-btn {
+    border: 1px solid #cfdaee;
+    background: #ffffff;
+    color: #2f476f;
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .sewing-cards-btn.nav {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    padding: 0;
+    font-size: 16px;
+  }
+  .sewing-pdf-header h5 {
+    margin: 0;
+    font-size: 13px;
+    color: #30476f;
+  }
+  .sewing-pdf-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sewing-pdf-page-label {
+    min-width: 72px;
+    text-align: center;
+    font-size: 12px;
+    color: #4a668f;
+    font-weight: 700;
+  }
+  .sewing-pdf-frame {
+    width: 100%;
+    height: min(70vh, 880px);
+    border: 1px solid #d8dfec;
+    border-radius: 10px;
+    background: #fff;
+  }
   .acknowledgments-card {
     width: min(1120px, 100%);
     padding: 14px 14px 12px;
@@ -1948,6 +2126,12 @@
     overflow: auto;
   }
 
+  .modal-card.sewing-cards-card {
+    width: min(1380px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+  }
+
   .modal-card h4 {
     margin: 0 0 10px;
     color: #2b3e63;
@@ -2378,6 +2562,12 @@
     color: #e4eeff;
   }
 
+  html[data-theme="dark"] #experience-sewing-cards-toggle {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
+  }
+
   html[data-theme="dark"] .active-thread-overlay {
     background: transparent;
     backdrop-filter: none;
@@ -2408,6 +2598,37 @@
     border-color: #3f4f66;
     color: #dce7f8;
     box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] .modal-card.sewing-cards-card {
+    background: #1f2936;
+    border-color: #3f4f66;
+    color: #dce7f8;
+    box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] .sewing-cards-panel,
+  html[data-theme="dark"] .sewing-pdf-panel,
+  html[data-theme="dark"] .sewing-cards-figure,
+  html[data-theme="dark"] .sewing-pdf-frame {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+  }
+
+  html[data-theme="dark"] .sewing-cards-attribution,
+  html[data-theme="dark"] .sewing-cards-caption,
+  html[data-theme="dark"] .sewing-pdf-page-label,
+  html[data-theme="dark"] .sewing-pdf-header h5,
+  html[data-theme="dark"] .sewing-cards-panel-header label {
+    color: #c9daef;
+  }
+
+  html[data-theme="dark"] .sewing-cards-btn,
+  html[data-theme="dark"] .sewing-cards-thumb,
+  html[data-theme="dark"] #sewing-cards-series-select {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
   }
 
   html[data-theme="dark"] #pattern-save-modal.modal-backdrop,
@@ -2619,6 +2840,24 @@
     }
     .acknowledgments-card {
       padding: 10px;
+    }
+    .sewing-cards-card {
+      padding: 10px;
+    }
+    .sewing-cards-layout {
+      grid-template-columns: 1fr;
+    }
+    .sewing-cards-stage-wrap {
+      grid-template-columns: 1fr;
+    }
+    .sewing-cards-btn.nav {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      padding: 7px 11px;
+    }
+    .sewing-pdf-frame {
+      height: min(58vh, 680px);
     }
     .acknowledgments-header {
       align-items: flex-start;

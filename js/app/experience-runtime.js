@@ -1453,6 +1453,7 @@ function syncActiveThreadPlaybackOverlay(threadIndex) {
 
 function applyCurrentExperienceInfo() {
   var experience = getExperienceById(currentExperienceId);
+  var canShowSewingCards = currentExperienceId === 'stitching';
   experienceInfoTitle.textContent = experience.infoTitle || ('About ' + (experience.title || 'Experience'));
   var aboutHtmlPath = normalizeAllowedAboutDocPath(experience.aboutHtmlPath || '');
   var hasHtmlAbout = !!aboutHtmlPath;
@@ -1469,6 +1470,13 @@ function applyCurrentExperienceInfo() {
     } else {
       experienceInfoHtmlFrame.removeAttribute('src');
     }
+  }
+  if (experienceSewingCardsToggle) {
+    experienceSewingCardsToggle.hidden = !canShowSewingCards;
+    experienceSewingCardsToggle.disabled = !canShowSewingCards;
+  }
+  if (!canShowSewingCards && typeof closeSewingCardsViewer === 'function') {
+    closeSewingCardsViewer();
   }
   syncExperienceNarrationState(false, '');
 }

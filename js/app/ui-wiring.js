@@ -1112,6 +1112,33 @@ if (experienceAcknowledgmentsToggle) {
   });
 }
 
+if (experienceSewingCardsToggle) {
+  experienceSewingCardsToggle.addEventListener('click', () => {
+    if (typeof triggerSewingCardsViewerOpen === 'function') {
+      triggerSewingCardsViewerOpen();
+    }
+  });
+}
+
+if (sewingCardsCloseBtn) {
+  sewingCardsCloseBtn.addEventListener('click', () => {
+    if (typeof closeSewingCardsViewer === 'function') {
+      closeSewingCardsViewer();
+    }
+    if (experienceSewingCardsToggle) {
+      experienceSewingCardsToggle.focus();
+    }
+  });
+}
+
+if (sewingCardsModal) {
+  sewingCardsModal.addEventListener('click', (event) => {
+    if (event.target === sewingCardsModal && typeof closeSewingCardsViewer === 'function') {
+      closeSewingCardsViewer();
+    }
+  });
+}
+
 if (acknowledgmentsCloseBtn) {
   acknowledgmentsCloseBtn.addEventListener('click', () => {
     closeAcknowledgmentsViewer();
@@ -1190,6 +1217,8 @@ window.addEventListener('message', function(event) {
   if (typeof data === 'string') {
     if (data === 'stitchlab-open-acknowledgments') {
       triggerAcknowledgmentsViewerOpen();
+    } else if (data === 'stitchlab-open-sewing-cards' && typeof triggerSewingCardsViewerOpen === 'function') {
+      triggerSewingCardsViewerOpen();
     }
     return;
   }
@@ -1218,6 +1247,11 @@ window.addEventListener('message', function(event) {
 
   if (data.type === 'stitchlab-open-acknowledgments') {
     triggerAcknowledgmentsViewerOpen(!!data.autoPlay);
+    return;
+  }
+
+  if (data.type === 'stitchlab-open-sewing-cards' && typeof triggerSewingCardsViewerOpen === 'function') {
+    triggerSewingCardsViewerOpen();
   }
 });
 
@@ -1233,6 +1267,15 @@ document.addEventListener('keydown', (event) => {
   }
   if (acknowledgmentsModal && acknowledgmentsModal.classList.contains('open')) {
     closeAcknowledgmentsViewer();
+    return;
+  }
+  if (sewingCardsModal && sewingCardsModal.classList.contains('open')) {
+    if (typeof closeSewingCardsViewer === 'function') {
+      closeSewingCardsViewer();
+    }
+    if (experienceSewingCardsToggle) {
+      experienceSewingCardsToggle.focus();
+    }
     return;
   }
   if (kidSaveModal.classList.contains('open')) {
