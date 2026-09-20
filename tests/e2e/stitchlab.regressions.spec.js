@@ -1047,6 +1047,7 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('sewing cards viewer opens from About actions and defaults to series 1 card 0 page 34', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
     await page.locator('#experience-info-toggle').click();
@@ -1083,6 +1084,7 @@ test.describe('StitchLab regressions', () => {
   });
 
   test('sewing cards image navigation is independent from PDF page navigation', async ({ page }) => {
+    await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
     await page.locator('#experience-info-toggle').click();
@@ -1103,12 +1105,21 @@ test.describe('StitchLab regressions', () => {
       });
     }).toBe(35);
 
+    await page.locator('#sewing-pdf-next-btn').click();
+    await page.locator('#sewing-pdf-next-btn').click();
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 37');
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return window.sewingCardsViewerState ? Number(window.sewingCardsViewerState.pdfPage) : null;
+      });
+    }).toBe(37);
+
     await page.locator('#sewing-cards-next-btn').click();
     await expect(page.locator('#sewing-cards-card-caption')).toContainText('Card 2');
-    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 35');
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 37');
 
     await page.locator('#sewing-pdf-prev-btn').click();
-    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 34');
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 36');
   });
 
   test('advanced pane stays open during thread-card interactions', async ({ page }) => {

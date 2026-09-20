@@ -314,9 +314,10 @@
     background: #f5f8ff;
   }
   .sewing-cards-card {
-    width: min(1380px, 100%);
-    height: calc(100vh - 32px);
-    max-height: calc(100vh - 32px);
+    width: min(1380px, 80vw);
+    max-width: 80vw;
+    height: 80vh;
+    max-height: 80vh;
     overflow: hidden;
     padding: 14px;
     font-family: 'FoliesBergere', 'Nunito', sans-serif;
@@ -369,6 +370,7 @@
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     row-gap: 8px;
+    overflow: hidden;
   }
   .sewing-cards-panel-header,
   .sewing-pdf-header {
@@ -510,6 +512,8 @@
     border-radius: 10px;
     background: #fff;
     min-height: 0;
+    display: block;
+    overflow: hidden;
   }
   .acknowledgments-card {
     width: min(1120px, 100%);
@@ -2881,7 +2885,10 @@
     }
     .sewing-cards-card {
       padding: 10px;
-      height: calc(100vh - 32px);
+      width: min(1380px, 80vw);
+      max-width: 80vw;
+      height: min(80vh, 900px);
+      max-height: min(80vh, 900px);
     }
     .sewing-cards-layout {
       grid-template-columns: 1fr;
