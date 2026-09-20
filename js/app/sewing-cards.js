@@ -51,12 +51,25 @@ function shouldUseMobilePdfWorkaround() {
     || ua.indexOf('ipod') !== -1;
 }
 
+function shouldLogSewingPdfDebug() {
+  if (shouldUseMobilePdfWorkaround()) return true;
+  return !!(window && window.SEWING_PDF_DEBUG === true);
+}
+
+function logSewingPdfDebug(eventName, payload) {
+  if (!shouldLogSewingPdfDebug()) return;
+  if (typeof console === 'undefined' || !console || typeof console.log !== 'function') return;
+  console.log('[sewing-pdf]', eventName, payload || {});
+}
+
 function clearSewingPdfWorkaroundTimers() {
+  var priorCount = sewingCardsViewerState.pdfWorkaroundTimerIds ? sewingCardsViewerState.pdfWorkaroundTimerIds.length : 0;
   if (!sewingCardsViewerState.pdfWorkaroundTimerIds || !sewingCardsViewerState.pdfWorkaroundTimerIds.length) return;
   for (var i = 0; i < sewingCardsViewerState.pdfWorkaroundTimerIds.length; i++) {
     clearTimeout(sewingCardsViewerState.pdfWorkaroundTimerIds[i]);
   }
   sewingCardsViewerState.pdfWorkaroundTimerIds = [];
+  logSewingPdfDebug('timers-cleared', { cleared: priorCount });
 }
 
 function commitSewingPdfSrc(pageNumber) {
@@ -65,11 +78,23 @@ function commitSewingPdfSrc(pageNumber) {
   var safePage = Math.max(1, clampSewingCardsInt(pageNumber, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
   sewingCardsViewerState.pdfCommitSequence += 1;
   var currentSequence = sewingCardsViewerState.pdfCommitSequence;
+  logSewingPdfDebug('commit-start', {
+    requestedPage: pageNumber,
+    safePage: safePage,
+    sequence: currentSequence,
+    mobileWorkaround: shouldUseMobilePdfWorkaround()
+  });
   clearSewingPdfWorkaroundTimers();
 
   if (!shouldUseMobilePdfWorkaround()) {
-    sewingPdfFrame.src = buildSewingPdfSrc(safePage, {
+    var desktopSrc = buildSewingPdfSrc(safePage, {
       cacheBustToken: String(currentSequence) + '-' + String(Date.now())
+    });
+    sewingPdfFrame.src = desktopSrc;
+    logSewingPdfDebug('commit-desktop-src', {
+      sequence: currentSequence,
+      page: safePage,
+      src: desktopSrc
     });
     return;
   }
@@ -77,14 +102,39 @@ function commitSewingPdfSrc(pageNumber) {
   // Mobile PDF viewers can ignore fragment-only page changes in iframes.
   // A staged reload sequence is more reliable across Firefox/Chromium/Safari mobile.
   sewingPdfFrame.src = 'about:blank';
+  logSewingPdfDebug('mobile-reset-blank', {
+    sequence: currentSequence,
+    page: safePage
+  });
   var reloadDelays = [45, 210, 470, 920];
   for (var i = 0; i < reloadDelays.length; i++) {
     (function(attemptIndex) {
+      logSewingPdfDebug('mobile-reload-scheduled', {
+        sequence: currentSequence,
+        page: safePage,
+        attempt: attemptIndex,
+        delayMs: reloadDelays[attemptIndex]
+      });
       var timerId = window.setTimeout(function() {
         if (!sewingPdfFrame) return;
-        if (sewingCardsViewerState.pdfCommitSequence !== currentSequence) return;
-        sewingPdfFrame.src = buildSewingPdfSrc(safePage, {
+        if (sewingCardsViewerState.pdfCommitSequence !== currentSequence) {
+          logSewingPdfDebug('mobile-reload-skipped-stale', {
+            expectedSequence: currentSequence,
+            activeSequence: sewingCardsViewerState.pdfCommitSequence,
+            attempt: attemptIndex,
+            page: safePage
+          });
+          return;
+        }
+        var mobileSrc = buildSewingPdfSrc(safePage, {
           cacheBustToken: String(currentSequence) + '-' + String(attemptIndex) + '-' + String(Date.now())
+        });
+        sewingPdfFrame.src = mobileSrc;
+        logSewingPdfDebug('mobile-reload-applied', {
+          sequence: currentSequence,
+          page: safePage,
+          attempt: attemptIndex,
+          src: mobileSrc
         });
       }, reloadDelays[attemptIndex]);
       sewingCardsViewerState.pdfWorkaroundTimerIds.push(timerId);
@@ -168,9 +218,17 @@ function syncSewingPdfViewer() {
 
   var safePage = Math.max(1, clampSewingCardsInt(sewingCardsViewerState.pdfPage, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
   sewingCardsViewerState.pdfPage = safePage;
+  logSewingPdfDebug('sync-viewer', {
+    page: safePage,
+    labelBefore: sewingPdfPageLabel ? String(sewingPdfPageLabel.textContent || '') : ''
+  });
   commitSewingPdfSrc(safePage);
   if (sewingPdfPageLabel) {
     sewingPdfPageLabel.textContent = 'Page ' + String(safePage);
+    logSewingPdfDebug('label-updated', {
+      label: sewingPdfPageLabel.textContent,
+      page: safePage
+    });
   }
   if (sewingPdfPrevBtn) {
     sewingPdfPrevBtn.disabled = safePage <= 1;
@@ -201,6 +259,11 @@ function stepSewingCard(delta) {
 function stepSewingPdfPage(delta) {
   var nextPage = sewingCardsViewerState.pdfPage + (delta < 0 ? -1 : 1);
   sewingCardsViewerState.pdfPage = Math.max(1, nextPage);
+  logSewingPdfDebug('step-page', {
+    delta: delta,
+    nextPage: nextPage,
+    committedPage: sewingCardsViewerState.pdfPage
+  });
   syncSewingPdfViewer();
 }
 
@@ -216,6 +279,12 @@ function openSewingCardsViewer(options) {
   sewingCardsViewerState.cardIndex = requestedCardIndex;
   sewingCardsViewerState.pdfPage = requestedPdfPage;
   sewingCardsViewerState.renderedSeriesNumber = -1;
+  logSewingPdfDebug('open-viewer', {
+    requestedSeries: requestedSeries,
+    requestedCardIndex: requestedCardIndex,
+    requestedPdfPage: requestedPdfPage,
+    mobileWorkaround: shouldUseMobilePdfWorkaround()
+  });
 
   sewingCardsModal.classList.add('open');
   syncSewingCardsViewer();
@@ -275,6 +344,21 @@ if (sewingPdfPrevBtn) {
 if (sewingPdfNextBtn) {
   sewingPdfNextBtn.addEventListener('click', function() {
     stepSewingPdfPage(1);
+  });
+}
+
+if (sewingPdfFrame) {
+  sewingPdfFrame.addEventListener('load', function() {
+    logSewingPdfDebug('iframe-load', {
+      sequence: sewingCardsViewerState.pdfCommitSequence,
+      src: sewingPdfFrame.src
+    });
+  });
+  sewingPdfFrame.addEventListener('error', function() {
+    logSewingPdfDebug('iframe-error', {
+      sequence: sewingCardsViewerState.pdfCommitSequence,
+      src: sewingPdfFrame.src
+    });
   });
 }
 

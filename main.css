@@ -2163,7 +2163,8 @@
   }
 
   .modal-card.sewing-cards-card {
-    width: min(1380px, 100%);
+    width: 90vw;
+    max-width: 90vw;
     max-height: calc(100vh - 32px);
     overflow: auto;
   }
@@ -2885,8 +2886,8 @@
     }
     .sewing-cards-card {
       padding: 10px;
-      width: min(1380px, 90vw);
-      max-width: 95vw;
+      width: 90vw;
+      max-width: 90vw;
       height: min(80vh, 900px);
       max-height: min(80vh, 900px);
     }
