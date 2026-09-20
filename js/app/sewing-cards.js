@@ -31,8 +31,17 @@ function buildSewingCardImagePath(seriesNumber, cardIndex) {
 
 function buildSewingPdfSrc(pageNumber) {
   var safePage = Math.max(1, clampSewingCardsInt(pageNumber, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
-  // Include a query token so iframe updates are robust even when hash-only updates are ignored.
-  return SEWING_CARDS_PDF_PATH + '?viewerPage=' + String(safePage) + '#page=' + String(safePage) + '&zoom=page-fit';
+  return SEWING_CARDS_PDF_PATH + '#page=' + String(safePage) + '&zoom=page-fit';
+}
+
+function commitSewingPdfSrc(src) {
+  if (!sewingPdfFrame) return;
+  // Force a fresh navigation target so Firefox mobile consistently re-applies page fragments.
+  sewingPdfFrame.removeAttribute('src');
+  sewingPdfFrame.src = 'about:blank';
+  window.setTimeout(function() {
+    sewingPdfFrame.src = src;
+  }, 0);
 }
 
 function renderSewingCardsSeriesPicker() {
@@ -111,7 +120,7 @@ function syncSewingPdfViewer() {
 
   var safePage = Math.max(1, clampSewingCardsInt(sewingCardsViewerState.pdfPage, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
   sewingCardsViewerState.pdfPage = safePage;
-  sewingPdfFrame.src = buildSewingPdfSrc(safePage);
+  commitSewingPdfSrc(buildSewingPdfSrc(safePage));
   if (sewingPdfPageLabel) {
     sewingPdfPageLabel.textContent = 'Page ' + String(safePage);
   }
@@ -138,7 +147,7 @@ function syncSewingCardsViewer(options) {
 function stepSewingCard(delta) {
   var nextIndex = sewingCardsViewerState.cardIndex + (delta < 0 ? -1 : 1);
   sewingCardsViewerState.cardIndex = clampSewingCardsInt(nextIndex, 0, SEWING_CARDS_PER_SERIES - 1, 0);
-  syncSewingCardsViewer({ syncPdf: true });
+  syncSewingCardsViewer();
 }
 
 function stepSewingPdfPage(delta) {
@@ -160,8 +169,11 @@ function openSewingCardsViewer(options) {
   sewingCardsViewerState.pdfPage = requestedPdfPage;
   sewingCardsViewerState.renderedSeriesNumber = -1;
 
-  syncSewingCardsViewer();
   sewingCardsModal.classList.add('open');
+  syncSewingCardsViewer();
+  window.requestAnimationFrame(function() {
+    syncSewingPdfViewer();
+  });
   if (sewingCardsCloseBtn) {
     sewingCardsCloseBtn.focus();
   }
