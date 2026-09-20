@@ -11,8 +11,8 @@ var sewingCardsViewerState = {
   cardIndex: SEWING_CARDS_DEFAULT_CARD_INDEX,
   pdfPage: SEWING_CARDS_DEFAULT_PDF_PAGE,
   renderedSeriesNumber: -1,
-  pdfReapplyTimerId: null,
-  pdfReapplyAttemptsRemaining: 0
+  pdfCommitSequence: 0,
+  pdfWorkaroundTimerIds: []
 };
 
 function clampSewingCardsInt(value, min, max, fallback) {
@@ -41,42 +41,54 @@ function buildSewingPdfSrc(pageNumber, options) {
   return basePath + '#page=' + String(safePage) + '&zoom=page-fit&view=FitH&pagemode=none';
 }
 
-function shouldUseFirefoxMobilePdfWorkaround() {
+function shouldUseMobilePdfWorkaround() {
   if (!window || !window.navigator) return false;
   var ua = String(window.navigator.userAgent || '').toLowerCase();
-  var isFirefox = ua.indexOf('firefox') !== -1;
-  var isMobile = ua.indexOf('mobile') !== -1 || ua.indexOf('android') !== -1;
-  return isFirefox && isMobile;
+  return ua.indexOf('mobile') !== -1
+    || ua.indexOf('android') !== -1
+    || ua.indexOf('iphone') !== -1
+    || ua.indexOf('ipad') !== -1
+    || ua.indexOf('ipod') !== -1;
+}
+
+function clearSewingPdfWorkaroundTimers() {
+  if (!sewingCardsViewerState.pdfWorkaroundTimerIds || !sewingCardsViewerState.pdfWorkaroundTimerIds.length) return;
+  for (var i = 0; i < sewingCardsViewerState.pdfWorkaroundTimerIds.length; i++) {
+    clearTimeout(sewingCardsViewerState.pdfWorkaroundTimerIds[i]);
+  }
+  sewingCardsViewerState.pdfWorkaroundTimerIds = [];
 }
 
 function commitSewingPdfSrc(pageNumber) {
   if (!sewingPdfFrame) return;
 
   var safePage = Math.max(1, clampSewingCardsInt(pageNumber, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
-  var src = buildSewingPdfSrc(safePage, { cacheBustToken: Date.now() });
-  sewingPdfFrame.src = src;
+  sewingCardsViewerState.pdfCommitSequence += 1;
+  var currentSequence = sewingCardsViewerState.pdfCommitSequence;
+  clearSewingPdfWorkaroundTimers();
 
-  if (sewingCardsViewerState.pdfReapplyTimerId) {
-    clearTimeout(sewingCardsViewerState.pdfReapplyTimerId);
-    sewingCardsViewerState.pdfReapplyTimerId = null;
+  if (!shouldUseMobilePdfWorkaround()) {
+    sewingPdfFrame.src = buildSewingPdfSrc(safePage, {
+      cacheBustToken: String(currentSequence) + '-' + String(Date.now())
+    });
+    return;
   }
-  sewingCardsViewerState.pdfReapplyAttemptsRemaining = 0;
 
-  // Firefox mobile can land on page 1 despite a page fragment on the first set.
-  // Reapplying once after a short delay improves reliability without affecting desktop behavior.
-  if (shouldUseFirefoxMobilePdfWorkaround()) {
-    sewingCardsViewerState.pdfReapplyAttemptsRemaining = 2;
-    (function scheduleReapply() {
-      sewingCardsViewerState.pdfReapplyTimerId = window.setTimeout(function() {
-        sewingPdfFrame.src = buildSewingPdfSrc(safePage, { cacheBustToken: Date.now() });
-        sewingCardsViewerState.pdfReapplyAttemptsRemaining -= 1;
-        if (sewingCardsViewerState.pdfReapplyAttemptsRemaining > 0) {
-          scheduleReapply();
-          return;
-        }
-        sewingCardsViewerState.pdfReapplyTimerId = null;
-      }, 170);
-    })();
+  // Mobile PDF viewers can ignore fragment-only page changes in iframes.
+  // A staged reload sequence is more reliable across Firefox/Chromium/Safari mobile.
+  sewingPdfFrame.src = 'about:blank';
+  var reloadDelays = [45, 210, 470, 920];
+  for (var i = 0; i < reloadDelays.length; i++) {
+    (function(attemptIndex) {
+      var timerId = window.setTimeout(function() {
+        if (!sewingPdfFrame) return;
+        if (sewingCardsViewerState.pdfCommitSequence !== currentSequence) return;
+        sewingPdfFrame.src = buildSewingPdfSrc(safePage, {
+          cacheBustToken: String(currentSequence) + '-' + String(attemptIndex) + '-' + String(Date.now())
+        });
+      }, reloadDelays[attemptIndex]);
+      sewingCardsViewerState.pdfWorkaroundTimerIds.push(timerId);
+    })(i);
   }
 }
 
@@ -217,6 +229,7 @@ function openSewingCardsViewer(options) {
 
 function closeSewingCardsViewer() {
   if (!sewingCardsModal) return;
+  clearSewingPdfWorkaroundTimers();
   sewingCardsModal.classList.remove('open');
 }
 

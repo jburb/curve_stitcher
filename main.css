@@ -2885,8 +2885,8 @@
     }
     .sewing-cards-card {
       padding: 10px;
-      width: min(1380px, 80vw);
-      max-width: 80vw;
+      width: min(1380px, 90vw);
+      max-width: 90vw;
       height: min(80vh, 900px);
       max-height: min(80vh, 900px);
     }
