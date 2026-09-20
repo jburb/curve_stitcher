@@ -1046,6 +1046,71 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
   });
 
+  test('sewing cards viewer opens from About actions and defaults to series 1 card 0 page 34', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+
+    const panelActions = await page.evaluate(() => {
+      const actions = document.querySelector('.experience-info-actions');
+      if (!actions) return [];
+      return Array.from(actions.querySelectorAll('button')).map((btn) => btn.id);
+    });
+
+    expect(panelActions).toContain('experience-narrate-toggle');
+    expect(panelActions).toContain('experience-sewing-cards-toggle');
+    expect(panelActions).toContain('experience-acknowledgments-toggle');
+    expect(panelActions.indexOf('experience-sewing-cards-toggle')).toBeGreaterThan(panelActions.indexOf('experience-narrate-toggle'));
+    expect(panelActions.indexOf('experience-sewing-cards-toggle')).toBeLessThan(panelActions.indexOf('experience-acknowledgments-toggle'));
+
+    await page.locator('#experience-sewing-cards-toggle').click();
+
+    const modal = page.locator('#sewing-cards-modal');
+    await expect(modal).toHaveClass(/open/);
+    await expect(page.locator('#sewing-cards-series-select')).toHaveValue('1');
+    await expect(page.locator('#sewing-cards-card-caption')).toContainText('Series 1');
+    await expect(page.locator('#sewing-cards-card-caption')).toContainText('Card 0');
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 34');
+
+    const firstThumb = page.locator('#sewing-cards-thumbnails .sewing-cards-thumb').first();
+    await expect(firstThumb).toHaveAttribute('aria-selected', 'true');
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return window.sewingCardsViewerState ? Number(window.sewingCardsViewerState.pdfPage) : null;
+      });
+    }).toBe(34);
+  });
+
+  test('sewing cards image navigation is independent from PDF page navigation', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-sewing-cards-toggle').click();
+
+    await expect(page.locator('#sewing-cards-modal')).toHaveClass(/open/);
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 34');
+
+    await page.locator('#sewing-cards-next-btn').click();
+    await expect(page.locator('#sewing-cards-card-caption')).toContainText('Card 1');
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 34');
+
+    await page.locator('#sewing-pdf-next-btn').click();
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 35');
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return window.sewingCardsViewerState ? Number(window.sewingCardsViewerState.pdfPage) : null;
+      });
+    }).toBe(35);
+
+    await page.locator('#sewing-cards-next-btn').click();
+    await expect(page.locator('#sewing-cards-card-caption')).toContainText('Card 2');
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 35');
+
+    await page.locator('#sewing-pdf-prev-btn').click();
+    await expect(page.locator('#sewing-pdf-page-label')).toContainText('Page 34');
+  });
+
   test('advanced pane stays open during thread-card interactions', async ({ page }) => {
     await page.goto('/stitchlab.html');
     await page.locator('#gear').click();

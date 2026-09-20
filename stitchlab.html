@@ -43,6 +43,7 @@
   <script src="js/app/mashrabiya.js" defer></script>
   <script src="js/app/export.js" defer></script>
   <script src="js/app/acknowledgments.js" defer></script>
+  <script src="js/app/sewing-cards.js" defer></script>
   <script src="js/app/ui-wiring.js" defer></script>
 </head>
 
@@ -123,6 +124,7 @@
   <iframe id="experience-info-html" title="Experience details" hidden loading="lazy" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>
   <div class="experience-info-actions">
     <button id="experience-narrate-toggle" type="button" aria-pressed="false">🔊 Hear this</button>
+    <button id="experience-sewing-cards-toggle" type="button" hidden>🪡 Sewing cards</button>
     <button id="experience-acknowledgments-toggle" type="button">Acknowledgments</button>
     <span id="experience-narration-status" role="status" aria-live="polite"></span>
   </div>
@@ -595,6 +597,44 @@
   </div>
 </div>
 
+<div id="sewing-cards-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sewing-cards-title">
+  <div class="modal-card sewing-cards-card">
+    <div class="sewing-cards-header">
+      <h4 id="sewing-cards-title">Boole Curve-Sewing Cards</h4>
+      <button id="sewing-cards-close-btn" type="button" class="sewing-cards-btn">Close</button>
+    </div>
+    <div class="sewing-cards-layout">
+      <section class="sewing-cards-panel" aria-label="Curve sewing cards viewer">
+        <div class="sewing-cards-panel-header">
+          <label for="sewing-cards-series-select">Card series</label>
+          <select id="sewing-cards-series-select"></select>
+        </div>
+        <div class="sewing-cards-stage-wrap">
+          <button id="sewing-cards-prev-btn" type="button" class="sewing-cards-btn nav" aria-label="Previous card">◀</button>
+          <figure class="sewing-cards-figure">
+            <img id="sewing-cards-active-image" class="sewing-cards-image" alt="Curve sewing card" loading="lazy" draggable="false">
+            <figcaption id="sewing-cards-card-caption" class="sewing-cards-caption"></figcaption>
+          </figure>
+          <button id="sewing-cards-next-btn" type="button" class="sewing-cards-btn nav" aria-label="Next card">▶</button>
+        </div>
+        <div id="sewing-cards-thumbnails" class="sewing-cards-thumbnails" role="listbox" aria-label="Select a card"></div>
+        <p class="sewing-cards-attribution">Reproduced by kind permission of the Syndic of Cambridge University Library. Authors: Mary Everest Boole and Edith L. Somervell.</p>
+      </section>
+      <section class="sewing-pdf-panel" aria-label="A Rhythmic Approach to Mathematics">
+        <div class="sewing-pdf-header">
+          <h5>A Rhythmic Approach to Mathematics (PDF)</h5>
+          <div class="sewing-pdf-controls">
+            <button id="sewing-pdf-prev-btn" type="button" class="sewing-cards-btn">Prev page</button>
+            <span id="sewing-pdf-page-label" class="sewing-pdf-page-label">Page 34</span>
+            <button id="sewing-pdf-next-btn" type="button" class="sewing-cards-btn">Next page</button>
+          </div>
+        </div>
+        <iframe id="sewing-pdf-frame" class="sewing-pdf-frame" title="A Rhythmic Approach to Mathematics PDF viewer" loading="lazy"></iframe>
+      </section>
+    </div>
+  </div>
+</div>
+
 <div id="acknowledgments-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="acknowledgments-title" aria-describedby="acknowledgments-line-text">
   <div class="modal-card acknowledgments-card">
     <div class="acknowledgments-header">
@@ -814,8 +854,21 @@
   var experienceInfoHtmlFrame = document.getElementById('experience-info-html');
   var experienceInfoClose = document.getElementById('experience-info-close');
   var experienceNarrateToggle = document.getElementById('experience-narrate-toggle');
+  var experienceSewingCardsToggle = document.getElementById('experience-sewing-cards-toggle');
   var experienceAcknowledgmentsToggle = document.getElementById('experience-acknowledgments-toggle');
   var experienceNarrationStatus = document.getElementById('experience-narration-status');
+  var sewingCardsModal = document.getElementById('sewing-cards-modal');
+  var sewingCardsSeriesSelect = document.getElementById('sewing-cards-series-select');
+  var sewingCardsActiveImage = document.getElementById('sewing-cards-active-image');
+  var sewingCardsCardCaption = document.getElementById('sewing-cards-card-caption');
+  var sewingCardsThumbnails = document.getElementById('sewing-cards-thumbnails');
+  var sewingCardsPrevBtn = document.getElementById('sewing-cards-prev-btn');
+  var sewingCardsNextBtn = document.getElementById('sewing-cards-next-btn');
+  var sewingCardsCloseBtn = document.getElementById('sewing-cards-close-btn');
+  var sewingPdfPrevBtn = document.getElementById('sewing-pdf-prev-btn');
+  var sewingPdfNextBtn = document.getElementById('sewing-pdf-next-btn');
+  var sewingPdfPageLabel = document.getElementById('sewing-pdf-page-label');
+  var sewingPdfFrame = document.getElementById('sewing-pdf-frame');
   var acknowledgmentsModal = document.getElementById('acknowledgments-modal');
   var acknowledgmentsStage = document.getElementById('acknowledgments-stage');
   var acknowledgmentsLineText = document.getElementById('acknowledgments-line-text');
