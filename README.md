@@ -382,9 +382,21 @@ This section describes the practical steps for adding a new experience named zoo
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
 
 1. **Curve sewing cards viewer**
-     - to be opened from stitching about doc modal.
-	 - should include the 
-     - must include the Cambridge lib attribution: "Reproduced by kind permission of the Syndic of Cambridge University Library", and attribution to author (Edith L. Somervell and M.E.Boole in this case)
+     - to show the original Boole Curve Sewing cards which accompanied Edith L. Somervell's book, "A Rhythmic Approach to Mathematics"
+     - to be opened from stitching about doc modal, via a new "sewing cards" button with needle and thread or similar icon, between the existing "hear this" and "acknowledgments" buttons.
+	 - the sweing cards modal should be large enough to fit the following content within the modal, in however many divs/containers/panes required:
+	   - a card series picker
+	   - a carousel view of the cards in a given series, wherein the active/selected card is displayed at a readable size not exceeding 2000 pixels on a side.
+	   - a viewer for the rhythmic approach to mathematics PDF from our assets folder, by default opening to page 33 but allowing forward/backward page navigation via button presses.
+     - the portion of the modal which shows the sewing card images must include the Cambridge lib attribution: "Reproduced by kind permission of the Syndic of Cambridge University Library", and attribution to authors (Mary Everest Boole and Edith L. Somervell)
+	 - the general flow of the interaction would be:
+	   - navigation among sewing cards is independent of PDF navigation, though both types of content are presented within the same card viewer modal, simultaneously
+	   - navigation among the cards is as follows:
+	     - series 1 is chosen by default from the series picker. selection from the series picker loads the selected series of card images into the carousel view.
+		 - card 0 is shown first by default in the carousel. the user can choose which card is active/given full view (again with max 2000px on an image side restriction) in the carousel by navigating left/right or up/down arrows as appropriate to the presentation
+	 - right-click on card images should be restricted, to discourage downloading
+		 
+
 
 1. **Acknowledgements song discovery**
      - When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options.
