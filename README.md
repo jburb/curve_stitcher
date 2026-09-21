@@ -135,6 +135,14 @@ Current covered checks:
 3. Run tests:
 	- `npm run test:e2e`
 
+For manual app checks in a browser, serve the workspace over HTTP (do not open `stitchlab.html` via `file://`):
+- `python3 -m http.server 4173 --bind 127.0.0.1`
+- open `http://127.0.0.1:4173/stitchlab.html`
+
+Why this matters:
+- The sewing-cards PDF viewer uses PDF.js worker loading and fetches PDF assets; these can fail or behave inconsistently under `file://`.
+- Other fetch-based assets can also be impacted by browser local-file security restrictions.
+
 Optional:
 - Headed run: `npm run test:e2e:headed`
 - Interactive UI mode: `npm run test:e2e:ui`

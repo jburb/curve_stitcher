@@ -37,21 +37,21 @@ test.describe('TEMP mobile sewing PDF navigation debug', () => {
 
     await page.waitForTimeout(1400);
 
-    const finalSrc = await page.locator('#sewing-pdf-frame').getAttribute('src');
-    expect(String(finalSrc || '')).toContain('#page=36');
+    const debugLog = page.locator('#sewing-pdf-debug-log');
+    await expect(debugLog).toContainText('pdf-render-success');
+    await expect(debugLog).toContainText('"page":36');
+    await expect(debugLog).not.toContainText('pdfjs-missing-timeout');
 
     const hasOpenLog = sewingLogs.some((line) => line.indexOf('open-viewer') !== -1);
     const hasCommitLog = sewingLogs.some((line) => line.indexOf('commit-start') !== -1);
     const hasStepLog = sewingLogs.some((line) => line.indexOf('step-page') !== -1);
-    const hasInitialApply36 = sewingLogs.some((line) => line.indexOf('mobile-initial-apply') !== -1 && line.indexOf('#page=36') !== -1);
-    const hasReloadApply36 = sewingLogs.some((line) => line.indexOf('mobile-reload-applied') !== -1 && line.indexOf('#page=36') !== -1);
-    const hasBlankReset = sewingLogs.some((line) => line.indexOf('mobile-reset-blank') !== -1);
+    const hasLoadLog = sewingLogs.some((line) => line.indexOf('pdf-load-success') !== -1);
+    const hasRenderLog = sewingLogs.some((line) => line.indexOf('pdf-render-success') !== -1);
 
     expect(hasOpenLog, JSON.stringify(sewingLogs, null, 2)).toBe(true);
     expect(hasCommitLog, JSON.stringify(sewingLogs, null, 2)).toBe(true);
     expect(hasStepLog, JSON.stringify(sewingLogs, null, 2)).toBe(true);
-    expect(hasInitialApply36, JSON.stringify(sewingLogs, null, 2)).toBe(true);
-    expect(hasReloadApply36, JSON.stringify(sewingLogs, null, 2)).toBe(true);
-    expect(hasBlankReset, JSON.stringify(sewingLogs, null, 2)).toBe(false);
+    expect(hasLoadLog, JSON.stringify(sewingLogs, null, 2)).toBe(true);
+    expect(hasRenderLog, JSON.stringify(sewingLogs, null, 2)).toBe(true);
   });
 });
