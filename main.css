@@ -368,7 +368,7 @@
   }
   .sewing-pdf-panel {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     row-gap: 8px;
     overflow: hidden;
   }
@@ -382,11 +382,7 @@
     flex-wrap: wrap;
   }
   .sewing-pdf-header {
-    position: sticky;
-    top: 0;
-    z-index: 4;
-    background: #f8fbff;
-    padding-bottom: 4px;
+    margin-bottom: 0;
   }
   .sewing-cards-panel-header label {
     font-size: 12px;
@@ -505,6 +501,13 @@
     align-items: center;
     gap: 8px;
     flex-wrap: nowrap;
+  }
+  .sewing-pdf-controls-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: #f8fbff;
+    padding: 2px 0 4px;
   }
   .sewing-pdf-debug-panel {
     border: 1px dashed #b9c8e7;
@@ -2717,7 +2720,7 @@
   html[data-theme="dark"] .sewing-cards-panel-header label {
     color: #c9daef;
   }
-  html[data-theme="dark"] .sewing-pdf-header {
+  html[data-theme="dark"] .sewing-pdf-controls-sticky {
     background: #2f3f55;
   }
   html[data-theme="dark"] .sewing-cards-attribution a {
@@ -2951,6 +2954,10 @@
     }
     .sewing-pdf-header h5 {
       width: 100%;
+    }
+    .sewing-pdf-controls-sticky {
+      top: 0;
+      padding: 0 0 4px;
     }
     .sewing-pdf-controls {
       width: 100%;
