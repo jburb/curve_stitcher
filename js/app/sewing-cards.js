@@ -5,7 +5,7 @@ var SEWING_CARDS_PDF_PATH = 'assets/a_rhythmic_approach_to_mathematics.pdf';
 var SEWING_CARDS_DEFAULT_SERIES = 1;
 var SEWING_CARDS_DEFAULT_CARD_INDEX = 0;
 var SEWING_CARDS_DEFAULT_PDF_PAGE = 34;
-var SEWING_PDF_DEBUG_EVENT_LIMIT = 14;
+var SEWING_PDF_DEBUG_EVENT_LIMIT = 40;
 var sewingPdfDebugCopyStatusTimerId = null;
 
 var sewingCardsViewerState = {
@@ -15,7 +15,10 @@ var sewingCardsViewerState = {
   renderedSeriesNumber: -1,
   pdfCommitSequence: 0,
   pdfWorkaroundTimerIds: [],
-  pdfDebugEvents: []
+  pdfDebugEvents: [],
+  pdfDebugEventCounter: 0,
+  pdfDebugIframeLoadCount: 0,
+  pdfDebugNavClickCount: 0
 };
 
 function clampSewingCardsInt(value, min, max, fallback) {
@@ -82,7 +85,11 @@ function summarizeSewingPdfDebugPayload(payload) {
 
 function pushSewingPdfDebugEvent(eventName, payload) {
   var stamp = new Date().toISOString().slice(11, 23);
-  var line = stamp + ' ' + String(eventName || 'event') + ' ' + summarizeSewingPdfDebugPayload(payload);
+  sewingCardsViewerState.pdfDebugEventCounter += 1;
+  var line = String(sewingCardsViewerState.pdfDebugEventCounter)
+    + ' | ' + stamp
+    + ' | ' + String(eventName || 'event')
+    + ' | ' + summarizeSewingPdfDebugPayload(payload);
   sewingCardsViewerState.pdfDebugEvents.push(line);
   if (sewingCardsViewerState.pdfDebugEvents.length > SEWING_PDF_DEBUG_EVENT_LIMIT) {
     sewingCardsViewerState.pdfDebugEvents = sewingCardsViewerState.pdfDebugEvents.slice(-SEWING_PDF_DEBUG_EVENT_LIMIT);
@@ -149,6 +156,9 @@ function buildSewingPdfDebugReport() {
   lines.push('state.pdfPage: ' + String(sewingCardsViewerState.pdfPage));
   lines.push('state.sequence: ' + String(sewingCardsViewerState.pdfCommitSequence));
   lines.push('state.activeTimers: ' + String(sewingCardsViewerState.pdfWorkaroundTimerIds ? sewingCardsViewerState.pdfWorkaroundTimerIds.length : 0));
+  lines.push('state.eventCounter: ' + String(sewingCardsViewerState.pdfDebugEventCounter));
+  lines.push('state.navClickCount: ' + String(sewingCardsViewerState.pdfDebugNavClickCount));
+  lines.push('state.iframeLoadCount: ' + String(sewingCardsViewerState.pdfDebugIframeLoadCount));
   lines.push('iframe.src: ' + (sewingPdfFrame ? String(sewingPdfFrame.src || '') : '(missing)'));
   lines.push('events:');
   if (sewingCardsViewerState.pdfDebugEvents && sewingCardsViewerState.pdfDebugEvents.length) {
@@ -400,10 +410,12 @@ function stepSewingCard(delta) {
   syncSewingCardsViewer();
 }
 
-function stepSewingPdfPage(delta) {
+function stepSewingPdfPage(delta, source) {
+  source = source || 'unknown';
   var nextPage = sewingCardsViewerState.pdfPage + (delta < 0 ? -1 : 1);
   sewingCardsViewerState.pdfPage = Math.max(1, nextPage);
   logSewingPdfDebug('step-page', {
+    source: source,
     delta: delta,
     nextPage: nextPage,
     committedPage: sewingCardsViewerState.pdfPage
@@ -424,6 +436,9 @@ function openSewingCardsViewer(options) {
   sewingCardsViewerState.pdfPage = requestedPdfPage;
   sewingCardsViewerState.renderedSeriesNumber = -1;
   sewingCardsViewerState.pdfDebugEvents = [];
+  sewingCardsViewerState.pdfDebugEventCounter = 0;
+  sewingCardsViewerState.pdfDebugIframeLoadCount = 0;
+  sewingCardsViewerState.pdfDebugNavClickCount = 0;
   logSewingPdfDebug('open-viewer', {
     requestedSeries: requestedSeries,
     requestedCardIndex: requestedCardIndex,
@@ -483,29 +498,41 @@ if (sewingCardsNextBtn) {
 
 if (sewingPdfPrevBtn) {
   sewingPdfPrevBtn.addEventListener('click', function() {
+    sewingCardsViewerState.pdfDebugNavClickCount += 1;
     logSewingPdfDebug('nav-prev-click', {
+      navClickCount: sewingCardsViewerState.pdfDebugNavClickCount,
       pageBefore: sewingCardsViewerState.pdfPage,
       disabled: !!sewingPdfPrevBtn.disabled
     });
-    stepSewingPdfPage(-1);
+    stepSewingPdfPage(-1, 'button-prev');
   });
 }
 
 if (sewingPdfNextBtn) {
   sewingPdfNextBtn.addEventListener('click', function() {
+    sewingCardsViewerState.pdfDebugNavClickCount += 1;
     logSewingPdfDebug('nav-next-click', {
+      navClickCount: sewingCardsViewerState.pdfDebugNavClickCount,
       pageBefore: sewingCardsViewerState.pdfPage,
       disabled: !!sewingPdfNextBtn.disabled
     });
-    stepSewingPdfPage(1);
+    stepSewingPdfPage(1, 'button-next');
   });
 }
 
 if (sewingPdfFrame) {
   sewingPdfFrame.addEventListener('load', function() {
+    sewingCardsViewerState.pdfDebugIframeLoadCount += 1;
+    var rect = sewingPdfFrame.getBoundingClientRect ? sewingPdfFrame.getBoundingClientRect() : null;
     logSewingPdfDebug('iframe-load', {
+      iframeLoadCount: sewingCardsViewerState.pdfDebugIframeLoadCount,
       sequence: sewingCardsViewerState.pdfCommitSequence,
-      src: sewingPdfFrame.src
+      src: sewingPdfFrame.src,
+      viewport: {
+        width: rect ? Math.round(rect.width) : 0,
+        height: rect ? Math.round(rect.height) : 0
+      },
+      documentHidden: !!(document && document.hidden)
     });
   });
   sewingPdfFrame.addEventListener('error', function() {
@@ -573,18 +600,22 @@ if (sewingCardsModal) {
     }
     if (event.key === 'PageUp') {
       event.preventDefault();
+      sewingCardsViewerState.pdfDebugNavClickCount += 1;
       logSewingPdfDebug('nav-key-pageup', {
+        navClickCount: sewingCardsViewerState.pdfDebugNavClickCount,
         pageBefore: sewingCardsViewerState.pdfPage
       });
-      stepSewingPdfPage(-1);
+      stepSewingPdfPage(-1, 'key-pageup');
       return;
     }
     if (event.key === 'PageDown') {
       event.preventDefault();
+      sewingCardsViewerState.pdfDebugNavClickCount += 1;
       logSewingPdfDebug('nav-key-pagedown', {
+        navClickCount: sewingCardsViewerState.pdfDebugNavClickCount,
         pageBefore: sewingCardsViewerState.pdfPage
       });
-      stepSewingPdfPage(1);
+      stepSewingPdfPage(1, 'key-pagedown');
     }
   });
 }
