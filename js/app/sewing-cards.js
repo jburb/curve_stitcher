@@ -38,8 +38,12 @@ function buildSewingPdfSrc(pageNumber, options) {
   options = options || {};
   var safePage = Math.max(1, clampSewingCardsInt(pageNumber, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
   var basePath = SEWING_CARDS_PDF_PATH;
+  var useSimplePageFragment = !!options.simplePageFragment;
   if (options.cacheBustToken !== undefined && options.cacheBustToken !== null) {
     basePath += (basePath.indexOf('?') === -1 ? '?' : '&') + 'nonce=' + encodeURIComponent(String(options.cacheBustToken));
+  }
+  if (useSimplePageFragment) {
+    return basePath + '#page=' + String(safePage);
   }
   return basePath + '#page=' + String(safePage) + '&zoom=page-fit&view=FitH&pagemode=none';
 }
@@ -207,17 +211,19 @@ function commitSewingPdfSrc(pageNumber) {
   if (!sewingPdfFrame) return;
 
   var safePage = Math.max(1, clampSewingCardsInt(pageNumber, 1, 5000, SEWING_CARDS_DEFAULT_PDF_PAGE));
+  var useMobileWorkaround = shouldUseMobilePdfWorkaround();
   sewingCardsViewerState.pdfCommitSequence += 1;
   var currentSequence = sewingCardsViewerState.pdfCommitSequence;
   logSewingPdfDebug('commit-start', {
     requestedPage: pageNumber,
     safePage: safePage,
     sequence: currentSequence,
-    mobileWorkaround: shouldUseMobilePdfWorkaround()
+    mobileWorkaround: useMobileWorkaround,
+    simpleFragment: useMobileWorkaround
   });
   clearSewingPdfWorkaroundTimers();
 
-  if (!shouldUseMobilePdfWorkaround()) {
+  if (!useMobileWorkaround) {
     var desktopSrc = buildSewingPdfSrc(safePage, {
       cacheBustToken: String(currentSequence) + '-' + String(Date.now())
     });
@@ -233,6 +239,7 @@ function commitSewingPdfSrc(pageNumber) {
   // Mobile PDF viewers can ignore fragment-only page changes in iframes.
   // Apply the target PDF immediately, then reapply at relaxed intervals to avoid churn.
   var initialMobileSrc = buildSewingPdfSrc(safePage, {
+    simplePageFragment: true,
     cacheBustToken: String(currentSequence) + '-initial-' + String(Date.now())
   });
   sewingPdfFrame.src = initialMobileSrc;
@@ -263,6 +270,7 @@ function commitSewingPdfSrc(pageNumber) {
           return;
         }
         var mobileSrc = buildSewingPdfSrc(safePage, {
+          simplePageFragment: true,
           cacheBustToken: String(currentSequence) + '-retry-' + String(attemptIndex) + '-' + String(Date.now())
         });
         sewingPdfFrame.src = mobileSrc;
