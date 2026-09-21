@@ -61,7 +61,7 @@ function isMobileDevice() {
 }
 
 function shouldLogSewingPdfDebug() {
-  if (isMobileDevice()) return true;
+  //if (isMobileDevice()) return true;
   //return !!(window && window.SEWING_PDF_DEBUG === true);
   return false;
 }
