@@ -629,6 +629,21 @@
             <button id="sewing-pdf-next-btn" type="button" class="sewing-cards-btn">Next page</button>
           </div>
         </div>
+        <div id="sewing-pdf-debug-panel" class="sewing-pdf-debug-panel" hidden>
+          <div class="sewing-pdf-debug-grid">
+            <span><strong>Debug:</strong> <span id="sewing-pdf-debug-enabled">off</span></span>
+            <span><strong>Seq:</strong> <span id="sewing-pdf-debug-seq">0</span></span>
+            <span><strong>Page:</strong> <span id="sewing-pdf-debug-page">34</span></span>
+            <span><strong>Timers:</strong> <span id="sewing-pdf-debug-timers">0</span></span>
+          </div>
+          <div class="sewing-pdf-debug-actions">
+            <button id="sewing-pdf-debug-copy-btn" type="button" class="sewing-cards-btn">Copy debug log</button>
+            <span id="sewing-pdf-debug-copy-status" class="sewing-pdf-debug-copy-status" role="status" aria-live="polite"></span>
+          </div>
+          <div class="sewing-pdf-debug-line"><strong>Event:</strong> <span id="sewing-pdf-debug-last-event">(none)</span></div>
+          <div class="sewing-pdf-debug-line"><strong>Src:</strong> <span id="sewing-pdf-debug-src">(none)</span></div>
+          <pre id="sewing-pdf-debug-log" class="sewing-pdf-debug-log"></pre>
+        </div>
         <iframe id="sewing-pdf-frame" class="sewing-pdf-frame" title="A Rhythmic Approach to Mathematics PDF viewer" loading="lazy"></iframe>
       </section>
     </div>
@@ -868,6 +883,16 @@
   var sewingPdfPrevBtn = document.getElementById('sewing-pdf-prev-btn');
   var sewingPdfNextBtn = document.getElementById('sewing-pdf-next-btn');
   var sewingPdfPageLabel = document.getElementById('sewing-pdf-page-label');
+  var sewingPdfDebugPanel = document.getElementById('sewing-pdf-debug-panel');
+  var sewingPdfDebugEnabled = document.getElementById('sewing-pdf-debug-enabled');
+  var sewingPdfDebugSeq = document.getElementById('sewing-pdf-debug-seq');
+  var sewingPdfDebugPage = document.getElementById('sewing-pdf-debug-page');
+  var sewingPdfDebugTimers = document.getElementById('sewing-pdf-debug-timers');
+  var sewingPdfDebugLastEvent = document.getElementById('sewing-pdf-debug-last-event');
+  var sewingPdfDebugSrc = document.getElementById('sewing-pdf-debug-src');
+  var sewingPdfDebugLog = document.getElementById('sewing-pdf-debug-log');
+  var sewingPdfDebugCopyBtn = document.getElementById('sewing-pdf-debug-copy-btn');
+  var sewingPdfDebugCopyStatus = document.getElementById('sewing-pdf-debug-copy-status');
   var sewingPdfFrame = document.getElementById('sewing-pdf-frame');
   var acknowledgmentsModal = document.getElementById('acknowledgments-modal');
   var acknowledgmentsStage = document.getElementById('acknowledgments-stage');

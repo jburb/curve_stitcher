@@ -498,6 +498,53 @@
     align-items: center;
     gap: 8px;
   }
+  .sewing-pdf-debug-panel {
+    border: 1px dashed #b9c8e7;
+    border-radius: 8px;
+    background: #f4f8ff;
+    color: #2e4672;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+  .sewing-pdf-debug-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+    margin-bottom: 4px;
+  }
+  .sewing-pdf-debug-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 3px 0 5px;
+  }
+  .sewing-pdf-debug-actions .sewing-cards-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .sewing-pdf-debug-copy-status {
+    font-size: 10px;
+    color: #46628f;
+    min-height: 1em;
+  }
+  .sewing-pdf-debug-line {
+    margin: 2px 0;
+    word-break: break-word;
+  }
+  .sewing-pdf-debug-log {
+    margin: 6px 0 0;
+    border: 1px solid #d3ddf0;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #2f4368;
+    padding: 5px 6px;
+    max-height: 100px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-size: 10px;
+  }
   .sewing-pdf-page-label {
     min-width: 72px;
     text-align: center;
