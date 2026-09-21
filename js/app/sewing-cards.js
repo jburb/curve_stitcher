@@ -475,12 +475,20 @@ if (sewingCardsNextBtn) {
 
 if (sewingPdfPrevBtn) {
   sewingPdfPrevBtn.addEventListener('click', function() {
+    logSewingPdfDebug('nav-prev-click', {
+      pageBefore: sewingCardsViewerState.pdfPage,
+      disabled: !!sewingPdfPrevBtn.disabled
+    });
     stepSewingPdfPage(-1);
   });
 }
 
 if (sewingPdfNextBtn) {
   sewingPdfNextBtn.addEventListener('click', function() {
+    logSewingPdfDebug('nav-next-click', {
+      pageBefore: sewingCardsViewerState.pdfPage,
+      disabled: !!sewingPdfNextBtn.disabled
+    });
     stepSewingPdfPage(1);
   });
 }
@@ -557,11 +565,17 @@ if (sewingCardsModal) {
     }
     if (event.key === 'PageUp') {
       event.preventDefault();
+      logSewingPdfDebug('nav-key-pageup', {
+        pageBefore: sewingCardsViewerState.pdfPage
+      });
       stepSewingPdfPage(-1);
       return;
     }
     if (event.key === 'PageDown') {
       event.preventDefault();
+      logSewingPdfDebug('nav-key-pagedown', {
+        pageBefore: sewingCardsViewerState.pdfPage
+      });
       stepSewingPdfPage(1);
     }
   });
