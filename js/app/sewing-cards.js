@@ -65,19 +65,21 @@ function shouldLogSewingPdfDebug() {
   if (shouldUseMobilePdfWorkaround()) return true;
   return !!(window && window.SEWING_PDF_DEBUG === true);
 }
-
+// NOTE: Disabled truncation
 function summarizeSewingPdfDebugSrc(src) {
   var text = String(src || '');
   if (!text) return '(none)';
-  if (text.length <= 120) return text;
-  return text.slice(0, 117) + '...';
+  //if (text.length <= 120) return text;
+  //return text.slice(0, 117) + '...';
+  return text;
 }
-
+// NOTE: Disabled truncation
 function summarizeSewingPdfDebugPayload(payload) {
   if (!payload) return '';
   try {
     var serialized = JSON.stringify(payload);
-    return serialized.length <= 160 ? serialized : serialized.slice(0, 157) + '...';
+    //return serialized.length <= 160 ? serialized : serialized.slice(0, 157) + '...';
+    return serialized;
   } catch (error) {
     return '(unserializable payload)';
   }
