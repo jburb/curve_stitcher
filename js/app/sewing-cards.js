@@ -62,7 +62,8 @@ function isMobileDevice() {
 
 function shouldLogSewingPdfDebug() {
   if (isMobileDevice()) return true;
-  return !!(window && window.SEWING_PDF_DEBUG === true);
+  //return !!(window && window.SEWING_PDF_DEBUG === true);
+  return false;
 }
 // NOTE: Disabled truncation
 function summarizeSewingPdfDebugSrc(src) {
