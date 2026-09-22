@@ -21,7 +21,8 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 | 12 | js/app/mashrabiya.js | Mashrabiya geometry, fill classification, timeline, static/animated rendering | Experience-specific implementation. |
 | 13 | js/app/export.js | Export modals, naming normalization, SVG/guide/zip generation | Export-only workflow and asset builders. |
 | 14 | js/app/acknowledgments.js | Acknowledgments modal flow and stage renderer, plus currently coupled wiring/helpers needed by that flow | This file is intentionally in a mixed-ownership state right now because that is the known passing configuration. |
-| 15 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
+| 15 | js/app/sewing-cards.js | Sewing cards modal runtime, card deck navigation, and PDF.js viewer lifecycle/render state | Owns card image + PDF sync behavior, modal open/close lifecycle, and sewing-cards debug telemetry. |
+| 16 | js/app/ui-wiring.js | Shared DOM event wiring and startup initialization | Wires controls/events and bootstraps initial runtime state. |
 
 ## Development Notes
 
