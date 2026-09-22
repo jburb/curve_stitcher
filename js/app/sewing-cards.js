@@ -127,6 +127,12 @@ function syncSewingCardsViewportHeightVar() {
     sewingCardsModal.style.setProperty('--sewing-modal-vh', String(effectiveViewportHeight) + 'px');
   }
 
+  if (isIosDevice()) {
+    sewingCardsModal.classList.add('sewing-cards-ios');
+  } else {
+    sewingCardsModal.classList.remove('sewing-cards-ios');
+  }
+
   // Safari on iOS can report a legacy layout viewport without meta viewport;
   // use effective viewport size to drive only this modal's compact layout.
   if (effectiveViewportWidth > 0 && effectiveViewportWidth <= 720) {
