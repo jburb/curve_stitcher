@@ -2245,11 +2245,37 @@
   }
 
   .modal-card.sewing-cards-card {
-    width: 90vw;
-    max-width: 90vw;
+    width: min(90vw, calc(var(--sewing-modal-vw, 100vw) - 32px));
+    max-width: min(90vw, calc(var(--sewing-modal-vw, 100vw) - 32px));
     height: min(calc(var(--sewing-modal-vh, 100vh) - 32px), 900px);
     max-height: calc(var(--sewing-modal-vh, 100vh) - 32px);
     overflow: hidden;
+  }
+
+  .modal-backdrop.sewing-cards-modal-compact .sewing-cards-card {
+    width: min(92vw, calc(var(--sewing-modal-vw, 100vw) - 16px));
+    max-width: min(92vw, calc(var(--sewing-modal-vw, 100vw) - 16px));
+  }
+
+  .modal-backdrop.sewing-cards-modal-compact .sewing-cards-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .modal-backdrop.sewing-cards-modal-compact .sewing-cards-stage-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-backdrop.sewing-cards-modal-compact .sewing-cards-btn.nav {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    padding: 7px 11px;
+  }
+
+  .modal-backdrop.sewing-cards-modal-compact .sewing-pdf-frame {
+    height: 100%;
+    min-height: 0;
   }
 
   .modal-card h4 {

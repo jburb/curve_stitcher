@@ -63,15 +63,52 @@ function isMobileDevice() {
 
 function syncSewingCardsViewportHeightVar() {
   if (!document || !document.documentElement || !window) return;
+
+  var viewportWidth = 0;
   var viewportHeight = 0;
-  if (window.visualViewport && window.visualViewport.height) {
-    viewportHeight = Math.round(window.visualViewport.height);
+  var viewportScale = 1;
+
+  if (window.visualViewport) {
+    if (window.visualViewport.width) {
+      viewportWidth = Number(window.visualViewport.width) || 0;
+    }
+    if (window.visualViewport.height) {
+      viewportHeight = Number(window.visualViewport.height) || 0;
+    }
+    if (window.visualViewport.scale) {
+      viewportScale = Number(window.visualViewport.scale) || 1;
+    }
+  }
+
+  if (!viewportWidth && window.innerWidth) {
+    viewportWidth = Number(window.innerWidth) || 0;
   }
   if (!viewportHeight && window.innerHeight) {
-    viewportHeight = Math.round(window.innerHeight);
+    viewportHeight = Number(window.innerHeight) || 0;
   }
-  if (viewportHeight > 0) {
-    document.documentElement.style.setProperty('--sewing-modal-vh', String(viewportHeight) + 'px');
+
+  var effectiveViewportWidth = Math.round(viewportWidth * viewportScale);
+  var effectiveViewportHeight = Math.round(viewportHeight * viewportScale);
+
+  if (effectiveViewportHeight > 0) {
+    document.documentElement.style.setProperty('--sewing-modal-vh', String(effectiveViewportHeight) + 'px');
+  }
+
+  if (!sewingCardsModal) return;
+
+  if (effectiveViewportWidth > 0) {
+    sewingCardsModal.style.setProperty('--sewing-modal-vw', String(effectiveViewportWidth) + 'px');
+  }
+  if (effectiveViewportHeight > 0) {
+    sewingCardsModal.style.setProperty('--sewing-modal-vh', String(effectiveViewportHeight) + 'px');
+  }
+
+  // Safari on iOS can report a legacy layout viewport without meta viewport;
+  // use effective viewport size to drive only this modal's compact layout.
+  if (effectiveViewportWidth > 0 && effectiveViewportWidth <= 720) {
+    sewingCardsModal.classList.add('sewing-cards-modal-compact');
+  } else {
+    sewingCardsModal.classList.remove('sewing-cards-modal-compact');
   }
 }
 
