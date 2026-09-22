@@ -125,6 +125,63 @@ function scheduleSewingCardsViewportHeightSync() {
   }, 120);
 }
 
+function allocateSewingPdfFrameHeight() {
+  if (!sewingCardsModal || !sewingPdfFrame) return;
+  if (!sewingCardsModal.classList.contains('open')) return;
+
+  var pdfPanel = sewingPdfFrame.parentElement;
+  var layout = pdfPanel ? pdfPanel.parentElement : null;
+  if (!pdfPanel || !layout) return;
+
+  var compactMode = sewingCardsModal.classList.contains('sewing-cards-modal-compact');
+  if (!compactMode) {
+    if (layout && layout.style && layout.style.gridTemplateRows) {
+      layout.style.gridTemplateRows = '';
+    }
+  }
+
+  var panelStyle = window.getComputedStyle ? window.getComputedStyle(pdfPanel) : null;
+  var panelPaddingBottom = panelStyle ? parseFloat(panelStyle.paddingBottom || '0') : 0;
+  if (!isFinite(panelPaddingBottom)) panelPaddingBottom = 0;
+
+  var panelRect = pdfPanel.getBoundingClientRect ? pdfPanel.getBoundingClientRect() : null;
+  var frameRect = sewingPdfFrame.getBoundingClientRect ? sewingPdfFrame.getBoundingClientRect() : null;
+  var frameTopWithinPanel = 0;
+  if (panelRect && frameRect) {
+    frameTopWithinPanel = Math.round(frameRect.top - panelRect.top);
+  }
+  if (!isFinite(frameTopWithinPanel) || frameTopWithinPanel < 0) {
+    frameTopWithinPanel = 0;
+  }
+
+  if (compactMode) {
+    var totalLayoutHeight = Math.round(layout.clientHeight || 0);
+    var targetFrameMinHeight = 240;
+    var minCardsPanelHeight = 170;
+
+    if (totalLayoutHeight > 0) {
+      var desiredPdfPanelHeight = frameTopWithinPanel + targetFrameMinHeight + panelPaddingBottom;
+      var minPdfPanelHeight = Math.round(totalLayoutHeight * 0.55);
+      var maxPdfPanelHeight = Math.max(0, totalLayoutHeight - minCardsPanelHeight);
+      var pdfPanelHeight = Math.max(minPdfPanelHeight, desiredPdfPanelHeight);
+      pdfPanelHeight = Math.min(pdfPanelHeight, maxPdfPanelHeight);
+
+      if (pdfPanelHeight > 0 && maxPdfPanelHeight > 0) {
+        var cardsPanelHeight = Math.max(minCardsPanelHeight, totalLayoutHeight - pdfPanelHeight);
+        pdfPanelHeight = Math.max(0, totalLayoutHeight - cardsPanelHeight);
+        layout.style.gridTemplateRows = String(cardsPanelHeight) + 'px ' + String(pdfPanelHeight) + 'px';
+      }
+    }
+  }
+
+  var availableHeight = Math.round((pdfPanel.clientHeight || 0) - frameTopWithinPanel - panelPaddingBottom);
+  if (availableHeight > 0) {
+    sewingPdfFrame.style.height = String(availableHeight) + 'px';
+  } else {
+    sewingPdfFrame.style.height = '';
+  }
+}
+
 function shouldLogSewingPdfDebug() {
   //if (isMobileDevice()) return true;
   //return !!(window && window.SEWING_PDF_DEBUG === true);
@@ -655,9 +712,11 @@ function openSewingCardsViewer(options) {
 
   scheduleSewingCardsViewportHeightSync();
   sewingCardsModal.classList.add('open');
+  allocateSewingPdfFrameHeight();
   syncSewingCardsViewer();
   window.requestAnimationFrame(function() {
     scheduleSewingCardsViewportHeightSync();
+    allocateSewingPdfFrameHeight();
     syncSewingPdfViewer();
   });
   if (sewingCardsViewerState.pdfPostOpenRerenderTimerId) {
@@ -670,6 +729,7 @@ function openSewingCardsViewer(options) {
     sewingCardsViewerState.pdfPostOpenRerenderTimerId = null;
     if (!sewingCardsModal.classList.contains('open')) return;
     scheduleSewingCardsViewportHeightSync();
+    allocateSewingPdfFrameHeight();
     logSewingPdfDebug('pdf-post-open-rerender', {
       page: sewingCardsViewerState.pdfPage
     });
@@ -691,6 +751,14 @@ function closeSewingCardsViewer() {
     sewingCardsViewerState.pdfPostOpenRerenderTimerId = null;
   }
   sewingCardsViewerState.pdfPendingRequest = null;
+  var pdfPanel = sewingPdfFrame ? sewingPdfFrame.parentElement : null;
+  var layout = pdfPanel ? pdfPanel.parentElement : null;
+  if (layout && layout.style) {
+    layout.style.gridTemplateRows = '';
+  }
+  if (sewingPdfFrame && sewingPdfFrame.style) {
+    sewingPdfFrame.style.height = '';
+  }
   renderSewingPdfDebugPanel('close-viewer', { src: sewingCardsViewerState.pdfLastRenderDescriptor || '' });
   sewingCardsModal.classList.remove('open');
 }
@@ -841,6 +909,7 @@ if (window && typeof window.addEventListener === 'function') {
     sewingCardsViewerState.pdfRenderResizeTimerId = window.setTimeout(function() {
       sewingCardsViewerState.pdfRenderResizeTimerId = null;
       if (!sewingCardsModal.classList.contains('open')) return;
+      allocateSewingPdfFrameHeight();
       logSewingPdfDebug('pdf-resize-rerender', {
         page: sewingCardsViewerState.pdfPage
       });
@@ -857,6 +926,7 @@ if (window && typeof window.addEventListener === 'function') {
     sewingCardsViewerState.pdfRenderResizeTimerId = window.setTimeout(function() {
       sewingCardsViewerState.pdfRenderResizeTimerId = null;
       if (!sewingCardsModal.classList.contains('open')) return;
+      allocateSewingPdfFrameHeight();
       logSewingPdfDebug('pdf-orientation-rerender', {
         page: sewingCardsViewerState.pdfPage
       });
@@ -874,6 +944,7 @@ if (window && typeof window.addEventListener === 'function') {
       sewingCardsViewerState.pdfRenderResizeTimerId = window.setTimeout(function() {
         sewingCardsViewerState.pdfRenderResizeTimerId = null;
         if (!sewingCardsModal.classList.contains('open')) return;
+        allocateSewingPdfFrameHeight();
         logSewingPdfDebug('pdf-visual-viewport-rerender', {
           page: sewingCardsViewerState.pdfPage
         });
@@ -909,6 +980,7 @@ if (window && typeof window.ResizeObserver === 'function' && sewingPdfFrame) {
     sewingCardsViewerState.pdfRenderResizeTimerId = window.setTimeout(function() {
       sewingCardsViewerState.pdfRenderResizeTimerId = null;
       if (!sewingCardsModal.classList.contains('open')) return;
+      allocateSewingPdfFrameHeight();
       logSewingPdfDebug('pdf-frame-resize-rerender', {
         width: width,
         height: height,
