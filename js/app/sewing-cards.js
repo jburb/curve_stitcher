@@ -61,6 +61,30 @@ function isMobileDevice() {
     || ua.indexOf('ipod') !== -1;
 }
 
+function isIosDevice() {
+  if (!window || !window.navigator) return false;
+  var ua = String(window.navigator.userAgent || '').toLowerCase();
+  return ua.indexOf('iphone') !== -1
+    || ua.indexOf('ipad') !== -1
+    || ua.indexOf('ipod') !== -1;
+}
+
+function isIosFirefoxBrowser() {
+  if (!window || !window.navigator) return false;
+  var ua = String(window.navigator.userAgent || '').toLowerCase();
+  return ua.indexOf('fxios') !== -1;
+}
+
+function shouldUseContainScaleForMobilePdf() {
+  if (!isMobileDevice()) return false;
+  // Keep the previous contain behavior on iOS Firefox where full-page scrolling
+  // already works as expected, but allow iOS Safari/Chrome to render at fit-width.
+  if (isIosDevice()) {
+    return isIosFirefoxBrowser();
+  }
+  return true;
+}
+
 function syncSewingCardsViewportHeightVar() {
   if (!document || !document.documentElement || !window) return;
 
@@ -458,7 +482,8 @@ function renderSewingPdfPage(pageNumber, sequence, source) {
       var rawViewport = page.getViewport({ scale: 1 });
       var widthScale = fitWidth / rawViewport.width;
       var containScale = Math.min(widthScale, fitHeight / rawViewport.height);
-      var fitScale = isMobileDevice() ? containScale : widthScale;
+      var useContainScale = shouldUseContainScaleForMobilePdf();
+      var fitScale = useContainScale ? containScale : widthScale;
       if (!isFinite(fitScale) || fitScale <= 0) {
         fitScale = 1;
       }
@@ -488,7 +513,7 @@ function renderSewingPdfPage(pageNumber, sequence, source) {
           sequence: sequence,
           page: safePage,
           source: source,
-          scaleMode: isMobileDevice() ? 'contain' : 'fit-width',
+          scaleMode: useContainScale ? 'contain' : 'fit-width',
           scale: Number(fitScale.toFixed(4)),
           viewport: {
             width: Math.floor(viewport.width),

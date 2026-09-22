@@ -589,6 +589,7 @@
     align-items: flex-start;
     justify-content: center;
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .sewing-pdf-canvas {
     max-width: 100%;
