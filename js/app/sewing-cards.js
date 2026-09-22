@@ -8,6 +8,7 @@ var SEWING_CARDS_DEFAULT_CARD_INDEX = 0;
 var SEWING_CARDS_DEFAULT_PDF_PAGE = 34;
 var SEWING_PDF_DEBUG_EVENT_LIMIT = 40;
 var sewingPdfDebugCopyStatusTimerId = null;
+var sewingViewportHeightSyncTimerId = null;
 
 var sewingCardsViewerState = {
   seriesNumber: SEWING_CARDS_DEFAULT_SERIES,
@@ -58,6 +59,33 @@ function isMobileDevice() {
     || ua.indexOf('iphone') !== -1
     || ua.indexOf('ipad') !== -1
     || ua.indexOf('ipod') !== -1;
+}
+
+function syncSewingCardsViewportHeightVar() {
+  if (!document || !document.documentElement || !window) return;
+  var viewportHeight = 0;
+  if (window.visualViewport && window.visualViewport.height) {
+    viewportHeight = Math.round(window.visualViewport.height);
+  }
+  if (!viewportHeight && window.innerHeight) {
+    viewportHeight = Math.round(window.innerHeight);
+  }
+  if (viewportHeight > 0) {
+    document.documentElement.style.setProperty('--sewing-modal-vh', String(viewportHeight) + 'px');
+  }
+}
+
+function scheduleSewingCardsViewportHeightSync() {
+  syncSewingCardsViewportHeightVar();
+  if (!window || typeof window.setTimeout !== 'function') return;
+  if (sewingViewportHeightSyncTimerId) {
+    clearTimeout(sewingViewportHeightSyncTimerId);
+    sewingViewportHeightSyncTimerId = null;
+  }
+  sewingViewportHeightSyncTimerId = window.setTimeout(function() {
+    sewingViewportHeightSyncTimerId = null;
+    syncSewingCardsViewportHeightVar();
+  }, 120);
 }
 
 function shouldLogSewingPdfDebug() {
@@ -588,9 +616,11 @@ function openSewingCardsViewer(options) {
     engine: 'pdfjs'
   });
 
+  scheduleSewingCardsViewportHeightSync();
   sewingCardsModal.classList.add('open');
   syncSewingCardsViewer();
   window.requestAnimationFrame(function() {
+    scheduleSewingCardsViewportHeightSync();
     syncSewingPdfViewer();
   });
   if (sewingCardsViewerState.pdfPostOpenRerenderTimerId) {
@@ -602,6 +632,7 @@ function openSewingCardsViewer(options) {
   sewingCardsViewerState.pdfPostOpenRerenderTimerId = window.setTimeout(function() {
     sewingCardsViewerState.pdfPostOpenRerenderTimerId = null;
     if (!sewingCardsModal.classList.contains('open')) return;
+    scheduleSewingCardsViewportHeightSync();
     logSewingPdfDebug('pdf-post-open-rerender', {
       page: sewingCardsViewerState.pdfPage
     });
@@ -762,7 +793,9 @@ if (sewingCardsModal) {
 }
 
 if (window && typeof window.addEventListener === 'function') {
+  scheduleSewingCardsViewportHeightSync();
   window.addEventListener('resize', function() {
+    scheduleSewingCardsViewportHeightSync();
     if (!sewingCardsModal || !sewingCardsModal.classList.contains('open')) return;
     if (sewingCardsViewerState.pdfRenderResizeTimerId) {
       clearTimeout(sewingCardsViewerState.pdfRenderResizeTimerId);
@@ -777,6 +810,40 @@ if (window && typeof window.addEventListener === 'function') {
       syncSewingPdfViewer();
     }, 140);
   });
+  window.addEventListener('orientationchange', function() {
+    scheduleSewingCardsViewportHeightSync();
+    if (!sewingCardsModal || !sewingCardsModal.classList.contains('open')) return;
+    if (sewingCardsViewerState.pdfRenderResizeTimerId) {
+      clearTimeout(sewingCardsViewerState.pdfRenderResizeTimerId);
+      sewingCardsViewerState.pdfRenderResizeTimerId = null;
+    }
+    sewingCardsViewerState.pdfRenderResizeTimerId = window.setTimeout(function() {
+      sewingCardsViewerState.pdfRenderResizeTimerId = null;
+      if (!sewingCardsModal.classList.contains('open')) return;
+      logSewingPdfDebug('pdf-orientation-rerender', {
+        page: sewingCardsViewerState.pdfPage
+      });
+      syncSewingPdfViewer();
+    }, 180);
+  });
+  if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
+    window.visualViewport.addEventListener('resize', function() {
+      scheduleSewingCardsViewportHeightSync();
+      if (!sewingCardsModal || !sewingCardsModal.classList.contains('open')) return;
+      if (sewingCardsViewerState.pdfRenderResizeTimerId) {
+        clearTimeout(sewingCardsViewerState.pdfRenderResizeTimerId);
+        sewingCardsViewerState.pdfRenderResizeTimerId = null;
+      }
+      sewingCardsViewerState.pdfRenderResizeTimerId = window.setTimeout(function() {
+        sewingCardsViewerState.pdfRenderResizeTimerId = null;
+        if (!sewingCardsModal.classList.contains('open')) return;
+        logSewingPdfDebug('pdf-visual-viewport-rerender', {
+          page: sewingCardsViewerState.pdfPage
+        });
+        syncSewingPdfViewer();
+      }, 140);
+    });
+  }
 }
 
 if (window && typeof window.ResizeObserver === 'function' && sewingPdfFrame) {

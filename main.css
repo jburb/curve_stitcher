@@ -2247,8 +2247,9 @@
   .modal-card.sewing-cards-card {
     width: 90vw;
     max-width: 90vw;
-    max-height: calc(100vh - 32px);
-    overflow: auto;
+    height: min(calc(var(--sewing-modal-vh, 100vh) - 32px), 900px);
+    max-height: calc(var(--sewing-modal-vh, 100vh) - 32px);
+    overflow: hidden;
   }
 
   .modal-card h4 {
@@ -2973,8 +2974,8 @@
       padding: 10px;
       width: 90vw;
       max-width: 90vw;
-      height: min(80vh, 900px);
-      max-height: min(80vh, 900px);
+      height: min(calc(var(--sewing-modal-vh, 100vh) - 32px), 900px);
+      max-height: calc(var(--sewing-modal-vh, 100vh) - 32px);
     }
     .sewing-pdf-header h5 {
       width: 100%;
