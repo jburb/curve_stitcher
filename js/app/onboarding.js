@@ -18,11 +18,11 @@ var onboardingTourNarrationUtterance = null;
 var onboardingTutorialAutoplayActive = false;
 var onboardingTutorialAutoplayTimer = null;
 var onboardingTourAutoplayPrepareToken = 0;
+var ONBOARDING_AUTOPLAY_PREFERENCE_KEY = 'stitchlab.onboarding.startupTutorialOptOut.v1';
 var HEAR_THIS_BUTTON_LABEL = '🔊 Hear this';
 var STOP_BUTTON_LABEL = '⏹ Stop';
 var STOP_NARRATION_BUTTON_LABEL = '⏹ Stop narration';
 var HEAR_ALL_BUTTON_LABEL = '🔊 Hear all';
-var STOP_ALL_BUTTON_LABEL = '⏹ Stop all';
 var ONBOARDING_AUTOPLAY_ADVANCE_DELAY_MS = 520;
 var ONBOARDING_AUTOPLAY_FALLBACK_DELAY_MS = 2400;
 
@@ -364,12 +364,23 @@ function sanitizeOnboardingState(rawState) {
 
 function hydrateOnboardingState() {
   var raw = appStateStorage.getItem(ONBOARDING_STATE_KEY);
-  if (!raw) return;
-  try {
-    onboardingState = sanitizeOnboardingState(JSON.parse(raw));
-  } catch (error) {
-    onboardingState = sanitizeOnboardingState(null);
+  var hydratedState = sanitizeOnboardingState(null);
+  if (raw) {
+    try {
+      hydratedState = sanitizeOnboardingState(JSON.parse(raw));
+    } catch (error) {
+      hydratedState = sanitizeOnboardingState(null);
+    }
   }
+
+  var persistedAutoplayPref = appStateStorage.getItem(ONBOARDING_AUTOPLAY_PREFERENCE_KEY);
+  if (persistedAutoplayPref === '1') {
+    hydratedState.startupTutorialOptOut = true;
+  } else if (persistedAutoplayPref === '0') {
+    hydratedState.startupTutorialOptOut = false;
+  }
+
+  onboardingState = hydratedState;
 }
 
 function persistOnboardingState() {
@@ -382,6 +393,7 @@ function setOnboardingStatePatch(patch) {
 }
 
 function setOnboardingTutorialOptOutPreference(shouldOptOut) {
+  appStateStorage.setItem(ONBOARDING_AUTOPLAY_PREFERENCE_KEY, shouldOptOut ? '1' : '0');
   setOnboardingStatePatch({ startupTutorialOptOut: !!shouldOptOut });
   if (onboardingTourOptOutInput) {
     onboardingTourOptOutInput.checked = !!onboardingState.startupTutorialOptOut;
@@ -494,7 +506,7 @@ function syncOnboardingTourAudioControls() {
     onboardingTourHearAllBtn.disabled = isSingleActive;
     onboardingTourHearAllBtn.setAttribute('aria-hidden', isSingleActive ? 'true' : 'false');
     onboardingTourHearAllBtn.setAttribute('aria-pressed', isAllActive ? 'true' : 'false');
-    onboardingTourHearAllBtn.textContent = isAllActive ? STOP_ALL_BUTTON_LABEL : HEAR_ALL_BUTTON_LABEL;
+    onboardingTourHearAllBtn.textContent = isAllActive ? STOP_BUTTON_LABEL : HEAR_ALL_BUTTON_LABEL;
   }
 }
 

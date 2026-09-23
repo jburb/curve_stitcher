@@ -432,7 +432,7 @@ test.describe('StitchLab regressions', () => {
     expect(onboardingProbe.stitchingHearSingleStopped.hearAllHidden).toBe(false);
 
     expect(onboardingProbe.stitchingHearAllActive.hearAllPressed).toBe('true');
-    expect(onboardingProbe.stitchingHearAllActive.hearAllLabel).toContain('Stop all');
+    expect(onboardingProbe.stitchingHearAllActive.hearAllLabel).toContain('Stop');
     expect(onboardingProbe.stitchingHearAllActive.hearHidden).toBe(true);
     expect(onboardingProbe.stitchingHearAllActive.hearAllHidden).toBe(false);
     expect(onboardingProbe.stitchingHearAllActive.nextHidden).toBe(true);
@@ -456,7 +456,7 @@ test.describe('StitchLab regressions', () => {
     expect(onboardingProbe.stitchingAutoplay.nextDisabled).toBe(true);
     expect(onboardingProbe.stitchingAutoplay.hearHidden).toBe(true);
     expect(onboardingProbe.stitchingAutoplay.hearAllPressed).toBe('true');
-    expect(onboardingProbe.stitchingAutoplay.hearAllLabel).toContain('Stop all');
+    expect(onboardingProbe.stitchingAutoplay.hearAllLabel).toContain('Stop');
   });
 
   test('onboarding autoplay preference and hear-all stop-all flow work across reloads', async ({ page }) => {
@@ -478,7 +478,7 @@ test.describe('StitchLab regressions', () => {
 
     await expect(tour).toBeVisible({ timeout: 12000 });
     await expect(hearAll).toHaveAttribute('aria-pressed', 'true');
-    await expect(hearAll).toContainText('Stop all');
+    await expect(hearAll).toContainText('Stop');
 
     await hearAll.click();
     await expect(hearAll).toHaveAttribute('aria-pressed', 'false');
@@ -508,7 +508,7 @@ test.describe('StitchLab regressions', () => {
     await page.goto('/stitchlab.html');
     await expect(tour).toBeVisible();
     await expect(hearAll).toHaveAttribute('aria-pressed', 'true');
-    await expect(hearAll).toContainText('Stop all');
+    await expect(hearAll).toContainText('Stop');
 
     await hearAll.click();
     await expect(hearAll).toHaveAttribute('aria-pressed', 'false');
