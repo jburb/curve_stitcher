@@ -159,7 +159,8 @@ Files involved:
 - `scripts/capture-whats-new.mjs`
 	- Uses Playwright to run deterministic capture scenarios.
 	- Records short per-feature videos, then converts each to GIF with `ffmpeg`.
-	- Writes output under `docs/whats-new/gifs/` and `docs/whats-new/videos/`.
+	- Writes GIF output under `docs/whats-new/gifs/`.
+	- Deletes intermediate videos by default after successful GIF conversion (to reduce disk usage).
 - `scripts/build-whats-new.mjs`
 	- Builds `docs/whats-new/index.html` and `docs/whats-new/README.md` from the manifest.
 	- Annotates each GIF with the matching note text from the manifest.
@@ -185,6 +186,8 @@ Optional environment overrides:
 	- GIF width in pixels (default: `1200`).
 - `WHATS_NEW_GIF_SLOWDOWN`
 	- Playback slowdown multiplier applied before GIF conversion (default: `1.35`).
+- `WHATS_NEW_KEEP_VIDEOS`
+	- Set to `1` (or `true`) to keep per-scenario videos in `docs/whats-new/videos/` after conversion (default: videos are removed).
 
 Maintenance notes:
 - To add or remove showcased features, update `docs/whats-new/manifest.json` and rerun `npm run whats-new:generate`.

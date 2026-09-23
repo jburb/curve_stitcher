@@ -17,6 +17,7 @@ const rawDir = path.join(workspaceRoot, 'test-results', 'whats-new-raw-videos');
 const APP_URL = process.env.WHATS_NEW_URL || 'http://127.0.0.1:4173/stitchlab.html';
 const APP_ORIGIN = new URL(APP_URL).origin;
 const ONBOARDING_KEY = 'stitchlab.onboarding.v1';
+const KEEP_VIDEOS = ['1', 'true', 'yes'].includes(String(process.env.WHATS_NEW_KEEP_VIDEOS || '').toLowerCase());
 
 function fail(message) {
   console.error(`[whats-new:capture] ${message}`);
@@ -318,6 +319,9 @@ async function captureFeature(item, browser) {
 
     await fs.copyFile(rawVideoPath, videoTargetPath);
     runFfmpegToGif(videoTargetPath, gifTargetPath);
+    if (!KEEP_VIDEOS) {
+      await fs.rm(videoTargetPath, { force: true });
+    }
   }
 }
 
@@ -361,6 +365,12 @@ async function main() {
       }
     }
   }
+
+  if (!KEEP_VIDEOS) {
+    await rmIfExists(videosDir);
+  }
+
+  await rmIfExists(rawDir);
 
   log(`Done. GIFs: ${path.relative(workspaceRoot, gifsDir)}`);
 }
