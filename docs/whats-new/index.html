@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StitchLab What&#39;s New</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --ink: #1e2a32;
+      --muted: #6d757d;
+      --card: #fffdf7;
+      --accent: #0f766e;
+      --border: #d9cfbe;
+      --shadow: rgba(30, 42, 50, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a2129;
+        --ink: #e5edf6;
+        --muted: #9fb0c3;
+        --card: #222d39;
+        --accent: #7cd9cf;
+        --border: #3f5266;
+        --shadow: rgba(4, 7, 11, 0.45);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--card) 55%, var(--bg) 45%) 0%, var(--bg) 55%, color-mix(in srgb, var(--bg) 85%, #000 15%) 100%);
+    }
+    header {
+      padding: 2rem 1rem 1.25rem;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      letter-spacing: 0.02em;
+    }
+    .stamp {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+    }
+    .intro {
+      margin: 0;
+      color: var(--muted);
+      max-width: 70ch;
+    }
+    .grid {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0.5rem 1rem 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px var(--shadow);
+      padding: 1rem;
+      display: grid;
+      gap: 0.85rem;
+      align-content: start;
+    }
+    .feature-card h2 {
+      margin: 0;
+      font-size: 1.12rem;
+      line-height: 1.3;
+      color: var(--accent);
+    }
+    .feature-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 80%, var(--bg) 20%);
+      display: block;
+    }
+    .feature-card p {
+      margin: 0;
+      line-height: 1.45;
+    }
+    .missing {
+      color: #8a2d2d;
+      font-weight: 600;
+      background: #fff1f1;
+      border: 1px solid #f0c8c8;
+      border-radius: 8px;
+      padding: 0.6rem 0.7rem;
+    }
+    @media (max-width: 920px) {
+      header { padding-top: 1.25rem; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>StitchLab What&#39;s New</h1>
+    <p class="intro">Feature highlights captured from scripted Playwright interactions.</p>
+    <p class="stamp">Generated: 2026-09-23T10:30:17.908Z</p>
+  </header>
+  <main class="grid">
+    
+      <article class="feature-card" id="list-mode-sequence-or-steps">
+        <h2>List stitch mode: hole sequence or addition steps</h2>
+        <img src="gifs/list-mode-sequence-or-steps.gif" alt="List stitch mode: hole sequence or addition steps demonstration GIF" loading="lazy">
+        <p>You now have two ways to stitch a thread with a list of values. Set the list type to &quot;holes&quot; to treat each possible consecutive ordered pair as a connection, or set the list type to &quot;steps&quot; to calculate each connection by adding the given value from the list, progressing one by one through it.</p>
+      </article>
+    
+
+      <article class="feature-card" id="onboarding-autoplay-tutorial">
+        <h2>Onboarding autoplay tutorial</h2>
+        <img src="gifs/onboarding-autoplay-tutorial.gif" alt="Onboarding autoplay tutorial demonstration GIF" loading="lazy">
+        <p>When you open StitchLab for the first time, or without any URL parameters, a spoken tutorial will start by default.</p>
+      </article>
+    
+
+      <article class="feature-card" id="paramless-random-thread-preview">
+        <h2>Paramless random thread startup preview</h2>
+        <img src="gifs/paramless-random-thread-preview.gif" alt="Paramless random thread startup preview demonstration GIF" loading="lazy">
+        <p>When you open StitchLab for the first time, or with no URL parameters, a random single-thread pattern will be generated.</p>
+      </article>
+    
+
+      <article class="feature-card" id="hole-number-rotation">
+        <h2>Hole number rotation remapping</h2>
+        <img src="gifs/hole-number-rotation.gif" alt="Hole number rotation remapping demonstration GIF" loading="lazy">
+        <p>Now you can rotate your patterns by rotating the hole numbers on a stitching frame.</p>
+      </article>
+    
+
+      <article class="feature-card" id="active-thread-overlay">
+        <h2>Active thread configuration overlay</h2>
+        <img src="gifs/active-thread-overlay.gif" alt="Active thread configuration overlay demonstration GIF" loading="lazy">
+        <p>When your pattern has more than one thread, StitchLab will show the config values for each active thread during stitch animation.</p>
+      </article>
+    
+
+      <article class="feature-card" id="formula-mode-improvements">
+        <h2>Formula stitch mode improvements</h2>
+        <img src="gifs/formula-mode-improvements.gif" alt="Formula stitch mode improvements demonstration GIF" loading="lazy">
+        <p>Formula mode returns! You can use basic operators and expressions to tell StitchLab how to calculate each target hole for your thread connections.</p>
+      </article>
+    
+
+      <article class="feature-card" id="stitch-library-offline-first">
+        <h2>Stitch library workflow</h2>
+        <img src="gifs/stitch-library-offline-first.gif" alt="Stitch library workflow demonstration GIF" loading="lazy">
+        <p>Finally you can save your Stitching patterns, and load them again whenever you like!</p>
+      </article>
+    
+
+      <article class="feature-card" id="curve-sewing-cards-viewer">
+        <h2>Curve sewing cards viewer</h2>
+        <img src="gifs/curve-sewing-cards-viewer.gif" alt="Curve sewing cards viewer demonstration GIF" loading="lazy">
+        <p>Thanks to Cambridge Library, we now have images of the original sewing cards created by Mary Everest Boole!</p>
+      </article>
+    
+  </main>
+</body>
+</html>

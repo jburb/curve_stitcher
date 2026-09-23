@@ -1883,13 +1883,28 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
 
   var startupSplash = document.getElementById('startup-splash');
   var hearBtn = document.getElementById('startup-splash-hear');
+  var whatsNewBtn = document.getElementById('startup-splash-whats-new');
   var continueBtn = document.getElementById('startup-splash-continue');
+  var whatsNewModal = document.getElementById('startup-whats-new-modal');
+  var whatsNewCloseBtn = document.getElementById('startup-whats-new-close');
+  var whatsNewPrevBtn = document.getElementById('startup-whats-new-prev');
+  var whatsNewNextBtn = document.getElementById('startup-whats-new-next');
+  var whatsNewStatus = document.getElementById('startup-whats-new-status');
+  var whatsNewStage = document.getElementById('startup-whats-new-stage');
+  var whatsNewTitle = document.getElementById('startup-whats-new-title');
+  var whatsNewGif = document.getElementById('startup-whats-new-gif');
+  var whatsNewNote = document.getElementById('startup-whats-new-note');
+  var whatsNewProgress = document.getElementById('startup-whats-new-progress');
   if (!startupSplash || !continueBtn) {
     onContinue(!!initialParamlessLoad);
     return;
   }
 
   var splashNarrationUtterance = null;
+  var startupWhatsNewItems = [];
+  var startupWhatsNewIndex = 0;
+  var startupWhatsNewLoaded = false;
+  var startupWhatsNewLoading = false;
   var SPLASH_HEAR_LABEL = '🔊 Hear this';
   var SPLASH_STOP_LABEL = '⏹ Stop narration';
 
@@ -1935,6 +1950,157 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     hearBtn.textContent = SPLASH_STOP_LABEL;
   }
 
+  function closeStartupWhatsNewModal() {
+    if (!whatsNewModal) return;
+    whatsNewModal.classList.remove('open');
+    whatsNewModal.hidden = true;
+  }
+
+  function setStartupWhatsNewStatus(message) {
+    if (!whatsNewStatus) return;
+    whatsNewStatus.textContent = String(message || '');
+  }
+
+  function syncStartupWhatsNewNavButtons() {
+    var count = startupWhatsNewItems.length;
+    var atStart = startupWhatsNewIndex <= 0;
+    var atEnd = startupWhatsNewIndex >= (count - 1);
+    if (whatsNewPrevBtn) {
+      whatsNewPrevBtn.disabled = !count || atStart;
+    }
+    if (whatsNewNextBtn) {
+      whatsNewNextBtn.disabled = !count || atEnd;
+    }
+  }
+
+  function renderStartupWhatsNewSlide(index) {
+    if (!whatsNewStage || !whatsNewTitle || !whatsNewGif || !whatsNewNote || !whatsNewProgress) return;
+    if (!startupWhatsNewItems.length) return;
+
+    var safeIndex = Math.max(0, Math.min(index, startupWhatsNewItems.length - 1));
+    startupWhatsNewIndex = safeIndex;
+    var item = startupWhatsNewItems[safeIndex];
+    if (!item) return;
+
+    whatsNewTitle.textContent = String(item.title || 'Update');
+    whatsNewNote.textContent = String(item.note || '');
+    whatsNewGif.src = String(item.gif || '');
+    whatsNewProgress.textContent = String(safeIndex + 1) + ' / ' + String(startupWhatsNewItems.length);
+    whatsNewStage.hidden = false;
+    setStartupWhatsNewStatus('');
+    syncStartupWhatsNewNavButtons();
+  }
+
+  function normalizeStartupWhatsNewItems(manifest) {
+    var items = manifest && Array.isArray(manifest.items) ? manifest.items : [];
+
+    function resolveGifPath(rawPath) {
+      var value = String(rawPath || '').trim();
+      if (!value) return '';
+      if (/^(https?:|data:|blob:|\/)/i.test(value)) {
+        return value;
+      }
+      if (value.indexOf('docs/whats-new/') === 0) {
+        return value;
+      }
+      value = value.replace(/^\.\//, '');
+      return 'docs/whats-new/' + value;
+    }
+
+    return items
+      .map(function(item) {
+        if (!item || typeof item !== 'object') return null;
+        var title = String(item.title || item.id || 'Update').trim();
+        var note = String(item.note || '').trim();
+        var gif = resolveGifPath(item.gif);
+        if (!gif) return null;
+        return {
+          title: title,
+          note: note,
+          gif: gif
+        };
+      })
+      .filter(function(item) {
+        return !!item;
+      });
+  }
+
+  function loadStartupWhatsNewItems() {
+    if (startupWhatsNewLoaded) return Promise.resolve(startupWhatsNewItems);
+    if (startupWhatsNewLoading) return Promise.resolve(startupWhatsNewItems);
+
+    startupWhatsNewLoading = true;
+    setStartupWhatsNewStatus('Loading updates...');
+
+    var globalManifest = window.stitchlabWhatsNewManifest;
+    if (globalManifest && typeof globalManifest === 'object') {
+      startupWhatsNewItems = normalizeStartupWhatsNewItems(globalManifest);
+      startupWhatsNewLoaded = startupWhatsNewItems.length > 0;
+      startupWhatsNewLoading = false;
+      return Promise.resolve(startupWhatsNewItems);
+    }
+
+    var manifestUrlCandidates = [
+      'docs/whats-new/manifest.json',
+      './docs/whats-new/manifest.json',
+      '/docs/whats-new/manifest.json'
+    ];
+
+    function fetchManifestByIndex(index) {
+      if (index >= manifestUrlCandidates.length) {
+        return Promise.reject(new Error('No manifest URL candidates succeeded.'));
+      }
+      var url = manifestUrlCandidates[index];
+      return fetch(url, { cache: 'no-store' }).then(function(response) {
+        if (!response.ok) {
+          return fetchManifestByIndex(index + 1);
+        }
+        return response.json();
+      }).catch(function() {
+        return fetchManifestByIndex(index + 1);
+      });
+    }
+
+    return fetchManifestByIndex(0)
+      .then(function(manifest) {
+        startupWhatsNewItems = normalizeStartupWhatsNewItems(manifest);
+        startupWhatsNewLoaded = startupWhatsNewItems.length > 0;
+        return startupWhatsNewItems;
+      })
+      .catch(function() {
+        startupWhatsNewItems = [];
+        startupWhatsNewLoaded = false;
+        return [];
+      })
+      .finally(function() {
+        startupWhatsNewLoading = false;
+      });
+  }
+
+  function openStartupWhatsNewModal() {
+    if (!whatsNewModal) {
+      window.open('docs/whats-new/index.html', '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    stopSplashNarration();
+    whatsNewModal.hidden = false;
+    whatsNewModal.classList.add('open');
+    if (whatsNewStage) {
+      whatsNewStage.hidden = true;
+    }
+    setStartupWhatsNewStatus('Loading updates...');
+
+    loadStartupWhatsNewItems().then(function(items) {
+      if (!items.length) {
+        setStartupWhatsNewStatus('No updates are available yet. If this is unexpected, run npm run whats-new:build and refresh.');
+        syncStartupWhatsNewNavButtons();
+        return;
+      }
+      renderStartupWhatsNewSlide(0);
+    });
+  }
+
   startupSplash.hidden = false;
   continueBtn.focus();
 
@@ -1950,11 +2116,52 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     });
   }
 
+  if (whatsNewBtn) {
+    whatsNewBtn.addEventListener('click', function() {
+      openStartupWhatsNewModal();
+    });
+  }
+
+  if (whatsNewCloseBtn) {
+    whatsNewCloseBtn.addEventListener('click', function() {
+      closeStartupWhatsNewModal();
+    });
+  }
+
+  if (whatsNewPrevBtn) {
+    whatsNewPrevBtn.addEventListener('click', function() {
+      if (!startupWhatsNewItems.length) return;
+      renderStartupWhatsNewSlide(startupWhatsNewIndex - 1);
+    });
+  }
+
+  if (whatsNewNextBtn) {
+    whatsNewNextBtn.addEventListener('click', function() {
+      if (!startupWhatsNewItems.length) return;
+      renderStartupWhatsNewSlide(startupWhatsNewIndex + 1);
+    });
+  }
+
+  if (whatsNewModal) {
+    whatsNewModal.addEventListener('click', function(event) {
+      if (event.target === whatsNewModal) {
+        closeStartupWhatsNewModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', function(event) {
+    if (!event || event.key !== 'Escape') return;
+    if (!whatsNewModal || whatsNewModal.hidden || !whatsNewModal.classList.contains('open')) return;
+    closeStartupWhatsNewModal();
+  });
+
   continueBtn.addEventListener('click', function handleStartupSplashContinue() {
     continueBtn.removeEventListener('click', handleStartupSplashContinue);
     if (typeof prewarmOnboardingNarrationSpeech === 'function') {
       prewarmOnboardingNarrationSpeech();
     }
+    closeStartupWhatsNewModal();
     stopSplashNarration();
     startupSplash.hidden = true;
     onContinue(!!initialParamlessLoad);

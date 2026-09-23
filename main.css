@@ -896,11 +896,87 @@
     font-size: 13px;
     line-height: 1;
   }
+  #startup-splash-whats-new {
+    min-width: 128px;
+    min-height: 36px;
+    font-size: 13px;
+    line-height: 1;
+  }
   #startup-splash-continue {
     min-width: 128px;
     min-height: 36px;
     font-size: 13px;
     line-height: 1;
+  }
+  .startup-whats-new-card {
+    width: min(75vw, 1380px);
+    max-width: calc(100vw - 24px);
+    height: min(75vh, 980px);
+    max-height: calc(100vh - 24px);
+    overflow: hidden;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .startup-whats-new-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .startup-whats-new-header h4 {
+    margin: 0;
+  }
+  .startup-whats-new-status {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #4e6285;
+  }
+  .startup-whats-new-stage[hidden] {
+    display: none;
+  }
+  .startup-whats-new-stage {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 8px;
+    overflow: auto;
+  }
+  .startup-whats-new-stage h5 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: #2b3e63;
+  }
+  #startup-whats-new-gif {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 280px;
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid #d8dfef;
+    display: block;
+    background: #f8fafe;
+  }
+  #startup-whats-new-note {
+    margin: 10px 0 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #334a73;
+  }
+  .startup-whats-new-progress {
+    margin: 0;
+    font-size: 12px;
+    color: #5e7090;
+  }
+  .startup-whats-new-actions {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
   }
   .onboarding-help-btn {
     font-size: 18px;
@@ -2230,6 +2306,14 @@
     display: flex;
   }
 
+  #startup-whats-new-modal {
+    z-index: 130;
+  }
+
+  #startup-whats-new-modal[hidden] {
+    display: none;
+  }
+
   .modal-card {
     width: min(460px, 100%);
     background: #fff;
@@ -2237,6 +2321,13 @@
     border: 1px solid #d8dfef;
     box-shadow: 0 18px 50px rgba(18, 30, 53, 0.22);
     padding: 14px;
+  }
+
+  #startup-whats-new-modal .startup-whats-new-card {
+    width: min(90vw, 1600px);
+    max-width: calc(100vw - 24px);
+    height: min(84vh, 1040px);
+    max-height: calc(100vh - 24px);
   }
 
   .modal-card.acknowledgments-card {
@@ -2844,6 +2935,33 @@
     border-color: #324968;
     background: #324968;
     color: #f8fbff;
+  }
+
+  html[data-theme="dark"] #startup-whats-new-modal {
+    background: rgba(6, 10, 16, 0.76);
+  }
+
+  html[data-theme="dark"] #startup-whats-new-modal .modal-card {
+    background: #1f2936;
+    border-color: #3f4f66;
+    color: #dce7f8;
+    box-shadow: 0 18px 50px rgba(5, 9, 16, 0.45);
+  }
+
+  html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-status,
+  html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-progress,
+  html[data-theme="dark"] #startup-whats-new-modal #startup-whats-new-note {
+    color: #c9daef;
+  }
+
+  html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-header h4,
+  html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-stage h5 {
+    color: #e7f0ff;
+  }
+
+  html[data-theme="dark"] #startup-whats-new-modal #startup-whats-new-gif {
+    border-color: #5a6f8f;
+    background: #2f3f55;
   }
 
   html[data-theme="dark"] .modal-card.acknowledgments-card h4 {
