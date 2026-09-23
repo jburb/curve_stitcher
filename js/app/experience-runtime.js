@@ -255,9 +255,15 @@ function buildRandomThreadSequence(sourceHoleCount, jumpLimit, sequenceMode, min
 
 function applyRandomizedStitchingStateForParamlessLoad() {
   var stitchingProfile = getExperienceUiProfile('stitching');
-  var allowedShapes = (stitchingProfile && Array.isArray(stitchingProfile.allowedShapes) && stitchingProfile.allowedShapes.length)
+  var profileAllowedShapes = (stitchingProfile && Array.isArray(stitchingProfile.allowedShapes) && stitchingProfile.allowedShapes.length)
     ? stitchingProfile.allowedShapes.slice()
     : ['circle', 'triangle', 'square'];
+  var allowedShapes = profileAllowedShapes.filter(function(shape) {
+    return sanitizeShape(shape, 'circle') !== 'star';
+  });
+  if (!allowedShapes.length) {
+    allowedShapes = ['circle', 'triangle', 'square'];
+  }
   var randomShape = sanitizeShape(pickRandomValue(allowedShapes, 'circle'), 'circle');
   var holesMin = parseBoundedInt(holesSlider && holesSlider.min, 3, MAX_HOLES, 3);
   var holesDisplayLimit = parseBoundedInt(HOLE_NUMBER_AUTO_HIDE_THRESHOLD, holesMin, MAX_HOLES, MAX_HOLES);

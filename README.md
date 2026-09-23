@@ -433,7 +433,6 @@ This section describes the practical steps for adding a new experience named zoo
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
 1. Add thank you note to Cambridge in acknowledgments
-1. Prevent star frame usage for random thread generation
 1. Move stitch by help text in advanced to interaction based reveal eg by info icon beside stitch by picker
 1. Add mashrabiya animation sample among acknowledgments experience animations 
 1. Tips library and modal
@@ -476,6 +475,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Enable thread re-ordering from advanced pane (including first-card downward drag and in-drag visual lift feedback; picker remains select-only)
 1. Improved and re-enabled formula mode
 1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
+1. Paramless random thread generation excludes star frame selection
 1. Use better voice for narration.
 
 ## TODO Backlog
@@ -484,8 +484,6 @@ This section describes the practical steps for adding a new experience named zoo
 1. Allow single pattern export and import.
 
 1. Add thank you note to Cambridge in acknowledgments
- 
-1. Prevent star frame usage for random thread generation
  
 1. Move stitch by help text in advanced to interaction based reveal eg by info icon beside stitch by picker
  

@@ -1853,6 +1853,34 @@ test.describe('StitchLab regressions', () => {
     expect(probe.steps.failures, JSON.stringify(probe.steps.samples)).toEqual([]);
   });
 
+  test('paramless randomization does not choose star frame shape', async ({ page }) => {
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      var runs = 80;
+      var seenShapes = [];
+      var starSelections = 0;
+
+      for (var i = 0; i < runs; i++) {
+        window.hasAppliedParamlessStitchingRandomization = false;
+        window.applyRandomizedStitchingStateForParamlessLoad();
+        var shape = window.sanitizeShape(window.stitchingFrameShape || window.currentShape || 'circle', 'circle');
+        seenShapes.push(shape);
+        if (shape === 'star') {
+          starSelections += 1;
+        }
+      }
+
+      return {
+        runs: runs,
+        starSelections: starSelections,
+        seenShapes: Array.from(new Set(seenShapes)).sort()
+      };
+    });
+
+    expect(probe.starSelections, JSON.stringify(probe)).toBe(0);
+  });
+
   test('start hole is hidden and ignored for list modes', async ({ page }) => {
     await page.goto('/stitchlab.html');
 

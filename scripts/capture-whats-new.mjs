@@ -656,7 +656,6 @@ const scenarioHandlers = {
     await page.waitForTimeout(280);
     await demoClick(page, '#startup-splash-continue', { postDelayMs: 220 });
 
-    await ensureScenarioFrameShape(page, item);
     await page.locator('#onboarding-tour').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('#onboarding-tour-title').waitFor({ state: 'visible', timeout: 8000 });
     var sawSecondHint = false;
@@ -730,7 +729,6 @@ const scenarioHandlers = {
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await setupCapturePage(page);
     await page.waitForTimeout(500);
-    await ensureScenarioFrameShape(page, item);
     await demoClick(page, '#gear');
 
     await moveCursorToSelector(page, '#advanced-hole-rotation');
