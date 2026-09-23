@@ -158,6 +158,7 @@ Files involved:
 	- Each item declares `id`, `scenario`, `title`, `note`, and target `gif` path.
 - `scripts/capture-whats-new.mjs`
 	- Uses Playwright to run deterministic capture scenarios.
+	- Before capture begins, uses app UI controls to disable onboarding autoplay and reuses that persisted state for all scenarios.
 	- Records short per-feature videos, then converts each to GIF with `ffmpeg`.
 	- Writes GIF output under `docs/whats-new/gifs/`.
 	- Deletes intermediate videos by default after successful GIF conversion (to reduce disk usage).

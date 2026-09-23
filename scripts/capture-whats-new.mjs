@@ -13,6 +13,7 @@ const outputRoot = path.join(workspaceRoot, 'docs', 'whats-new');
 const gifsDir = path.join(outputRoot, 'gifs');
 const videosDir = path.join(outputRoot, 'videos');
 const rawDir = path.join(workspaceRoot, 'test-results', 'whats-new-raw-videos');
+const captureStorageStatePath = path.join(workspaceRoot, 'test-results', 'whats-new-capture-storage-state.json');
 
 const APP_URL = process.env.WHATS_NEW_URL || 'http://127.0.0.1:4173/stitchlab.html';
 const APP_ORIGIN = new URL(APP_URL).origin;
@@ -133,9 +134,23 @@ async function disableOnboardingAutoplayViaUi(page) {
   await page.waitForTimeout(350);
 }
 
+async function createCaptureStorageState(browser) {
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 }
+  });
+  const page = await context.newPage();
+  try {
+    await disableOnboardingAutoplayViaUi(page);
+    await context.storageState({ path: captureStorageStatePath });
+    log('Prepared shared capture state with onboarding autoplay disabled.');
+  } finally {
+    await context.close();
+  }
+}
+
 const scenarioHandlers = {
   async 'list-mode-sequence-or-steps'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(450);
     await page.selectOption('#kid-stitch-by', 'sequence');
     await page.selectOption('#kid-sequence-mode', 'holes');
@@ -151,14 +166,14 @@ const scenarioHandlers = {
   },
 
   async 'onboarding-autoplay-tutorial'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.locator('#onboarding-help').click();
     await page.locator('#onboarding-tour-hear-all').click();
     await page.waitForTimeout(4200);
   },
 
   async 'paramless-random-thread-preview'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(450);
     await page.evaluate(() => {
       if (typeof window.applyRandomizedStitchingStateForParamlessLoad === 'function') {
@@ -176,7 +191,7 @@ const scenarioHandlers = {
   },
 
   async 'hole-number-rotation'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
     await page.locator('#gear').click();
 
@@ -207,7 +222,7 @@ const scenarioHandlers = {
   },
 
   async 'active-thread-overlay'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(450);
 
     await page.evaluate(() => {
@@ -251,7 +266,7 @@ const scenarioHandlers = {
   },
 
   async 'formula-mode-improvements'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(450);
     await page.locator('#gear').click();
     await page.selectOption('#jump-mode-0', 'formula');
@@ -264,7 +279,7 @@ const scenarioHandlers = {
   },
 
   async 'stitch-library-offline-first'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
     await page.locator('#discovery-toggle').click();
     await page.waitForTimeout(900);
@@ -273,7 +288,7 @@ const scenarioHandlers = {
   },
 
   async 'curve-sewing-cards-viewer'(page) {
-    await disableOnboardingAutoplayViaUi(page);
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-sewing-cards-toggle').click();
@@ -293,6 +308,7 @@ async function captureFeature(item, browser) {
 
   const context = await browser.newContext({
     viewport: { width: 1280, height: 720 },
+    storageState: captureStorageStatePath,
     recordVideo: {
       dir: rawDir,
       size: { width: 1280, height: 720 }
@@ -352,6 +368,7 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
 
   try {
+    await createCaptureStorageState(browser);
     for (const item of items) {
       await captureFeature(item, browser);
     }
@@ -371,6 +388,7 @@ async function main() {
   }
 
   await rmIfExists(rawDir);
+  await rmIfExists(captureStorageStatePath);
 
   log(`Done. GIFs: ${path.relative(workspaceRoot, gifsDir)}`);
 }
