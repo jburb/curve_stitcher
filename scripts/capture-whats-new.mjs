@@ -856,6 +856,15 @@ const scenarioHandlers = {
     await firstCard.waitFor({ state: 'visible', timeout: 8000 });
     await secondCard.waitFor({ state: 'visible', timeout: 8000 });
 
+    await page.evaluate(() => {
+      var controls = document.getElementById('thread-controls');
+      if (controls) {
+        controls.scrollTop = 0;
+      }
+    });
+    await firstCard.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(320);
+
     const firstBox = await firstCard.boundingBox();
     const secondBox = await secondCard.boundingBox();
     if (!firstBox || !secondBox) {
@@ -906,7 +915,7 @@ const scenarioHandlers = {
     await ensureScenarioFrameShape(page, item);
     await demoClick(page, '#gear');
     await demoSelect(page, '#jump-mode-0', 'formula');
-    await demoFill(page, '#jump-formula-0', 'currentHole + (index mod 4)');
+    await demoFill(page, '#jump-formula-0', '((currentHole + previousHole) mod holeCount) + 1');
     await page.waitForTimeout(900);
     await demoClick(page, '#kid-tempo-slow');
     await page.waitForTimeout(700);

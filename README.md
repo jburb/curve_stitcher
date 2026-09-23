@@ -445,8 +445,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 1. What's New refresh: improved formula copy, added advanced thread-reordering highlight item, and reordered highlights by impact/interest
 1. Added selective What's New capture filters (capture only selected ids/scenarios or only missing GIFs) and an interactive reorder workflow
-1. Enable thread re-ordering from advanced pane (including first-card downward drag and in-drag visual lift feedback; picker remains select-only)
-1. Improved and re-enabled formula mode
 1. Refactor for cleanliness: moved non-acknowledgments code from the acknowledgments module into proper modules
 1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
 1. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
@@ -475,7 +473,8 @@ This section describes the practical steps for adding a new experience named zoo
 1. Re-enable formula stitch mode with improvements 
 1. Stitch library (offline-first)
 1. Curve sewing cards viewer
-
+1. Enable thread re-ordering from advanced pane (including first-card downward drag and in-drag visual lift feedback; picker remains select-only)
+1. Improved and re-enabled formula mode
 1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
 1. Use better voice for narration.
 
