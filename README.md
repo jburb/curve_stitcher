@@ -170,6 +170,20 @@ Files involved:
 Commands:
 - `npm run whats-new:capture`
 	- Runs scripted captures + GIF conversion.
+	- Full run behavior: clears and rebuilds all `docs/whats-new/gifs/` assets.
+	- Partial run behavior: when filters are provided, preserves existing GIFs and only regenerates selected items.
+- `npm run whats-new:capture -- --list-items`
+	- Shows the current capture item list (`id`, `scenario`, GIF path, file existence) without recording anything.
+- `npm run whats-new:capture -- --only thread-reordering-advanced-pane`
+	- Regenerates a single item by id (can pass multiple comma-separated ids).
+- `npm run whats-new:capture -- --scenario formula-mode-improvements`
+	- Regenerates items by scenario name.
+- `npm run whats-new:capture -- --only-missing`
+	- Captures only items whose GIF output file is currently missing.
+- `npm run whats-new:reorder`
+	- Prints the current What's New order and prompts for a new comma-separated order (numbers or ids).
+- `npm run whats-new:reorder -- --list-only`
+	- Prints the current order only.
 - `npm run whats-new:build`
 	- Rebuilds the "What's New" HTML/Markdown pages from manifest + generated assets.
 - `npm run whats-new:generate`
@@ -190,6 +204,12 @@ Optional environment overrides:
 	- Playback slowdown multiplier applied before GIF conversion (default: `1.35`).
 - `WHATS_NEW_KEEP_VIDEOS`
 	- Set to `1` (or `true`) to keep per-scenario videos in `docs/whats-new/videos/` after conversion (default: videos are removed).
+- `WHATS_NEW_ONLY`
+	- Comma-separated item ids to capture selectively (same effect as `--only`).
+- `WHATS_NEW_SCENARIOS`
+	- Comma-separated scenario names to capture selectively (same effect as `--scenario`).
+- `WHATS_NEW_REORDER`
+	- Comma-separated ids or positions for non-interactive ordering in `whats-new:reorder`.
 - `WHATS_NEW_PROMPT_DESCRIPTIONS`
 	- Set to `1` (or `true`) to prompt for a more user-friendly description per item during `whats-new:build`.
 	- Press Enter to keep the existing item note (the completed-milestone text already in `manifest.json`).
@@ -208,6 +228,8 @@ Optional environment overrides:
 
 Maintenance notes:
 - To add or remove showcased features, update `docs/whats-new/manifest.json` and rerun `npm run whats-new:generate`.
+- To reorder showcased features without touching GIFs, run `npm run whats-new:reorder`, then `npm run whats-new:build`.
+- To refresh only one new/changed GIF, run `npm run whats-new:capture -- --only <item-id>`, then `npm run whats-new:build`.
 - Keep scenario IDs stable where possible so generated asset filenames remain predictable.
 
 ### Packaging Safety Guardrails
@@ -408,9 +430,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Make formula what's new item use better formula 
-1. Add a what's new item for reordering threads 
-1. Reorder the what's new items by interest/impact
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
 1. Add thank you note to Cambridge in acknowledgments
@@ -424,6 +443,8 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Recently Completed
 
+1. What's New refresh: improved formula copy, added advanced thread-reordering highlight item, and reordered highlights by impact/interest
+1. Added selective What's New capture filters (capture only selected ids/scenarios or only missing GIFs) and an interactive reorder workflow
 1. Enable thread re-ordering from advanced pane (including first-card downward drag and in-drag visual lift feedback; picker remains select-only)
 1. Improved and re-enabled formula mode
 1. Refactor for cleanliness: moved non-acknowledgments code from the acknowledgments module into proper modules
@@ -459,12 +480,6 @@ This section describes the practical steps for adding a new experience named zoo
 1. Use better voice for narration.
 
 ## TODO Backlog
-1. Make formula what’s new item use better formula
-
-1. Add a what’s new item for reordering threads
-
-1. Reorder the what’s new items by interest/impact
- 
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
  
 1. Allow single pattern export and import.

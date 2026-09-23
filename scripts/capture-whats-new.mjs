@@ -27,6 +27,69 @@ const CURSOR_POST_ACTION_MS = Number(process.env.WHATS_NEW_CURSOR_POST_ACTION_MS
 const CURSOR_TYPE_DELAY_MS = Number(process.env.WHATS_NEW_CURSOR_TYPE_DELAY_MS || 28);
 const CURSOR_CLICK_HOLD_MS = Number(process.env.WHATS_NEW_CURSOR_CLICK_HOLD_MS || 55);
 
+function parseCsvList(raw) {
+  return String(raw || '')
+    .split(',')
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function parseCliOptions(argv) {
+  const options = {
+    onlyIds: [],
+    onlyScenarios: [],
+    onlyMissing: false,
+    listItems: false
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--only' || arg === '--ids') {
+      options.onlyIds.push(...parseCsvList(argv[i + 1] || ''));
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith('--only=')) {
+      options.onlyIds.push(...parseCsvList(arg.slice('--only='.length)));
+      continue;
+    }
+    if (arg.startsWith('--ids=')) {
+      options.onlyIds.push(...parseCsvList(arg.slice('--ids='.length)));
+      continue;
+    }
+    if (arg === '--scenario' || arg === '--scenarios') {
+      options.onlyScenarios.push(...parseCsvList(argv[i + 1] || ''));
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith('--scenario=')) {
+      options.onlyScenarios.push(...parseCsvList(arg.slice('--scenario='.length)));
+      continue;
+    }
+    if (arg.startsWith('--scenarios=')) {
+      options.onlyScenarios.push(...parseCsvList(arg.slice('--scenarios='.length)));
+      continue;
+    }
+    if (arg === '--only-missing') {
+      options.onlyMissing = true;
+      continue;
+    }
+    if (arg === '--list-items') {
+      options.listItems = true;
+    }
+  }
+
+  const envOnly = parseCsvList(process.env.WHATS_NEW_ONLY);
+  const envScenarios = parseCsvList(process.env.WHATS_NEW_SCENARIOS);
+  options.onlyIds.push(...envOnly);
+  options.onlyScenarios.push(...envScenarios);
+
+  options.onlyIds = Array.from(new Set(options.onlyIds));
+  options.onlyScenarios = Array.from(new Set(options.onlyScenarios));
+
+  return options;
+}
+
 function fail(message) {
   console.error(`[whats-new:capture] ${message}`);
   process.exit(1);
@@ -747,6 +810,95 @@ const scenarioHandlers = {
     await page.waitForTimeout(3600);
   },
 
+  async 'thread-reordering-advanced-pane'(page, item) {
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+    await setupCapturePage(page);
+    await page.waitForTimeout(460);
+    await ensureScenarioFrameShape(page, item);
+    await demoClick(page, '#gear', { postDelayMs: 200 });
+
+    await page.evaluate(() => {
+      stopAnimationIfActive();
+      nestedFrameEnabled = false;
+      if (nestedFrameEnabledInput) nestedFrameEnabledInput.checked = false;
+
+      threads = [
+        sanitizeThreadDescriptor({
+          jumpMode: 'fixed',
+          jump: 6,
+          startHole: 1,
+          width: 2,
+          color: '#1982c4'
+        }, null),
+        sanitizeThreadDescriptor({
+          jumpMode: 'fixed',
+          jump: 10,
+          startHole: 1,
+          width: 3,
+          color: '#ff595e'
+        }, null),
+        sanitizeThreadDescriptor({
+          jumpMode: 'connect',
+          connectMultiplier: 3,
+          startHole: 1,
+          width: 2,
+          color: '#8ac926'
+        }, null)
+      ];
+      selectedThreadIndex = 0;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    const firstCard = page.locator('#thread-controls .thread-card').nth(0);
+    const secondCard = page.locator('#thread-controls .thread-card').nth(1);
+    await firstCard.waitFor({ state: 'visible', timeout: 8000 });
+    await secondCard.waitFor({ state: 'visible', timeout: 8000 });
+
+    const firstBox = await firstCard.boundingBox();
+    const secondBox = await secondCard.boundingBox();
+    if (!firstBox || !secondBox) {
+      throw new Error('Unable to resolve thread-card bounds for reorder scenario.');
+    }
+
+    const dragStart = {
+      x: firstBox.x + firstBox.width / 2,
+      y: firstBox.y + Math.min(28, Math.max(18, firstBox.height * 0.25))
+    };
+    const dragMid = {
+      x: dragStart.x,
+      y: secondBox.y + secondBox.height * 0.65
+    };
+
+    await moveCursorToPoint(page, dragStart);
+    await cursorPress(page);
+    await page.mouse.move(dragStart.x, dragStart.y);
+    await page.mouse.down();
+    await page.waitForTimeout(90);
+
+    const dragSteps = 14;
+    for (let step = 1; step <= dragSteps; step += 1) {
+      const t = step / dragSteps;
+      const nextPoint = {
+        x: dragStart.x + (dragMid.x - dragStart.x) * t,
+        y: dragStart.y + (dragMid.y - dragStart.y) * t
+      };
+      await setCursorPoint(page, nextPoint);
+      await page.mouse.move(nextPoint.x, nextPoint.y);
+      await page.waitForTimeout(24);
+    }
+
+    await page.mouse.up();
+    await cursorRelease(page, true);
+    await page.waitForTimeout(900);
+
+    await demoClick(page, '#kid-tempo-slow');
+    await page.waitForTimeout(600);
+    await demoClick(page, '#animate', { postDelayMs: 180 });
+    await page.waitForTimeout(2200);
+  },
+
   async 'formula-mode-improvements'(page, item) {
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await setupCapturePage(page);
@@ -849,6 +1001,7 @@ async function captureFeature(item, browser) {
     const rawVideoExt = path.extname(rawVideoPath) || '.webm';
     const videoTargetPath = path.join(videosDir, `${item.id}${rawVideoExt}`);
     const gifTargetPath = path.join(outputRoot, item.gif);
+    await ensureDir(path.dirname(gifTargetPath));
 
     await fs.copyFile(rawVideoPath, videoTargetPath);
     runFfmpegToGif(videoTargetPath, gifTargetPath);
@@ -858,7 +1011,55 @@ async function captureFeature(item, browser) {
   }
 }
 
+async function filterCaptureItems(items, options) {
+  const idFilter = new Set(options.onlyIds.map((value) => value.toLowerCase()));
+  const scenarioFilter = new Set(options.onlyScenarios.map((value) => value.toLowerCase()));
+  const hasIdFilter = idFilter.size > 0;
+  const hasScenarioFilter = scenarioFilter.size > 0;
+  const useMissingOnly = Boolean(options.onlyMissing);
+
+  const filtered = [];
+  for (const item of items) {
+    const itemId = String(item.id || '').trim();
+    const scenario = String(item.scenario || '').trim();
+    const itemIdKey = itemId.toLowerCase();
+    const scenarioKey = scenario.toLowerCase();
+
+    if (hasIdFilter && !idFilter.has(itemIdKey)) {
+      continue;
+    }
+    if (hasScenarioFilter && !scenarioFilter.has(scenarioKey)) {
+      continue;
+    }
+    if (useMissingOnly) {
+      const gifRelPath = String(item.gif || '').trim();
+      const gifAbsPath = path.join(outputRoot, gifRelPath);
+      if (!gifRelPath || (await pathExists(gifAbsPath))) {
+        continue;
+      }
+    }
+
+    filtered.push(item);
+  }
+
+  return filtered;
+}
+
+async function logManifestItems(items) {
+  log('Manifest items:');
+  for (const item of items) {
+    const id = String(item.id || '').trim();
+    const scenario = String(item.scenario || '').trim();
+    const title = String(item.title || id || '(untitled)').trim();
+    const gifRelPath = String(item.gif || '').trim();
+    const gifAbsPath = path.join(outputRoot, gifRelPath);
+    const gifExists = gifRelPath ? await pathExists(gifAbsPath) : false;
+    console.log(`- ${id} | scenario=${scenario} | gif=${gifRelPath || '(none)'} | exists=${gifExists ? 'yes' : 'no'} | ${title}`);
+  }
+}
+
 async function main() {
+  const options = parseCliOptions(process.argv.slice(2));
   const ffmpegCheck = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' });
   if (ffmpegCheck.status !== 0) {
     fail('ffmpeg is required but not available on PATH.');
@@ -872,13 +1073,34 @@ async function main() {
     fail(`No manifest items found in ${manifestPath}`);
   }
 
+  if (options.listItems) {
+    await logManifestItems(items);
+    return;
+  }
+
+  const selectedItems = await filterCaptureItems(items, options);
+  if (!selectedItems.length) {
+    fail('No manifest items matched the requested capture filters. Use --list-items to inspect valid ids/scenarios.');
+  }
+
+  const isPartialRun = selectedItems.length !== items.length;
+
   await ensureDir(outputRoot);
-  await rmIfExists(gifsDir);
-  await rmIfExists(videosDir);
-  await rmIfExists(rawDir);
-  await ensureDir(gifsDir);
-  await ensureDir(videosDir);
-  await ensureDir(rawDir);
+  if (isPartialRun) {
+    await ensureDir(gifsDir);
+    await ensureDir(videosDir);
+    await rmIfExists(rawDir);
+    await ensureDir(rawDir);
+    log(`Partial capture run selected (${selectedItems.length}/${items.length}). Existing GIFs will be preserved.`);
+  } else {
+    await rmIfExists(gifsDir);
+    await rmIfExists(videosDir);
+    await rmIfExists(rawDir);
+    await ensureDir(gifsDir);
+    await ensureDir(videosDir);
+    await ensureDir(rawDir);
+    log(`Full capture run selected (${selectedItems.length}/${items.length}). GIF output folders were reset.`);
+  }
 
   const serverProc = await startHttpServerIfNeeded();
 
@@ -886,7 +1108,7 @@ async function main() {
 
   try {
     await createCaptureStorageState(browser);
-    for (const item of items) {
+    for (const item of selectedItems) {
       await captureFeature(item, browser);
     }
   } finally {

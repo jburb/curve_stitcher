@@ -8,6 +8,7 @@
     "setup:tts:prebuilt:prune": "node scripts/prune-prebuilt-narration-clips.mjs",
     "setup:tts:prebuilt:prune:apply": "node scripts/prune-prebuilt-narration-clips.mjs --apply",
     "whats-new:capture": "node scripts/capture-whats-new.mjs",
+    "whats-new:reorder": "node scripts/reorder-whats-new.mjs",
     "whats-new:build": "node scripts/build-whats-new.mjs",
     "whats-new:generate": "npm run whats-new:capture && npm run whats-new:build",
     "test:e2e": "playwright test",
