@@ -9,6 +9,7 @@ const workspaceRoot = path.resolve(__dirname, '..');
 const manifestPath = path.join(workspaceRoot, 'docs', 'whats-new', 'manifest.json');
 const outputHtmlPath = path.join(workspaceRoot, 'docs', 'whats-new', 'index.html');
 const outputMarkdownPath = path.join(workspaceRoot, 'docs', 'whats-new', 'README.md');
+const outputManifestJsPath = path.join(workspaceRoot, 'docs', 'whats-new', 'manifest.js');
 
 function escapeHtml(value) {
   return String(value || '')
@@ -105,7 +106,7 @@ async function main() {
     }
     header {
       padding: 2rem 1rem 1.25rem;
-      max-width: 1100px;
+      max-width: 1360px;
       margin: 0 auto;
     }
     h1 {
@@ -123,26 +124,26 @@ async function main() {
       max-width: 70ch;
     }
     .grid {
-      max-width: 1100px;
+      max-width: 1360px;
       margin: 0 auto;
       padding: 0.5rem 1rem 2rem;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+      gap: 1.25rem;
     }
     .feature-card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
       box-shadow: 0 10px 24px rgba(30, 42, 50, 0.08);
-      padding: 0.9rem;
+      padding: 1rem;
       display: grid;
-      gap: 0.7rem;
+      gap: 0.85rem;
       align-content: start;
     }
     .feature-card h2 {
       margin: 0;
-      font-size: 1.04rem;
+      font-size: 1.12rem;
       line-height: 1.3;
       color: var(--accent);
     }
@@ -166,7 +167,7 @@ async function main() {
       border-radius: 8px;
       padding: 0.6rem 0.7rem;
     }
-    @media (max-width: 640px) {
+    @media (max-width: 920px) {
       header { padding-top: 1.25rem; }
       .grid { grid-template-columns: 1fr; }
     }
@@ -187,9 +188,15 @@ async function main() {
 
   await fs.writeFile(outputHtmlPath, html, 'utf8');
   await fs.writeFile(outputMarkdownPath, `${markdownLines.join('\n')}\n`, 'utf8');
+  await fs.writeFile(
+    outputManifestJsPath,
+    `window.stitchlabWhatsNewManifest = ${JSON.stringify(manifest, null, 2)};\n`,
+    'utf8'
+  );
 
   console.log(`[whats-new:build] Wrote ${path.relative(workspaceRoot, outputHtmlPath)}`);
   console.log(`[whats-new:build] Wrote ${path.relative(workspaceRoot, outputMarkdownPath)}`);
+  console.log(`[whats-new:build] Wrote ${path.relative(workspaceRoot, outputManifestJsPath)}`);
 }
 
 main().catch((error) => {

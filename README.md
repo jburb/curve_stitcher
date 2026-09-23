@@ -180,9 +180,11 @@ Optional environment overrides:
 - `WHATS_NEW_URL`
 	- App URL to capture from (default: `http://127.0.0.1:4173/stitchlab.html`).
 - `WHATS_NEW_GIF_FPS`
-	- GIF frame rate (default: `12`).
+	- GIF frame rate (default: `10`).
 - `WHATS_NEW_GIF_WIDTH`
-	- GIF width in pixels (default: `900`).
+	- GIF width in pixels (default: `1200`).
+- `WHATS_NEW_GIF_SLOWDOWN`
+	- Playback slowdown multiplier applied before GIF conversion (default: `1.35`).
 
 Maintenance notes:
 - To add or remove showcased features, update `docs/whats-new/manifest.json` and rerun `npm run whats-new:generate`.

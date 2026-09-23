@@ -1,0 +1,62 @@
+window.stitchlabWhatsNewManifest = {
+  "title": "StitchLab What's New",
+  "intro": "Feature highlights captured from scripted Playwright interactions.",
+  "items": [
+    {
+      "id": "list-mode-sequence-or-steps",
+      "scenario": "list-mode-sequence-or-steps",
+      "title": "List stitch mode: hole sequence or addition steps",
+      "note": "Enable \"list\" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts",
+      "gif": "gifs/list-mode-sequence-or-steps.gif"
+    },
+    {
+      "id": "onboarding-autoplay-tutorial",
+      "scenario": "onboarding-autoplay-tutorial",
+      "title": "Onboarding autoplay tutorial",
+      "note": "Autoplay of onboarding hints as tutorial",
+      "gif": "gifs/onboarding-autoplay-tutorial.gif"
+    },
+    {
+      "id": "paramless-random-thread-preview",
+      "scenario": "paramless-random-thread-preview",
+      "title": "Paramless random thread startup preview",
+      "note": "Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment",
+      "gif": "gifs/paramless-random-thread-preview.gif"
+    },
+    {
+      "id": "hole-number-rotation",
+      "scenario": "hole-number-rotation",
+      "title": "Hole number rotation remapping",
+      "note": "Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.",
+      "gif": "gifs/hole-number-rotation.gif"
+    },
+    {
+      "id": "active-thread-overlay",
+      "scenario": "active-thread-overlay",
+      "title": "Active thread configuration overlay",
+      "note": "Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.",
+      "gif": "gifs/active-thread-overlay.gif"
+    },
+    {
+      "id": "formula-mode-improvements",
+      "scenario": "formula-mode-improvements",
+      "title": "Formula stitch mode improvements",
+      "note": "Re-enable formula stitch mode with improvements",
+      "gif": "gifs/formula-mode-improvements.gif"
+    },
+    {
+      "id": "stitch-library-offline-first",
+      "scenario": "stitch-library-offline-first",
+      "title": "Stitch library workflow",
+      "note": "Stitch library (offline-first)",
+      "gif": "gifs/stitch-library-offline-first.gif"
+    },
+    {
+      "id": "curve-sewing-cards-viewer",
+      "scenario": "curve-sewing-cards-viewer",
+      "title": "Curve sewing cards viewer",
+      "note": "Curve sewing cards viewer",
+      "gif": "gifs/curve-sewing-cards-viewer.gif"
+    }
+  ]
+};

@@ -38,6 +38,7 @@
   <script src="js/app/narration.js" defer></script>
   <script src="js/app/state-url-persistence.js" defer></script>
   <script src="js/app/pattern-library.js" defer></script>
+  <script src="docs/whats-new/manifest.js" defer></script>
   <script src="js/app/experience-runtime.js" defer></script>
   <script src="js/app/stitching-core.js" defer></script>
   <script src="js/app/triangula.js" defer></script>
@@ -58,7 +59,28 @@
     <p id="startup-splash-text">This app is intended to be heard, as well as seen. Please ensure your device volume is unmuted and set to a comfortable level, then click or tap 'Continue'.</p>
     <div class="startup-splash-actions">
       <button id="startup-splash-hear" class="onboarding-chip-btn" type="button" aria-pressed="false">🔊 Hear this</button>
+      <button id="startup-splash-whats-new" class="onboarding-chip-btn" type="button">What's New?</button>
       <button id="startup-splash-continue" class="onboarding-chip-btn primary" type="button">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="startup-whats-new-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="startup-whats-new-heading" hidden>
+  <div class="modal-card startup-whats-new-card">
+    <div class="startup-whats-new-header">
+      <h4 id="startup-whats-new-heading">What's New?</h4>
+      <button id="startup-whats-new-close" type="button" class="modal-btn">Close</button>
+    </div>
+    <p id="startup-whats-new-status" class="startup-whats-new-status" role="status" aria-live="polite">Loading updates...</p>
+    <div id="startup-whats-new-stage" class="startup-whats-new-stage" hidden>
+      <h5 id="startup-whats-new-title"></h5>
+      <img id="startup-whats-new-gif" alt="What's New feature demonstration" loading="lazy">
+      <p id="startup-whats-new-note"></p>
+      <p id="startup-whats-new-progress" class="startup-whats-new-progress"></p>
+    </div>
+    <div class="startup-whats-new-actions">
+      <button id="startup-whats-new-prev" type="button" class="modal-btn">Previous</button>
+      <button id="startup-whats-new-next" type="button" class="modal-btn primary">Next</button>
     </div>
   </div>
 </div>
@@ -91,7 +113,6 @@
   <p id="onboarding-quickstart-text">Try this: choose a frame shape, drag Holes or Add, then press Play.</p>
   <div class="onboarding-quickstart-actions">
     <button id="onboarding-dismiss" class="onboarding-chip-btn" type="button">Skip</button>
-    <button id="onboarding-whats-new" class="onboarding-chip-btn" type="button">What's New</button>
     <button id="onboarding-start-tour" class="onboarding-chip-btn primary" type="button">Learn in 60s</button>
   </div>
 </div>
@@ -106,7 +127,6 @@
         <button id="onboarding-tour-hear-all" class="onboarding-chip-btn" type="button" aria-pressed="false">🔊 Hear all</button>
       </div>
       <div class="onboarding-tour-nav-actions" aria-label="Tour navigation actions">
-        <button id="onboarding-tour-whats-new" class="onboarding-chip-btn" type="button">What's New</button>
         <button id="onboarding-tour-prev" class="onboarding-chip-btn" type="button">Previous</button>
         <button id="onboarding-tour-next" class="onboarding-chip-btn" type="button">Next</button>
         <button id="onboarding-tour-skip" class="onboarding-chip-btn" type="button">End</button>
@@ -916,7 +936,6 @@
   var onboardingQuickStartTitle = document.getElementById('onboarding-quickstart-title');
   var onboardingQuickStartText = document.getElementById('onboarding-quickstart-text');
   var onboardingDismissBtn = document.getElementById('onboarding-dismiss');
-  var onboardingWhatsNewBtn = document.getElementById('onboarding-whats-new');
   var onboardingStartTourBtn = document.getElementById('onboarding-start-tour');
   var onboardingHintsLayer = document.getElementById('onboarding-hints');
   var onboardingHintShape = document.getElementById('onboarding-hint-shape');
@@ -935,7 +954,6 @@
   var onboardingTourHearBtn = document.getElementById('onboarding-tour-hear');
   var onboardingTourHearAllBtn = document.getElementById('onboarding-tour-hear-all');
   var onboardingTourPrevBtn = document.getElementById('onboarding-tour-prev');
-  var onboardingTourWhatsNewBtn = document.getElementById('onboarding-tour-whats-new');
   var onboardingTourSkipBtn = document.getElementById('onboarding-tour-skip');
   var onboardingTourNextBtn = document.getElementById('onboarding-tour-next');
 

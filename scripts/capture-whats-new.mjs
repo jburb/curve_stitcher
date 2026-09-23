@@ -89,9 +89,10 @@ function startHttpServerIfNeeded() {
 }
 
 function runFfmpegToGif(inputVideoPath, outputGifPath) {
-  const fps = process.env.WHATS_NEW_GIF_FPS || '12';
-  const width = process.env.WHATS_NEW_GIF_WIDTH || '900';
-  const vf = `fps=${fps},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`;
+  const fps = process.env.WHATS_NEW_GIF_FPS || '10';
+  const width = process.env.WHATS_NEW_GIF_WIDTH || '1200';
+  const speed = process.env.WHATS_NEW_GIF_SLOWDOWN || '1.35';
+  const vf = `setpts=${speed}*PTS,fps=${fps},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=full[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle`;
 
   const result = spawnSync('ffmpeg', ['-y', '-i', inputVideoPath, '-vf', vf, outputGifPath], {
     cwd: workspaceRoot,
@@ -104,57 +105,60 @@ function runFfmpegToGif(inputVideoPath, outputGifPath) {
   }
 }
 
-function createSuppressedOnboardingScript() {
-  return (key) => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify({
-        quickStartDismissed: true,
-        tourCompleted: true,
-        startupTutorialOptOut: true
-      }));
-    } catch {
-      // localStorage may be unavailable in some browser contexts.
+async function disableOnboardingAutoplayViaUi(page) {
+  await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+
+  const quickstart = page.locator('#onboarding-quickstart');
+  if (await quickstart.isVisible()) {
+    await page.locator('#onboarding-start-tour').click();
+  } else {
+    await page.locator('#onboarding-help').click();
+  }
+
+  const tour = page.locator('#onboarding-tour');
+  await tour.waitFor({ state: 'visible', timeout: 8000 });
+
+  const optOut = page.locator('#onboarding-tour-optout');
+  if (await optOut.isVisible()) {
+    const isChecked = await optOut.isChecked();
+    if (!isChecked) {
+      await optOut.check();
     }
-  };
+  }
+
+  await page.locator('#onboarding-tour-skip').click();
+  await tour.waitFor({ state: 'hidden', timeout: 8000 });
+  await page.waitForTimeout(350);
 }
 
 const scenarioHandlers = {
   async 'list-mode-sequence-or-steps'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(400);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.waitForTimeout(450);
     await page.selectOption('#kid-stitch-by', 'sequence');
     await page.selectOption('#kid-sequence-mode', 'holes');
     await page.locator('#gear').click();
     await page.locator('#jump-sequence-0').fill('1,3,5,8,13');
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(900);
     await page.selectOption('#kid-sequence-mode', 'steps');
+    await page.waitForTimeout(900);
+    await page.locator('#kid-tempo-slow').click();
     await page.waitForTimeout(700);
     await page.locator('#animate').click();
-    await page.waitForTimeout(2200);
+    await page.waitForTimeout(3600);
   },
 
   async 'onboarding-autoplay-tutorial'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.evaluate((key) => {
-      try {
-        window.localStorage.removeItem(key);
-      } catch {
-        // Ignore storage failures.
-      }
-    }, ONBOARDING_KEY);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-    await page.evaluate(() => {
-      if (typeof window.startOnboardingTour === 'function') {
-        window.startOnboardingTour({ autoplay: true });
-      }
-    });
-    await page.waitForTimeout(2600);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.locator('#onboarding-help').click();
+    await page.locator('#onboarding-tour-hear-all').click();
+    await page.waitForTimeout(4200);
   },
 
   async 'paramless-random-thread-preview'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(350);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.waitForTimeout(450);
     await page.evaluate(() => {
       if (typeof window.applyRandomizedStitchingStateForParamlessLoad === 'function') {
         window.hasAppliedParamlessStitchingRandomization = false;
@@ -164,13 +168,15 @@ const scenarioHandlers = {
         window.redrawForPathChange();
       }
     });
+    await page.locator('#kid-tempo-slow').click();
+    await page.waitForTimeout(700);
     await page.locator('#animate').click();
-    await page.waitForTimeout(2200);
+    await page.waitForTimeout(3400);
   },
 
   async 'hole-number-rotation'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(350);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.waitForTimeout(500);
     await page.locator('#gear').click();
 
     await page.evaluate(() => {
@@ -185,21 +191,23 @@ const scenarioHandlers = {
       slider.dispatchEvent(changeEvt);
     });
 
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(900);
     await page.selectOption('#kid-stitch-by', 'add');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(700);
     await page.selectOption('#kid-stitch-by', 'multiply');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(700);
     await page.selectOption('#kid-stitch-by', 'sequence');
     await page.selectOption('#kid-sequence-mode', 'holes');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
+    await page.locator('#kid-tempo-slow').click();
+    await page.waitForTimeout(700);
     await page.locator('#animate').click();
-    await page.waitForTimeout(1600);
+    await page.waitForTimeout(3000);
   },
 
   async 'active-thread-overlay'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(300);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.waitForTimeout(450);
 
     await page.evaluate(() => {
       stopAnimationIfActive();
@@ -235,40 +243,44 @@ const scenarioHandlers = {
       redrawForPathChange();
     });
 
+    await page.locator('#kid-tempo-slow').click();
+    await page.waitForTimeout(700);
     await page.locator('#animate').click();
-    await page.waitForTimeout(2200);
+    await page.waitForTimeout(3600);
   },
 
   async 'formula-mode-improvements'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(300);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.waitForTimeout(450);
     await page.locator('#gear').click();
     await page.selectOption('#jump-mode-0', 'formula');
     await page.locator('#jump-formula-0').fill('currentHole + (index mod 4)');
+    await page.waitForTimeout(900);
+    await page.locator('#kid-tempo-slow').click();
     await page.waitForTimeout(700);
     await page.locator('#animate').click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3400);
   },
 
   async 'stitch-library-offline-first'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(350);
-    await page.locator('#discovery-toggle').click();
+    await disableOnboardingAutoplayViaUi(page);
     await page.waitForTimeout(500);
+    await page.locator('#discovery-toggle').click();
+    await page.waitForTimeout(900);
     await page.locator('#pattern-library-export-btn').focus();
-    await page.waitForTimeout(2200);
+    await page.waitForTimeout(3000);
   },
 
   async 'curve-sewing-cards-viewer'(page) {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(350);
+    await disableOnboardingAutoplayViaUi(page);
+    await page.waitForTimeout(500);
     await page.locator('#experience-info-toggle').click();
     await page.locator('#experience-sewing-cards-toggle').click();
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(1200);
     await page.locator('#sewing-cards-next-btn').click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(900);
     await page.locator('#sewing-pdf-next-btn').click();
-    await page.waitForTimeout(1700);
+    await page.waitForTimeout(2800);
   }
 };
 
@@ -285,10 +297,6 @@ async function captureFeature(item, browser) {
       size: { width: 1280, height: 720 }
     }
   });
-
-  if (item.scenario !== 'onboarding-autoplay-tutorial') {
-    await context.addInitScript(createSuppressedOnboardingScript(), ONBOARDING_KEY);
-  }
 
   const page = await context.newPage();
   log(`Capturing ${item.id}`);
