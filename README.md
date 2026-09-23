@@ -408,6 +408,15 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Make formula what's new item use better formula 
+1. Add a what's new item for reordering threads 
+1. Reorder the what's new items by interest/impact
+1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
+1. Allow single pattern export and import.
+1. Add thank you note to Cambridge in acknowledgments
+1. Prevent star frame usage for random thread generation
+1. Move stitch by help text in advanced to interaction based reveal eg by info icon beside stitch by picker
+1. Add mashrabiya animation sample among acknowledgments experience animations 
 1. Tips library and modal
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
 1. Experience title bar (animated stitched reveal)
@@ -450,6 +459,24 @@ This section describes the practical steps for adding a new experience named zoo
 1. Use better voice for narration.
 
 ## TODO Backlog
+1. Make formula what’s new item use better formula
+
+1. Add a what’s new item for reordering threads
+
+1. Reorder the what’s new items by interest/impact
+ 
+1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
+ 
+1. Allow single pattern export and import.
+
+1. Add thank you note to Cambridge in acknowledgments
+ 
+1. Prevent star frame usage for random thread generation
+ 
+1. Move stitch by help text in advanced to interaction based reveal eg by info icon beside stitch by picker
+ 
+1. Add mashrabiya animation sample among acknowledgments experience animations
+
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
 
