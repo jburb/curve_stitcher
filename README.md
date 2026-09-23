@@ -159,6 +159,7 @@ Files involved:
 - `scripts/capture-whats-new.mjs`
 	- Uses Playwright to run deterministic capture scenarios.
 	- Before capture begins, uses app UI controls to disable onboarding autoplay and reuses that persisted state for all scenarios.
+	- Renders a demo cursor overlay and animates movement/click/type interactions so GIFs clearly show user-like input during scripted flows.
 	- Records short per-feature videos, then converts each to GIF with `ffmpeg`.
 	- Writes GIF output under `docs/whats-new/gifs/`.
 	- Deletes intermediate videos by default after successful GIF conversion (to reduce disk usage).
@@ -192,6 +193,18 @@ Optional environment overrides:
 - `WHATS_NEW_PROMPT_DESCRIPTIONS`
 	- Set to `1` (or `true`) to prompt for a more user-friendly description per item during `whats-new:build`.
 	- Press Enter to keep the existing item note (the completed-milestone text already in `manifest.json`).
+- `WHATS_NEW_SHOW_CURSOR`
+	- Set to `0` (or `false`) to disable the demo cursor overlay during capture (default: enabled).
+- `WHATS_NEW_CURSOR_MOVE_MS`
+	- Base cursor movement duration in milliseconds before distance scaling (default: `280`).
+- `WHATS_NEW_CURSOR_STEP_PX`
+	- Approximate cursor animation granularity in pixels per step (default: `20`).
+- `WHATS_NEW_CURSOR_POST_ACTION_MS`
+	- Pause duration in milliseconds after each cursor-driven action (default: `100`).
+- `WHATS_NEW_CURSOR_TYPE_DELAY_MS`
+	- Per-character typing delay in milliseconds for text inputs (default: `28`).
+- `WHATS_NEW_CURSOR_CLICK_HOLD_MS`
+	- Press-and-hold duration in milliseconds for click gestures (default: `55`).
 
 Maintenance notes:
 - To add or remove showcased features, update `docs/whats-new/manifest.json` and rerun `npm run whats-new:generate`.
