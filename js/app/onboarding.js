@@ -1137,6 +1137,15 @@ function dismissOnboardingQuickStart() {
   setOnboardingStatePatch({ quickStartDismissed: true });
 }
 
+function openWhatsNewFromOnboarding() {
+  var targetPath = 'docs/whats-new/index.html';
+  try {
+    window.open(targetPath, '_blank', 'noopener,noreferrer');
+  } catch (error) {
+    window.location.href = targetPath;
+  }
+}
+
 function syncOnboardingHelpPulse() {
   if (!onboardingHelpBtn) return;
   var shouldPulse = !onboardingInteractionMarked;

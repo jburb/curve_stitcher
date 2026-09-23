@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StitchLab What&#39;s New</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --ink: #1e2a32;
+      --muted: #6d757d;
+      --card: #fffdf7;
+      --accent: #0f766e;
+      --border: #d9cfbe;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 10% 0%, #fff8ee 0%, var(--bg) 45%, #ede4d6 100%);
+    }
+    header {
+      padding: 2rem 1rem 1.25rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      letter-spacing: 0.02em;
+    }
+    .stamp {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+    }
+    .intro {
+      margin: 0;
+      color: var(--muted);
+      max-width: 70ch;
+    }
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0.5rem 1rem 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(30, 42, 50, 0.08);
+      padding: 0.9rem;
+      display: grid;
+      gap: 0.7rem;
+      align-content: start;
+    }
+    .feature-card h2 {
+      margin: 0;
+      font-size: 1.04rem;
+      line-height: 1.3;
+      color: var(--accent);
+    }
+    .feature-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8f5ee;
+      display: block;
+    }
+    .feature-card p {
+      margin: 0;
+      line-height: 1.45;
+    }
+    .missing {
+      color: #8a2d2d;
+      font-weight: 600;
+      background: #fff1f1;
+      border: 1px solid #f0c8c8;
+      border-radius: 8px;
+      padding: 0.6rem 0.7rem;
+    }
+    @media (max-width: 640px) {
+      header { padding-top: 1.25rem; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>StitchLab What&#39;s New</h1>
+    <p class="intro">Feature highlights captured from scripted Playwright interactions.</p>
+    <p class="stamp">Generated: 2026-09-23T08:21:18.464Z</p>
+  </header>
+  <main class="grid">
+    
+      <article class="feature-card" id="list-mode-sequence-or-steps">
+        <h2>List stitch mode: hole sequence or addition steps</h2>
+        <img src="gifs/list-mode-sequence-or-steps.gif" alt="List stitch mode: hole sequence or addition steps demonstration GIF" loading="lazy">
+        <p>Enable &quot;list&quot; stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts</p>
+      </article>
+    
+
+      <article class="feature-card" id="onboarding-autoplay-tutorial">
+        <h2>Onboarding autoplay tutorial</h2>
+        <img src="gifs/onboarding-autoplay-tutorial.gif" alt="Onboarding autoplay tutorial demonstration GIF" loading="lazy">
+        <p>Autoplay of onboarding hints as tutorial</p>
+      </article>
+    
+
+      <article class="feature-card" id="paramless-random-thread-preview">
+        <h2>Paramless random thread startup preview</h2>
+        <img src="gifs/paramless-random-thread-preview.gif" alt="Paramless random thread startup preview demonstration GIF" loading="lazy">
+        <p>Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment</p>
+      </article>
+    
+
+      <article class="feature-card" id="hole-number-rotation">
+        <h2>Hole number rotation remapping</h2>
+        <img src="gifs/hole-number-rotation.gif" alt="Hole number rotation remapping demonstration GIF" loading="lazy">
+        <p>Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.</p>
+      </article>
+    
+
+      <article class="feature-card" id="active-thread-overlay">
+        <h2>Active thread configuration overlay</h2>
+        <img src="gifs/active-thread-overlay.gif" alt="Active thread configuration overlay demonstration GIF" loading="lazy">
+        <p>Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.</p>
+      </article>
+    
+
+      <article class="feature-card" id="formula-mode-improvements">
+        <h2>Formula stitch mode improvements</h2>
+        <img src="gifs/formula-mode-improvements.gif" alt="Formula stitch mode improvements demonstration GIF" loading="lazy">
+        <p>Re-enable formula stitch mode with improvements</p>
+      </article>
+    
+
+      <article class="feature-card" id="stitch-library-offline-first">
+        <h2>Stitch library workflow</h2>
+        <img src="gifs/stitch-library-offline-first.gif" alt="Stitch library workflow demonstration GIF" loading="lazy">
+        <p>Stitch library (offline-first)</p>
+      </article>
+    
+
+      <article class="feature-card" id="curve-sewing-cards-viewer">
+        <h2>Curve sewing cards viewer</h2>
+        <img src="gifs/curve-sewing-cards-viewer.gif" alt="Curve sewing cards viewer demonstration GIF" loading="lazy">
+        <p>Curve sewing cards viewer</p>
+      </article>
+    
+  </main>
+</body>
+</html>

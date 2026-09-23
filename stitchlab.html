@@ -91,6 +91,7 @@
   <p id="onboarding-quickstart-text">Try this: choose a frame shape, drag Holes or Add, then press Play.</p>
   <div class="onboarding-quickstart-actions">
     <button id="onboarding-dismiss" class="onboarding-chip-btn" type="button">Skip</button>
+    <button id="onboarding-whats-new" class="onboarding-chip-btn" type="button">What's New</button>
     <button id="onboarding-start-tour" class="onboarding-chip-btn primary" type="button">Learn in 60s</button>
   </div>
 </div>
@@ -105,6 +106,7 @@
         <button id="onboarding-tour-hear-all" class="onboarding-chip-btn" type="button" aria-pressed="false">🔊 Hear all</button>
       </div>
       <div class="onboarding-tour-nav-actions" aria-label="Tour navigation actions">
+        <button id="onboarding-tour-whats-new" class="onboarding-chip-btn" type="button">What's New</button>
         <button id="onboarding-tour-prev" class="onboarding-chip-btn" type="button">Previous</button>
         <button id="onboarding-tour-next" class="onboarding-chip-btn" type="button">Next</button>
         <button id="onboarding-tour-skip" class="onboarding-chip-btn" type="button">End</button>
@@ -914,6 +916,7 @@
   var onboardingQuickStartTitle = document.getElementById('onboarding-quickstart-title');
   var onboardingQuickStartText = document.getElementById('onboarding-quickstart-text');
   var onboardingDismissBtn = document.getElementById('onboarding-dismiss');
+  var onboardingWhatsNewBtn = document.getElementById('onboarding-whats-new');
   var onboardingStartTourBtn = document.getElementById('onboarding-start-tour');
   var onboardingHintsLayer = document.getElementById('onboarding-hints');
   var onboardingHintShape = document.getElementById('onboarding-hint-shape');
@@ -932,6 +935,7 @@
   var onboardingTourHearBtn = document.getElementById('onboarding-tour-hear');
   var onboardingTourHearAllBtn = document.getElementById('onboarding-tour-hear-all');
   var onboardingTourPrevBtn = document.getElementById('onboarding-tour-prev');
+  var onboardingTourWhatsNewBtn = document.getElementById('onboarding-tour-whats-new');
   var onboardingTourSkipBtn = document.getElementById('onboarding-tour-skip');
   var onboardingTourNextBtn = document.getElementById('onboarding-tour-next');
 

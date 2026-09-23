@@ -1636,6 +1636,12 @@ if (onboardingDismissBtn) {
   });
 }
 
+if (onboardingWhatsNewBtn) {
+  onboardingWhatsNewBtn.addEventListener('click', function() {
+    openWhatsNewFromOnboarding();
+  });
+}
+
 if (onboardingStartTourBtn) {
   onboardingStartTourBtn.addEventListener('click', function() {
     setOnboardingStatePatch({ quickStartDismissed: true });
@@ -1653,6 +1659,12 @@ if (onboardingTourPrevBtn) {
 
 if (onboardingTourSkipBtn) {
   onboardingTourSkipBtn.addEventListener('click', handleOnboardingTourSkip);
+}
+
+if (onboardingTourWhatsNewBtn) {
+  onboardingTourWhatsNewBtn.addEventListener('click', function() {
+    openWhatsNewFromOnboarding();
+  });
 }
 
 if (onboardingTourOptOutInput) {

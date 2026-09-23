@@ -148,6 +148,46 @@ Optional:
 - Headed run: `npm run test:e2e:headed`
 - Interactive UI mode: `npm run test:e2e:ui`
 
+### What's New GIF Generation (Repeatable)
+
+You can programmatically generate GIF demos for the highlighted feature list and assemble them into a "What's New" page with per-feature notes.
+
+Files involved:
+- `docs/whats-new/manifest.json`
+	- Source-of-truth list for featured items.
+	- Each item declares `id`, `scenario`, `title`, `note`, and target `gif` path.
+- `scripts/capture-whats-new.mjs`
+	- Uses Playwright to run deterministic capture scenarios.
+	- Records short per-feature videos, then converts each to GIF with `ffmpeg`.
+	- Writes output under `docs/whats-new/gifs/` and `docs/whats-new/videos/`.
+- `scripts/build-whats-new.mjs`
+	- Builds `docs/whats-new/index.html` and `docs/whats-new/README.md` from the manifest.
+	- Annotates each GIF with the matching note text from the manifest.
+
+Commands:
+- `npm run whats-new:capture`
+	- Runs scripted captures + GIF conversion.
+- `npm run whats-new:build`
+	- Rebuilds the "What's New" HTML/Markdown pages from manifest + generated assets.
+- `npm run whats-new:generate`
+	- Full pipeline (`capture` then `build`).
+
+Requirements:
+- `ffmpeg` must be available on PATH.
+- Playwright browser installed (`npm run test:e2e:install`).
+
+Optional environment overrides:
+- `WHATS_NEW_URL`
+	- App URL to capture from (default: `http://127.0.0.1:4173/stitchlab.html`).
+- `WHATS_NEW_GIF_FPS`
+	- GIF frame rate (default: `12`).
+- `WHATS_NEW_GIF_WIDTH`
+	- GIF width in pixels (default: `900`).
+
+Maintenance notes:
+- To add or remove showcased features, update `docs/whats-new/manifest.json` and rerun `npm run whats-new:generate`.
+- Keep scenario IDs stable where possible so generated asset filenames remain predictable.
+
 ### Packaging Safety Guardrails
 
 - Playwright is in `devDependencies` only.
@@ -373,20 +413,19 @@ This section describes the practical steps for adding a new experience named zoo
 1. Mashrabiya
 1. Discovery Preview Cards 
 1. Acknowledgments viewer
-1. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
 1. Fix start hole implementation for threads stitched by multiplication
 1. Code Modularization
+1. Enable "list" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts
 1. Autoplay of onboarding hints as tutorial
 1. Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment
-1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
-1. Fix mobile safari and chrome tutorial autoplay after paramless thread preview
 1. Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.
-1. Use better voice for narration.
 1. Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.
 1. Re-enable formula stitch mode with improvements 
 1. Stitch library (offline-first)
 1. Curve sewing cards viewer
 
+1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
+1. Use better voice for narration.
 
 ## TODO Backlog
 1. **Tips library and modal**
