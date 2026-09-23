@@ -6,56 +6,56 @@ window.stitchlabWhatsNewManifest = {
       "id": "list-mode-sequence-or-steps",
       "scenario": "list-mode-sequence-or-steps",
       "title": "List stitch mode: hole sequence or addition steps",
-      "note": "Enable \"list\" stitch mode to treat numbers as either a sequence of hole numbers or of addition amounts",
+      "note": "You now have two ways to stitch a thread with a list of values. Set the list type to \"holes\" to treat each possible consecutive ordered pair as a connection, or set the list type to \"steps\" to calculate each connection by adding the given value from the list, progressing one by one through it.",
       "gif": "gifs/list-mode-sequence-or-steps.gif"
     },
     {
       "id": "onboarding-autoplay-tutorial",
       "scenario": "onboarding-autoplay-tutorial",
       "title": "Onboarding autoplay tutorial",
-      "note": "Autoplay of onboarding hints as tutorial",
+      "note": "When you open StitchLab for the first time, or without any URL parameters, a spoken tutorial will start by default.",
       "gif": "gifs/onboarding-autoplay-tutorial.gif"
     },
     {
       "id": "paramless-random-thread-preview",
       "scenario": "paramless-random-thread-preview",
       "title": "Paramless random thread startup preview",
-      "note": "Random thread value selection on paramless load, including startup preview of the last three stitching steps with acknowledgments fanfare accompaniment",
+      "note": "When you open StitchLab for the first time, or with no URL parameters, a random single-thread pattern will be generated.",
       "gif": "gifs/paramless-random-thread-preview.gif"
     },
     {
       "id": "hole-number-rotation",
       "scenario": "hole-number-rotation",
       "title": "Hole number rotation remapping",
-      "note": "Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.",
+      "note": "Now you can rotate your patterns by rotating the hole numbers on a stitching frame.",
       "gif": "gifs/hole-number-rotation.gif"
     },
     {
       "id": "active-thread-overlay",
       "scenario": "active-thread-overlay",
       "title": "Active thread configuration overlay",
-      "note": "Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.",
+      "note": "When your pattern has more than one thread, StitchLab will show the config values for each active thread during stitch animation.",
       "gif": "gifs/active-thread-overlay.gif"
     },
     {
       "id": "formula-mode-improvements",
       "scenario": "formula-mode-improvements",
       "title": "Formula stitch mode improvements",
-      "note": "Re-enable formula stitch mode with improvements",
+      "note": "Formula mode returns! You can use basic operators and expressions to tell StitchLab how to calculate each target hole for your thread connections.",
       "gif": "gifs/formula-mode-improvements.gif"
     },
     {
       "id": "stitch-library-offline-first",
       "scenario": "stitch-library-offline-first",
       "title": "Stitch library workflow",
-      "note": "Stitch library (offline-first)",
+      "note": "Finally you can save your Stitching patterns, and load them again whenever you like!",
       "gif": "gifs/stitch-library-offline-first.gif"
     },
     {
       "id": "curve-sewing-cards-viewer",
       "scenario": "curve-sewing-cards-viewer",
       "title": "Curve sewing cards viewer",
-      "note": "Curve sewing cards viewer",
+      "note": "Thanks to Cambridge Library, we now have images of the original sewing cards created by Mary Everest Boole!",
       "gif": "gifs/curve-sewing-cards-viewer.gif"
     }
   ]
