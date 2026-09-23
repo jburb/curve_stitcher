@@ -188,6 +188,9 @@ Optional environment overrides:
 	- Playback slowdown multiplier applied before GIF conversion (default: `1.35`).
 - `WHATS_NEW_KEEP_VIDEOS`
 	- Set to `1` (or `true`) to keep per-scenario videos in `docs/whats-new/videos/` after conversion (default: videos are removed).
+- `WHATS_NEW_PROMPT_DESCRIPTIONS`
+	- Set to `1` (or `true`) to prompt for a more user-friendly description per item during `whats-new:build`.
+	- Press Enter to keep the existing item note (the completed-milestone text already in `manifest.json`).
 
 Maintenance notes:
 - To add or remove showcased features, update `docs/whats-new/manifest.json` and rerun `npm run whats-new:generate`.

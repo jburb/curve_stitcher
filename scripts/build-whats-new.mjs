@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createInterface } from 'node:readline/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +11,42 @@ const manifestPath = path.join(workspaceRoot, 'docs', 'whats-new', 'manifest.jso
 const outputHtmlPath = path.join(workspaceRoot, 'docs', 'whats-new', 'index.html');
 const outputMarkdownPath = path.join(workspaceRoot, 'docs', 'whats-new', 'README.md');
 const outputManifestJsPath = path.join(workspaceRoot, 'docs', 'whats-new', 'manifest.js');
+
+function shouldPromptDescriptions() {
+  return ['1', 'true', 'yes'].includes(String(process.env.WHATS_NEW_PROMPT_DESCRIPTIONS || '').toLowerCase());
+}
+
+async function maybePromptForDescriptions(manifest) {
+  if (!shouldPromptDescriptions()) return manifest;
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return manifest;
+
+  const items = Array.isArray(manifest.items) ? manifest.items : [];
+  if (!items.length) return manifest;
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  try {
+    console.log('[whats-new:build] Prompt mode enabled. Press Enter to keep existing description.');
+    for (const item of items) {
+      const title = String(item.title || item.id || 'Update').trim();
+      const existingNote = String(item.note || '').trim();
+      console.log('');
+      console.log(`Feature: ${title}`);
+      console.log(`Current: ${existingNote}`);
+      const response = await rl.question('New description (optional): ');
+      const nextNote = String(response || '').trim();
+      if (nextNote) {
+        item.note = nextNote;
+      }
+    }
+  } finally {
+    rl.close();
+  }
+
+  await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  console.log(`[whats-new:build] Updated ${path.relative(workspaceRoot, manifestPath)} from prompt input.`);
+  return manifest;
+}
 
 function escapeHtml(value) {
   return String(value || '')
@@ -30,7 +67,7 @@ async function fileExists(filePath) {
 }
 
 async function main() {
-  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  const manifest = await maybePromptForDescriptions(JSON.parse(await fs.readFile(manifestPath, 'utf8')));
   const title = String(manifest.title || "StitchLab What's New");
   const intro = String(manifest.intro || '');
   const items = Array.isArray(manifest.items) ? manifest.items : [];
@@ -96,13 +133,25 @@ async function main() {
       --card: #fffdf7;
       --accent: #0f766e;
       --border: #d9cfbe;
+      --shadow: rgba(30, 42, 50, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a2129;
+        --ink: #e5edf6;
+        --muted: #9fb0c3;
+        --card: #222d39;
+        --accent: #7cd9cf;
+        --border: #3f5266;
+        --shadow: rgba(4, 7, 11, 0.45);
+      }
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       color: var(--ink);
       font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
-      background: radial-gradient(circle at 10% 0%, #fff8ee 0%, var(--bg) 45%, #ede4d6 100%);
+      background: radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--card) 55%, var(--bg) 45%) 0%, var(--bg) 55%, color-mix(in srgb, var(--bg) 85%, #000 15%) 100%);
     }
     header {
       padding: 2rem 1rem 1.25rem;
@@ -135,7 +184,7 @@ async function main() {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
-      box-shadow: 0 10px 24px rgba(30, 42, 50, 0.08);
+      box-shadow: 0 10px 24px var(--shadow);
       padding: 1rem;
       display: grid;
       gap: 0.85rem;
@@ -152,7 +201,7 @@ async function main() {
       height: auto;
       border-radius: 10px;
       border: 1px solid var(--border);
-      background: #f8f5ee;
+      background: color-mix(in srgb, var(--card) 80%, var(--bg) 20%);
       display: block;
     }
     .feature-card p {

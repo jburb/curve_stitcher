@@ -909,10 +909,14 @@
     line-height: 1;
   }
   .startup-whats-new-card {
-    width: min(980px, 100%);
-    max-height: calc(100vh - 36px);
-    overflow: auto;
+    width: min(75vw, 1380px);
+    max-width: calc(100vw - 24px);
+    height: min(75vh, 980px);
+    max-height: calc(100vh - 24px);
+    overflow: hidden;
     padding: 14px;
+    display: flex;
+    flex-direction: column;
   }
   .startup-whats-new-header {
     display: flex;
@@ -932,6 +936,14 @@
   .startup-whats-new-stage[hidden] {
     display: none;
   }
+  .startup-whats-new-stage {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 8px;
+    overflow: auto;
+  }
   .startup-whats-new-stage h5 {
     margin: 0 0 8px;
     font-size: 15px;
@@ -939,7 +951,10 @@
   }
   #startup-whats-new-gif {
     width: 100%;
-    height: auto;
+    height: 100%;
+    max-height: none;
+    min-height: 280px;
+    object-fit: contain;
     border-radius: 10px;
     border: 1px solid #d8dfef;
     display: block;
@@ -2308,6 +2323,13 @@
     padding: 14px;
   }
 
+  #startup-whats-new-modal .startup-whats-new-card {
+    width: min(90vw, 1600px);
+    max-width: calc(100vw - 24px);
+    height: min(84vh, 1040px);
+    max-height: calc(100vh - 24px);
+  }
+
   .modal-card.acknowledgments-card {
     width: min(1120px, 100%);
     max-height: calc(100vh - 32px);
@@ -2930,6 +2952,11 @@
   html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-progress,
   html[data-theme="dark"] #startup-whats-new-modal #startup-whats-new-note {
     color: #c9daef;
+  }
+
+  html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-header h4,
+  html[data-theme="dark"] #startup-whats-new-modal .startup-whats-new-stage h5 {
+    color: #e7f0ff;
   }
 
   html[data-theme="dark"] #startup-whats-new-modal #startup-whats-new-gif {
