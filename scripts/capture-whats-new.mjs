@@ -26,6 +26,7 @@ const CURSOR_STEP_PIXELS = Number(process.env.WHATS_NEW_CURSOR_STEP_PX || 20);
 const CURSOR_POST_ACTION_MS = Number(process.env.WHATS_NEW_CURSOR_POST_ACTION_MS || 100);
 const CURSOR_TYPE_DELAY_MS = Number(process.env.WHATS_NEW_CURSOR_TYPE_DELAY_MS || 28);
 const CURSOR_CLICK_HOLD_MS = Number(process.env.WHATS_NEW_CURSOR_CLICK_HOLD_MS || 55);
+const GIF_TRIM_START_SECONDS = Number(process.env.WHATS_NEW_TRIM_START_SECONDS || 0);
 
 function parseCsvList(raw) {
   return String(raw || '')
@@ -164,7 +165,18 @@ function runFfmpegToGif(inputVideoPath, outputGifPath) {
   const fps = process.env.WHATS_NEW_GIF_FPS || '10';
   const width = process.env.WHATS_NEW_GIF_WIDTH || '1200';
   const speed = process.env.WHATS_NEW_GIF_SLOWDOWN || '1.35';
-  const vf = `setpts=${speed}*PTS,fps=${fps},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=full[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle`;
+  const trimStart = isFinite(GIF_TRIM_START_SECONDS) && GIF_TRIM_START_SECONDS > 0
+    ? GIF_TRIM_START_SECONDS
+    : 0;
+  const timingFilters = [];
+  if (trimStart > 0) {
+    timingFilters.push(`trim=start=${trimStart}`);
+    timingFilters.push('setpts=PTS-STARTPTS');
+  }
+  timingFilters.push(`setpts=${speed}*PTS`);
+  timingFilters.push(`fps=${fps}`);
+  timingFilters.push(`scale=${width}:-1:flags=lanczos`);
+  const vf = `${timingFilters.join(',')},split[s0][s1];[s0]palettegen=max_colors=128:stats_mode=full[p];[s1][p]paletteuse=dither=sierra2_4a:diff_mode=rectangle`;
 
   const result = spawnSync('ffmpeg', ['-y', '-i', inputVideoPath, '-vf', vf, outputGifPath], {
     cwd: workspaceRoot,

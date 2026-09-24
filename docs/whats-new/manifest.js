@@ -13,14 +13,14 @@ window.stitchlabWhatsNewManifest = {
       "id": "thread-reordering-advanced-pane",
       "scenario": "thread-reordering-advanced-pane",
       "title": "Advanced thread stack reordering",
-      "note": "Drag a thread card up or down in the advanced pane to reorder playback and styling order without changing which thread is selected in the kid picker.",
+      "note": "Drag a thread card up or down in the advanced pane to reorder playback and styling order.",
       "gif": "gifs/thread-reordering-advanced-pane.gif"
     },
     {
       "id": "formula-mode-improvements",
       "scenario": "formula-mode-improvements",
       "title": "Formula stitch mode improvements",
-      "note": "Formula mode returns with stronger expression handling and clearer presets. Try formulas like ((currentHole + previousHole) mod holeCount) + 1 to create rich wrapped patterns.",
+      "note": "Formula mode returns with stronger expression handling and clearer presets. Try formulas like ((currentHole + previousHole) mod holeCount) + 1.",
       "gif": "gifs/formula-mode-improvements.gif"
     },
     {
