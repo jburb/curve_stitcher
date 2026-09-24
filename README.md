@@ -439,6 +439,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
+1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
 
 ## Recently Completed
 
@@ -511,6 +512,8 @@ This section describes the practical steps for adding a new experience named zoo
 	  - Keep a feature toggle so users can switch between current motion style and ribbon mode.
 	  - Profile at high hole counts and high BPM; auto-fallback to lightweight mode when needed.
 	  - Defer advanced polish (thread twist texture, multi-layer fibers, noise jitter) until baseline performance is stable.
+
+1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
 
 ## License
 
