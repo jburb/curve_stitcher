@@ -1887,6 +1887,9 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
   var startupSplash = document.getElementById('startup-splash');
   var hearBtn = document.getElementById('startup-splash-hear');
   var whatsNewBtn = document.getElementById('startup-splash-whats-new');
+  var tipPreview = document.getElementById('startup-splash-tip-preview');
+  var tipPreviewText = document.getElementById('startup-splash-tip-preview-text');
+  var tipPreviewViewAllBtn = document.getElementById('startup-splash-tip-view-all');
   var continueBtn = document.getElementById('startup-splash-continue');
   var whatsNewModal = document.getElementById('startup-whats-new-modal');
   var whatsNewCloseBtn = document.getElementById('startup-whats-new-close');
@@ -1898,6 +1901,14 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
   var whatsNewGif = document.getElementById('startup-whats-new-gif');
   var whatsNewNote = document.getElementById('startup-whats-new-note');
   var whatsNewProgress = document.getElementById('startup-whats-new-progress');
+  var tipsModal = document.getElementById('startup-tips-modal');
+  var tipsCloseBtn = document.getElementById('startup-tips-close');
+  var tipsPrevBtn = document.getElementById('startup-tips-prev');
+  var tipsNextBtn = document.getElementById('startup-tips-next');
+  var tipsStatus = document.getElementById('startup-tips-status');
+  var tipsStage = document.getElementById('startup-tips-stage');
+  var tipsText = document.getElementById('startup-tips-text');
+  var tipsProgress = document.getElementById('startup-tips-progress');
   if (!startupSplash || !continueBtn) {
     onContinue(!!initialParamlessLoad);
     return;
@@ -1908,6 +1919,22 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
   var startupWhatsNewIndex = 0;
   var startupWhatsNewLoaded = false;
   var startupWhatsNewLoading = false;
+  var startupTipsItems = [];
+  var startupTipsIndex = 0;
+  var startupTipsLoaded = false;
+  var startupTipsLoading = false;
+  var STARTUP_TIPS_FALLBACK_ITEMS = [
+    'You can add an inner stitch frame to make even more complex patterns! Just open the advanced controls pane and toggle "enabled" in the inner frame section!',
+    'You can make animations run even faster than the rabbit speed setting. Choose the fourth or fifth value from the "BPM" dropdown in the "Stitch Tempo" section of advanced controls.',
+    'When you choose "List" as the "Stitch by" mode for a thread, you can specify whether the numbers in the list are treated as hole numbers or as amounts to add for each next connection point.',
+    'Inner frame threads can be woven into their outer frame. Try "Inner -> Outer (Bridge)" or "Inner -> Outer (Projected)" in a thread card frame dropdown within Advanced Controls.',
+    'You can take your StitchLab pattern library from one device to another by exporting and then importing from the Pattern Library pane.',
+    'Advanced Controls are not just for Stitching. Other experiences have unique settings too, like Triangula "Parallel" Fractal Mode.',
+    'It is possible to blend colors where threads overlap. A thinner thread sharing a stitch path over a thicker thread will blend colors.',
+    'Need a fresh idea for a thread? Try reopening the app with the base URL to generate a new paramless setup.',
+    'You can view original sewing cards from Mary Everest Boole by opening the experience "?" panel and selecting "Sewing cards".',
+    'Find the acknowledgments, then view them all. There is a new song waiting for you there.'
+  ];
   var SPLASH_HEAR_LABEL = '🔊 Hear this';
   var SPLASH_STOP_LABEL = '⏹ Stop narration';
 
@@ -1959,9 +1986,20 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     whatsNewModal.hidden = true;
   }
 
+  function closeStartupTipsModal() {
+    if (!tipsModal) return;
+    tipsModal.classList.remove('open');
+    tipsModal.hidden = true;
+  }
+
   function setStartupWhatsNewStatus(message) {
     if (!whatsNewStatus) return;
     whatsNewStatus.textContent = String(message || '');
+  }
+
+  function setStartupTipsStatus(message) {
+    if (!tipsStatus) return;
+    tipsStatus.textContent = String(message || '');
   }
 
   function syncStartupWhatsNewNavButtons() {
@@ -1973,6 +2011,18 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     }
     if (whatsNewNextBtn) {
       whatsNewNextBtn.disabled = !count || atEnd;
+    }
+  }
+
+  function syncStartupTipsNavButtons() {
+    var count = startupTipsItems.length;
+    var atStart = startupTipsIndex <= 0;
+    var atEnd = startupTipsIndex >= (count - 1);
+    if (tipsPrevBtn) {
+      tipsPrevBtn.disabled = !count || atStart;
+    }
+    if (tipsNextBtn) {
+      tipsNextBtn.disabled = !count || atEnd;
     }
   }
 
@@ -1992,6 +2042,98 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     whatsNewStage.hidden = false;
     setStartupWhatsNewStatus('');
     syncStartupWhatsNewNavButtons();
+  }
+
+  function renderStartupTipsSlide(index) {
+    if (!tipsStage || !tipsText || !tipsProgress) return;
+    if (!startupTipsItems.length) return;
+
+    var safeIndex = Math.max(0, Math.min(index, startupTipsItems.length - 1));
+    startupTipsIndex = safeIndex;
+    var item = String(startupTipsItems[safeIndex] || '').trim();
+    if (!item) return;
+
+    tipsText.textContent = item;
+    tipsProgress.textContent = String(safeIndex + 1) + ' / ' + String(startupTipsItems.length);
+    tipsStage.hidden = false;
+    setStartupTipsStatus('');
+    syncStartupTipsNavButtons();
+  }
+
+  function normalizeStartupTipsItems(rawText) {
+    if (typeof rawText !== 'string') return [];
+    return rawText
+      .split(/\r?\n\s*\r?\n/)
+      .map(function(block) {
+        return String(block || '').replace(/\s+/g, ' ').trim();
+      })
+      .filter(function(entry) {
+        return !!entry;
+      });
+  }
+
+  function loadStartupTipsItems() {
+    if (startupTipsLoaded) return Promise.resolve(startupTipsItems);
+    if (startupTipsLoading) return Promise.resolve(startupTipsItems);
+
+    startupTipsLoading = true;
+    setStartupTipsStatus('Loading tips...');
+
+    var tipsUrlCandidates = [
+      'docs/tips.txt',
+      './docs/tips.txt',
+      '/docs/tips.txt'
+    ];
+
+    function fetchTipsByIndex(index) {
+      if (index >= tipsUrlCandidates.length) {
+        return Promise.reject(new Error('No tips URL candidates succeeded.'));
+      }
+      var url = tipsUrlCandidates[index];
+      return fetch(url, { cache: 'no-store' }).then(function(response) {
+        if (!response.ok) {
+          return fetchTipsByIndex(index + 1);
+        }
+        return response.text();
+      }).catch(function() {
+        return fetchTipsByIndex(index + 1);
+      });
+    }
+
+    return fetchTipsByIndex(0)
+      .then(function(text) {
+        startupTipsItems = normalizeStartupTipsItems(text);
+        if (!startupTipsItems.length) {
+          startupTipsItems = STARTUP_TIPS_FALLBACK_ITEMS.slice();
+        }
+        startupTipsLoaded = startupTipsItems.length > 0;
+        return startupTipsItems;
+      })
+      .catch(function() {
+        startupTipsItems = STARTUP_TIPS_FALLBACK_ITEMS.slice();
+        startupTipsLoaded = startupTipsItems.length > 0;
+        return startupTipsItems;
+      })
+      .finally(function() {
+        startupTipsLoading = false;
+      });
+  }
+
+  function refreshStartupTipPreview() {
+    if (!tipPreview || !tipPreviewText) return;
+    tipPreview.hidden = true;
+    tipPreviewText.textContent = '';
+
+    loadStartupTipsItems().then(function(items) {
+      if (!Array.isArray(items) || !items.length) return;
+      var randomIndex = Math.floor(Math.random() * items.length);
+      if (!isFinite(randomIndex) || randomIndex < 0 || randomIndex >= items.length) {
+        randomIndex = 0;
+      }
+      startupTipsIndex = randomIndex;
+      tipPreviewText.textContent = String(items[randomIndex] || '');
+      tipPreview.hidden = false;
+    });
   }
 
   function normalizeStartupWhatsNewItems(manifest) {
@@ -2087,6 +2229,7 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     }
 
     stopSplashNarration();
+    closeStartupTipsModal();
     whatsNewModal.hidden = false;
     whatsNewModal.classList.add('open');
     if (whatsNewStage) {
@@ -2104,8 +2247,35 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     });
   }
 
+  function openStartupTipsModal(indexToRender) {
+    if (!tipsModal) {
+      window.open('docs/tips.txt', '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    stopSplashNarration();
+    closeStartupWhatsNewModal();
+    tipsModal.hidden = false;
+    tipsModal.classList.add('open');
+    if (tipsStage) {
+      tipsStage.hidden = true;
+    }
+    setStartupTipsStatus('Loading tips...');
+
+    loadStartupTipsItems().then(function(items) {
+      if (!items.length) {
+        setStartupTipsStatus('No tips are available yet.');
+        syncStartupTipsNavButtons();
+        return;
+      }
+      var initialIndex = parseBoundedInt(indexToRender, 0, items.length - 1, 0);
+      renderStartupTipsSlide(initialIndex);
+    });
+  }
+
   startupSplash.hidden = false;
   continueBtn.focus();
+  refreshStartupTipPreview();
 
   if (hearBtn) {
     hearBtn.setAttribute('aria-pressed', 'false');
@@ -2125,9 +2295,21 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     });
   }
 
+  if (tipPreviewViewAllBtn) {
+    tipPreviewViewAllBtn.addEventListener('click', function() {
+      openStartupTipsModal(startupTipsIndex);
+    });
+  }
+
   if (whatsNewCloseBtn) {
     whatsNewCloseBtn.addEventListener('click', function() {
       closeStartupWhatsNewModal();
+    });
+  }
+
+  if (tipsCloseBtn) {
+    tipsCloseBtn.addEventListener('click', function() {
+      closeStartupTipsModal();
     });
   }
 
@@ -2145,6 +2327,20 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     });
   }
 
+  if (tipsPrevBtn) {
+    tipsPrevBtn.addEventListener('click', function() {
+      if (!startupTipsItems.length) return;
+      renderStartupTipsSlide(startupTipsIndex - 1);
+    });
+  }
+
+  if (tipsNextBtn) {
+    tipsNextBtn.addEventListener('click', function() {
+      if (!startupTipsItems.length) return;
+      renderStartupTipsSlide(startupTipsIndex + 1);
+    });
+  }
+
   if (whatsNewModal) {
     whatsNewModal.addEventListener('click', function(event) {
       if (event.target === whatsNewModal) {
@@ -2153,8 +2349,20 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     });
   }
 
+  if (tipsModal) {
+    tipsModal.addEventListener('click', function(event) {
+      if (event.target === tipsModal) {
+        closeStartupTipsModal();
+      }
+    });
+  }
+
   document.addEventListener('keydown', function(event) {
     if (!event || event.key !== 'Escape') return;
+    if (tipsModal && !tipsModal.hidden && tipsModal.classList.contains('open')) {
+      closeStartupTipsModal();
+      return;
+    }
     if (!whatsNewModal || whatsNewModal.hidden || !whatsNewModal.classList.contains('open')) return;
     closeStartupWhatsNewModal();
   });
@@ -2164,6 +2372,7 @@ function showParamlessStartupSplash(onContinue, initialParamlessLoad) {
     if (typeof prewarmOnboardingNarrationSpeech === 'function') {
       prewarmOnboardingNarrationSpeech();
     }
+    closeStartupTipsModal();
     closeStartupWhatsNewModal();
     stopSplashNarration();
     startupSplash.hidden = true;

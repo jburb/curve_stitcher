@@ -433,10 +433,10 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Determine why some seeming equilateral triangle patterns are not recognized as triangula discovery candidates, e.g. the one created by using the URL: "file:///home/joshy/source/repos/curve_stitcher/stitchlab.html?version=2&experience=stitching&stitchingShape=square&stitchingShowHoleNumbers=1&stitchingHoleNumberRotation=1&stitchingBorderEnabled=1&stitchingHoles=9&stitchingNestedFrameEnabled=0&stitchingNestedFrameRatio=0.75&stitchingSelectedThreadIndex=0&stitchingThreadState=%255B%257B%2522j%2522%253A6%252C%2522w%2522%253A2%252C%2522c%2522%253A%2522rainbow%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522fixed%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522steps%2522%252C%2522cm%2522%253A2%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522outer%2522%252C%2522sc%2522%253A%2522%25231982c4%2522%257D%255D&stitchingThreadColors=rainbow&bpm=84&musicMuted=0&song=bach"
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
-1. Tips library and modal
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 
@@ -480,16 +480,16 @@ This section describes the practical steps for adding a new experience named zoo
 1. Add thank you note to Cambridge in acknowledgments
 1. Add mashrabiya animation sample among acknowledgments experience animations 
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
+1. Tips library and modal
 
 ## TODO Backlog
+1. Determine why some seeming equilateral triangle patterns are not recognized as triangula discovery candidates, e.g. the one created by using the URL: "file:///home/joshy/source/repos/curve_stitcher/stitchlab.html?version=2&experience=stitching&stitchingShape=square&stitchingShowHoleNumbers=1&stitchingHoleNumberRotation=1&stitchingBorderEnabled=1&stitchingHoles=9&stitchingNestedFrameEnabled=0&stitchingNestedFrameRatio=0.75&stitchingSelectedThreadIndex=0&stitchingThreadState=%255B%257B%2522j%2522%253A6%252C%2522w%2522%253A2%252C%2522c%2522%253A%2522rainbow%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522fixed%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522steps%2522%252C%2522cm%2522%253A2%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522outer%2522%252C%2522sc%2522%253A%2522%25231982c4%2522%257D%255D&stitchingThreadColors=rainbow&bpm=84&musicMuted=0&song=bach"
+
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
  
 1. Allow single pattern export and import.
 
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
-
-1. **Tips library and modal**
-     - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
 
 1. **Experience title bar (animated stitched reveal)**
 	- ~~Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").~~

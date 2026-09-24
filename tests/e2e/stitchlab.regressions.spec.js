@@ -638,6 +638,56 @@ test.describe('StitchLab regressions', () => {
     });
   });
 
+  test('paramless splash shows random tip preview and opens startup tips modal from preview link', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
+    });
+
+    await page.goto('/stitchlab.html');
+    await expect(page.locator('#startup-splash')).toBeVisible();
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        var preview = document.getElementById('startup-splash-tip-preview');
+        var textNode = document.getElementById('startup-splash-tip-preview-text');
+        return {
+          hidden: !!(preview && preview.hidden),
+          text: String((textNode && textNode.textContent) || '').trim()
+        };
+      });
+    }).toEqual(expect.objectContaining({ hidden: false }));
+
+    await expect(page.locator('#startup-splash-tip-preview-text')).not.toHaveText(/^\s*$/);
+
+    await page.locator('#startup-splash-tip-view-all').click();
+    await expect(page.locator('#startup-tips-modal')).toHaveClass(/open/);
+    await expect(page.locator('#startup-tips-text')).not.toHaveText(/^\s*$/);
+    await expect(page.locator('#startup-tips-progress')).toContainText('/');
+
+    await page.locator('#startup-tips-close').click();
+    await expect(page.locator('#startup-tips-modal')).not.toHaveClass(/open/);
+  });
+
+  test('paramless splash continue still starts onboarding after opening startup tips modal', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
+    });
+
+    await page.goto('/stitchlab.html');
+    await expect(page.locator('#startup-splash')).toBeVisible();
+
+    await page.locator('#startup-splash-tip-view-all').click();
+    await expect(page.locator('#startup-tips-modal')).toHaveClass(/open/);
+
+    await page.locator('#startup-tips-close').click();
+    await expect(page.locator('#startup-tips-modal')).not.toHaveClass(/open/);
+
+    await page.locator('#startup-splash-continue').click();
+
+    await expect(page.locator('#startup-splash')).toBeHidden({ timeout: 10000 });
+    await expect(page.locator('#onboarding-tour')).toBeVisible({ timeout: 12000 });
+  });
+
   test('prebuilt narration playback succeeds when clip is available', async ({ page }) => {
     await page.addInitScript(() => {
       const originalPlay = HTMLMediaElement.prototype.play;
