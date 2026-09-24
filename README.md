@@ -435,7 +435,7 @@ This section describes the practical steps for adding a new experience named zoo
 
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
-1. Move stitch by help text in advanced to interaction based reveal eg by info icon beside stitch by picker
+1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
 1. Add mashrabiya animation sample among acknowledgments experience animations 
 1. Tips library and modal
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
@@ -486,7 +486,7 @@ This section describes the practical steps for adding a new experience named zoo
  
 1. Allow single pattern export and import.
 
-1. Move stitch by help text in advanced to interaction based reveal eg by info icon beside stitch by picker
+1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
  
 1. Add mashrabiya animation sample among acknowledgments experience animations
 

@@ -1024,6 +1024,9 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#acknowledgments-next-btn').click();
     await expect(page.locator('#acknowledgments-progress')).toContainText('3 /');
+
+    await page.locator('#acknowledgments-next-btn').click();
+    await expect(page.locator('#acknowledgments-progress')).toContainText('4 /');
   });
 
   test('acknowledgments viewer opens from About actions', async ({ page }) => {
