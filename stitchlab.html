@@ -62,6 +62,13 @@
       <button id="startup-splash-whats-new" class="onboarding-chip-btn" type="button">What's New?</button>
       <button id="startup-splash-continue" class="onboarding-chip-btn primary" type="button">Continue</button>
     </div>
+    <p id="startup-splash-tip-preview" class="startup-splash-tip-preview" hidden>
+      <strong>Tip:</strong>
+      <em>
+        <span id="startup-splash-tip-preview-text"></span>
+      </em>
+      <button id="startup-splash-tip-view-all" class="startup-splash-tip-link" type="button">View all tips</button>
+    </p>
   </div>
 </div>
 
@@ -81,6 +88,24 @@
     <div class="startup-whats-new-actions">
       <button id="startup-whats-new-prev" type="button" class="modal-btn">Previous</button>
       <button id="startup-whats-new-next" type="button" class="modal-btn primary">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="startup-tips-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="startup-tips-heading" hidden>
+  <div class="modal-card startup-tips-card">
+    <div class="startup-tips-header">
+      <h4 id="startup-tips-heading">Tips</h4>
+      <button id="startup-tips-close" type="button" class="modal-btn">Close</button>
+    </div>
+    <p id="startup-tips-status" class="startup-tips-status" role="status" aria-live="polite">Loading tips...</p>
+    <div id="startup-tips-stage" class="startup-tips-stage" hidden>
+      <p id="startup-tips-text" class="startup-tips-text"></p>
+      <p id="startup-tips-progress" class="startup-tips-progress"></p>
+    </div>
+    <div class="startup-tips-actions">
+      <button id="startup-tips-prev" type="button" class="modal-btn">Previous</button>
+      <button id="startup-tips-next" type="button" class="modal-btn primary">Next</button>
     </div>
   </div>
 </div>
@@ -149,7 +174,7 @@
   <div class="experience-info-actions">
     <button id="experience-narrate-toggle" type="button" aria-pressed="false">🔊 Hear this</button>
     <button id="experience-sewing-cards-toggle" type="button" hidden>🪡 Sewing cards</button>
-    <button id="experience-acknowledgments-toggle" type="button">Acknowledgments</button>
+    <button id="experience-acknowledgments-toggle" type="button">🙏 Acknowledgments</button>
     <span id="experience-narration-status" role="status" aria-live="polite"></span>
   </div>
 </div>
@@ -1015,7 +1040,7 @@
   var DEFAULT_SKIP = 22;
   var DEFAULT_THREAD_SIZE = 2;
   var ACKNOWLEDGMENTS_SOURCE_PATH = 'docs/acknowledgments.txt';
-  var ACKNOWLEDGMENTS_STYLE_SEQUENCE = ['stitching', 'triangula', 'squarus'];
+  var ACKNOWLEDGMENTS_STYLE_SEQUENCE = ['stitching', 'triangula', 'squarus', 'mashrabiya'];
   var ACKNOWLEDGMENTS_AUTOPLAY_DELAY_MS = 5200;
   var ACKNOWLEDGMENTS_GRAY_PALETTE = ['#111820', '#2b3440', '#46525f', '#65717f', '#8a95a2'];
   var ACKNOWLEDGMENTS_STAGE_SIZE = 720;
@@ -1035,9 +1060,9 @@
     'To Kim Kotovic, whose persistent engagement to partner SUMM with my son\'s kindergarten fixed my resolve to volunteer something in return.',
     'To Mary Everest Boole, whose brilliant mind revealed curve stitching to the world and whose heart vouchsafed it to the coming generations with her appeal to children -- and with whose borrowed wings my 40 year old imagination has soared to heights not reached since childhood, finding there vistas unexpected and delightful.',
     'To George Boole, for inventing the math that would ultimately enable a human to stitch in seconds and minutes what a lone individual\'s free time might never have otherwise created.',
+    'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
     'To Alexey Pajitnov, whose legendary Tetris beat all odds of his place and time to not only popularize polyominoes throughout the human population, but to finally reward his own spirited work as well.',
     'To the Muslim mathematicians whose devotion to Oneness wrought the beauty that is Islamic geometry and tiling.',
-    'To the many computer scientists who made LLMs a tool capable of creating a rich user experience in the hands of one with such a clumsy ability to create front end code, and the engineers of all stripes who have enabled its continuance.',
     'To Cambridge University Library, for producing and sharing images of the original Boole Curve Sewing cards.',
     'To my wife Rabiya, without whose nurturing, systematizing, and firm support I could hardly function as a decent human being, and certainly not sufficiently to create such a lovely experience as this app.',
     'And finally to the divine being from whom all mathematical law originates, and to whom all thanks is ultimately due.'
@@ -1060,7 +1085,8 @@
     bach: DEFAULT_TEMPO_OPTIONS.slice(),
     triangle: [110, 220, 330, 440, 550],
     square: [300, 450, 600, 750, 900],
-    rosette: [90, 180, 270, 360, 450]
+    rosette: [90, 180, 270, 360, 450],
+    acknowledgments: [110, 220, 330, 440, 550]
   };
   var MUSIC_LIBRARY = {
     bach: {
@@ -1078,6 +1104,10 @@
     rosette: {
       title: 'djovan-the-voice-of-the-oud-258611',
       path: 'assets/audio/djovan-the-voice-of-the-oud-258611.mp3'
+    },
+    acknowledgments: {
+      title: 'SonatainCmajor,Hob.XVI_50-I.Allegro',
+      path: 'assets/audio/SonatainCmajor,Hob.XVI_50-I.Allegro.mp3'
     }
   };
   var DISCOVERY_LIBRARY = {

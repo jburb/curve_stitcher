@@ -14,6 +14,6 @@ It's possible to blend colors where threads overlap. Wherever a thinner thread s
 
 Need a fresh idea for a thread? Try reopening the app with its base URL: https://jburb.github.io/curve_stitcher/stitchlab.html
 
-#TODO reference to Boole Sewing Cards viewer, once available
+You can view some of the original sewing cards created by Mary Everest Boole (the inventor of curve stitching)! Just click/tap the "?" icon next to "Stitching", and then click/tap the "Sewing Cards" button at the bottom.
 
-#TODO Find the acknowledgments, then view them all! There's a new song in it for you... (Once available)
+Find the acknowledgments, then view them all! There's a new song in it for you...

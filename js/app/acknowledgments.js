@@ -136,6 +136,7 @@ function getAcknowledgmentsStyleForIndex(index) {
 function getAcknowledgmentsStyleLabel(styleId) {
   if (styleId === 'triangula') return 'Triangula';
   if (styleId === 'squarus') return 'Squarus';
+  if (styleId === 'mashrabiya') return 'Mashrabiya';
   return 'Stitching';
 }
 
@@ -152,7 +153,17 @@ function createAcknowledgmentsSeededRng(seed) {
 }
 
 function createAcknowledgmentsVisual(styleId, index) {
-  var rng = createAcknowledgmentsSeededRng(((index + 1) * 2654435761) ^ (styleId === 'triangula' ? 73 : (styleId === 'squarus' ? 137 : 211)));
+  var rngSeed;
+  if (styleId === 'triangula') {
+    rngSeed = 73;
+  } else if (styleId === 'squarus') {
+    rngSeed = 137;
+  } else if (styleId === 'mashrabiya') {
+    rngSeed = 199;
+  } else {
+    rngSeed = 211;
+  }
+  var rng = createAcknowledgmentsSeededRng(((index + 1) * 2654435761) ^ rngSeed);
   if (styleId === 'triangula') {
     return {
       depth: 3 + Math.floor(rng() * 2),
@@ -166,6 +177,13 @@ function createAcknowledgmentsVisual(styleId, index) {
       pieceCount: 8 + Math.floor(rng() * 8),
       sequenceSeed: 1 + Math.floor(rng() * 32),
       layout: rng() > 0.5 ? 'force-directed' : 'grid-packing'
+    };
+  }
+  if (styleId === 'mashrabiya') {
+    return {
+      fold: 12,
+      geometryMode: 'rosette',
+      constructionOnly: true
     };
   }
   return {
@@ -545,8 +563,9 @@ function createAcknowledgmentsTextLayer(styleId) {
   acknowledgmentsPattern.appendChild(defs);
 
   frameOutline.setAttribute('fill', 'none');
-  if (spec.shapeType === 'rect') {
+  if (spec.shapeType === 'rect' || styleId === 'mashrabiya') {
     // Squarus uses an internal square clip frame; keep it invisible.
+    // Mashrabiya in acknowledgments should not render a pre-drawn enclosing frame.
     frameOutline.setAttribute('stroke', 'none');
     frameOutline.setAttribute('opacity', '0');
   } else {
@@ -1186,12 +1205,153 @@ function buildAcknowledgmentsSquarusAnimator(visual) {
   };
 }
 
+function buildAcknowledgmentsMashrabiyaAnimator(visual) {
+  clearAcknowledgmentsPattern();
+  createAcknowledgmentsTextLayer('mashrabiya');
+  configureAcknowledgmentsPatternViewport();
+
+  var fold = 12;
+  if (visual && Number(visual.fold) === 12) {
+    fold = 12;
+  }
+  var geometryMode = (visual && visual.geometryMode) ? String(visual.geometryMode) : 'rosette';
+  var geometry = buildMashrabiyaRosetteGeometry(fold, geometryMode);
+  var palette = getAcknowledgmentsPaletteColors();
+  var lineColor = getAcknowledgmentsSoftenedColor(palette[0] || '#82511f', 0.35);
+  var accentColor = getAcknowledgmentsSoftenedColor(palette[1] || '#82511f', 0.3);
+
+  var mapPoint = buildAcknowledgmentsViewportMapper(
+    (geometry.scaffoldPoints || [])
+      .concat(geometry.guideCircleVertices || [])
+      .concat(geometry.innerGuideCircleVertices || [])
+  );
+
+  function buildPolylineSegments(pointsList, closeLoop, tag) {
+    var points = Array.isArray(pointsList) ? pointsList : [];
+    var segments = [];
+    for (var i = 0; i < points.length; i++) {
+      var nextIndex = i + 1;
+      if (nextIndex >= points.length) {
+        if (!closeLoop) break;
+        nextIndex = 0;
+      }
+      var fromMapped = mapPoint({ x: points[i].x, y: points[i].y });
+      var toMapped = mapPoint({ x: points[nextIndex].x, y: points[nextIndex].y });
+      segments.push({
+        from: { x: fromMapped.x, y: fromMapped.y },
+        to: { x: toMapped.x, y: toMapped.y },
+        tag: tag
+      });
+    }
+    return segments;
+  }
+
+  function buildSequenceSegments(pointsList, sequence, tag) {
+    var points = Array.isArray(pointsList) ? pointsList : [];
+    var order = Array.isArray(sequence) ? sequence : [];
+    var segments = [];
+    for (var i = 0; i < order.length; i++) {
+      var fromIndex = order[i];
+      var toIndex = order[(i + 1) % order.length];
+      if (!isFinite(fromIndex) || !isFinite(toIndex)) continue;
+      var fromPoint = points[fromIndex];
+      var toPoint = points[toIndex];
+      if (!fromPoint || !toPoint) continue;
+      var fromMapped = mapPoint({ x: fromPoint.x, y: fromPoint.y });
+      var toMapped = mapPoint({ x: toPoint.x, y: toPoint.y });
+      segments.push({
+        from: { x: fromMapped.x, y: fromMapped.y },
+        to: { x: toMapped.x, y: toMapped.y },
+        tag: tag
+      });
+    }
+    return segments;
+  }
+
+  function buildSegmentListSegments(rawSegments, tag) {
+    var source = Array.isArray(rawSegments) ? rawSegments : [];
+    var segments = [];
+    for (var i = 0; i < source.length; i++) {
+      var seg = source[i];
+      if (!seg || !seg.from || !seg.to) continue;
+      var fromMapped = mapPoint({ x: seg.from.x, y: seg.from.y });
+      var toMapped = mapPoint({ x: seg.to.x, y: seg.to.y });
+      segments.push({
+        from: { x: fromMapped.x, y: fromMapped.y },
+        to: { x: toMapped.x, y: toMapped.y },
+        tag: tag
+      });
+    }
+    return segments;
+  }
+
+  var mappedGuide = buildPolylineSegments(geometry.guideCircleVertices, true, 'guide');
+  var mappedOuter = buildSequenceSegments(geometry.scaffoldPoints || geometry.holePoints, geometry.firstPolygonSequence, 'outer');
+  var mappedOffset = buildSequenceSegments(geometry.scaffoldPoints || geometry.holePoints, geometry.offsetPolygonSequence, 'offset');
+  var mappedInnerGuide = buildPolylineSegments(geometry.innerGuideCircleVertices, true, 'inner');
+  var mappedStar = buildSegmentListSegments(geometry.starThreadSegments, 'star');
+
+  var timeline = mappedGuide
+    .concat(mappedOuter)
+    .concat(mappedOffset)
+    .concat(mappedInnerGuide)
+    .concat(mappedStar);
+
+  var renderedSegments = [];
+  for (var si = 0; si < timeline.length; si++) {
+    var segDef = timeline[si];
+    var line = createSvgNode('line');
+    line.setAttribute('x1', String(segDef.from.x));
+    line.setAttribute('y1', String(segDef.from.y));
+    line.setAttribute('x2', String(segDef.from.x));
+    line.setAttribute('y2', String(segDef.from.y));
+    line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('stroke-width', (segDef.tag === 'guide' || segDef.tag === 'inner') ? '1.6' : '2.1');
+    line.setAttribute('stroke', (segDef.tag === 'star') ? accentColor : lineColor);
+    line.setAttribute('opacity', (segDef.tag === 'guide' || segDef.tag === 'inner') ? '0.54' : '0.68');
+    acknowledgmentsPattern.appendChild(line);
+    renderedSegments.push({
+      from: segDef.from,
+      to: segDef.to,
+      line: line
+    });
+  }
+
+  return {
+    segmentCount: renderedSegments.length,
+    render: function(progress) {
+      var p = clamp01(progress);
+      var scaled = p * renderedSegments.length;
+      var fullCount = Math.floor(scaled);
+      var partial = scaled - fullCount;
+      for (var i = 0; i < renderedSegments.length; i++) {
+        var seg = renderedSegments[i];
+        if (i < fullCount) {
+          seg.line.setAttribute('x2', String(seg.to.x));
+          seg.line.setAttribute('y2', String(seg.to.y));
+        } else if (i === fullCount) {
+          var x = seg.from.x + (seg.to.x - seg.from.x) * partial;
+          var y = seg.from.y + (seg.to.y - seg.from.y) * partial;
+          seg.line.setAttribute('x2', String(x));
+          seg.line.setAttribute('y2', String(y));
+        } else {
+          seg.line.setAttribute('x2', String(seg.from.x));
+          seg.line.setAttribute('y2', String(seg.from.y));
+        }
+      }
+    }
+  };
+}
+
 function buildAcknowledgmentsStageAnimator(styleId, visual) {
   if (styleId === 'triangula') {
     return buildAcknowledgmentsTriangulaAnimator(visual);
   }
   if (styleId === 'squarus') {
     return buildAcknowledgmentsSquarusAnimator(visual);
+  }
+  if (styleId === 'mashrabiya') {
+    return buildAcknowledgmentsMashrabiyaAnimator(visual);
   }
   return buildAcknowledgmentsStitchingAnimator(visual);
 }
@@ -1260,6 +1420,10 @@ function renderAcknowledgmentsLine(lines) {
     acknowledgmentsProgress.textContent = String(lineIndex + 1) + ' / ' + String(safeLines.length);
   }
 
+  if (lineIndex >= safeLines.length - 1 && typeof grantAcknowledgmentsSongUnlock === 'function') {
+    grantAcknowledgmentsSongUnlock({ markUnseen: true });
+  }
+
   renderAcknowledgmentsPattern(styleId, visual, activeLine);
   syncAcknowledgmentsControls(safeLines.length);
 }
@@ -1281,6 +1445,11 @@ function scheduleAcknowledgmentsAutoplayTick(lines) {
     30000,
     ACKNOWLEDGMENTS_AUTOPLAY_DELAY_MS
   ));
+
+  var currentStyleId = getAcknowledgmentsStyleForIndex(acknowledgmentsViewerState.lineIndex);
+  if (currentStyleId === 'mashrabiya') {
+    delayMs += 2000;
+  }
 
   acknowledgmentsViewerState.timerId = window.setTimeout(function() {
     if (!acknowledgmentsModal || !acknowledgmentsModal.classList.contains('open')) return;

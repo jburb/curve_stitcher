@@ -174,6 +174,8 @@ var PARAMLESS_RANDOM_SEQUENCE_MAX_ATTEMPTS = 18;
 var PARAMLESS_MULTIPLY_MIN_HOLES = 16;
 var PARAMLESS_MULTIPLY_MAX_VALUE = 5;
 var THREAD_CARD_REORDER_MOVE_THRESHOLD = 3;
+var ACKNOWLEDGMENTS_SONG_ID = 'acknowledgments';
+var ACKNOWLEDGMENTS_SONG_UNLOCK_STORAGE_KEY = 'stitchlab_acknowledgments_song_unlocked_v1';
 var threadCardReorderSession = null;
 var suppressThreadCardSelectionClick = false;
 
@@ -2046,6 +2048,8 @@ function getSongMenuLabel(songId) {
     shapeIcon = '□';
   } else if (shapeKey === 'rosette') {
     shapeIcon = '✺';
+  } else if (shapeKey === 'acknowledgments') {
+    shapeIcon = '[/\\]';
   }
 
   return shapeIcon + ' ' + truncateSongLabel(label, 40);
@@ -2061,7 +2065,45 @@ function getSongShapeKey(songId) {
   if (songId === 'triangle') return 'triangle';
   if (songId === 'square') return 'square';
   if (songId === 'rosette') return 'rosette';
+  if (songId === ACKNOWLEDGMENTS_SONG_ID) return 'acknowledgments';
   return 'circle';
+}
+
+function persistAcknowledgmentsSongUnlock() {
+  if (!appStateStorage || typeof appStateStorage.setItem !== 'function') return;
+  try {
+    appStateStorage.setItem(ACKNOWLEDGMENTS_SONG_UNLOCK_STORAGE_KEY, '1');
+  } catch (_error) {
+    // Ignore persistence failures; session unlock still works.
+  }
+}
+
+function hasPersistedAcknowledgmentsSongUnlock() {
+  if (!appStateStorage || typeof appStateStorage.getItem !== 'function') return false;
+  try {
+    return appStateStorage.getItem(ACKNOWLEDGMENTS_SONG_UNLOCK_STORAGE_KEY) === '1';
+  } catch (_error) {
+    return false;
+  }
+}
+
+function grantAcknowledgmentsSongUnlock(options) {
+  options = options || {};
+  var alreadyUnlocked = unlockedSongIds.indexOf(ACKNOWLEDGMENTS_SONG_ID) !== -1;
+  unlockSong(ACKNOWLEDGMENTS_SONG_ID, { markUnseen: options.markUnseen !== false });
+  persistAcknowledgmentsSongUnlock();
+  renderSongPicker();
+  return !alreadyUnlocked;
+}
+
+function restoreAcknowledgmentsSongUnlockFromStorage() {
+  if (!hasPersistedAcknowledgmentsSongUnlock()) return false;
+  var grantedNow = grantAcknowledgmentsSongUnlock({ markUnseen: false });
+  if (hasUnseenSongUnlock) {
+    hasUnseenSongUnlock = false;
+  }
+  syncSongPickerToggleButton();
+  return grantedNow;
 }
 
 function getPolygonRadiusFactor(angle, sides) {
@@ -2668,11 +2710,14 @@ function submitDiscoveryPassphraseEntry() {
   discoveryPassphraseInput.value = '';
 }
 
-function unlockSong(songId) {
+function unlockSong(songId, options) {
+  options = options || {};
   if (!songId || !MUSIC_LIBRARY[songId]) return;
   if (unlockedSongIds.indexOf(songId) !== -1) return;
   unlockedSongIds.push(songId);
-  hasUnseenSongUnlock = true;
+  if (options.markUnseen !== false) {
+    hasUnseenSongUnlock = true;
+  }
 }
 
 function unlockDiscovery(shapeKey) {

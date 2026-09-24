@@ -638,6 +638,56 @@ test.describe('StitchLab regressions', () => {
     });
   });
 
+  test('paramless splash shows random tip preview and opens startup tips modal from preview link', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
+    });
+
+    await page.goto('/stitchlab.html');
+    await expect(page.locator('#startup-splash')).toBeVisible();
+
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        var preview = document.getElementById('startup-splash-tip-preview');
+        var textNode = document.getElementById('startup-splash-tip-preview-text');
+        return {
+          hidden: !!(preview && preview.hidden),
+          text: String((textNode && textNode.textContent) || '').trim()
+        };
+      });
+    }).toEqual(expect.objectContaining({ hidden: false }));
+
+    await expect(page.locator('#startup-splash-tip-preview-text')).not.toHaveText(/^\s*$/);
+
+    await page.locator('#startup-splash-tip-view-all').click();
+    await expect(page.locator('#startup-tips-modal')).toHaveClass(/open/);
+    await expect(page.locator('#startup-tips-text')).not.toHaveText(/^\s*$/);
+    await expect(page.locator('#startup-tips-progress')).toContainText('/');
+
+    await page.locator('#startup-tips-close').click();
+    await expect(page.locator('#startup-tips-modal')).not.toHaveClass(/open/);
+  });
+
+  test('paramless splash continue still starts onboarding after opening startup tips modal', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__STITCHLAB_FORCE_SPLASH_FOR_TESTS__ = true;
+    });
+
+    await page.goto('/stitchlab.html');
+    await expect(page.locator('#startup-splash')).toBeVisible();
+
+    await page.locator('#startup-splash-tip-view-all').click();
+    await expect(page.locator('#startup-tips-modal')).toHaveClass(/open/);
+
+    await page.locator('#startup-tips-close').click();
+    await expect(page.locator('#startup-tips-modal')).not.toHaveClass(/open/);
+
+    await page.locator('#startup-splash-continue').click();
+
+    await expect(page.locator('#startup-splash')).toBeHidden({ timeout: 10000 });
+    await expect(page.locator('#onboarding-tour')).toBeVisible({ timeout: 12000 });
+  });
+
   test('prebuilt narration playback succeeds when clip is available', async ({ page }) => {
     await page.addInitScript(() => {
       const originalPlay = HTMLMediaElement.prototype.play;
@@ -1024,6 +1074,9 @@ test.describe('StitchLab regressions', () => {
 
     await page.locator('#acknowledgments-next-btn').click();
     await expect(page.locator('#acknowledgments-progress')).toContainText('3 /');
+
+    await page.locator('#acknowledgments-next-btn').click();
+    await expect(page.locator('#acknowledgments-progress')).toContainText('4 /');
   });
 
   test('acknowledgments viewer opens from About actions', async ({ page }) => {
@@ -1044,6 +1097,57 @@ test.describe('StitchLab regressions', () => {
 
     await expect(page.locator('#acknowledgments-modal')).toHaveClass(/open/);
     await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
+  });
+
+  test('viewing all acknowledgments unlocks acknowledgments song in picker', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-acknowledgments-toggle').click();
+
+    const modal = page.locator('#acknowledgments-modal');
+    await expect(modal).toHaveClass(/open/);
+
+    await expect.poll(async () => {
+      const progressText = await page.locator('#acknowledgments-progress').textContent();
+      const match = String(progressText || '').match(/\d+\s*\/\s*(\d+)/);
+      return match ? Number(match[1]) : null;
+    }).toBeGreaterThan(1);
+
+    const lineCount = await page.evaluate(() => {
+      var progressNode = document.getElementById('acknowledgments-progress');
+      var progressText = String(progressNode && progressNode.textContent ? progressNode.textContent : '');
+      var match = progressText.match(/\d+\s*\/\s*(\d+)/);
+      return match ? Number(match[1]) : 0;
+    });
+    for (let i = 1; i < lineCount; i++) {
+      await page.locator('#acknowledgments-next-btn').click();
+    }
+    await expect(page.locator('#acknowledgments-progress')).toContainText(String(lineCount) + ' / ' + String(lineCount));
+
+    const isUnlocked = await page.evaluate(() => {
+      return Array.isArray(window.unlockedSongIds) && window.unlockedSongIds.indexOf('acknowledgments') !== -1;
+    });
+    expect(isUnlocked).toBe(true);
+
+    await page.locator('#acknowledgments-close-btn').click();
+    await expect(modal).not.toHaveClass(/open/);
+
+    await page.evaluate(() => {
+      window.hasUnseenSongUnlock = false;
+      if (typeof window.syncSongPickerToggleButton === 'function') {
+        window.syncSongPickerToggleButton();
+      }
+    });
+
+    const songToggle = page.locator('#kid-song-toggle');
+    await expect(songToggle).toBeEnabled();
+    await songToggle.click();
+
+    const acknowledgmentOption = page.locator('#kid-song-menu .kid-song-option[data-song-id="acknowledgments"]');
+    await expect(acknowledgmentOption).toBeVisible();
+    await expect(acknowledgmentOption).toContainText('[/\\]');
   });
 
   test('sewing cards viewer opens from About actions and defaults to series 1 card 0 page 34', async ({ page }) => {
