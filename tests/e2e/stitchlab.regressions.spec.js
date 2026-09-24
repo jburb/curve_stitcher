@@ -183,21 +183,25 @@ async function dragThreadCardFromTo(page, fromIndex, toIndex, options) {
     const cards = Array.from(document.querySelectorAll('#thread-controls .thread-card'));
     const source = cards[from];
     const target = cards[to];
+    const sourceHandle = source ? source.querySelector('.thread-card-reorder-handle') : null;
     if (!source || !target) {
       throw new Error('Thread card(s) missing for drag operation');
     }
+    if (!sourceHandle) {
+      throw new Error('Thread card reorder handle missing for drag operation');
+    }
 
-    const sourceRect = source.getBoundingClientRect();
+    const sourceRect = sourceHandle.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
     const startX = sourceRect.left + sourceRect.width / 2;
-    const startY = sourceRect.top + 14;
+    const startY = sourceRect.top + sourceRect.height / 2;
     const endX = targetRect.left + targetRect.width / 2;
     const endY = dropMode === 'after'
       ? (targetRect.top + targetRect.height - 4)
       : (targetRect.top + 2);
     const steps = 8;
 
-    source.dispatchEvent(new PointerEvent('pointerdown', {
+    sourceHandle.dispatchEvent(new PointerEvent('pointerdown', {
       bubbles: true,
       cancelable: true,
       pointerId: 1,

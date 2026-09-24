@@ -174,6 +174,8 @@ var PARAMLESS_RANDOM_SEQUENCE_MAX_ATTEMPTS = 18;
 var PARAMLESS_MULTIPLY_MIN_HOLES = 16;
 var PARAMLESS_MULTIPLY_MAX_VALUE = 5;
 var THREAD_CARD_REORDER_MOVE_THRESHOLD = 3;
+var THREAD_CARD_REORDER_TOUCH_HOLD_DELAY_MS = 140;
+var THREAD_CARD_REORDER_TOUCH_HOLD_MOVE_TOLERANCE = 8;
 var ACKNOWLEDGMENTS_SONG_ID = 'acknowledgments';
 var ACKNOWLEDGMENTS_SONG_UNLOCK_STORAGE_KEY = 'stitchlab_acknowledgments_song_unlocked_v1';
 var threadCardReorderSession = null;
@@ -3760,6 +3762,17 @@ function isThreadCardInteractiveTarget(target) {
   return !!target.closest('input, select, button, textarea, label, a');
 }
 
+function isThreadCardReorderHandleTarget(target) {
+  if (!target || typeof target.closest !== 'function') return false;
+  return !!target.closest('.thread-card-reorder-handle');
+}
+
+function clearThreadCardReorderTouchHoldTimer(session) {
+  if (!session || !session.touchHoldTimer) return;
+  window.clearTimeout(session.touchHoldTimer);
+  session.touchHoldTimer = null;
+}
+
 function endThreadCardReorderSession(event) {
   if (!threadCardReorderSession) return;
   var hasPointerId = event && typeof event.pointerId === 'number';
@@ -3769,6 +3782,7 @@ function endThreadCardReorderSession(event) {
 
   var session = threadCardReorderSession;
   threadCardReorderSession = null;
+  clearThreadCardReorderTouchHoldTimer(session);
 
   document.removeEventListener('pointermove', handleThreadCardReorderPointerMove);
   document.removeEventListener('pointerup', endThreadCardReorderSession);
@@ -3837,6 +3851,12 @@ function handleThreadCardReorderMove(clientY, event) {
   if (!isFinite(clientY)) return;
 
   var deltaY = clientY - session.startY;
+  if (session.requiresTouchHold && !session.touchHoldReady) {
+    if (Math.abs(deltaY) > THREAD_CARD_REORDER_TOUCH_HOLD_MOVE_TOLERANCE) {
+      endThreadCardReorderSession(event);
+    }
+    return;
+  }
   if (!session.isDragging && Math.abs(deltaY) < THREAD_CARD_REORDER_MOVE_THRESHOLD) {
     return;
   }
@@ -3897,8 +3917,10 @@ function handleThreadCardReorderTouchMove(event) {
 function beginThreadCardReorder(event, cardElement) {
   if (!cardElement || threads.length <= 1) return;
   if (isThreadCardInteractiveTarget(event.target)) return;
+  if (!isThreadCardReorderHandleTarget(event.target)) return;
   if (typeof event.button === 'number' && event.button !== 0) return;
-  if (event && typeof event.preventDefault === 'function' && event.cancelable) {
+  var isTouchStart = (event && event.pointerType === 'touch') || !!(event && event.touches && event.touches.length);
+  if (!isTouchStart && event && typeof event.preventDefault === 'function' && event.cancelable) {
     event.preventDefault();
   }
   endThreadCardReorderSession();
@@ -3913,8 +3935,20 @@ function beginThreadCardReorder(event, cardElement) {
     startY: startY,
     container: threadControlsContainer,
     draggedCard: cardElement,
-    isDragging: false
+    isDragging: false,
+    requiresTouchHold: !!isTouchStart,
+    touchHoldReady: !isTouchStart,
+    touchHoldTimer: null
   };
+
+  if (threadCardReorderSession.requiresTouchHold) {
+    var activeSession = threadCardReorderSession;
+    activeSession.touchHoldTimer = window.setTimeout(function() {
+      if (threadCardReorderSession !== activeSession) return;
+      activeSession.touchHoldReady = true;
+      activeSession.touchHoldTimer = null;
+    }, THREAD_CARD_REORDER_TOUCH_HOLD_DELAY_MS);
+  }
 
   document.addEventListener('pointermove', handleThreadCardReorderPointerMove);
   document.addEventListener('pointerup', endThreadCardReorderSession);
@@ -3975,7 +4009,7 @@ function renderThreadControls() {
     var hideStartHoleControl = !isFixedMode && !isFormulaMode;
 
     div.innerHTML = `
-      <strong>Thread ${index + 1}${threads.length > 1 ? ' <span class="thread-card-reorder-hint">(Tap/click + drag to reorder.)</span>' : ''}</strong><br>
+      <strong>Thread ${index + 1}${threads.length > 1 ? ' <span class="thread-card-reorder-handle" title="Drag to reorder" aria-hidden="true">&#x2195;</span><span class="thread-card-reorder-hint">(Hold + drag to reorder.)</span>' : ''}</strong><br>
       Color: <input type="color" value="${threadColorInputValue}" id="color-${index}"><br>
       ${nestedFrameEnabled ? `
       Frame:
