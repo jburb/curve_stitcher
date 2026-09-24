@@ -149,7 +149,7 @@
   <div class="experience-info-actions">
     <button id="experience-narrate-toggle" type="button" aria-pressed="false">🔊 Hear this</button>
     <button id="experience-sewing-cards-toggle" type="button" hidden>🪡 Sewing cards</button>
-    <button id="experience-acknowledgments-toggle" type="button">Acknowledgments</button>
+    <button id="experience-acknowledgments-toggle" type="button">🙏 Acknowledgments</button>
     <span id="experience-narration-status" role="status" aria-live="polite"></span>
   </div>
 </div>
@@ -1060,7 +1060,8 @@
     bach: DEFAULT_TEMPO_OPTIONS.slice(),
     triangle: [110, 220, 330, 440, 550],
     square: [300, 450, 600, 750, 900],
-    rosette: [90, 180, 270, 360, 450]
+    rosette: [90, 180, 270, 360, 450],
+    acknowledgments: [110, 220, 330, 440, 550]
   };
   var MUSIC_LIBRARY = {
     bach: {
@@ -1078,6 +1079,10 @@
     rosette: {
       title: 'djovan-the-voice-of-the-oud-258611',
       path: 'assets/audio/djovan-the-voice-of-the-oud-258611.mp3'
+    },
+    acknowledgments: {
+      title: 'SonatainCmajor,Hob.XVI_50-I.Allegro',
+      path: 'assets/audio/SonatainCmajor,Hob.XVI_50-I.Allegro.mp3'
     }
   };
   var DISCOVERY_LIBRARY = {

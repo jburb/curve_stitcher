@@ -2015,7 +2015,8 @@
   }
   .kid-song-menu {
     position: absolute;
-    top: calc(100% + 6px);
+    bottom: calc(100% + 6px);
+    top: auto;
     right: 0;
     min-width: 250px;
     max-height: 220px;

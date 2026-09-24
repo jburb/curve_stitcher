@@ -1049,6 +1049,57 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#acknowledgments-progress')).toContainText('1 /');
   });
 
+  test('viewing all acknowledgments unlocks acknowledgments song in picker', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.locator('#experience-info-toggle').click();
+    await page.locator('#experience-acknowledgments-toggle').click();
+
+    const modal = page.locator('#acknowledgments-modal');
+    await expect(modal).toHaveClass(/open/);
+
+    await expect.poll(async () => {
+      const progressText = await page.locator('#acknowledgments-progress').textContent();
+      const match = String(progressText || '').match(/\d+\s*\/\s*(\d+)/);
+      return match ? Number(match[1]) : null;
+    }).toBeGreaterThan(1);
+
+    const lineCount = await page.evaluate(() => {
+      var progressNode = document.getElementById('acknowledgments-progress');
+      var progressText = String(progressNode && progressNode.textContent ? progressNode.textContent : '');
+      var match = progressText.match(/\d+\s*\/\s*(\d+)/);
+      return match ? Number(match[1]) : 0;
+    });
+    for (let i = 1; i < lineCount; i++) {
+      await page.locator('#acknowledgments-next-btn').click();
+    }
+    await expect(page.locator('#acknowledgments-progress')).toContainText(String(lineCount) + ' / ' + String(lineCount));
+
+    const isUnlocked = await page.evaluate(() => {
+      return Array.isArray(window.unlockedSongIds) && window.unlockedSongIds.indexOf('acknowledgments') !== -1;
+    });
+    expect(isUnlocked).toBe(true);
+
+    await page.locator('#acknowledgments-close-btn').click();
+    await expect(modal).not.toHaveClass(/open/);
+
+    await page.evaluate(() => {
+      window.hasUnseenSongUnlock = false;
+      if (typeof window.syncSongPickerToggleButton === 'function') {
+        window.syncSongPickerToggleButton();
+      }
+    });
+
+    const songToggle = page.locator('#kid-song-toggle');
+    await expect(songToggle).toBeEnabled();
+    await songToggle.click();
+
+    const acknowledgmentOption = page.locator('#kid-song-menu .kid-song-option[data-song-id="acknowledgments"]');
+    await expect(acknowledgmentOption).toBeVisible();
+    await expect(acknowledgmentOption).toContainText('[/\\]');
+  });
+
   test('sewing cards viewer opens from About actions and defaults to series 1 card 0 page 34', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');

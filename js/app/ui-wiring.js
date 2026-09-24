@@ -1819,6 +1819,9 @@ syncHoleNumberToggles();
 syncBorderControls();
 syncMusicToggleButton();
 syncKidControlsFromSelectedThread();
+if (typeof restoreAcknowledgmentsSongUnlockFromStorage === 'function') {
+  restoreAcknowledgmentsSongUnlockFromStorage();
+}
 renderDiscoveryLibrary();
 var shouldDelayInitialUrlSyncForMashrabiya = hasUrlStateParams() && startupRequestedExperienceId === 'mashrabiya';
 if (typeof initializePatternLibrary === 'function') {

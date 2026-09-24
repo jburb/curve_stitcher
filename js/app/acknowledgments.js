@@ -1420,6 +1420,10 @@ function renderAcknowledgmentsLine(lines) {
     acknowledgmentsProgress.textContent = String(lineIndex + 1) + ' / ' + String(safeLines.length);
   }
 
+  if (lineIndex >= safeLines.length - 1 && typeof grantAcknowledgmentsSongUnlock === 'function') {
+    grantAcknowledgmentsSongUnlock({ markUnseen: true });
+  }
+
   renderAcknowledgmentsPattern(styleId, visual, activeLine);
   syncAcknowledgmentsControls(safeLines.length);
 }

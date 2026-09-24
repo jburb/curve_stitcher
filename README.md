@@ -436,9 +436,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
-1. Add mashrabiya animation sample among acknowledgments experience animations 
 1. Tips library and modal
-1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 
@@ -480,6 +478,8 @@ This section describes the practical steps for adding a new experience named zoo
 1. Paramless random thread generation excludes star frame selection
 1. Use better voice for narration.
 1. Add thank you note to Cambridge in acknowledgments
+1. Add mashrabiya animation sample among acknowledgments experience animations 
+1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
 
 ## TODO Backlog
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
@@ -487,15 +487,9 @@ This section describes the practical steps for adding a new experience named zoo
 1. Allow single pattern export and import.
 
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
- 
-1. Add mashrabiya animation sample among acknowledgments experience animations
 
 1. **Tips library and modal**
      - Should highlight advanced abd less obvious options especially, eg inner frame, inner frame thread modes, list modes, parallel vs serial animation options for some experiences eg Triangula, Squarus
-
-
-1. **Acknowledgements song discovery**
-     - When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options.
 
 1. **Experience title bar (animated stitched reveal)**
 	- ~~Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").~~
