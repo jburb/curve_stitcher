@@ -29,7 +29,9 @@
     shit: true,
     shitty: true,
     slut: true,
-    whore: true
+    whore: true,
+    sex: true,
+    sexy: true
   };
   var JSON_INJECTION_TEXT_REGEX = /(\{\s*["'][A-Za-z0-9_\- ]+["']\s*:|\[\s*\{|["'][A-Za-z0-9_\- ]+["']\s*:\s*["'{\[]|<\/?script\b|javascript\s*:)/i;
 
