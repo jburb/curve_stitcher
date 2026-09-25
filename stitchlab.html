@@ -432,6 +432,12 @@
       <div class="advanced-global-row">Border: <input id="advanced-border-enabled" type="checkbox"></div>
       <div class="advanced-global-row">Hole Numbers: <input id="advanced-hole-numbers" type="checkbox"></div>
       <div class="advanced-global-row">Holes: <input id="advanced-holes-number" class="advanced-inline-number" type="number" min="3" max="144" value="35" aria-label="Holes value"></div>
+      <div class="advanced-global-row">Hole limit:
+        <select id="advanced-holes-max" aria-label="Hole limit">
+          <option value="144" selected>144 (Default)</option>
+          <option value="1024">1024 (Extended)</option>
+        </select>
+      </div>
       <div class="advanced-global-row">Hole number rotation:
         <input id="advanced-hole-rotation" type="range" min="1" max="35" step="1" value="1" aria-label="Hole number rotation">
         <span class="advanced-inline-value" id="advanced-hole-rotation-value">1</span>
@@ -617,7 +623,16 @@
     <div id="pattern-detail-description" class="pattern-detail-description"></div>
     <div class="pattern-detail-actions">
       <button id="pattern-detail-load-btn" type="button" class="modal-btn">Load</button>
-      <button id="pattern-detail-view-export-btn" type="button" class="modal-btn">Export</button>
+      <div class="pattern-detail-export-row">
+        <button id="pattern-detail-export-json-btn" type="button" class="modal-btn">
+          <span class="pattern-detail-btn-icon" aria-hidden="true">📦</span>
+          Export Pattern
+        </button>
+        <button id="pattern-detail-view-export-btn" type="button" class="modal-btn">
+          <span class="pattern-detail-btn-icon" aria-hidden="true">🖼</span>
+          Maker Files
+        </button>
+      </div>
       <button id="pattern-detail-travel-btn" type="button" class="modal-btn">Travel</button>
       <button id="pattern-detail-rename-btn" type="button" class="modal-btn">Edit Details</button>
       <button id="pattern-detail-delete-btn" type="button" class="modal-btn">Delete</button>
@@ -757,6 +772,7 @@
   var advancedShapeSelect = document.getElementById('advanced-shape');
   var advancedStitchingFrameSubsection = advancedShapeSelect ? advancedShapeSelect.closest('.advanced-subsection') : null;
   var advancedHolesNumberInput = document.getElementById('advanced-holes-number');
+  var advancedHolesMaxSelect = document.getElementById('advanced-holes-max');
   var advancedHoleRotationInput = document.getElementById('advanced-hole-rotation');
   var advancedHoleRotationValue = document.getElementById('advanced-hole-rotation-value');
   var advancedHoleNumbersToggle = document.getElementById('advanced-hole-numbers');
@@ -792,6 +808,7 @@
   var patternDetailPreview = document.getElementById('pattern-detail-preview');
   var patternDetailDescription = document.getElementById('pattern-detail-description');
   var patternDetailCloseBtn = document.getElementById('pattern-detail-close-btn');
+  var patternDetailExportJsonBtn = document.getElementById('pattern-detail-export-json-btn');
   var patternDetailViewExportBtn = document.getElementById('pattern-detail-view-export-btn');
   var patternDetailLoadBtn = document.getElementById('pattern-detail-load-btn');
   var patternDetailTravelBtn = document.getElementById('pattern-detail-travel-btn');
@@ -1076,7 +1093,10 @@
   var DEFAULT_NESTED_FRAME_RATIO = 0.5;
   var nestedFrameEnabled = false;
   var nestedFrameRatio = DEFAULT_NESTED_FRAME_RATIO;
-  var MAX_HOLES = 144;
+  var DEFAULT_MAX_HOLES = 144;
+  var EXTENDED_MAX_HOLES = 1024;
+  var MAX_HOLES = DEFAULT_MAX_HOLES;
+  var MAX_THREADS_PER_FRAME = 64;
   var HOLE_NUMBER_AUTO_HIDE_THRESHOLD = 80;
   var DEFAULT_ANIMATION_BPM = 84;
   var BEATS_PER_STITCH_SEGMENT = 1;

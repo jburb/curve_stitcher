@@ -133,7 +133,80 @@ window.addEventListener('popstate', function() {
   applyStateFromCurrentUrl({ forceUrlSync: false });
 });
 
+var STITCHING_MAX_HOLES_STORAGE_KEY = 'stitchlab.maxHoles.v1';
+var ALLOWED_MAX_HOLE_LIMITS = [DEFAULT_MAX_HOLES, EXTENDED_MAX_HOLES];
+
+function canAddMoreThreads() {
+  var cap = parseBoundedInt(MAX_THREADS_PER_FRAME, 1, 4096, 64);
+  return threads.length < cap;
+}
+
+function alertThreadLimitReached() {
+  var cap = parseBoundedInt(MAX_THREADS_PER_FRAME, 1, 4096, 64);
+  alert('Thread limit reached. This frame supports up to ' + String(cap) + ' threads.');
+}
+
+function resolveConfiguredMaxHoles(rawValue) {
+  var parsed = parseInt(rawValue, 10);
+  if (!isFinite(parsed)) {
+    return DEFAULT_MAX_HOLES;
+  }
+  for (var i = 0; i < ALLOWED_MAX_HOLE_LIMITS.length; i++) {
+    if (parsed === ALLOWED_MAX_HOLE_LIMITS[i]) {
+      return parsed;
+    }
+  }
+  return DEFAULT_MAX_HOLES;
+}
+
+function applyConfiguredMaxHoles(rawValue, options) {
+  options = options || {};
+  var nextMax = resolveConfiguredMaxHoles(rawValue);
+  MAX_HOLES = nextMax;
+
+  if (holesSlider) {
+    holesSlider.max = String(nextMax);
+  }
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.max = String(nextMax);
+  }
+  if (advancedHolesMaxSelect) {
+    advancedHolesMaxSelect.value = String(nextMax);
+  }
+
+  if (!options.silentStorage) {
+    try {
+      window.localStorage.setItem(STITCHING_MAX_HOLES_STORAGE_KEY, String(nextMax));
+    } catch (error) {
+      // Ignore storage write failures and continue with in-memory setting.
+    }
+  }
+
+  var currentHoleCount = parseBoundedInt(holesSlider && holesSlider.value, 3, nextMax, DEFAULT_HOLES);
+  if (holesSlider) {
+    holesSlider.value = String(currentHoleCount);
+  }
+  if (advancedHolesNumberInput) {
+    advancedHolesNumberInput.value = String(currentHoleCount);
+  }
+  syncJumpBoundsFromHoleCount();
+}
+
+function initializeConfiguredMaxHolesFromStorage() {
+  var stored = '';
+  try {
+    stored = window.localStorage.getItem(STITCHING_MAX_HOLES_STORAGE_KEY) || '';
+  } catch (error) {
+    stored = '';
+  }
+  applyConfiguredMaxHoles(stored || DEFAULT_MAX_HOLES, { silentStorage: true });
+}
+
 addMagicThreadBtn.addEventListener('click', () => {
+  if (!canAddMoreThreads()) {
+    alertThreadLimitReached();
+    return;
+  }
   threads.push(buildMagicThread());
   // Keep basic controls focused on the newest magic thread.
   selectedThreadIndex = threads.length - 1;
@@ -261,6 +334,14 @@ if (advancedHolesNumberInput) {
   advancedHolesNumberInput.addEventListener('input', handleAdvancedHolesNumberInput);
   advancedHolesNumberInput.addEventListener('change', handleAdvancedHolesNumberCommit);
   advancedHolesNumberInput.addEventListener('blur', handleAdvancedHolesNumberCommit);
+}
+if (advancedHolesMaxSelect) {
+  advancedHolesMaxSelect.addEventListener('change', function() {
+    applyConfiguredMaxHoles(advancedHolesMaxSelect.value);
+    renderThreadControls();
+    updateKidControlValues();
+    redrawForPathChange();
+  });
 }
 if (advancedHoleRotationInput) {
   advancedHoleRotationInput.addEventListener('input', function() {
@@ -787,6 +868,11 @@ function renderPatternDetailModal(record) {
     patternDetailLoadBtn.setAttribute('aria-disabled', canLoad ? 'false' : 'true');
   }
 
+  if (patternDetailExportJsonBtn) {
+    patternDetailExportJsonBtn.disabled = !canExport;
+    patternDetailExportJsonBtn.setAttribute('aria-disabled', canExport ? 'false' : 'true');
+  }
+
   if (patternDetailViewExportBtn) {
     patternDetailViewExportBtn.disabled = !canExport;
     patternDetailViewExportBtn.setAttribute('aria-disabled', canExport ? 'false' : 'true');
@@ -1017,6 +1103,20 @@ if (patternDetailViewExportBtn) {
   });
 }
 
+if (patternDetailExportJsonBtn) {
+  patternDetailExportJsonBtn.addEventListener('click', async () => {
+    if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function' || typeof exportSinglePatternToJsonFile !== 'function') return;
+    var patternId = getPatternLibraryDetailPatternId();
+    var record = getPatternRecordById(patternId);
+    if (!record || !record.patternUrl) return;
+    try {
+      await exportSinglePatternToJsonFile(record.id);
+    } catch (error) {
+      alert((error && error.message) ? error.message : 'Pattern export failed.');
+    }
+  });
+}
+
 if (patternDetailTravelBtn) {
   patternDetailTravelBtn.addEventListener('click', () => {
     if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function') return;
@@ -1142,7 +1242,9 @@ if (patternLibraryImportBtn && patternLibraryImportInput) {
       }
       var result = await importPatternLibraryFromJsonText(text);
       renderDiscoveryLibrary();
-      alert('Library import complete. Added: ' + String(result.importedCount) + ', updated: ' + String(result.updatedCount) + '.');
+      var label = (result && result.importMode === 'single') ? 'Pattern import complete.' : 'Library import complete.';
+      var summary = label + ' Added: ' + String(result && result.importedCount || 0) + ', updated: ' + String(result && result.updatedCount || 0) + ', skipped: ' + String(result && result.skippedCount || 0) + '.';
+      alert(summary);
     } catch (error) {
       alert((error && error.message) ? error.message : 'Library import failed.');
     }
@@ -1349,6 +1451,10 @@ document.addEventListener('keydown', (event) => {
 
 if (addThreadBtn) {
   addThreadBtn.addEventListener('click', () => {
+    if (!canAddMoreThreads()) {
+      alertThreadLimitReached();
+      return;
+    }
     threads.push(buildMagicThread());
     selectedThreadIndex = threads.length - 1;
     renderThreadControls();
@@ -1833,6 +1939,7 @@ if (animateBtn) {
    INITIALIZE
 ------------------------------ */
 initializeThemeFromStorage();
+initializeConfiguredMaxHolesFromStorage();
 renderThreadControls();
 syncExperienceInfoPanel(false);
 applyExperienceOverlayPosition(EXPERIENCE_OVERLAY_POSITION_CLASS);

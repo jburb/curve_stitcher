@@ -75,6 +75,9 @@ Current covered checks:
 | Narration & Audio | Prebuilt narration playback succeeds when clip is available. |
 | Narration & Audio | Prebuilt narration manifest covers all splash onboarding and about narration texts. |
 | Controls & Interaction | Basic and advanced shared controls stay in sync. |
+| Controls & Interaction | Advanced hole limit selector supports 144 and 1024 with clamping. |
+| Controls & Interaction | Advanced stitch-by help is collapsed by default and expandable. |
+| Controls & Interaction | Thread add controls stop at max thread cap. |
 | Controls & Interaction | Advanced formula input syncs immediately to basic formula input. |
 | Controls & Interaction | Stitching active-thread overlay shows non-styling playback values. |
 | Controls & Interaction | Basic palette custom dropper applies selected thread color. |
@@ -110,10 +113,15 @@ Current covered checks:
 | Stitch Routing & Formula | Invalid formula does not serialize to URL and resolves to fallback on commit. |
 | Discovery & Pattern Library | Stitching discovery candidates unlock their corresponding discovery cards. |
 | Discovery & Pattern Library | Pattern library supports save rename and delete for user patterns. |
+| Discovery & Pattern Library | Pattern save and edit block profanity and JSON-like text. |
 | Discovery & Pattern Library | Pattern library import restores exported user pattern records. |
 | Discovery & Pattern Library | Pattern library import accepts file-origin pattern URLs from exported JSON. |
+| Discovery & Pattern Library | Single-pattern export produces stitchlab.pattern payload. |
+| Discovery & Pattern Library | Single-pattern import accepts stitchlab.pattern JSON payload. |
+| Discovery & Pattern Library | Pattern library import rename conflict prompt can apply imported rename. |
 | Discovery & Pattern Library | Pattern detail load restores saved stitching state to app controls. |
 | Discovery & Pattern Library | Pattern detail load for user patterns preserves currently active song and tempo. |
+| Discovery & Pattern Library | Pattern detail load for discovery patterns performs navigation and can reset playback position. |
 | Discovery & Pattern Library | Pattern save preview and saved load respect border and hole-number toggles. |
 | Discovery & Pattern Library | Pattern detail export flow uses pattern name for filename and creates a download blob. |
 | Discovery & Pattern Library | Pattern detail maker ZIP forces hole numbers, respects border toggle, and includes pattern description in guide. |
@@ -444,9 +452,9 @@ This section describes the practical steps for adding a new experience named zoo
 1. Block vulgarity, profanity, and json injection when creating /editing pattern names and descriptions.
 1. Add a reasonable thread count per frame limit eg 64, 128, etc.
 1. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144.
-1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
-1. Allow single pattern export and import.
-1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
+1. Fix library import not respecting pattern rename, with an alert allowing the user option to accept or reject it.
+1. Allow single pattern export and import, for sharing.
+1. Move stitch by jump-help text in advanced pane to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
@@ -501,11 +509,11 @@ This section describes the practical steps for adding a new experience named zoo
  
 1. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144.
 
-1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
+1. Fix library import not respecting pattern rename, with an alert allowing the user option to accept or reject it.
  
-1. Allow single pattern export and import.
+1. Allow single pattern export and import, for sharing.
 
-1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
+1. Move stitch by jump-help text in advanced pane to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
 
 1. **Experience title bar (animated stitched reveal)**
 	- ~~Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").~~

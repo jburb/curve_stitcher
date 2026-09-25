@@ -3,10 +3,35 @@
   var PATTERN_LIBRARY_INDEXED_DB_VERSION = 1;
   var PATTERN_LIBRARY_STORE_NAME = 'patterns';
   var PATTERN_LIBRARY_EXPORT_VERSION = 1;
+  var SINGLE_PATTERN_EXPORT_VERSION = 1;
   var PATTERN_NAME_MAX_LENGTH = 512;
   var PATTERN_DESCRIPTION_MAX_LENGTH = 4000;
   var PATTERN_SMALL_PREVIEW_SIZE = 52;
   var PATTERN_NAME_ALLOWED_REGEX = /^[A-Za-z0-9 _()\-]+$/;
+  var FAMILY_SAFE_CONTENT_MESSAGE = 'Hey, this is a family app. Please keep names and descriptions clean and avoid code-like text.';
+  var BLOCKED_PROFANITY_REGEX = /\b(f+\W*u+\W*c+\W*k+|s+\W*h+\W*i+\W*t+|b+\W*i+\W*t+\W*c+\W*h+|a+\W*s+\W*s+\W*h+\W*o+\W*l+\W*e+|m+\W*f+|mother\W*f+\W*u+\W*c+\W*k+\W*e+\W*r+|c+\W*u+\W*n+\W*t+)\b/i;
+  var COMMON_VULGARITY_TERMS = {
+    ass: true,
+    asshole: true,
+    bastard: true,
+    bitch: true,
+    bullshit: true,
+    crap: true,
+    cunt: true,
+    dick: true,
+    fuck: true,
+    fucker: true,
+    fucking: true,
+    motherfucker: true,
+    piss: true,
+    prick: true,
+    pussy: true,
+    shit: true,
+    shitty: true,
+    slut: true,
+    whore: true
+  };
+  var JSON_INJECTION_TEXT_REGEX = /(\{\s*["'][A-Za-z0-9_\- ]+["']\s*:|\[\s*\{|["'][A-Za-z0-9_\- ]+["']\s*:\s*["'{\[]|<\/?script\b|javascript\s*:)/i;
 
   var patternLibraryState = {
     adapterName: 'indexeddb',
@@ -46,6 +71,35 @@
     }
     if (!PATTERN_NAME_ALLOWED_REGEX.test(normalized)) {
       return { ok: false, message: 'Pattern name may only use letters, numbers, spaces, underscores, parentheses, and dashes.' };
+    }
+    if (containsBlockedPatternText(normalized)) {
+      return { ok: false, message: FAMILY_SAFE_CONTENT_MESSAGE };
+    }
+    return { ok: true, value: normalized };
+  }
+
+  function containsBlockedPatternText(value) {
+    var text = String(value || '').trim();
+    if (!text) return false;
+    return BLOCKED_PROFANITY_REGEX.test(text) || containsCommonVulgarity(text) || JSON_INJECTION_TEXT_REGEX.test(text);
+  }
+
+  function containsCommonVulgarity(value) {
+    var normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!normalized) return false;
+    var tokens = normalized.split(/\s+/g);
+    for (var i = 0; i < tokens.length; i++) {
+      if (COMMON_VULGARITY_TERMS[tokens[i]]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function validatePatternDescription(value) {
+    var normalized = normalizePatternDescription(value);
+    if (containsBlockedPatternText(normalized)) {
+      return { ok: false, message: FAMILY_SAFE_CONTENT_MESSAGE };
     }
     return { ok: true, value: normalized };
   }
@@ -576,7 +630,11 @@
     record.isProtected = false;
     record.patternName = nameValidation.value;
     record.patternNameKey = normalizePatternNameKey(record.patternName);
-    record.patternDescription = normalizePatternDescription(description);
+    var descriptionValidation = validatePatternDescription(description);
+    if (!descriptionValidation.ok) {
+      throw new Error(descriptionValidation.message);
+    }
+    record.patternDescription = descriptionValidation.value;
     record.patternUrl = normalizePatternUrl(readCurrentPatternUrl());
     record.patternPreviewFull = fullSvg;
     record.patternPreviewSmall = buildCurrentPatternPreviewSmallSvg(fullSvg);
@@ -679,7 +737,11 @@
     }
 
     var record = sanitizeIncomingRecord(existing, 'user');
-    record.patternDescription = normalizePatternDescription(nextDescription);
+    var descriptionValidation = validatePatternDescription(nextDescription);
+    if (!descriptionValidation.ok) {
+      throw new Error(descriptionValidation.message);
+    }
+    record.patternDescription = descriptionValidation.value;
     record.updatedAt = nowIso();
 
     await patternLibraryState.adapter.upsert(record);
@@ -717,6 +779,46 @@
     }, 0);
   }
 
+  function normalizePatternExportFileBaseName(name) {
+    var base = String(name || 'stitchlab-pattern').trim();
+    if (!base) base = 'stitchlab-pattern';
+    base = base.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-()]/g, '');
+    if (!base) base = 'stitchlab-pattern';
+    return base;
+  }
+
+  function getPatternRecordForExport(recordId) {
+    var id = String(recordId || '').trim();
+    if (!id) return null;
+    for (var i = 0; i < patternLibraryState.records.length; i++) {
+      if (String(patternLibraryState.records[i].id || '') === id) {
+        return cloneRecord(patternLibraryState.records[i]);
+      }
+    }
+    return null;
+  }
+
+  function buildSinglePatternExportPayload(record) {
+    return {
+      schema: 'stitchlab.pattern',
+      version: SINGLE_PATTERN_EXPORT_VERSION,
+      exportedAt: nowIso(),
+      record: cloneRecord(record)
+    };
+  }
+
+  async function exportSinglePatternToJsonFile(recordId) {
+    await initializePatternLibrary();
+    var record = getPatternRecordForExport(recordId);
+    if (!record) {
+      throw new Error('Pattern not found for export.');
+    }
+    var payload = buildSinglePatternExportPayload(record);
+    var fileBaseName = normalizePatternExportFileBaseName(record.patternName || 'stitchlab-pattern');
+    triggerJsonDownload(fileBaseName + '.stitchpattern.json', payload);
+    return payload;
+  }
+
   async function exportPatternLibraryToJsonFile() {
     await initializePatternLibrary();
     var payload = {
@@ -739,7 +841,30 @@
     return output;
   }
 
-  async function importPatternLibraryFromJsonText(jsonText) {
+  function resolveRenameConflictAction(existingName, importedName, options) {
+    var strategy = String(options && options.renameConflictAction || '').toLowerCase();
+    if (strategy === 'keep' || strategy === 'apply' || strategy === 'cancel') {
+      return strategy;
+    }
+
+    if (!window || typeof window.prompt !== 'function') {
+      return 'keep';
+    }
+
+    var message = [
+      'Imported pattern rename detected for the same pattern ID.',
+      'Current name: "' + String(existingName || '') + '"',
+      'Imported name: "' + String(importedName || '') + '"',
+      'Type K to keep current name, A to apply imported rename, or C to skip this import record.'
+    ].join('\n');
+    var response = String(window.prompt(message, 'K') || '').trim().toUpperCase();
+    if (response === 'A') return 'apply';
+    if (response === 'C') return 'cancel';
+    return 'keep';
+  }
+
+  async function importPatternLibraryFromJsonText(jsonText, options) {
+    options = options || {};
     await initializePatternLibrary();
 
     var parsed;
@@ -749,37 +874,49 @@
       throw new Error('Import file is not valid JSON.');
     }
 
-    if (!parsed || parsed.schema !== 'stitchlab.patternLibrary' || !Array.isArray(parsed.records)) {
+    var importMode = 'library';
+    var rawRecords = [];
+    if (parsed && parsed.schema === 'stitchlab.patternLibrary' && Array.isArray(parsed.records)) {
+      rawRecords = parsed.records;
+      importMode = 'library';
+    } else if (parsed && parsed.schema === 'stitchlab.pattern' && parsed.record && typeof parsed.record === 'object') {
+      rawRecords = [parsed.record];
+      importMode = 'single';
+    } else {
       throw new Error('Import file has an unsupported format.');
     }
 
-    var incoming = sanitizeImportedRecords(parsed.records);
-    var existingById = Object.create(null);
-    for (var e = 0; e < patternLibraryState.records.length; e++) {
-      existingById[patternLibraryState.records[e].id] = patternLibraryState.records[e];
-    }
-
+    var incoming = sanitizeImportedRecords(rawRecords);
     var merged = [];
+    var existingById = Object.create(null);
     var nameRegistry = Object.create(null);
 
     for (var i = 0; i < patternLibraryState.records.length; i++) {
       var current = cloneRecord(patternLibraryState.records[i]);
+      existingById[current.id] = current;
       nameRegistry[current.patternNameKey] = current.id;
       merged.push(current);
     }
 
     var importedCount = 0;
     var updatedCount = 0;
+    var skippedCount = 0;
 
     for (var j = 0; j < incoming.length; j++) {
       var next = incoming[j];
       var validation = validatePatternName(next.patternName);
       if (!validation.ok) {
+        skippedCount++;
         continue;
       }
       next.patternName = validation.value;
       next.patternNameKey = normalizePatternNameKey(next.patternName);
-      next.patternDescription = normalizePatternDescription(next.patternDescription);
+      var descriptionValidation = validatePatternDescription(next.patternDescription);
+      if (!descriptionValidation.ok) {
+        skippedCount++;
+        continue;
+      }
+      next.patternDescription = descriptionValidation.value;
       next.updatedAt = nowIso();
       if (!next.createdAt) {
         next.createdAt = next.updatedAt;
@@ -816,9 +953,27 @@
         }
 
         if (existingByIdMatch.kind === 'user' && next.kind === 'user') {
-          if (next.patternNameKey !== existingByIdMatch.patternNameKey && nameRegistry[next.patternNameKey]) {
-            continue;
+          if (next.patternNameKey !== existingByIdMatch.patternNameKey) {
+            var renameAction = resolveRenameConflictAction(existingByIdMatch.patternName, next.patternName, options);
+            if (renameAction === 'cancel') {
+              skippedCount++;
+              continue;
+            }
+            if (renameAction === 'keep') {
+              next.patternName = existingByIdMatch.patternName;
+              next.patternNameKey = existingByIdMatch.patternNameKey;
+            }
           }
+
+          var isApplyingDifferentName = next.patternNameKey !== existingByIdMatch.patternNameKey;
+          if (isApplyingDifferentName && nameRegistry[next.patternNameKey] && nameRegistry[next.patternNameKey] !== existingByIdMatch.id) {
+            if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+              window.alert('Imported rename "' + String(next.patternName || '') + '" conflicts with an existing pattern name. Keeping current name instead.');
+            }
+            next.patternName = existingByIdMatch.patternName;
+            next.patternNameKey = existingByIdMatch.patternNameKey;
+          }
+
           delete nameRegistry[existingByIdMatch.patternNameKey];
           nameRegistry[next.patternNameKey] = existingByIdMatch.id;
           existingByIdMatch.patternName = next.patternName;
@@ -834,14 +989,17 @@
       }
 
       if (nameRegistry[next.patternNameKey]) {
+        skippedCount++;
         continue;
       }
 
       if (next.kind === 'discovery') {
         if (!next.discoveryKey || !window.DISCOVERY_LIBRARY || !window.DISCOVERY_LIBRARY[next.discoveryKey]) {
+          skippedCount++;
           continue;
         }
       } else if (!ensurePatternUrlForStitching(next.patternUrl || '')) {
+        skippedCount++;
         continue;
       }
 
@@ -854,8 +1012,10 @@
     await loadPatternLibraryRecords();
 
     return {
+      importMode: importMode,
       importedCount: importedCount,
       updatedCount: updatedCount,
+      skippedCount: skippedCount,
       totalCount: patternLibraryState.records.length
     };
   }
@@ -885,6 +1045,7 @@
   window.updateUserPatternDescription = updateUserPatternDescription;
   window.deleteUserPattern = deleteUserPattern;
   window.exportPatternLibraryToJsonFile = exportPatternLibraryToJsonFile;
+  window.exportSinglePatternToJsonFile = exportSinglePatternToJsonFile;
   window.importPatternLibraryFromJsonText = importPatternLibraryFromJsonText;
   window.ensurePatternUrlForStitching = ensurePatternUrlForStitching;
   window.validatePatternName = validatePatternName;
