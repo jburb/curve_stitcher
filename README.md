@@ -443,10 +443,10 @@ This section describes the practical steps for adding a new experience named zoo
 
 1. Block vulgarity, profanity, and json injection when creating /editing pattern names and descriptions.
 1. Add a reasonable thread count per frame limit eg 64, 128, etc.
-1. Enable selection of a higher frame hole limit in advanced controls, e.g. 1024 or 900, instead of 144.  
+1. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144.
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
-1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
+1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
@@ -499,13 +499,13 @@ This section describes the practical steps for adding a new experience named zoo
  
 1. Add a reasonable thread count per frame limit eg 64, 128, etc.
  
-1. Enable selection of a higher frame hole limit in advanced controls, e.g. 1024 or 900, instead of 144.
+1. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144.
 
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
  
 1. Allow single pattern export and import.
 
-1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
+1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
 
 1. **Experience title bar (animated stitched reveal)**
 	- ~~Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").~~
