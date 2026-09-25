@@ -947,6 +947,41 @@ if (patternDetailModal) {
 }
 
 if (patternDetailLoadBtn) {
+  function getPatternLoadTargetUrl(record) {
+    var baseUrl = String(record && record.patternUrl || '').trim();
+    if (!baseUrl) return '';
+
+    // Discovery cards keep their authored playback context; user patterns keep current playback.
+    if (record && record.kind === 'discovery') {
+      return baseUrl;
+    }
+
+    try {
+      var parsed = new URL(baseUrl, window.location.href);
+      var params = new URLSearchParams(parsed.search || '');
+      params.set('song', String(currentSongId || 'bach'));
+      params.set('bpm', String(currentAnimationBpm || DEFAULT_ANIMATION_BPM));
+      parsed.search = params.toString();
+      return parsed.toString();
+    } catch (error) {
+      return baseUrl;
+    }
+  }
+
+  function applyPatternLoadInPlace(loadTargetUrl) {
+    try {
+      var parsed = new URL(loadTargetUrl, window.location.href);
+      var nextUrl = parsed.pathname + (parsed.search || '');
+      if ((window.location.pathname + window.location.search) !== nextUrl) {
+        history.replaceState({ appStateVersion: APP_STATE_URL_VERSION }, '', nextUrl);
+      }
+      applyStateFromCurrentUrl({ forceUrlSync: false });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   patternDetailLoadBtn.addEventListener('click', () => {
     if (typeof getPatternLibraryDetailPatternId !== 'function' || typeof getPatternRecordById !== 'function') return;
     var patternId = getPatternLibraryDetailPatternId();
@@ -956,7 +991,16 @@ if (patternDetailLoadBtn) {
       alert('Saved pattern URL is invalid for Stitching load.');
       return;
     }
-    window.location.href = record.patternUrl;
+    var loadTargetUrl = getPatternLoadTargetUrl(record);
+    if (!loadTargetUrl) return;
+
+    // Keep discovery behavior as hard navigation; load user patterns in-place to preserve music position.
+    if (record.kind !== 'discovery' && applyPatternLoadInPlace(loadTargetUrl)) {
+      closePatternDetailModal();
+      return;
+    }
+
+    window.location.href = loadTargetUrl;
   });
 }
 

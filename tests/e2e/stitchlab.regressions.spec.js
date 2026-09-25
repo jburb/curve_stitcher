@@ -2903,6 +2903,198 @@ test.describe('StitchLab regressions', () => {
     await expect.poll(() => new URL(page.url()).searchParams.get('stitchingHoles')).toBe('27');
   });
 
+  test('pattern detail load for user patterns preserves currently active song and tempo', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+    const patternName = 'User Load Playback Stability ' + String(Date.now());
+
+    const savedPlayback = await page.evaluate(() => {
+      if (typeof window.setCurrentSong !== 'function' || typeof window.applyTempoValue !== 'function') return null;
+      var sourceSongId = window.currentSongId === 'triangle' ? 'bach' : 'triangle';
+      if (!window.MUSIC_LIBRARY || !window.MUSIC_LIBRARY[sourceSongId]) {
+        sourceSongId = 'bach';
+      }
+
+      window.setCurrentSong(sourceSongId, { allowLockedSong: true, suppressUrlSync: true });
+      var tempoOptions = (typeof window.getTempoOptionsForSong === 'function')
+        ? window.getTempoOptionsForSong(sourceSongId)
+        : [];
+      var sourceBpm = (Array.isArray(tempoOptions) && tempoOptions.length)
+        ? tempoOptions[tempoOptions.length - 1]
+        : (window.currentAnimationBpm || 120);
+      window.applyTempoValue(sourceBpm, { suppressUrlSync: true });
+      if (typeof window.scheduleUrlStateSync === 'function') {
+        window.scheduleUrlStateSync(true);
+      }
+
+      return {
+        songId: String(window.currentSongId || ''),
+        bpm: Number(window.currentAnimationBpm || 0)
+      };
+    });
+
+    expect(savedPlayback).not.toBeNull();
+    expect(savedPlayback.songId).toBeTruthy();
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+    await page.locator('#pattern-save-name-input').fill(patternName);
+    await page.locator('#pattern-save-description-input').fill('User pattern playback should preserve current song and tempo when loaded.');
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    const activePlaybackBeforeLoad = await page.evaluate((savedSongId) => {
+      if (typeof window.setCurrentSong !== 'function' || typeof window.applyTempoValue !== 'function') return null;
+      var candidateSongIds = ['bach', 'square', 'triangle', 'rosette'];
+      var targetSongId = 'bach';
+      for (var i = 0; i < candidateSongIds.length; i++) {
+        var id = candidateSongIds[i];
+        if (id !== savedSongId && window.MUSIC_LIBRARY && window.MUSIC_LIBRARY[id]) {
+          targetSongId = id;
+          break;
+        }
+      }
+
+      window.setCurrentSong(targetSongId, { allowLockedSong: true, suppressUrlSync: true });
+      var tempoOptions = (typeof window.getTempoOptionsForSong === 'function')
+        ? window.getTempoOptionsForSong(targetSongId)
+        : [];
+      var targetBpm = (Array.isArray(tempoOptions) && tempoOptions.length)
+        ? tempoOptions[0]
+        : (window.currentAnimationBpm || 120);
+      window.applyTempoValue(targetBpm, { suppressUrlSync: true });
+      if (typeof window.scheduleUrlStateSync === 'function') {
+        window.scheduleUrlStateSync(true);
+      }
+
+      return {
+        songId: String(window.currentSongId || ''),
+        bpm: Number(window.currentAnimationBpm || 0)
+      };
+    }, savedPlayback.songId);
+
+    expect(activePlaybackBeforeLoad).not.toBeNull();
+    expect(activePlaybackBeforeLoad.songId).toBeTruthy();
+
+    const playbackPositionBeforeLoad = await page.evaluate(async () => {
+      var audio = window.joyAudio;
+      if (!audio) return 0;
+
+      if (audio.readyState < 1) {
+        await new Promise((resolve) => {
+          audio.addEventListener('loadedmetadata', resolve, { once: true });
+        });
+      }
+
+      var duration = Number(audio.duration || 0);
+      var targetTime = 2.5;
+      if (isFinite(duration) && duration > 1) {
+        targetTime = Math.max(0.5, Math.min(2.5, duration - 0.25));
+      }
+
+      try {
+        audio.currentTime = targetTime;
+      } catch (error) {
+        // Ignore seek rejections in browser edge cases.
+      }
+
+      if (audio.paused) {
+        try {
+          await audio.play();
+        } catch (error) {
+          // Autoplay policy may reject; currentTime should still remain set.
+        }
+      }
+
+      return Number(audio.currentTime || 0);
+    });
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
+    await expect(savedCard).toBeVisible();
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+    await page.locator('#pattern-detail-load-btn').click();
+
+    await expect(detailModal).not.toHaveClass(/open/);
+    await expect.poll(() => page.evaluate(() => String(window.currentSongId || ''))).toBe(activePlaybackBeforeLoad.songId);
+    await expect.poll(() => page.evaluate(() => Number(window.currentAnimationBpm || 0))).toBe(activePlaybackBeforeLoad.bpm);
+    await expect.poll(() => new URL(page.url()).searchParams.get('song')).toBe(activePlaybackBeforeLoad.songId);
+    await expect.poll(() => Number(new URL(page.url()).searchParams.get('bpm') || '0')).toBe(activePlaybackBeforeLoad.bpm);
+    await expect.poll(() => page.evaluate(() => Number(window.joyAudio && window.joyAudio.currentTime || 0))).toBeGreaterThan(Math.max(0.4, playbackPositionBeforeLoad - 0.6));
+  });
+
+  test('pattern detail load for discovery patterns performs navigation and can reset playback position', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await page.evaluate(async () => {
+      if (typeof window.unlockDiscovery !== 'function') return;
+      var maybePromise = window.unlockDiscovery('triangle');
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        await maybePromise;
+      }
+      if (typeof window.renderDiscoveryLibrary === 'function') {
+        window.renderDiscoveryLibrary();
+      }
+    });
+
+    await page.evaluate(async () => {
+      if (typeof window.setCurrentSong === 'function') {
+        window.setCurrentSong('bach', { allowLockedSong: true, suppressUrlSync: true });
+      }
+      if (typeof window.applyTempoValue === 'function') {
+        window.applyTempoValue(168, { suppressUrlSync: true });
+      }
+      var audio = window.joyAudio;
+      if (!audio) return;
+      if (audio.readyState < 1) {
+        await new Promise((resolve) => {
+          audio.addEventListener('loadedmetadata', resolve, { once: true });
+        });
+      }
+      try {
+        audio.currentTime = 2.5;
+      } catch (error) {
+        // Ignore seek errors in edge runtimes.
+      }
+      if (audio.paused) {
+        try {
+          await audio.play();
+        } catch (error) {
+          // Autoplay policies may block play in some environments.
+        }
+      }
+      if (typeof window.scheduleUrlStateSync === 'function') {
+        window.scheduleUrlStateSync(true);
+      }
+    });
+
+    await page.evaluate(() => {
+      var toggle = document.getElementById('discovery-toggle');
+      if (toggle) toggle.click();
+    });
+    await expect(page.locator('#discovery-panel')).toHaveClass(/open/);
+    const discoveryCard = page.locator('.discovery-card').filter({ hasText: /triangle/i }).first();
+    await expect(discoveryCard).toBeVisible();
+    await discoveryCard.getByRole('button', { name: /View Pattern/i }).click();
+
+    const detailModal = page.locator('#pattern-detail-modal');
+    await expect(detailModal).toHaveClass(/open/);
+
+    const urlBeforeLoad = page.url();
+    await Promise.all([
+      page.waitForNavigation(),
+      page.locator('#pattern-detail-load-btn').click()
+    ]);
+
+    await expect.poll(() => page.url()).not.toBe(urlBeforeLoad);
+    await expect.poll(() => page.evaluate(() => Number(window.joyAudio && window.joyAudio.currentTime || 0))).toBeLessThan(1.2);
+  });
+
   test('pattern save preview and saved load respect border and hole-number toggles', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');

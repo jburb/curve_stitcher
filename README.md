@@ -60,69 +60,77 @@ The runtime is loaded in deterministic order from stitchlab.html, and ownership 
 This repository includes dev-only Playwright tests for repeatable regression coverage.
 
 Current covered checks:
-- Stitching shape selection persists to URL and survives refresh.
-- SVG export flow opens/closes correctly and does not throw the export failure alert.
-- Squarus squares selection snaps "pieces placed" to the max for the selected polyomino set.
-- Experience switching updates the visible control groups correctly (Stitching, Triangula, Squarus).
-- Onboarding tour uses Stitching-only intro behavior and startup opt-out control behavior.
-- Onboarding autoplay preference and hear-all stop-all flow persist correctly across reloads.
-- Paramless splash continue primes onboarding autoplay narration for webkit-style speech lock.
-- Prebuilt narration playback succeeds via static clips when a matching clip is available.
-- Prebuilt narration manifest covers all splash, onboarding, and about narration texts (including stale-hash drift checks).
-- Basic and advanced shared controls remain synchronized (holes, tempo, and inner-to-outer frame mode labeling).
-- Advanced formula input syncs immediately to the basic formula input.
-- Stitching active-thread overlay shows non-styling playback values for the currently animated thread.
-- Basic palette custom dropper applies the selected thread color.
-- Advanced thread-card drag reorders stack, keeps kid thread picker order synced, and persists via URL/reload.
-- First thread card can be dragged downward to reorder.
-- Thread-card reordering is disabled when there is only one thread.
-- Kid thread picker selection changes active thread only and does not reorder the thread stack.
-- Acknowledgments viewer opens from about controls and cycles styles by line.
-- Acknowledgments viewer opens from About actions.
-- Sewing cards viewer opens from About actions and defaults to Series 1, Card 0, and PDF page 34.
-- Sewing cards image navigation remains independent from PDF page navigation.
-- Acknowledgments autoplay lifecycle resets cleanly across close/reopen.
-- Advanced pane remains open during thread-card interactions.
-- Advanced pane remains open for top/lower control-bar interactions and closes on canvas click.
-- Squarus basic and advanced squares controls stay synchronized.
-- Slider touchmove events are not canceled by global handlers.
-- Playback remains operable after orientation-style viewport changes.
-- Mobile layout baseline remains usable at phone viewport.
-- Mashrabiya debug SVG export closes sequence stitch paths.
-- Mashrabiya fold 8 classification and fills match expected point IDs and area coverage.
-- Mashrabiya fold 8 and 12 fills are invariant to debug-label toggle.
-- List type variants produce the expected stitch routing.
-- Paramless sequence randomization is ordered and yields at least three segments.
-- Start hole is hidden and ignored for list modes (Holes and Steps).
-- Start hole affects addition mode threads only and does not affect multiplication edge mapping.
-- Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes.
-- Formula mode uses evaluated values as absolute target holes.
-- Formula constant target is not interpreted as add-by.
-- Formula validity accepts whitespace expressions and preserves valid state.
-- Formula validity rolls back invalid input to the last valid or default fallback value.
-- Formula validity feedback is intentionally delayed while typing.
-- Invalid formula input does not serialize to URL and resolves to fallback on commit.
-- Stitching discovery candidates unlock their corresponding discovery cards (triangle, square, rosette 8-fold, rosette 12-fold).
-- Pattern library supports save, edit details (rename + description), and delete for user-saved patterns.
-- Pattern library import restores exported user pattern records.
-- Pattern library import accepts file-origin pattern URLs from exported JSON and remaps them for local use.
-- Pattern detail load restores a saved Stitching pattern state back into active app controls.
-- Pattern save preview and saved load both respect border and hole-number toggle settings.
-- Pattern detail export flow uses the pattern name for filename and creates a valid PNG download blob.
-- Pattern detail maker ZIP export forces hole numbers while still respecting the border toggle for SVG output.
-- Locked discovery cards keep the View Pattern action disabled and do not open detail modal until unlocked.
-- Core interaction sweep does not raise runtime reference/type errors.
-- Triangula URL state roundtrip persists key controls on reload.
-- Squarus URL state roundtrip persists key controls on reload.
-- Mashrabiya URL state roundtrip persists key controls on reload.
-- Export fallback path works when JSZip is unavailable.
-- Squarus seeded piece sequencing is deterministic for fixed seed.
-- Runtime load-order contract exposes required global functions.
-- About narration uses paragraph text and excludes figure captions.
-- About narration resolves from file even when the About panel was never opened.
-- About narration text hashes resolve to prebuilt manifest clips across experience About docs.
-- About narration hash remains manifest-aligned after About iframe cache priming.
-- About and onboarding "Hear this" buttons include speaker icon.
+
+| Category | Covered regression check |
+| --- | --- |
+| URL & Experience State | Stitching shape selection persists to URL and survives refresh. |
+| Export & Download | SVG export flow opens/closes correctly and does not throw the export failure alert. |
+| URL & Experience State | Squarus squares selection snaps pieces placed to max for that polyomino set. |
+| URL & Experience State | Experience switching updates visible control groups correctly. |
+| Onboarding & Splash | Onboarding tour uses stitching-only intro and startup opt-out control. |
+| Onboarding & Splash | Onboarding autoplay preference and hear-all stop-all flow work across reloads. |
+| Onboarding & Splash | Paramless splash continue routes onboarding autoplay narration through Piper bridge. |
+| Onboarding & Splash | Paramless splash shows random tip preview and opens startup tips modal from preview link. |
+| Onboarding & Splash | Paramless splash continue still starts onboarding after opening startup tips modal. |
+| Narration & Audio | Prebuilt narration playback succeeds when clip is available. |
+| Narration & Audio | Prebuilt narration manifest covers all splash onboarding and about narration texts. |
+| Controls & Interaction | Basic and advanced shared controls stay in sync. |
+| Controls & Interaction | Advanced formula input syncs immediately to basic formula input. |
+| Controls & Interaction | Stitching active-thread overlay shows non-styling playback values. |
+| Controls & Interaction | Basic palette custom dropper applies selected thread color. |
+| About & Acknowledgments | Acknowledgments viewer opens from about controls and cycles styles by line. |
+| About & Acknowledgments | Acknowledgments viewer opens from About actions. |
+| About & Acknowledgments | Viewing all acknowledgments unlocks acknowledgments song in picker. |
+| About & Acknowledgments | Sewing cards viewer opens from About actions and defaults to series 1 card 0 page 34. |
+| About & Acknowledgments | Sewing cards image navigation is independent from PDF page navigation. |
+| Controls & Interaction | Advanced pane stays open during thread-card interactions. |
+| Controls & Interaction | Advanced thread-card drag reorders stack, keeps picker order synced, and persists via URL. |
+| Controls & Interaction | First thread card can be dragged downward to reorder. |
+| Controls & Interaction | Thread-card reorder is disabled when only one thread exists. |
+| Controls & Interaction | Kid thread picker selection does not reorder thread stack. |
+| Controls & Interaction | Advanced pane stays open for top and lower control bars, closes on canvas click. |
+| Controls & Interaction | Squarus basic and advanced squares controls stay synchronized. |
+| Mobile & Input Resilience | Slider touchmove events are not canceled by global handlers. |
+| Mobile & Input Resilience | Playback remains operable after orientation-style viewport changes. |
+| Mobile & Input Resilience | Mobile layout baseline remains usable at phone viewport. |
+| Mashrabiya Geometry | Mashrabiya debug SVG export closes sequence stitch paths. |
+| Mashrabiya Geometry | Mashrabiya fold 8 classification and fills match expected point IDs and area coverage. |
+| Mashrabiya Geometry | Mashrabiya fold 8 and 12 fills are invariant to debug-label toggle. |
+| Stitch Routing & Formula | List type variants produce the expected stitch routing. |
+| Stitch Routing & Formula | Paramless sequence randomization is ordered and yields at least three segments. |
+| Stitch Routing & Formula | Paramless randomization does not choose star frame shape. |
+| Stitch Routing & Formula | Start hole is hidden and ignored for list modes. |
+| Stitch Routing & Formula | Start hole affects only addition mode threads. |
+| Stitch Routing & Formula | Hole number rotation remaps labels and stitch targeting for add, multiply, and Holes list modes. |
+| Stitch Routing & Formula | Formula mode uses evaluated values as absolute target holes. |
+| Stitch Routing & Formula | Formula constant target is not interpreted as add-by. |
+| Stitch Routing & Formula | Formula validity accepts whitespace expression and keeps it valid. |
+| Stitch Routing & Formula | Formula validity rolls back invalid input to last valid or default fallback. |
+| Stitch Routing & Formula | Formula validity feedback is delayed while typing. |
+| Stitch Routing & Formula | Invalid formula does not serialize to URL and resolves to fallback on commit. |
+| Discovery & Pattern Library | Stitching discovery candidates unlock their corresponding discovery cards. |
+| Discovery & Pattern Library | Pattern library supports save rename and delete for user patterns. |
+| Discovery & Pattern Library | Pattern library import restores exported user pattern records. |
+| Discovery & Pattern Library | Pattern library import accepts file-origin pattern URLs from exported JSON. |
+| Discovery & Pattern Library | Pattern detail load restores saved stitching state to app controls. |
+| Discovery & Pattern Library | Pattern detail load for user patterns preserves currently active song and tempo. |
+| Discovery & Pattern Library | Pattern save preview and saved load respect border and hole-number toggles. |
+| Discovery & Pattern Library | Pattern detail export flow uses pattern name for filename and creates a download blob. |
+| Discovery & Pattern Library | Pattern detail maker ZIP forces hole numbers, respects border toggle, and includes pattern description in guide. |
+| Discovery & Pattern Library | Locked discovery cards keep view action disabled and do not open detail modal. |
+| Runtime Safety & Contracts | Core interaction sweep does not raise runtime reference/type errors. |
+| About & Acknowledgments | Acknowledgments viewer autoplay lifecycle resets cleanly across reopen. |
+| URL & Experience State | Triangula URL state roundtrip persists key controls on reload. |
+| URL & Experience State | Squarus URL state roundtrip persists key controls on reload. |
+| URL & Experience State | Mashrabiya URL state roundtrip persists key controls on reload. |
+| Export & Download | Export fallback path works when JSZip is unavailable. |
+| Squarus Determinism | Squarus seeded piece sequencing is deterministic for fixed seed. |
+| Runtime Safety & Contracts | Runtime load-order contract exposes required global functions. |
+| Narration & Audio | About narration uses paragraph text and excludes figure captions. |
+| Narration & Audio | About narration resolves from file even when the About panel was never opened. |
+| Narration & Audio | About narration text hashes resolve to prebuilt manifest clips. |
+| Narration & Audio | About narration hash remains manifest-aligned after about iframe cache priming. |
+| Narration & Audio | About and onboarding Hear this buttons include speaker icon. |
 
 ### Run Locally
 
@@ -433,7 +441,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Determine why some seeming equilateral triangle patterns are not recognized as triangula discovery candidates, e.g. the one created by using the URL: "file:///home/joshy/source/repos/curve_stitcher/stitchlab.html?version=2&experience=stitching&stitchingShape=square&stitchingShowHoleNumbers=1&stitchingHoleNumberRotation=1&stitchingBorderEnabled=1&stitchingHoles=9&stitchingNestedFrameEnabled=0&stitchingNestedFrameRatio=0.75&stitchingSelectedThreadIndex=0&stitchingThreadState=%255B%257B%2522j%2522%253A6%252C%2522w%2522%253A2%252C%2522c%2522%253A%2522rainbow%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522fixed%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522steps%2522%252C%2522cm%2522%253A2%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522outer%2522%252C%2522sc%2522%253A%2522%25231982c4%2522%257D%255D&stitchingThreadColors=rainbow&bpm=84&musicMuted=0&song=bach"
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
@@ -484,7 +491,6 @@ This section describes the practical steps for adding a new experience named zoo
 1. Tips library and modal
 
 ## TODO Backlog
-1. Determine why some seeming equilateral triangle patterns are not recognized as triangula discovery candidates, e.g. the one created by using the URL: "file:///home/joshy/source/repos/curve_stitcher/stitchlab.html?version=2&experience=stitching&stitchingShape=square&stitchingShowHoleNumbers=1&stitchingHoleNumberRotation=1&stitchingBorderEnabled=1&stitchingHoles=9&stitchingNestedFrameEnabled=0&stitchingNestedFrameRatio=0.75&stitchingSelectedThreadIndex=0&stitchingThreadState=%255B%257B%2522j%2522%253A6%252C%2522w%2522%253A2%252C%2522c%2522%253A%2522rainbow%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522fixed%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522steps%2522%252C%2522cm%2522%253A2%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522outer%2522%252C%2522sc%2522%253A%2522%25231982c4%2522%257D%255D&stitchingThreadColors=rainbow&bpm=84&musicMuted=0&song=bach"
 
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
  
