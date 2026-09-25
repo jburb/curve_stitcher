@@ -262,3 +262,152 @@ If runtime consistency (especially PDF/viewer/render behavior) is the top concer
 3. The cost is dual shell ecosystems, which can be controlled by doing the shared adapter-first work above.
 
 If reducing shell/tooling surface area matters more than runtime uniformity, Tauri can still be viable, but it does not remove webview variance concerns that are already visible in this app.
+
+## Additional NYI Requirements Impact Assessment
+
+The following not-yet-implemented requirements should be treated as packaging-sensitive and included in framework selection:
+
+1. Single-pattern export/import for sharing.
+2. Startup splash shown on each app open, with:
+- option to load the last pattern
+- option to disable splash for future opens
+3. Persistence strategy review: SQLite vs IndexedDB, and interaction with existing localStorage usage.
+
+### NYI 1: Single-Pattern Export/Import for Sharing
+
+#### Product requirement shape
+
+Recommended portable pattern artifact (JSON):
+- schemaVersion
+- createdAt
+- appVersion (optional)
+- patternName
+- patternDescription
+- patternUrl (URL-state encoded)
+- optional preview metadata (small SVG/thumbnail)
+
+#### Framework impact
+
+Electron:
+- Strong fit. Use native save/open dialogs via IPC.
+- Can still support browser-style fallback in dev-web mode.
+
+Capacitor:
+- Requires Filesystem + Share + File Picker plugin flow.
+- UX should be explicit: Save copy / Share copy / Import from file.
+
+Tauri:
+- Similar to Electron in concept (native dialog/filesystem APIs), but with plugin/capability configuration.
+
+#### Code-level impact in this repo
+
+1. Add single-pattern serializer/deserializer API in `js/app/pattern-library.js`.
+2. Route file save/open through `platformServices` adapter.
+3. Keep current full-library import/export as separate workflow.
+
+### NYI 2: Startup Splash Policy (Always show + load last pattern + disable future)
+
+#### Product requirement shape
+
+State model recommendation:
+- `splashMode`: `always` | `disabled`
+- `lastOpenedPatternRef`: `{ id?, kind?, serializedPattern? }`
+- `lastOpenedAt`
+
+Flow recommendation:
+1. App launch checks splash mode.
+2. If `always`, show splash with:
+- Continue
+- Load last pattern
+- Disable splash going forward
+3. If `disabled`, skip splash and open app directly.
+
+#### Framework impact
+
+Electron:
+- Straightforward; launch lifecycle is stable and predictable.
+
+Capacitor:
+- Need to define behavior on cold start vs resume-from-background.
+- On mobile, "app opened" semantics differ from desktop; avoid showing splash on every resume.
+
+Tauri:
+- Similar lifecycle caveat as Capacitor on mobile targets.
+
+#### Code-level impact in this repo
+
+1. Add splash preference and last-pattern metadata keys in localStorage (or unified settings store).
+2. Add startup decision logic in `js/app/ui-wiring.js` bootstrap path.
+3. Add "load last pattern" resolver that can restore from:
+- stored pattern ID when available
+- or stored serialized pattern payload fallback.
+
+### NYI 3: SQLite vs IndexedDB, and localStorage implications
+
+#### Current state
+
+Pattern library already has an adapter shape (`indexeddb` with optional runtime bridge hook), while localStorage is used for settings/caches/state toggles.
+
+#### Decision guidance
+
+1. Keep localStorage for lightweight preferences and UX flags.
+- theme
+- onboarding/splash preferences
+- quick feature toggles
+
+2. Use a primary durable store for pattern/library records.
+- IndexedDB is simplest for pure-web and WebView parity.
+- SQLite can be stronger for queryability, backup portability, and native-shell durability if bridged cleanly.
+
+3. Do not mix multiple authorities for the same entity set.
+- Choose one source of truth for pattern records (IndexedDB or SQLite).
+- Use localStorage only for metadata/cache pointers.
+
+#### Framework-by-framework persistence implications
+
+Electron:
+- Easiest SQLite adoption path (Node/Rust/native addon options), plus reliable filesystem access.
+- IndexedDB also works; SQLite becomes an architectural choice, not a necessity.
+
+Capacitor:
+- IndexedDB support exists but behavior can vary by WebView and OS lifecycle edge cases.
+- SQLite can improve durability/consistency, but requires plugin integration and migration logic.
+
+Tauri:
+- SQLite integration is feasible via plugin/native side and can be clean if capabilities are configured well.
+- Still need explicit migration path from IndexedDB/localStorage if switching authority.
+
+#### Migration strategy recommendation
+
+If moving to SQLite:
+1. Versioned migration gate on startup.
+2. One-time import from IndexedDB -> SQLite.
+3. Validation checksum/count before cutover.
+4. Mark migration complete flag in localStorage.
+5. Keep read-only fallback from IndexedDB for one release window, then retire.
+
+If staying on IndexedDB:
+1. Keep existing adapter architecture.
+2. Tighten schema versioning and corruption recovery flows.
+3. Keep localStorage only for non-authoritative settings.
+
+## Packaging Choice Pressure from NYI Items
+
+These NYI items shift tradeoff weight as follows:
+
+1. Single-pattern share feature:
+- Neutral to slight advantage for Electron/Tauri (desktop native file APIs).
+- Still fully achievable in Capacitor with plugin-based flows.
+
+2. Splash policy with "load last pattern":
+- Neutral for desktop.
+- On mobile, requires careful resume semantics regardless of Capacitor or Tauri mobile.
+
+3. Potential SQLite adoption:
+- Slight advantage for Electron (operational simplicity on desktop).
+- Strongly manageable in Capacitor/Tauri, but adds integration and migration complexity.
+
+Overall, these NYI points are compatible with all three frameworks, but they reinforce the value of:
+1. Implementing the platform services adapter first.
+2. Defining a single persistence authority model early (IndexedDB-first or SQLite-first).
+3. Treating app lifecycle semantics (launch vs resume) as a first-class mobile requirement.
