@@ -2200,13 +2200,16 @@
   }
 
   .thread-card .thread-card-reorder-handle {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin-left: 8px;
-    padding: 0 6px;
+    min-height: 20px;
+    padding: 1px 6px;
     border: 1px solid #c6d4de;
     border-radius: 999px;
-    font-size: 13px;
-    line-height: 1.2;
+    font-size: 15px;
+    line-height: 1;
     font-weight: 700;
     letter-spacing: 0.02em;
     cursor: grab;
@@ -2238,11 +2241,20 @@
   }
 
   .thread-card .thread-card-reorder-hint {
+    display: inline-block;
     font-size: 11px;
     font-weight: 500;
     opacity: 0.62;
     margin-left: 6px;
     letter-spacing: 0.01em;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #thread-controls.thread-card-reorder-active .thread-card .thread-card-reorder-hint {
+    cursor: grabbing;
   }
 
   .thread-card input[type="color"],
@@ -2265,6 +2277,17 @@
   .thread-card.selected {
     border-color: #1982c4;
     box-shadow: 0 0 0 2px rgba(25, 130, 196, 0.15);
+  }
+
+  html[data-theme="dark"] .thread-card .thread-card-reorder-handle {
+    border-color: #4a6375;
+    background: #1b2a35;
+    color: #d7e9f6;
+  }
+
+  html[data-theme="dark"] .thread-card .thread-card-reorder-hint {
+    color: #d7e9f6;
+    opacity: 0.78;
   }
 
   .jump-help {

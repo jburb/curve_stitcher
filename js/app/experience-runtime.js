@@ -3764,7 +3764,7 @@ function isThreadCardInteractiveTarget(target) {
 
 function isThreadCardReorderHandleTarget(target) {
   if (!target || typeof target.closest !== 'function') return false;
-  return !!target.closest('.thread-card-reorder-handle');
+  return !!target.closest('.thread-card-reorder-handle, .thread-card-reorder-hint');
 }
 
 function clearThreadCardReorderTouchHoldTimer(session) {
