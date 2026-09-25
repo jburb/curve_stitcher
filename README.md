@@ -441,6 +441,9 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Block vulgarity, profanity, and json injection when creating /editing pattern names and descriptions.
+1. Add a reasonable thread count per frame limit eg 64, 128, etc.
+1. Enable selection of a higher frame hole limit in advanced controls, e.g. 1024 or 900, instead of 144.  
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
 1. Allow single pattern export and import.
 1. Move stitch by jump-help text in advanced to interaction based reveal eg by info icon beside stitch by picker
@@ -491,6 +494,12 @@ This section describes the practical steps for adding a new experience named zoo
 1. Tips library and modal
 
 ## TODO Backlog
+
+1. Block vulgarity, profanity, and json injection when creating /editing pattern names and descriptions.
+ 
+1. Add a reasonable thread count per frame limit eg 64, 128, etc.
+ 
+1. Enable selection of a higher frame hole limit in advanced controls, e.g. 1024 or 900, instead of 144.
 
 1. Fix library import not respecting pattern rename, or at least alert sensibly for user option to accept.
  
