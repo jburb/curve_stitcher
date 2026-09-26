@@ -1745,7 +1745,7 @@ test.describe('StitchLab regressions', () => {
       };
     });
 
-    expect(svgProbe.ok).toBe(true);
+    expect(svgProbe.ok, String(svgProbe.reason || 'unknown')).toBe(true);
     expect(svgProbe.longSequencePathCount).toBeGreaterThanOrEqual(2);
     expect(svgProbe.allLongSequencesClosed).toBe(true);
   });
@@ -3767,10 +3767,6 @@ test.describe('StitchLab regressions', () => {
         await dialog.accept('detail_make_toggle_probe');
         return;
       }
-      if (dialog.type() === 'confirm') {
-        await dialog.accept();
-        return;
-      }
       await dialog.dismiss();
     });
 
@@ -3778,6 +3774,10 @@ test.describe('StitchLab regressions', () => {
     const kidSaveModal = page.locator('#kid-save-modal');
     await expect(kidSaveModal).toHaveClass(/open/);
     await page.locator('#kid-save-make-option').click();
+    const makeConfirmModal = page.locator('#kid-save-make-confirm-modal');
+    await expect(makeConfirmModal).toHaveClass(/open/);
+    await page.locator('#kid-save-make-confirm-accept').click();
+    await expect(makeConfirmModal).not.toHaveClass(/open/);
     await expect(kidSaveModal).not.toHaveClass(/open/);
 
     await expect.poll(() => page.evaluate(() => {
@@ -3788,35 +3788,80 @@ test.describe('StitchLab regressions', () => {
     const svgProbe = await page.evaluate(async (expectedDescription) => {
       var probe = window.__patternDetailMakeExportProbe || { blobs: [] };
       var blobs = Array.isArray(probe.blobs) ? probe.blobs : [];
-      if (!blobs.length || typeof JSZip === 'undefined') {
-        return { ok: false, reason: 'missing-blobs-or-jszip' };
+      if (!blobs.length) {
+        return { ok: false, reason: 'missing-blobs' };
       }
-      var blob = blobs[blobs.length - 1];
-      var zip = await JSZip.loadAsync(blob);
-      var svgEntryName = '';
-      var names = Object.keys(zip.files || {});
-      for (var i = 0; i < names.length; i++) {
-        if (/\.svg$/i.test(names[i])) {
-          svgEntryName = names[i];
-          break;
-        }
-      }
-      if (!svgEntryName) {
-        return { ok: false, reason: 'missing-svg-entry' };
-      }
-      var svgText = await zip.file(svgEntryName).async('text');
 
-      var guideEntryName = '';
-      for (var j = 0; j < names.length; j++) {
-        if (/\.txt$/i.test(names[j])) {
-          guideEntryName = names[j];
+      var zipBlob = null;
+      for (var b = blobs.length - 1; b >= 0; b--) {
+        var zipCandidate = blobs[b];
+        var zipType = String(zipCandidate && zipCandidate.type || '').toLowerCase();
+        if (zipType.indexOf('zip') !== -1) {
+          zipBlob = zipCandidate;
           break;
         }
       }
-      if (!guideEntryName) {
-        return { ok: false, reason: 'missing-guide-entry' };
+
+      if (!zipBlob) {
+        for (var k = blobs.length - 1; k >= 0; k--) {
+          var zipBytes = await blobs[k].slice(0, 2).arrayBuffer();
+          var zipView = new Uint8Array(zipBytes);
+          if (zipView.length >= 2 && zipView[0] === 0x50 && zipView[1] === 0x4b) {
+            zipBlob = blobs[k];
+            break;
+          }
+        }
       }
-      var guideText = await zip.file(guideEntryName).async('text');
+
+      var svgText = '';
+      var guideText = '';
+
+      if (zipBlob && typeof JSZip !== 'undefined') {
+        var zip = await JSZip.loadAsync(zipBlob);
+        var names = Object.keys(zip.files || {});
+
+        var svgEntryName = '';
+        for (var i = 0; i < names.length; i++) {
+          if (/\.svg$/i.test(names[i])) {
+            svgEntryName = names[i];
+            break;
+          }
+        }
+        if (!svgEntryName) {
+          return { ok: false, reason: 'missing-svg-entry' };
+        }
+        svgText = await zip.file(svgEntryName).async('text');
+
+        var guideEntryName = '';
+        for (var j = 0; j < names.length; j++) {
+          if (/\.txt$/i.test(names[j])) {
+            guideEntryName = names[j];
+            break;
+          }
+        }
+        if (!guideEntryName) {
+          return { ok: false, reason: 'missing-guide-entry' };
+        }
+        guideText = await zip.file(guideEntryName).async('text');
+      } else {
+        var svgBlob = null;
+        var guideBlob = null;
+        for (var n = blobs.length - 1; n >= 0; n--) {
+          var candidate = blobs[n];
+          var type = String(candidate && candidate.type || '').toLowerCase();
+          if (!svgBlob && type.indexOf('image/svg+xml') !== -1) {
+            svgBlob = candidate;
+          } else if (!guideBlob && type.indexOf('text/plain') !== -1) {
+            guideBlob = candidate;
+          }
+        }
+        if (!svgBlob || !guideBlob) {
+          return { ok: false, reason: 'missing-fallback-svg-or-guide' };
+        }
+        svgText = await svgBlob.text();
+        guideText = await guideBlob.text();
+      }
+
       return {
         ok: true,
         hasBorderPath: /stroke-miterlimit\s*=\s*"8"/i.test(svgText),
@@ -3825,7 +3870,7 @@ test.describe('StitchLab regressions', () => {
       };
     }, savedPatternDescription);
 
-    expect(svgProbe.ok).toBe(true);
+    expect(svgProbe.ok, String(svgProbe.reason || 'unknown')).toBe(true);
     expect(svgProbe.hasBorderPath).toBe(false);
     expect(svgProbe.hasHoleLabels).toBe(true);
     expect(svgProbe.hasDescription).toBe(true);

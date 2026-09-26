@@ -211,7 +211,7 @@ async function runKidFriendlySaveSelection(mode, options) {
   }
   var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(baseStem));
   if (normalizedMode === 'make') {
-    var confirmed = window.confirm('Save maker files as "' + baseName + '"?');
+    var confirmed = await requestMakerExportConfirmation(baseName);
     if (!confirmed) {
       return;
     }
@@ -242,6 +242,28 @@ async function runKidFriendlySaveSelection(mode, options) {
           patternDescription: targetPatternDescription
         };
 
+        function waitForFrameZipLibrary() {
+          if (typeof frameWindow.JSZip !== 'undefined') {
+            return Promise.resolve();
+          }
+          return new Promise(function(resolve) {
+            var startedAt = Date.now();
+            var timeoutMs = 1200;
+            function check() {
+              if (typeof frameWindow.JSZip !== 'undefined') {
+                resolve();
+                return;
+              }
+              if (Date.now() - startedAt >= timeoutMs) {
+                resolve();
+                return;
+              }
+              frameWindow.setTimeout(check, 40);
+            }
+            check();
+          });
+        }
+
         if (normalizedMode === 'image') {
           if (typeof frameWindow.createPreviewImageBlob !== 'function') {
             throw new Error('Saved pattern preview export is unavailable.');
@@ -254,57 +276,55 @@ async function runKidFriendlySaveSelection(mode, options) {
           });
         }
 
-        if (typeof frameWindow.JSZip === 'undefined') {
-          if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
-            throw new Error('Saved pattern maker export helpers are unavailable.');
-          }
-          var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
-          if (!svgBlob) {
-            throw new Error('Saved pattern maker export returned no SVG data.');
-          }
-          triggerBlobDownload(svgBlob, frameBaseName + '.svg');
-
-          var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
-          if (guideBlob) {
-            triggerBlobDownload(guideBlob, frameWindow.getExportGuideFileName(frameBaseName));
-          }
-
-          return frameWindow.createPreviewImageBlob().then(function(previewBlob) {
-            if (previewBlob) {
-              triggerBlobDownload(previewBlob, frameBaseName + '-preview.png');
+        return waitForFrameZipLibrary().then(function() {
+          if (typeof frameWindow.JSZip === 'undefined') {
+            if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
+              throw new Error('Saved pattern maker export helpers are unavailable.');
             }
-          });
-        }
+            var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
+            if (!svgBlob) {
+              throw new Error('Saved pattern maker export returned no SVG data.');
+            }
+            triggerBlobDownload(svgBlob, frameBaseName + '.svg');
 
-        if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
-          throw new Error('Saved pattern ZIP export helpers are unavailable.');
-        }
+            var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
+            if (guideBlob) {
+              triggerBlobDownload(guideBlob, frameWindow.getExportGuideFileName(frameBaseName));
+            }
 
-        if (typeof frameWindow.JSZip === 'undefined') {
-          throw new Error('Saved pattern ZIP export library is unavailable.');
-        }
-
-        return (async function() {
-          var zip = new frameWindow.JSZip();
-          var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
-          if (!svgBlob) {
-            throw new Error('Saved pattern ZIP export returned no SVG data.');
-          }
-          zip.file(frameBaseName + '.svg', svgBlob);
-
-          var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
-          if (guideBlob) {
-            zip.file(frameWindow.getExportGuideFileName(frameBaseName), guideBlob);
+            return frameWindow.createPreviewImageBlob().then(function(previewBlob) {
+              if (previewBlob) {
+                triggerBlobDownload(previewBlob, frameBaseName + '-preview.png');
+              }
+            });
           }
 
-          var previewBlob = await frameWindow.createPreviewImageBlob();
-          if (previewBlob) {
-            zip.file(frameBaseName + '-preview.png', previewBlob);
+          if (typeof frameWindow.createCurrentDesignSvgBlob !== 'function' || typeof frameWindow.createStitchingGuideBlob !== 'function' || typeof frameWindow.createPreviewImageBlob !== 'function' || typeof frameWindow.getExportGuideFileName !== 'function') {
+            throw new Error('Saved pattern ZIP export helpers are unavailable.');
           }
 
-          var zipBlob = await zip.generateAsync({ type: 'blob' });
-          triggerBlobDownload(zipBlob, frameBaseName + '.zip');
-        })();
+          return (async function() {
+            var zip = new frameWindow.JSZip();
+            var svgBlob = frameWindow.createCurrentDesignSvgBlob(frameOptions);
+            if (!svgBlob) {
+              throw new Error('Saved pattern ZIP export returned no SVG data.');
+            }
+            zip.file(frameBaseName + '.svg', svgBlob);
+
+            var guideBlob = frameWindow.createStitchingGuideBlob(frameBaseName, frameOptions);
+            if (guideBlob) {
+              zip.file(frameWindow.getExportGuideFileName(frameBaseName), guideBlob);
+            }
+
+            var previewBlob = await frameWindow.createPreviewImageBlob();
+            if (previewBlob) {
+              zip.file(frameBaseName + '-preview.png', previewBlob);
+            }
+
+            var zipBlob = await zip.generateAsync({ type: 'blob' });
+            triggerBlobDownload(zipBlob, frameBaseName + '.zip');
+          })();
+        });
       });
       closeKidSaveModal();
       return;
@@ -329,6 +349,62 @@ async function runKidFriendlySaveSelection(mode, options) {
   }
 
   closeKidSaveModal();
+}
+
+function requestMakerExportConfirmation(baseName) {
+  var promptText = 'Save maker files as "' + baseName + '"?';
+  if (!kidSaveMakeConfirmModal || !kidSaveMakeConfirmName || !kidSaveMakeConfirmCancelBtn || !kidSaveMakeConfirmAcceptBtn) {
+    return Promise.resolve(window.confirm(promptText));
+  }
+
+  var restoreKidSaveModalOnCancel = false;
+  if (kidSaveModal && kidSaveModal.classList.contains('open')) {
+    kidSaveModal.classList.remove('open');
+    restoreKidSaveModalOnCancel = true;
+  }
+
+  kidSaveMakeConfirmName.textContent = baseName;
+  kidSaveMakeConfirmModal.classList.add('open');
+
+  return new Promise(function(resolve) {
+    var settled = false;
+
+    function cleanup() {
+      kidSaveMakeConfirmAcceptBtn.removeEventListener('click', onAccept);
+      kidSaveMakeConfirmCancelBtn.removeEventListener('click', onCancel);
+      kidSaveMakeConfirmModal.removeEventListener('click', onBackdropClick);
+    }
+
+    function finish(result) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      kidSaveMakeConfirmModal.classList.remove('open');
+      if (!result && restoreKidSaveModalOnCancel && kidSaveModal) {
+        kidSaveModal.classList.add('open');
+      }
+      resolve(!!result);
+    }
+
+    function onAccept() {
+      finish(true);
+    }
+
+    function onCancel() {
+      finish(false);
+    }
+
+    function onBackdropClick(event) {
+      if (event.target === kidSaveMakeConfirmModal) {
+        finish(false);
+      }
+    }
+
+    kidSaveMakeConfirmAcceptBtn.addEventListener('click', onAccept);
+    kidSaveMakeConfirmCancelBtn.addEventListener('click', onCancel);
+    kidSaveMakeConfirmModal.addEventListener('click', onBackdropClick);
+    kidSaveMakeConfirmAcceptBtn.focus();
+  });
 }
 
 function normalizeExportBaseName(rawName) {

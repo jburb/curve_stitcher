@@ -2790,6 +2790,9 @@
   #kid-save-modal {
     z-index: 90;
   }
+  #kid-save-make-confirm-modal {
+    z-index: 140;
+  }
 
   :root {
     --ui-page-bg: #f7f7fb;

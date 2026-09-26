@@ -600,6 +600,18 @@
   </div>
 </div>
 
+<div id="kid-save-make-confirm-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="kid-save-make-confirm-title">
+  <div class="modal-card">
+    <h4 id="kid-save-make-confirm-title">Confirm Maker File Export</h4>
+    <p>Save maker files as <strong id="kid-save-make-confirm-name">stitchlab-file</strong>?</p>
+    <div class="modal-help">This confirmation keeps maker file export tied to your tap/click for browser download permissions.</div>
+    <div class="modal-actions">
+      <button id="kid-save-make-confirm-cancel" type="button" class="modal-btn">Cancel</button>
+      <button id="kid-save-make-confirm-accept" type="button" class="modal-btn primary">Continue</button>
+    </div>
+  </div>
+</div>
+
 <div id="pattern-save-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pattern-save-title">
   <div class="modal-card pattern-save-card">
     <h4 id="pattern-save-title">Save to Pattern Library</h4>
@@ -813,6 +825,10 @@
   var kidSaveImageOptionBtn = document.getElementById('kid-save-image-option');
   var kidSaveMakeOptionBtn = document.getElementById('kid-save-make-option');
   var kidSaveCancelBtn = document.getElementById('kid-save-cancel-btn');
+  var kidSaveMakeConfirmModal = document.getElementById('kid-save-make-confirm-modal');
+  var kidSaveMakeConfirmName = document.getElementById('kid-save-make-confirm-name');
+  var kidSaveMakeConfirmCancelBtn = document.getElementById('kid-save-make-confirm-cancel');
+  var kidSaveMakeConfirmAcceptBtn = document.getElementById('kid-save-make-confirm-accept');
   var patternSaveModal = document.getElementById('pattern-save-modal');
   var patternSavePreview = document.getElementById('pattern-save-preview');
   var patternSaveNameInput = document.getElementById('pattern-save-name-input');
