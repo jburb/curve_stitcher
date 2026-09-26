@@ -17,18 +17,18 @@ window.stitchlabWhatsNewManifest = {
       "gif": "gifs/thread-reordering-advanced-pane.gif"
     },
     {
+      "id": "list-mode-sequence-or-steps",
+      "scenario": "list-mode-sequence-or-steps",
+      "title": "List stitch mode: hole sequence or addition steps",
+      "note": "You now have two ways to stitch a thread with a list of values. Set the list type to \"holes\" to treat each possible consecutive ordered pair as a connection, or set the list type to \"steps\" to calculate each connection by adding the given value from the list, progressing one by one through it.",
+      "gif": "gifs/list-mode-sequence-or-steps.gif"
+    },
+    {
       "id": "formula-mode-improvements",
       "scenario": "formula-mode-improvements",
       "title": "Formula stitch mode improvements",
       "note": "Formula mode returns with stronger expression handling and clearer presets. Try formulas like ((currentHole + previousHole) mod holeCount) + 1.",
       "gif": "gifs/formula-mode-improvements.gif"
-    },
-    {
-      "id": "hole-number-rotation",
-      "scenario": "hole-number-rotation",
-      "title": "Hole number rotation remapping",
-      "note": "Now you can rotate your patterns by rotating the hole numbers on a stitching frame.",
-      "gif": "gifs/hole-number-rotation.gif"
     },
     {
       "id": "active-thread-overlay",
@@ -38,18 +38,18 @@ window.stitchlabWhatsNewManifest = {
       "gif": "gifs/active-thread-overlay.gif"
     },
     {
-      "id": "list-mode-sequence-or-steps",
-      "scenario": "list-mode-sequence-or-steps",
-      "title": "List stitch mode: hole sequence or addition steps",
-      "note": "You now have two ways to stitch a thread with a list of values. Set the list type to \"holes\" to treat each possible consecutive ordered pair as a connection, or set the list type to \"steps\" to calculate each connection by adding the given value from the list, progressing one by one through it.",
-      "gif": "gifs/list-mode-sequence-or-steps.gif"
-    },
-    {
       "id": "curve-sewing-cards-viewer",
       "scenario": "curve-sewing-cards-viewer",
       "title": "Curve sewing cards viewer",
       "note": "Thanks to Cambridge Library, we now have images of the original sewing cards created by Mary Everest Boole!",
       "gif": "gifs/curve-sewing-cards-viewer.gif"
+    },
+    {
+      "id": "hole-number-rotation",
+      "scenario": "hole-number-rotation",
+      "title": "Hole number rotation remapping",
+      "note": "Now you can rotate your patterns by rotating the hole numbers on a stitching frame.",
+      "gif": "gifs/hole-number-rotation.gif"
     },
     {
       "id": "onboarding-autoplay-tutorial",
@@ -64,6 +64,29 @@ window.stitchlabWhatsNewManifest = {
       "title": "Paramless random thread startup preview",
       "note": "When you open StitchLab for the first time, or with no URL parameters, a random single-thread pattern will be generated.",
       "gif": "gifs/paramless-random-thread-preview.gif"
+    },
+    {
+      "id": "single-pattern-export-import",
+      "scenario": "single-pattern-export-import",
+      "title": "Single-pattern export and import",
+      "note": "You can now share or save individual patterns (in case you want to give one to a friend)!",
+      "gif": "gifs/single-pattern-export-import.gif"
+    },
+    {
+      "id": "extended-hole-limit-1024",
+      "scenario": "extended-hole-limit-1024",
+      "title": "Extended hole limit up to 1024",
+      "note": "For added fun, increase the stitching frame hole limit all the way to 1024!",
+      "gif": "gifs/extended-hole-limit-1024.gif",
+      "frameShape": "square"
+    },
+    {
+      "id": "active-connection-overlay",
+      "scenario": "active-connection-overlay",
+      "title": "Active connection numbers overlay",
+      "note": "Whenever your stitching frame has more than 80 holes, StitchLab will show you the numbers of each connection during animation.",
+      "gif": "gifs/active-connection-overlay.gif",
+      "frameShape": "square"
     }
   ]
 };

@@ -981,6 +981,183 @@ const scenarioHandlers = {
     await page.waitForTimeout(900);
     await demoClick(page, '#sewing-pdf-next-btn');
     await page.waitForTimeout(2800);
+  },
+
+  async 'extended-hole-limit-1024'(page, item) {
+    const scenarioUrl = new URL(APP_URL);
+    scenarioUrl.search = 'version=2&experience=stitching&stitchingShape=square&stitchingShowHoleNumbers=1&stitchingHoleNumberRotation=1&stitchingBorderEnabled=0&stitchingHoles=144&stitchingNestedFrameEnabled=1&stitchingNestedFrameRatio=0.5&stitchingSelectedThreadIndex=0&stitchingThreadState=%255B%257B%2522j%2522%253A2%252C%2522w%2522%253A1%252C%2522c%2522%253A%2522rainbow%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522connect%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522holes%2522%252C%2522cm%2522%253A5%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522inner%2522%252C%2522sc%2522%253A%2522%2523013b04%2522%257D%252C%257B%2522j%2522%253A2%252C%2522w%2522%253A2%252C%2522c%2522%253A%2522rainbow%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522fixed%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522holes%2522%252C%2522cm%2522%253A2%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522outer%2522%252C%2522sc%2522%253A%2522%2523021249%2522%257D%252C%257B%2522j%2522%253A2%252C%2522w%2522%253A1%252C%2522c%2522%253A%2522%25238b0808%2522%252C%2522sh%2522%253A1%252C%2522m%2522%253A%2522connect%2522%252C%2522f%2522%253A%2522currentHole%2520%252B%25201%2522%252C%2522s%2522%253A%2522%2522%252C%2522sm%2522%253A%2522holes%2522%252C%2522cm%2522%253A9%252C%2522co%2522%253A0%252C%2522fm%2522%253A%2522outer%2522%252C%2522sc%2522%253A%2522%25238b0808%2522%257D%255D&stitchingThreadColors=rainbow%2Crainbow%2C%238b0808&bpm=550&musicMuted=0&song=acknowledgments';
+    await page.goto(scenarioUrl.toString(), { waitUntil: 'domcontentloaded' });
+    await setupCapturePage(page);
+    await page.waitForTimeout(460);
+
+    await demoClick(page, '#gear');
+    await demoSelect(page, '#advanced-holes-max', '1024');
+
+    await page.evaluate(() => {
+      if (typeof stopAnimationIfActive === 'function') {
+        stopAnimationIfActive();
+      }
+    });
+
+    const holesSlider = page.locator('#holes').first();
+    await holesSlider.waitFor({ state: 'visible', timeout: 10000 });
+    const holesBox = await holesSlider.boundingBox();
+    if (!holesBox) {
+      throw new Error('Unable to resolve #holes slider bounds for extended-hole-limit scenario.');
+    }
+
+    const sliderMin = 3;
+    const sliderMax = 1024;
+    const startValue = 144;
+    const startRatio = (startValue - sliderMin) / (sliderMax - sliderMin);
+    const startX = holesBox.x + holesBox.width * Math.max(0.02, Math.min(0.98, startRatio));
+    const endX = holesBox.x + holesBox.width * 0.985;
+    const y = holesBox.y + holesBox.height / 2;
+
+    await moveCursorToPoint(page, { x: startX, y });
+    await cursorPress(page);
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.waitForTimeout(110);
+
+    const dragSteps = 24;
+    for (let step = 1; step <= dragSteps; step += 1) {
+      const t = step / dragSteps;
+      const eased = t * t * (3 - 2 * t);
+      const nextPoint = {
+        x: startX + (endX - startX) * eased,
+        y
+      };
+      await setCursorPoint(page, nextPoint);
+      await page.mouse.move(nextPoint.x, nextPoint.y);
+      await page.waitForTimeout(24);
+    }
+
+    await page.mouse.up();
+    await cursorRelease(page, true);
+
+    await page.waitForTimeout(650);
+    await demoClick(page, '#kid-tempo-slow');
+    await page.waitForTimeout(500);
+    await demoClick(page, '#animate', { postDelayMs: 180 });
+    await page.waitForTimeout(2800);
+  },
+
+  async 'single-pattern-export-import'(page, item) {
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+    await setupCapturePage(page);
+    await page.waitForTimeout(500);
+    await ensureScenarioFrameShape(page, item);
+
+    const patternName = `Whats New Single Pattern ${Date.now()}`;
+
+    await demoClick(page, '#kid-save-toggle');
+    await waitForModalOpenClass(page, '#pattern-save-modal', 8000);
+    await demoFillInstant(page, '#pattern-save-name-input', patternName);
+    await demoFillInstant(page, '#pattern-save-description-input', 'Single-pattern export/import What\'s New demonstration.');
+    await demoClick(page, '#pattern-save-confirm-btn', { postDelayMs: 200 });
+    await finalizePatternSaveOrRecover(page, patternName, 'Single-pattern export/import What\'s New demonstration.');
+
+    await demoClick(page, '#discovery-toggle', { postDelayMs: 260 });
+    const savedCard = page.locator('.discovery-card').filter({ hasText: patternName }).first();
+    await savedCard.waitFor({ state: 'visible', timeout: 10000 });
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+    await waitForModalOpenClass(page, '#pattern-detail-modal', 8000);
+
+    await demoClick(page, '#pattern-detail-export-json-btn', { postDelayMs: 260 });
+    await page.waitForTimeout(520);
+    await demoClick(page, '#pattern-detail-close-btn', { postDelayMs: 200 });
+
+    await page.evaluate(async ({ targetName }) => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function') return;
+      if (typeof window.deleteUserPattern !== 'function') return;
+      if (typeof window.importPatternLibraryFromJsonText !== 'function') return;
+
+      var records = window.getPatternLibrarySnapshot();
+      var match = null;
+      for (var i = 0; i < records.length; i++) {
+        var rec = records[i];
+        if (rec && rec.kind === 'user' && rec.patternName === targetName) {
+          match = rec;
+          break;
+        }
+      }
+      if (!match) return;
+
+      var payload = {
+        schema: 'stitchlab.pattern',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        record: JSON.parse(JSON.stringify(match))
+      };
+
+      await window.deleteUserPattern(match.id);
+      await window.importPatternLibraryFromJsonText(JSON.stringify(payload), {
+        allowedMode: 'single',
+        renameConflictAction: 'apply'
+      });
+
+      if (typeof window.renderDiscoveryLibrary === 'function') {
+        window.renderDiscoveryLibrary();
+      }
+    }, { targetName: patternName });
+
+    await page.waitForTimeout(700);
+    await savedCard.waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(900);
+  },
+
+  async 'active-connection-overlay'(page, item) {
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+    await setupCapturePage(page);
+    await page.waitForTimeout(460);
+    await ensureScenarioFrameShape(page, item);
+
+    await page.evaluate(() => {
+      if (typeof stopAnimationIfActive === 'function') {
+        stopAnimationIfActive();
+      }
+
+      if (advancedHolesMaxSelect) {
+        advancedHolesMaxSelect.value = '1024';
+        var maxChangeEvt = document.createEvent('Event');
+        maxChangeEvt.initEvent('change', true, true);
+        advancedHolesMaxSelect.dispatchEvent(maxChangeEvt);
+      }
+      if (advancedHolesNumberInput) {
+        advancedHolesNumberInput.value = '96';
+        var lowInputEvt = document.createEvent('Event');
+        lowInputEvt.initEvent('input', true, true);
+        advancedHolesNumberInput.dispatchEvent(lowInputEvt);
+        var lowChangeEvt = document.createEvent('Event');
+        lowChangeEvt.initEvent('change', true, true);
+        advancedHolesNumberInput.dispatchEvent(lowChangeEvt);
+      }
+
+      holeNumberRotation = 3;
+      if (typeof syncHoleNumberRotationControls === 'function') {
+        syncHoleNumberRotationControls();
+      }
+
+      threads = [sanitizeThreadDescriptor({
+        jumpMode: 'fixed',
+        jump: 5,
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null)];
+      selectedThreadIndex = 0;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    await demoClick(page, '#kid-tempo-slow');
+    await page.waitForTimeout(500);
+    await demoClick(page, '#animate', { postDelayMs: 180 });
+    await page.waitForTimeout(1900);
+    await demoClick(page, '#animate', { postDelayMs: 180 });
+    await page.waitForTimeout(1400);
   }
 };
 

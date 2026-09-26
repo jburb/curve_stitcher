@@ -64,6 +64,29 @@
       "title": "Paramless random thread startup preview",
       "note": "When you open StitchLab for the first time, or with no URL parameters, a random single-thread pattern will be generated.",
       "gif": "gifs/paramless-random-thread-preview.gif"
+    },
+    {
+      "id": "single-pattern-export-import",
+      "scenario": "single-pattern-export-import",
+      "title": "Single-pattern export and import",
+      "note": "You can now share or save individual patterns (in case you want to give one to a friend)!",
+      "gif": "gifs/single-pattern-export-import.gif"
+    },
+    {
+      "id": "extended-hole-limit-1024",
+      "scenario": "extended-hole-limit-1024",
+      "title": "Extended hole limit up to 1024",
+      "note": "For added fun, increase the stitching frame hole limit all the way to 1024!",
+      "gif": "gifs/extended-hole-limit-1024.gif",
+      "frameShape": "square"
+    },
+    {
+      "id": "active-connection-overlay",
+      "scenario": "active-connection-overlay",
+      "title": "Active connection numbers overlay",
+      "note": "Whenever your stitching frame has more than 80 holes, StitchLab will show you the numbers of each connection during animation.",
+      "gif": "gifs/active-connection-overlay.gif",
+      "frameShape": "square"
     }
   ]
 }
