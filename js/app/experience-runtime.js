@@ -4029,7 +4029,10 @@ function renderThreadControls() {
       </select><br>
       ${isFixedMode ? `
       Add by: <input class="advanced-inline-number" type="number" min="1" max="${jumpLimit}" value="${thread.jump}" id="jump-number-${index}" aria-label="Thread ${index + 1} add value"><br>
-      <div class="jump-help">Addition wraps with modulo: target hole = ((currentHole + addBy - 1) mod holeCount) + 1.</div>
+      <details class="jump-help-collapsible">
+        <summary>How this works</summary>
+        <div class="jump-help">Addition wraps with modulo: target hole = ((currentHole + addBy - 1) mod holeCount) + 1.</div>
+      </details>
       ` : ''}
       ${isFormulaMode ? `
       Formula:
@@ -4037,8 +4040,11 @@ function renderThreadControls() {
         <span class="formula-prefix">targetHole =</span>
         <input class="formula-expression-input" type="text" value="${sanitizeThreadFormulaExpression(thread.jumpFormula)}" id="jump-formula-${index}" placeholder="e.g. currentHole + 4">
       </div>
-      <div class="jump-help">Variables: holeCount, currentHole, previousHole, index (step, 0-based)</div>
-      <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
+      <details class="jump-help-collapsible">
+        <summary>How this works</summary>
+        <div class="jump-help">Variables: holeCount, currentHole, previousHole, index (step, 0-based)</div>
+        <div class="jump-help">Use + - * /, ^ for powers, and mod for modulo.</div>
+      </details>
       <div class="jump-preset-row">
         <select id="jump-preset-${index}">
           <option value="">Preset formulas...</option>
@@ -4057,14 +4063,20 @@ function renderThreadControls() {
         <option value="steps" ${sequenceMode === 'steps' ? 'selected' : ''}>Steps</option>
       </select><br>
       List: <input type="text" value="${thread.jumpSequence || ''}" id="jump-sequence-${index}" placeholder="${sequenceMode === 'steps' ? 'e.g. 2,3,5,8' : 'e.g. 1,1,2,3,5,8'}"><br>
-      <div class="jump-help">Hole sequence: 1,1,2,3... stitches each listed pair in order.</div>
-      <div class="jump-help">Hole sequence stops at the first value above the current hole count.</div>
-      <div class="jump-help">Interval sequence: values are repeated jumps from each current hole.</div>
+      <details class="jump-help-collapsible">
+        <summary>How this works</summary>
+        <div class="jump-help">Hole sequence: 1,1,2,3... stitches each listed pair in order.</div>
+        <div class="jump-help">Hole sequence stops at the first value above the current hole count.</div>
+        <div class="jump-help">Interval sequence: values are repeated jumps from each current hole.</div>
+      </details>
       ` : ''}
       ${!hideStartHoleControl ? `Start hole: <input class="advanced-inline-number" type="number" min="1" max="${sourceHoleCount}" value="${thread.startHole}" id="start-hole-number-${index}" aria-label="Thread ${index + 1} start hole"><br>` : ''}
       ${isConnectMode ? `
       Multiply by: <input class="advanced-inline-number" type="number" min="1" max="12" value="${thread.connectMultiplier}" id="connect-m-number-${index}" aria-label="Thread ${index + 1} multiply value"><br>
-      <div class="jump-help">Multiplication wraps with modulo: target hole = ((multiplier * currentHole - 1) mod holeCount) + 1, so values above holeCount loop back into range.</div>
+      <details class="jump-help-collapsible">
+        <summary>How this works</summary>
+        <div class="jump-help">Multiplication wraps with modulo: target hole = ((multiplier * currentHole - 1) mod holeCount) + 1, so values above holeCount loop back into range.</div>
+      </details>
       ` : ''}
       Size: <input class="advanced-inline-number" type="number" min="1" max="10" value="${thread.width}" id="width-number-${index}" aria-label="Thread ${index + 1} size value"><br>
       Rainbow: <input type="checkbox" id="rainbow-${index}" ${thread.color === 'rainbow' ? 'checked' : ''}><br>
@@ -4095,6 +4107,7 @@ function renderThreadControls() {
         event.preventDefault();
         return;
       }
+      if (event.target && event.target.closest && event.target.closest('details.jump-help-collapsible')) return;
       if (event.target.closest('input, select, button')) return;
       selectedThreadIndex = index;
       renderThreadControls();
@@ -4319,6 +4332,16 @@ function refreshKidThreadPicker() {
   removeLastThreadBtn.style.display = threads.length > 1 ? '' : 'none';
   kidThreadMenu.innerHTML = '';
   removeLastThreadBtn.disabled = threads.length <= 1;
+  var threadCap = parseBoundedInt(MAX_THREADS_PER_FRAME, 1, 4096, 64);
+  var canAddThread = threads.length < threadCap;
+  if (addMagicThreadBtn) {
+    addMagicThreadBtn.disabled = !canAddThread;
+    addMagicThreadBtn.title = canAddThread ? 'Add thread' : ('Thread limit reached (' + String(threadCap) + ').');
+  }
+  if (addThreadBtn) {
+    addThreadBtn.disabled = !canAddThread;
+    addThreadBtn.title = canAddThread ? 'Add thread' : ('Thread limit reached (' + String(threadCap) + ').');
+  }
 
   if (!threads.length) {
     kidThreadToggle.disabled = true;

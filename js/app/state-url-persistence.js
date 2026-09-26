@@ -536,6 +536,10 @@ function parseStitchingThreadState(value, fallbackList) {
     if (!sanitized.length) {
       return fallbackList.slice();
     }
+    var threadCap = parseBoundedInt(MAX_THREADS_PER_FRAME, 1, 4096, 64);
+    if (sanitized.length > threadCap) {
+      return sanitized.slice(0, threadCap);
+    }
     return sanitized;
   } catch (error) {
     return fallbackList.slice();
