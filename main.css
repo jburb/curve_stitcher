@@ -1798,13 +1798,6 @@
   .discovery-library-tools .library-tool-icon {
     line-height: 1;
   }
-  .discovery-library-tools .library-tool-pattern-icon {
-    width: 14px;
-    height: 14px;
-    object-fit: contain;
-    display: inline-block;
-    vertical-align: middle;
-  }
   #discovery-cards {
     display: grid;
     grid-template-columns: repeat(2, minmax(260px, 1fr));
