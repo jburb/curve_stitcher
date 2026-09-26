@@ -1320,6 +1320,10 @@ function renderExperienceTitleStatic() {
   experienceTitleLabel.style.fontFamily = '"' + fontFamily + '", "Nunito", sans-serif';
 }
 
+var STITCHING_CONNECTION_OVERLAY_LOW_HOLE_THRESHOLD = 80;
+var SHOW_STITCHING_CONNECTION_OVERLAY_AT_OR_BELOW_LOW_HOLE_THRESHOLD = false;
+var lastStitchingConnectionPair = null;
+
 function getThreadFrameModeDisplayLabel(mode) {
   var normalized = sanitizeThreadFrameMode(mode, 'outer');
   if (normalized === 'inner') return 'Inner';
@@ -1422,8 +1426,72 @@ function renderStitchingActiveThreadOverlay(thread, threadIndex, entries) {
   }
 }
 
+function getStitchingDisplayedHoleLabelForGlobalIndex(globalIndex) {
+  if (!isFinite(globalIndex)) return null;
+
+  var normalizedGlobalIndex = Math.round(Number(globalIndex));
+  var outerCount = getCurrentStitchHoleCount();
+  if (normalizedGlobalIndex < outerCount) {
+    return getHoleLabelFromPhysicalIndex(normalizedGlobalIndex, outerCount);
+  }
+
+  var innerCount = getCurrentInnerStitchHoleCount();
+  if (nestedFrameEnabled && innerCount > 0) {
+    var innerIndex = normalizedGlobalIndex - outerCount;
+    if (innerIndex >= 0 && innerIndex < innerCount) {
+      return getHoleLabelFromPhysicalIndex(innerIndex, innerCount);
+    }
+  }
+
+  return null;
+}
+
+function getStitchingConnectionPairText(pair) {
+  if (!pair || !Array.isArray(pair) || pair.length < 2) return '';
+
+  var fromLabel = getStitchingDisplayedHoleLabelForGlobalIndex(pair[0]);
+  var toLabel = getStitchingDisplayedHoleLabelForGlobalIndex(pair[1]);
+  if (!isFinite(fromLabel) || !isFinite(toLabel)) return '';
+
+  return String(fromLabel) + ' → ' + String(toLabel);
+}
+
+function syncActiveConnectionPlaybackOverlay() {
+  if (!activeConnectionOverlay || !activeConnectionOverlayLabel) return;
+
+  var isPlaybackActiveOrPaused = animationPlaybackState === 'playing' || animationPlaybackState === 'paused';
+  var holeCount = getCurrentStitchHoleCount();
+  var shouldShowAtCurrentHoleCount = holeCount > STITCHING_CONNECTION_OVERLAY_LOW_HOLE_THRESHOLD
+    || SHOW_STITCHING_CONNECTION_OVERLAY_AT_OR_BELOW_LOW_HOLE_THRESHOLD;
+
+  var shouldShow = currentExperienceId === 'stitching'
+    && isPlaybackActiveOrPaused
+    && shouldShowAtCurrentHoleCount;
+
+  if (!shouldShow) {
+    lastStitchingConnectionPair = null;
+    activeConnectionOverlay.hidden = true;
+    activeConnectionOverlayLabel.textContent = '';
+    return;
+  }
+
+  var currentPair = animationState && Array.isArray(animationState.activeHolePair)
+    ? animationState.activeHolePair
+    : null;
+  if (currentPair && currentPair.length >= 2) {
+    lastStitchingConnectionPair = [currentPair[0], currentPair[1]];
+  }
+
+  var pairText = getStitchingConnectionPairText(lastStitchingConnectionPair);
+  activeConnectionOverlayLabel.style.fontFamily = '"MadeLikesScript", "FoliesBergere", "Nunito", sans-serif';
+  activeConnectionOverlayLabel.textContent = pairText;
+  activeConnectionOverlay.hidden = !pairText;
+}
+
 function syncActiveThreadPlaybackOverlay(threadIndex) {
   if (!activeThreadOverlay || !activeThreadOverlayLabel) return;
+
+  syncActiveConnectionPlaybackOverlay();
 
   var isPlaybackActiveOrPaused = animationPlaybackState === 'playing' || animationPlaybackState === 'paused';
 

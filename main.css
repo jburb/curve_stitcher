@@ -142,6 +142,38 @@
     background: rgba(248, 252, 255, 0.38);
     backdrop-filter: blur(1px);
   }
+  .active-connection-overlay {
+    position: absolute;
+    top: 41px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9;
+    pointer-events: none;
+    width: max-content;
+    max-width: min(90%, 540px);
+    box-sizing: border-box;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(248, 252, 255, 0.38);
+    backdrop-filter: blur(1px);
+  }
+  #active-connection-overlay-label {
+    display: block;
+    font-size: 16px;
+    line-height: 1.25;
+    font-family: 'MadeLikesScript', 'FoliesBergere', 'Nunito', sans-serif;
+    color: #1f4f94;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    letter-spacing: 0.005em;
+    opacity: 0.95;
+    text-shadow:
+      0 -1px 0 rgba(255, 255, 255, 0.68),
+      0 1px 0 rgba(22, 43, 76, 0.2),
+      0 1px 2px rgba(18, 35, 66, 0.12);
+  }
   #active-thread-overlay-label {
     display: block;
     font-size: 18px; /*used to be 14px*/
@@ -3018,6 +3050,21 @@
   html[data-theme="dark"] .active-thread-overlay {
     background: transparent;
     backdrop-filter: none;
+  }
+
+  html[data-theme="dark"] .active-connection-overlay {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  html[data-theme="dark"] #active-connection-overlay-label {
+    color: #dce9ff;
+    opacity: 0.98;
+    text-shadow:
+      0 -1px 0 rgba(13, 20, 31, 0.9),
+      0 1px 0 rgba(10, 16, 26, 0.95),
+      0 2px 3px rgba(7, 10, 16, 0.78),
+      0 0 1px rgba(7, 10, 16, 0.88);
   }
 
   html[data-theme="dark"] #active-thread-overlay-label {

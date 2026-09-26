@@ -449,7 +449,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Add an active connection numbers (ordered pair) overlay in stitching, at least when the hole count > 144, if not always (even when there is only one thread). Consider putting it above the frame instead of below, to balance the active thread config overlay that adjust exists below.
 1. **add what’s new items and tips for:**
   A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let’s use square frame with multiply by 5 for nice effect in the gif. 
   B. Allow single pattern export and import, for sharing.
@@ -506,10 +505,9 @@ This section describes the practical steps for adding a new experience named zoo
 1. Move stitch by jump-help text in advanced pane to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
 1. Add import pattern (single) button to pattern library pane.
 1. Fix issue wherein discovered pattern can get corrupted if a matching saved pattern gets deleted.
+1. Add an active connection numbers (ordered pair) overlay in stitching when the hole count > 80.
 
 ## TODO Backlog
-
-1. Add an active connection numbers (ordered pair) overlay in stitching, at least when the hole count > 144, if not always (even when there is only one thread). Consider putting it above the frame instead of below, to balance the active thread config overlay that adjust exists below. Use the same font for this as we have for the active thread config overlay.
 
 1. **add what's new items and tips for:**
   A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let's use square frame with multiply by 5 for nice effect in the gif. 

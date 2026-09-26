@@ -994,6 +994,76 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('#kid-jump-formula')).toHaveValue(nextFormula);
   });
 
+  test('stitching active-connection overlay shows displayed pair and persists on pause', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const connectionOverlay = page.locator('#active-connection-overlay');
+    const connectionOverlayLabel = page.locator('#active-connection-overlay-label');
+
+    await page.evaluate(() => {
+      stopAnimationIfActive();
+
+      if (holesSlider) {
+        holesSlider.value = '96';
+      }
+      if (advancedHolesNumberInput) {
+        advancedHolesNumberInput.value = '96';
+      }
+
+      holeNumberRotation = 4;
+      if (typeof syncHoleNumberRotationControls === 'function') {
+        syncHoleNumberRotationControls();
+      }
+      if (typeof syncJumpBoundsFromHoleCount === 'function') {
+        syncJumpBoundsFromHoleCount();
+      }
+
+      nestedFrameEnabled = false;
+      if (nestedFrameEnabledInput) nestedFrameEnabledInput.checked = false;
+      if (nestedFrameRatioSelect) nestedFrameRatioSelect.disabled = true;
+
+      threads = [sanitizeThreadDescriptor({
+        jumpMode: 'fixed',
+        jump: 5,
+        frameMode: 'outer',
+        startHole: 1,
+        width: 2,
+        color: '#1982c4'
+      }, null)];
+      selectedThreadIndex = 0;
+      renderThreadControls();
+      syncKidControlsFromSelectedThread();
+      redrawForPathChange();
+    });
+
+    await page.locator('#animate').click();
+    await expect(connectionOverlay).toBeVisible();
+    await expect(connectionOverlayLabel).toContainText('1 → 6');
+
+    const overlayPlacement = await page.evaluate(() => {
+      var title = document.getElementById('experience-inline');
+      var overlay = document.getElementById('active-connection-overlay');
+      if (!title || !overlay) return { valid: false };
+
+      var titleRect = title.getBoundingClientRect();
+      var overlayRect = overlay.getBoundingClientRect();
+      return {
+        valid: true,
+        overlayBelowTitle: overlayRect.top >= titleRect.bottom - 1,
+        centerDelta: Math.abs((overlayRect.left + overlayRect.width / 2) - (titleRect.left + titleRect.width / 2))
+      };
+    });
+
+    expect(overlayPlacement.valid).toBe(true);
+    expect(overlayPlacement.overlayBelowTitle).toBe(true);
+    expect(overlayPlacement.centerDelta).toBeLessThan(12);
+
+    await page.locator('#animate').click();
+    await expect(connectionOverlay).toBeVisible();
+    await expect(connectionOverlayLabel).toContainText('1 → 6');
+  });
+
   test('stitching active-thread overlay shows non-styling playback values', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
