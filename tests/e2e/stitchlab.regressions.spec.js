@@ -3767,6 +3767,10 @@ test.describe('StitchLab regressions', () => {
         await dialog.accept('detail_make_toggle_probe');
         return;
       }
+      if (dialog.type() === 'confirm') {
+        await dialog.accept();
+        return;
+      }
       await dialog.dismiss();
     });
 

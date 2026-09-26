@@ -210,6 +210,12 @@ async function runKidFriendlySaveSelection(mode, options) {
     baseStem = requestedName;
   }
   var baseName = ensureExportBaseNameHasExperiencePrefix(normalizeExportBaseName(baseStem));
+  if (normalizedMode === 'make') {
+    var confirmed = window.confirm('Save maker files as "' + baseName + '"?');
+    if (!confirmed) {
+      return;
+    }
+  }
   var exportOptions = {
     includeThreads: false,
     includeGuide: normalizedMode === 'make',
