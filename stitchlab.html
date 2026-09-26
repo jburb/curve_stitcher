@@ -476,9 +476,9 @@
       <div class="advanced-global-help">This sets the speed the animation will run when you press "Play."</div>
     </div>
     <div class="advanced-subsection">
-      <div class="advanced-global-title">Export</div>
-      <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Save Pattern</button></div>
-      <div id="advanced-export-help" class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers).</div>
+      <div class="advanced-global-title">Export for Making</div>
+      <div class="advanced-global-row"><button id="advanced-export-svg" type="button" class="advanced-reset-btn">Save Maker Files</button></div>
+      <div id="advanced-export-help" class="advanced-global-help">Exports current Stitching view (borders, threads, holes, and visible hole numbers) for crafting via 3D printing, laser cutting, etc.</div>
     </div>
     <div class="advanced-subsection" id="mashrabiya-advanced-subsection" style="display:none;">
       <div class="advanced-global-title">Mashrabiya Fill</div>
@@ -632,7 +632,10 @@
     <div id="pattern-detail-preview" class="pattern-preview-frame" aria-label="Saved pattern preview"></div>
     <div id="pattern-detail-description" class="pattern-detail-description"></div>
     <div class="pattern-detail-actions">
-      <button id="pattern-detail-load-btn" type="button" class="modal-btn">Load</button>
+      <button id="pattern-detail-load-btn" type="button" class="modal-btn">
+        <span class="pattern-detail-btn-icon" aria-hidden="true">🪡</span>
+        Load
+      </button>
       <div class="pattern-detail-export-row">
         <button id="pattern-detail-export-json-btn" type="button" class="modal-btn">
           <span class="pattern-detail-btn-icon" aria-hidden="true">📦</span>
@@ -640,11 +643,14 @@
         </button>
         <button id="pattern-detail-view-export-btn" type="button" class="modal-btn">
           <span class="pattern-detail-btn-icon" aria-hidden="true">🖼</span>
-          Maker Files
+          Save Maker Files
         </button>
       </div>
       <button id="pattern-detail-travel-btn" type="button" class="modal-btn">Travel</button>
-      <button id="pattern-detail-rename-btn" type="button" class="modal-btn">Edit Details</button>
+      <button id="pattern-detail-rename-btn" type="button" class="modal-btn">
+        <span class="pattern-detail-btn-icon" aria-hidden="true">✎</span>
+        Edit Details
+      </button>
       <button id="pattern-detail-delete-btn" type="button" class="modal-btn">Delete</button>
     </div>
   </div>

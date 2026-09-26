@@ -440,7 +440,7 @@ function syncExportUiCopy() {
     } else if (exportExperience === 'mashrabiya') {
       advancedExportHelp.textContent = 'Exports Mashrabiya rosette composition as SVG with instructions and optional preview.';
     } else {
-      advancedExportHelp.textContent = 'Exports current Stitching view (borders, threads, holes, and visible hole numbers).';
+      advancedExportHelp.textContent = 'Exports current Stitching view for crafting via 3D printing, laser cutting, etc.';
     }
   }
 
