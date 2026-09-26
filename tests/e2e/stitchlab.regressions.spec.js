@@ -2728,6 +2728,86 @@ test.describe('StitchLab regressions', () => {
     await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
   });
 
+  test('deleting a matching saved pattern does not corrupt discovered pattern records', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    await unlockMashrabiyaExperienceForTest(page, 8);
+
+    const beforeDelete = await page.evaluate(async () => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function' || typeof window.importPatternLibraryFromJsonText !== 'function') {
+        return { ok: false, reason: 'pattern-library-unavailable' };
+      }
+
+      var records = window.getPatternLibrarySnapshot();
+      var discovery = null;
+      for (var i = 0; i < records.length; i++) {
+        var rec = records[i];
+        if (rec && rec.kind === 'discovery' && rec.discoveryKey === 'rosette8') {
+          discovery = rec;
+          break;
+        }
+      }
+      if (!discovery) {
+        return { ok: false, reason: 'missing-discovery-seed' };
+      }
+
+      var importedUserLikeMatch = {
+        id: discovery.id,
+        kind: 'user',
+        isProtected: false,
+        patternName: 'Rosette 8 Saved Match',
+        patternDescription: 'Regression probe for delete + matching saved record.',
+        patternUrl: window.location.origin + '/stitchlab.html',
+        patternPreviewFull: discovery.patternPreviewFull || '',
+        patternPreviewSmall: discovery.patternPreviewSmall || ''
+      };
+
+      await window.importPatternLibraryFromJsonText(JSON.stringify({
+        schema: 'stitchlab.pattern',
+        version: 1,
+        record: importedUserLikeMatch
+      }));
+
+      records = window.getPatternLibrarySnapshot();
+      var activeRecord = null;
+      for (var j = 0; j < records.length; j++) {
+        if (records[j] && records[j].id === discovery.id) {
+          activeRecord = records[j];
+          break;
+        }
+      }
+
+      return {
+        ok: true,
+        collidingId: discovery.id,
+        activeKindAfterCollision: activeRecord ? activeRecord.kind : null,
+        activeDiscoveryKeyAfterCollision: activeRecord ? (activeRecord.discoveryKey || '') : ''
+      };
+    });
+
+    expect(beforeDelete.ok).toBe(true);
+    expect(beforeDelete.activeKindAfterCollision).toBe('user');
+
+    await page.evaluate(async ({ collidingId }) => {
+      if (typeof window.deleteUserPattern === 'function') {
+        await window.deleteUserPattern(collidingId);
+      }
+    }, { collidingId: beforeDelete.collidingId });
+
+    await expect.poll(() => page.evaluate(() => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function') return false;
+      var records = window.getPatternLibrarySnapshot();
+      for (var i = 0; i < records.length; i++) {
+        var rec = records[i];
+        if (rec && rec.kind === 'discovery' && rec.discoveryKey === 'rosette8') {
+          return !!rec.isDiscovered;
+        }
+      }
+      return false;
+    })).toBe(true);
+  });
+
   test('pattern save and edit block profanity and JSON-like text', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');

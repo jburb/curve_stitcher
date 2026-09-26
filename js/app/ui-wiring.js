@@ -1227,27 +1227,43 @@ if (patternLibraryExportBtn) {
   });
 }
 
-if (patternLibraryImportBtn && patternLibraryImportInput) {
-  patternLibraryImportBtn.addEventListener('click', () => {
+if ((patternLibraryImportBtn || patternLibraryImportPatternBtn) && patternLibraryImportInput) {
+  var openPatternLibraryImportPicker = function(mode) {
+    patternLibraryImportInput.dataset.importMode = mode;
     patternLibraryImportInput.click();
-  });
+  };
+
+  if (patternLibraryImportBtn) {
+    patternLibraryImportBtn.addEventListener('click', () => {
+      openPatternLibraryImportPicker('any');
+    });
+  }
+
+  if (patternLibraryImportPatternBtn) {
+    patternLibraryImportPatternBtn.addEventListener('click', () => {
+      openPatternLibraryImportPicker('single');
+    });
+  }
 
   patternLibraryImportInput.addEventListener('change', async () => {
     var file = patternLibraryImportInput.files && patternLibraryImportInput.files[0];
     if (!file) return;
+    var importMode = String(patternLibraryImportInput.dataset.importMode || 'any');
     try {
       var text = await file.text();
       if (typeof importPatternLibraryFromJsonText !== 'function') {
         throw new Error('Pattern library import is unavailable.');
       }
-      var result = await importPatternLibraryFromJsonText(text);
+      var result = await importPatternLibraryFromJsonText(text, { allowedMode: importMode });
       renderDiscoveryLibrary();
       var label = (result && result.importMode === 'single') ? 'Pattern import complete.' : 'Library import complete.';
       var summary = label + ' Added: ' + String(result && result.importedCount || 0) + ', updated: ' + String(result && result.updatedCount || 0) + ', skipped: ' + String(result && result.skippedCount || 0) + '.';
       alert(summary);
     } catch (error) {
-      alert((error && error.message) ? error.message : 'Library import failed.');
+      var fallbackLabel = importMode === 'single' ? 'Pattern import failed.' : 'Library import failed.';
+      alert((error && error.message) ? error.message : fallbackLabel);
     }
+    delete patternLibraryImportInput.dataset.importMode;
     patternLibraryImportInput.value = '';
   });
 }

@@ -763,6 +763,8 @@
 
     await patternLibraryState.adapter.remove(recordId);
     await loadPatternLibraryRecords();
+    await ensureDiscoverySeeds();
+    applyRuntimeDiscoveryStateFromRecords();
     return true;
   }
 
@@ -876,6 +878,11 @@
       throw new Error('Import file is not valid JSON.');
     }
 
+    var allowedMode = String(options.allowedMode || 'any').toLowerCase();
+    if (allowedMode !== 'single' && allowedMode !== 'library') {
+      allowedMode = 'any';
+    }
+
     var importMode = 'library';
     var rawRecords = [];
     if (parsed && parsed.schema === 'stitchlab.patternLibrary' && Array.isArray(parsed.records)) {
@@ -886,6 +893,13 @@
       importMode = 'single';
     } else {
       throw new Error('Import file has an unsupported format.');
+    }
+
+    if (allowedMode !== 'any' && importMode !== allowedMode) {
+      if (allowedMode === 'single') {
+        throw new Error('This action expects a single-pattern export file (schema: stitchlab.pattern).');
+      }
+      throw new Error('This action expects a library export file (schema: stitchlab.patternLibrary).');
     }
 
     var incoming = sanitizeImportedRecords(rawRecords);

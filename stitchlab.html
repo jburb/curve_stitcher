@@ -192,8 +192,18 @@
   <div id="discovery-cards"></div>
 
   <div class="discovery-library-tools">
-    <button id="pattern-library-export-btn" type="button" class="advanced-reset-btn">Export Library</button>
-    <button id="pattern-library-import-btn" type="button" class="advanced-reset-btn">Import Library</button>
+    <button id="pattern-library-export-btn" type="button" class="advanced-reset-btn" aria-label="Export library">
+      <span class="library-tool-icon" aria-hidden="true">📚⬇</span>
+      <span>Export Library</span>
+    </button>
+    <button id="pattern-library-import-btn" type="button" class="advanced-reset-btn" aria-label="Import library">
+      <span class="library-tool-icon" aria-hidden="true">📚⬆</span>
+      <span>Import Library</span>
+    </button>
+    <button id="pattern-library-import-pattern-btn" type="button" class="advanced-reset-btn" aria-label="Import single pattern">
+      <img class="library-tool-pattern-icon" src="assets/images/icons/stitchlab-stitching-stitchlab_rosette_8fold_color.svg" alt="" aria-hidden="true">
+      <span>Import Pattern</span>
+    </button>
     <input id="pattern-library-import-input" type="file" accept="application/json" hidden>
   </div>
 </div>
@@ -822,6 +832,7 @@
   var patternEditConfirmBtn = document.getElementById('pattern-edit-confirm-btn');
   var patternLibraryExportBtn = document.getElementById('pattern-library-export-btn');
   var patternLibraryImportBtn = document.getElementById('pattern-library-import-btn');
+  var patternLibraryImportPatternBtn = document.getElementById('pattern-library-import-pattern-btn');
   var patternLibraryImportInput = document.getElementById('pattern-library-import-input');
   var canvasContainer = document.getElementById('canvas-container');
   var canvasStage = document.getElementById('canvas-stage');

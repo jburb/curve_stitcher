@@ -449,8 +449,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Add import pattern (single) button to listen library pane.
-1. Fix issue wherein discovered pattern can get corrupted if a matching saved pattern gets deleted.
 1. Add an active connection numbers (ordered pair) overlay in stitching, at least when the hole count > 144, if not always (even when there is only one thread). Consider putting it above the frame instead of below, to balance the active thread config overlay that adjust exists below.
 1. **add what’s new items and tips for:**
   A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let’s use square frame with multiply by 5 for nice effect in the gif. 
@@ -461,9 +459,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Recently Completed
 
-1. What's New refresh: improved formula copy, added advanced thread-reordering highlight item, and reordered highlights by impact/interest
-1. Added selective What's New capture filters (capture only selected ids/scenarios or only missing GIFs) and an interactive reorder workflow
-1. Refactor for cleanliness: moved non-acknowledgments code from the acknowledgments module into proper modules
 1. Square canvas enforcement hardening (promoted to complete; reopen if regressions appear)
 1. Shape border support (paired inner+outer Stitching borders, advanced toggle, and improved hole-number placement)
 1. Stitch motion realism (progressive pull + settle accent, tempo-locked)
@@ -489,6 +484,7 @@ This section describes the practical steps for adding a new experience named zoo
 1. Enable hole number rotation in Stitching for all stitch-by modes, as a new advanced frame slider control with label+target remapping.
 1. Active thread config values overlay shown during Stitching playback, with current thread non-styling control values and frame mode when nested frame is enabled.
 1. Re-enable formula stitch mode with improvements 
+1. Refactor for cleanliness: moved non-acknowledgments code from the acknowledgments module into proper modules
 1. Stitch library (offline-first)
 1. Curve sewing cards viewer
 1. Enable thread re-ordering from advanced pane (including first-card downward drag and in-drag visual lift feedback; picker remains select-only)
@@ -496,6 +492,8 @@ This section describes the practical steps for adding a new experience named zoo
 1. Random thread generation constraints for all three enabled stitch-by modes, such that a minimum of three stitching segments are guaranteed to exist.
 1. Paramless random thread generation excludes star frame selection
 1. Use better voice for narration.
+1. What's New refresh: improved formula copy, added advanced thread-reordering highlight item, and reordered highlights by impact/interest
+1. Added selective What's New capture filters (capture only selected ids/scenarios or only missing GIFs) and an interactive reorder workflow
 1. Add thank you note to Cambridge in acknowledgments
 1. Add mashrabiya animation sample among acknowledgments experience animations 
 1. When user finds the acknowledgments, then views them all, add acknowledgements song to song picker options. 
@@ -506,14 +504,12 @@ This section describes the practical steps for adding a new experience named zoo
 1. Fix library import not respecting pattern rename, with an alert allowing the user option to accept or reject it.
 1. Allow single pattern export and import, for sharing.
 1. Move stitch by jump-help text in advanced pane to interaction based reveal eg by info icon beside stitch by picker, or at least just move it next to stitch by field.
+1. Add import pattern (single) button to pattern library pane.
+1. Fix issue wherein discovered pattern can get corrupted if a matching saved pattern gets deleted.
 
 ## TODO Backlog
 
-1. Add import pattern (single) button to listen library pane.
-
-1. Fix issue wherein discovered pattern can get corrupted if a matching saved pattern gets deleted.
-
-1. Add an active connection numbers (ordered pair) overlay in stitching, at least when the hole count > 144, if not always (even when there is only one thread). Consider putting it above the frame instead of below, to balance the active thread config overlay that adjust exists below.
+1. Add an active connection numbers (ordered pair) overlay in stitching, at least when the hole count > 144, if not always (even when there is only one thread). Consider putting it above the frame instead of below, to balance the active thread config overlay that adjust exists below. Use the same font for this as we have for the active thread config overlay.
 
 1. **add what's new items and tips for:**
   A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let's use square frame with multiply by 5 for nice effect in the gif. 

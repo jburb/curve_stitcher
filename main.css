@@ -1747,7 +1747,7 @@
   }
   .discovery-library-tools {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin: auto 0 0;
     padding-top: 10px;
@@ -1756,8 +1756,22 @@
   }
   .discovery-library-tools .advanced-reset-btn {
     width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     font-size: 11px;
     padding: 7px 8px;
+  }
+  .discovery-library-tools .library-tool-icon {
+    line-height: 1;
+  }
+  .discovery-library-tools .library-tool-pattern-icon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
   }
   #discovery-cards {
     display: grid;
