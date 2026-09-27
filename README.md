@@ -449,6 +449,9 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
+1. Alpha sort saved patterns 
+1. Constrain square discovery candidates to square and circle frames 
+1. Allow parentheses and colon chars in saved pattern name and description
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
