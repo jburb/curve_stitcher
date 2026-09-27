@@ -449,9 +449,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. **add tips for:**
-  A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let’s use square frame with multiply by 5 for nice effect in the gif. 
-  B. Allow single pattern export and import, for sharing.
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
@@ -512,9 +509,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## TODO Backlog
 
-1. **add tips for:**
-  A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let’s use square frame with multiply by 5 for nice effect in the gif. 
-  B. Allow single pattern export and import, for sharing.
 1. **Experience title bar (animated stitched reveal)**
 	- ~~Add a visible active-experience title bar (for example: "Stitching", "Triangula", "Squarus", "Mashrabiya").~~
 	- Animate title reveal as if stitched along the writing path, rather than a static fade/slide.
