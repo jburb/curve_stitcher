@@ -3542,6 +3542,14 @@ test.describe('StitchLab regressions', () => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
 
+    const onboardingTour = page.locator('#onboarding-tour');
+    if (await onboardingTour.isVisible()) {
+      await page.locator('#onboarding-tour-skip').click();
+      await expect(onboardingTour).toBeHidden();
+    }
+    await expect(page.locator('#onboarding-quickstart')).toBeHidden();
+    await expect(onboardingTour).toBeHidden();
+
     await page.locator('#gear').click();
     await page.locator('#advanced-border-enabled').uncheck();
     await page.locator('#advanced-hole-numbers').uncheck();
@@ -3673,6 +3681,10 @@ test.describe('StitchLab regressions', () => {
 
     const dialogMessages = [];
     page.on('dialog', async (dialog) => {
+      if (dialog.type() === 'confirm') {
+        await dialog.accept();
+        return;
+      }
       dialogMessages.push(dialog.type() + ':' + dialog.message());
       await dialog.dismiss();
     });
@@ -3767,6 +3779,10 @@ test.describe('StitchLab regressions', () => {
         await dialog.accept('detail_make_toggle_probe');
         return;
       }
+      if (dialog.type() === 'confirm') {
+        await dialog.accept();
+        return;
+      }
       await dialog.dismiss();
     });
 
@@ -3774,10 +3790,6 @@ test.describe('StitchLab regressions', () => {
     const kidSaveModal = page.locator('#kid-save-modal');
     await expect(kidSaveModal).toHaveClass(/open/);
     await page.locator('#kid-save-make-option').click();
-    const makeConfirmModal = page.locator('#kid-save-make-confirm-modal');
-    await expect(makeConfirmModal).toHaveClass(/open/);
-    await page.locator('#kid-save-make-confirm-accept').click();
-    await expect(makeConfirmModal).not.toHaveClass(/open/);
     await expect(kidSaveModal).not.toHaveClass(/open/);
 
     await expect.poll(() => page.evaluate(() => {
