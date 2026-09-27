@@ -3171,6 +3171,32 @@
     color: #f8fbff;
   }
 
+  html[data-theme="dark"] #pattern-detail-modal .pattern-detail-description {
+    border-color: #5a6f8f;
+    background: #2a3444;
+    color: #d6e2f3;
+  }
+
+  html[data-theme="dark"] #pattern-edit-modal .modal-row {
+    color: #d6e2f3;
+  }
+
+  html[data-theme="dark"] #pattern-edit-modal .modal-help {
+    color: #c1cfe3;
+  }
+
+  html[data-theme="dark"] #pattern-edit-modal .modal-row input[type="text"],
+  html[data-theme="dark"] #pattern-edit-modal .modal-row textarea {
+    border-color: #5a6f8f;
+    background: #2f3f55;
+    color: #e4eeff;
+  }
+
+  html[data-theme="dark"] #pattern-edit-modal .modal-row input[type="text"]::placeholder,
+  html[data-theme="dark"] #pattern-edit-modal .modal-row textarea::placeholder {
+    color: #afbed5;
+  }
+
   html[data-theme="dark"] #startup-whats-new-modal {
     background: rgba(6, 10, 16, 0.76);
   }
