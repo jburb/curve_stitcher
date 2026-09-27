@@ -2762,6 +2762,88 @@ test.describe('StitchLab regressions', () => {
     }
   });
 
+  test('square discovery candidates are constrained to square and circle frames', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const probe = await page.evaluate(() => {
+      function makeThread(options) {
+        options = options || {};
+        return {
+          color: String(options.color || '#1982c4'),
+          jump: Number(options.jump || 1),
+          startHole: Number(options.startHole || 1),
+          jumpMode: String(options.jumpMode || 'fixed'),
+          jumpFormula: String(options.jumpFormula || 'currentHole + 1'),
+          jumpSequence: String(options.jumpSequence || ''),
+          connectMultiplier: Number(options.connectMultiplier || 2),
+          connectOffset: Number(options.connectOffset || 0),
+          frameMode: String(options.frameMode || 'outer'),
+          sourceHoleCount: options.sourceHoleCount ? Number(options.sourceHoleCount) : undefined
+        };
+      }
+
+      function setHoleCount(value) {
+        if (!window.holesSlider) return;
+        window.holesSlider.value = String(value);
+        if (window.advancedHolesNumberInput) {
+          window.advancedHolesNumberInput.value = String(value);
+        }
+      }
+
+      function runCandidate(options) {
+        options = options || {};
+        var shape = String(options.shape || 'circle');
+        var holes = Number(options.holes || 16);
+        var jump = Number(options.jump || 1);
+
+        window.discoveredShapeKeys = Object.create(null);
+        window.unlockedSongIds = [];
+        window.hasUnseenDiscoveries = false;
+        window.hasUnseenSongUnlock = false;
+
+        if (typeof window.setCurrentExperience === 'function') {
+          window.setCurrentExperience('stitching', { suppressUrlSync: true });
+        } else {
+          window.currentExperienceId = 'stitching';
+        }
+
+        if (typeof window.setCurrentShape === 'function') {
+          window.setCurrentShape(shape, false);
+        } else {
+          window.currentShape = shape;
+        }
+
+        window.nestedFrameEnabled = false;
+        window.nestedFrameRatio = 0.5;
+        setHoleCount(holes);
+        window.threads = [makeThread({ jumpMode: 'fixed', jump: jump, startHole: 1 })];
+        window.selectedThreadIndex = 0;
+
+        if (typeof window.computePoints === 'function') {
+          window.computePoints();
+        }
+        if (typeof window.evaluateDiscoveryCandidates === 'function') {
+          window.evaluateDiscoveryCandidates();
+        }
+
+        return !!window.discoveredShapeKeys.square;
+      }
+
+      return {
+        circle: runCandidate({ shape: 'circle', holes: 4, jump: 1 }),
+        square: runCandidate({ shape: 'square', holes: 16, jump: 1 }),
+        triangle: runCandidate({ shape: 'triangle', holes: 16, jump: 1 }),
+        star: runCandidate({ shape: 'star', holes: 16, jump: 1 })
+      };
+    });
+
+    expect(probe.circle).toBe(true);
+    expect(probe.square).toBe(true);
+    expect(probe.triangle).toBe(false);
+    expect(probe.star).toBe(false);
+  });
+
   test('pattern library supports save rename and delete for user patterns', async ({ page }) => {
     await suppressStartupOnboarding(page);
     await page.goto('/stitchlab.html');
@@ -2802,6 +2884,70 @@ test.describe('StitchLab regressions', () => {
     await expect(detailModal).not.toHaveClass(/open/);
 
     await expect(page.locator('.discovery-card').filter({ hasText: 'Test Pattern (User) - 2' })).toHaveCount(0);
+  });
+
+  test('saved user patterns are alpha-sorted', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const names = ['Zulu Pattern Sort Check', 'alpha pattern sort check', 'Beta Pattern Sort Check'];
+    for (const name of names) {
+      await page.locator('#kid-save-toggle').click();
+      const saveModal = page.locator('#pattern-save-modal');
+      await expect(saveModal).toHaveClass(/open/);
+      await page.locator('#pattern-save-name-input').fill(name);
+      await page.locator('#pattern-save-description-input').fill('Sort order verification entry.');
+      await page.locator('#pattern-save-confirm-btn').click();
+      await expect(saveModal).not.toHaveClass(/open/);
+    }
+
+    const userNames = await page.evaluate(() => {
+      if (typeof window.getPatternLibrarySnapshot !== 'function') return [];
+      return window.getPatternLibrarySnapshot()
+        .filter((record) => record && record.kind === 'user')
+        .map((record) => String(record.patternName || ''));
+    });
+
+    const targetNames = userNames.filter((name) => /sort check/i.test(name));
+    expect(targetNames).toEqual(['alpha pattern sort check', 'Beta Pattern Sort Check', 'Zulu Pattern Sort Check']);
+  });
+
+  test('pattern save and edit allow parentheses and colon chars in names and descriptions', async ({ page }) => {
+    await suppressStartupOnboarding(page);
+    await page.goto('/stitchlab.html');
+
+    const initialName = 'Square Study: Variant (A)';
+    const initialDescription = 'Recipe (intro): jump by one and observe corners.';
+
+    await page.locator('#kid-save-toggle').click();
+    const saveModal = page.locator('#pattern-save-modal');
+    await expect(saveModal).toHaveClass(/open/);
+
+    await page.locator('#pattern-save-name-input').fill(initialName);
+    await page.locator('#pattern-save-description-input').fill(initialDescription);
+    await page.locator('#pattern-save-confirm-btn').click();
+    await expect(saveModal).not.toHaveClass(/open/);
+
+    await page.locator('#discovery-toggle').click();
+    const savedCard = page.locator('.discovery-card').filter({ hasText: initialName }).first();
+    await expect(savedCard).toBeVisible();
+
+    await savedCard.getByRole('button', { name: /View Pattern/i }).click();
+    await expect(page.locator('#pattern-detail-description')).toContainText(initialDescription);
+
+    await page.locator('#pattern-detail-rename-btn').click();
+    const editModal = page.locator('#pattern-edit-modal');
+    await expect(editModal).toHaveClass(/open/);
+
+    const renamedName = 'Square Study: Variant (B)';
+    const renamedDescription = 'Recipe (advanced): keep ratio 1:2 and rotate labels.';
+    await page.locator('#pattern-edit-name-input').fill(renamedName);
+    await page.locator('#pattern-edit-description-input').fill(renamedDescription);
+    await page.locator('#pattern-edit-confirm-btn').click();
+    await expect(editModal).not.toHaveClass(/open/);
+
+    await expect(page.locator('#pattern-detail-title')).toHaveText(renamedName);
+    await expect(page.locator('#pattern-detail-description')).toContainText(renamedDescription);
   });
 
   test('deleting a matching saved pattern does not corrupt discovered pattern records', async ({ page }) => {

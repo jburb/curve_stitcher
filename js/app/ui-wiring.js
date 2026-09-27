@@ -1033,6 +1033,21 @@ if (patternDetailModal) {
 }
 
 if (patternDetailLoadBtn) {
+  function parseExplicitBooleanParam(params, key) {
+    if (!params || !key || !params.has(key)) return null;
+    var raw = String(params.get(key) || '').trim().toLowerCase();
+    if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on') return true;
+    if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'off') return false;
+    return null;
+  }
+
+  function getStitchingShowHoleNumbersKey() {
+    if (typeof URL_STATE_PARAM_KEYS === 'object' && URL_STATE_PARAM_KEYS && URL_STATE_PARAM_KEYS.stitchingShowHoleNumbers) {
+      return String(URL_STATE_PARAM_KEYS.stitchingShowHoleNumbers);
+    }
+    return 'stitchingShowHoleNumbers';
+  }
+
   function getPatternLoadTargetUrl(record) {
     var baseUrl = String(record && record.patternUrl || '').trim();
     if (!baseUrl) return '';
@@ -1057,11 +1072,24 @@ if (patternDetailLoadBtn) {
   function applyPatternLoadInPlace(loadTargetUrl) {
     try {
       var parsed = new URL(loadTargetUrl, window.location.href);
+      var params = new URLSearchParams(parsed.search || '');
+      var explicitShowHoleNumbers = parseExplicitBooleanParam(params, getStitchingShowHoleNumbersKey());
       var nextUrl = parsed.pathname + (parsed.search || '');
       if ((window.location.pathname + window.location.search) !== nextUrl) {
         history.replaceState({ appStateVersion: APP_STATE_URL_VERSION }, '', nextUrl);
       }
       applyStateFromCurrentUrl({ forceUrlSync: false });
+
+      // Preserve explicit saved stitching toggle intent for in-place user-pattern loads.
+      if (explicitShowHoleNumbers !== null) {
+        showHoleNumbers = explicitShowHoleNumbers;
+        if (typeof syncHoleNumberToggles === 'function') {
+          syncHoleNumberToggles();
+        }
+        if (typeof redrawForPathChange === 'function') {
+          redrawForPathChange();
+        }
+      }
       return true;
     } catch (error) {
       return false;

@@ -79,6 +79,7 @@ Current covered checks:
 | Controls & Interaction | Advanced stitch-by help is collapsed by default and expandable. |
 | Controls & Interaction | Thread add controls stop at max thread cap. |
 | Controls & Interaction | Advanced formula input syncs immediately to basic formula input. |
+| Controls & Interaction | Stitching active-connection overlay shows displayed pair and persists on pause. |
 | Controls & Interaction | Stitching active-thread overlay shows non-styling playback values. |
 | Controls & Interaction | Basic palette custom dropper applies selected thread color. |
 | About & Acknowledgments | Acknowledgments viewer opens from about controls and cycles styles by line. |
@@ -112,7 +113,11 @@ Current covered checks:
 | Stitch Routing & Formula | Formula validity feedback is delayed while typing. |
 | Stitch Routing & Formula | Invalid formula does not serialize to URL and resolves to fallback on commit. |
 | Discovery & Pattern Library | Stitching discovery candidates unlock their corresponding discovery cards. |
+| Discovery & Pattern Library | Square discovery candidates are constrained to square and circle frames. |
 | Discovery & Pattern Library | Pattern library supports save rename and delete for user patterns. |
+| Discovery & Pattern Library | Saved user patterns are alpha-sorted. |
+| Discovery & Pattern Library | Pattern save and edit allow parentheses and colon chars in names and descriptions. |
+| Discovery & Pattern Library | Deleting a matching saved pattern does not corrupt discovered pattern records. |
 | Discovery & Pattern Library | Pattern save and edit block profanity and JSON-like text. |
 | Discovery & Pattern Library | Pattern library import restores exported user pattern records. |
 | Discovery & Pattern Library | Pattern library import accepts file-origin pattern URLs from exported JSON. |
@@ -449,9 +454,6 @@ This section describes the practical steps for adding a new experience named zoo
 
 ## Current Milestones
 
-1. Alpha sort saved patterns 
-1. Constrain square discovery candidates to square and circle frames 
-1. Allow parentheses and colon chars in saved pattern name and description
 1. Experience title bar (animated stitched reveal)
 1. Advanced stitch ribbon motion (Optional)
 1. Improve full regression suite runtime by introducing safe caching of immutable static assets (images, songs, narration clips/manifest) across test runs while preserving test integrity and per-test independence.
@@ -509,6 +511,9 @@ This section describes the practical steps for adding a new experience named zoo
 1. **add what’s new items for:**
   A. Enable selection of a higher frame hole limit in advanced controls or as a cached or persisted setting, e.g. 1024 or 900, instead of 144. Let’s use square frame with multiply by 5 for nice effect in the gif. 
   B. Allow single pattern export and import, for sharing.
+1. Alpha sort saved patterns
+1. Constrain square discovery candidates to square and circle frames
+1. Allow parentheses and colon chars in saved pattern name and description
 
 ## TODO Backlog
 

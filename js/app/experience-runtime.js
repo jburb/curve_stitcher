@@ -3224,6 +3224,7 @@ function evaluateDiscoveryCandidates() {
 
   var activeShape = currentShape;
   var activeHoleCount = parseInt(holesSlider.value, 10);
+  var allowSquareDiscovery = activeShape === 'square' || activeShape === 'circle';
   if (activeShape !== 'circle') {
     // Keep discovery criteria consistent across stitching frames.
     currentShape = 'circle';
@@ -3238,7 +3239,7 @@ function evaluateDiscoveryCandidates() {
     if (!foundTriangle && threadHasEquilateralTriangleDiscovery(candidates[i])) {
       foundTriangle = true;
     }
-    if (!foundSquare && (threadHasSquareDiscovery(candidates[i]) || threadHasSquareFramePerfectSquareDiscovery(candidates[i], activeShape, activeHoleCount))) {
+    if (allowSquareDiscovery && !foundSquare && (threadHasSquareDiscovery(candidates[i]) || threadHasSquareFramePerfectSquareDiscovery(candidates[i], activeShape, activeHoleCount))) {
       foundSquare = true;
     }
     if (foundTriangle && foundSquare) break;

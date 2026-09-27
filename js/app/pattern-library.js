@@ -7,7 +7,7 @@
   var PATTERN_NAME_MAX_LENGTH = 512;
   var PATTERN_DESCRIPTION_MAX_LENGTH = 4000;
   var PATTERN_SMALL_PREVIEW_SIZE = 52;
-  var PATTERN_NAME_ALLOWED_REGEX = /^[A-Za-z0-9 _()\-]+$/;
+  var PATTERN_NAME_ALLOWED_REGEX = /^[A-Za-z0-9 _():\-]+$/;
   var FAMILY_SAFE_CONTENT_MESSAGE = 'Hey, this is a family app. Please keep names and descriptions clean and avoid code-like text.';
   var BLOCKED_PROFANITY_REGEX = /\b(f+\W*u+\W*c+\W*k+|s+\W*h+\W*i+\W*t+|b+\W*i+\W*t+\W*c+\W*h+|a+\W*s+\W*s+\W*h+\W*o+\W*l+\W*e+|m+\W*f+|mother\W*f+\W*u+\W*c+\W*k+\W*e+\W*r+|c+\W*u+\W*n+\W*t+)\b/i;
   var COMMON_VULGARITY_TERMS = {
@@ -72,7 +72,7 @@
       return { ok: false, message: 'Pattern name is too long.' };
     }
     if (!PATTERN_NAME_ALLOWED_REGEX.test(normalized)) {
-      return { ok: false, message: 'Pattern name may only use letters, numbers, spaces, underscores, parentheses, and dashes.' };
+      return { ok: false, message: 'Pattern name may only use letters, numbers, spaces, underscores, parentheses, colons, and dashes.' };
     }
     if (containsBlockedPatternText(normalized)) {
       return { ok: false, message: FAMILY_SAFE_CONTENT_MESSAGE };
@@ -242,6 +242,12 @@
       var indexB = parseInt(b.discoveryOrder, 10);
       if (isFinite(indexA) && isFinite(indexB) && indexA !== indexB) {
         return indexA - indexB;
+      }
+    }
+    if (a.kind === 'user' && b.kind === 'user') {
+      var nameCompare = String(a.patternName || '').localeCompare(String(b.patternName || ''), undefined, { sensitivity: 'base' });
+      if (nameCompare !== 0) {
+        return nameCompare;
       }
     }
     var at = String(a.updatedAt || a.createdAt || '');
