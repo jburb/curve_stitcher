@@ -2,6 +2,7 @@
   "name": "curve-stitcher-e2e",
   "private": true,
   "scripts": {
+    "build:web": "echo \"Static assets are source-controlled; no frontend build step required.\"",
     "setup:tts:prebuilt": "node scripts/build-prebuilt-narration.mjs",
     "setup:tts:prebuilt:manifest": "node scripts/build-prebuilt-narration.mjs --manifest-only",
     "setup:tts:prebuilt:force": "node scripts/build-prebuilt-narration.mjs --force",
@@ -14,9 +15,16 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "@tauri-apps/cli": "^2.12.0"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-dialog": "^2.8.0",
+    "@tauri-apps/plugin-fs": "^2.6.0"
   }
 }

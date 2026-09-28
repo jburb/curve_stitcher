@@ -169,6 +169,31 @@ Optional:
 - Headed run: `npm run test:e2e:headed`
 - Interactive UI mode: `npm run test:e2e:ui`
 
+## Tauri Desktop (Phase 0)
+
+This repo now includes a Tauri v2 shell under `src-tauri/` for desktop packaging work.
+
+Prerequisites:
+- Rust toolchain installed (`rustup`, `cargo`, `rustc`)
+- Node dependencies installed (`npm install`)
+
+Linux system packages (Debian/Ubuntu/Pop!_OS):
+- `sudo apt update`
+- `sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`
+
+If Tauri build fails with `gdk-3.0` or `pkg-config` errors, install the packages above and retry.
+
+Commands:
+- `npm run tauri:dev`
+	- starts a local static server at `http://127.0.0.1:4173`
+	- launches StitchLab in a Tauri desktop window
+- `npm run tauri:build`
+	- builds desktop artifacts using the static frontend in this repo
+
+Notes:
+- No frontend bundling step is required for this app currently (`npm run build:web` is a no-op helper used by Tauri build hooks).
+- Tauri desktop permissions currently include core + dialog + filesystem defaults (`src-tauri/capabilities/default.json`).
+
 ### What's New GIF Generation (Repeatable)
 
 You can programmatically generate GIF demos for the highlighted feature list and assemble them into a "What's New" page with per-feature notes.
