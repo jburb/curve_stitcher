@@ -319,3 +319,198 @@ These NYI items shift tradeoff weight as follows:
 Overall, these NYI points are compatible with all three frameworks, but they reinforce the value of:
 1. Implementing the platform services adapter first.
 3. Treating app lifecycle semantics (launch vs resume) as a first-class mobile requirement.
+
+## Tauri Implementation Plan (Execution Update: 2026-09-28)
+
+This section defines the implementation plan assuming Tauri is the selected path.
+
+Planning assumptions for this execution update:
+1. This app has low active-user impact, so internal refactors can be made without preserving legacy behavior contracts.
+2. Browser fallback should remain for local web development and GitHub Pages use, but native Tauri flows should be primary when running in Tauri.
+3. Desktop is the first target (Linux/macOS/Windows), then mobile parity.
+
+### Implementation Goals
+
+1. Ship a desktop Tauri MVP with native export/import flows and reliable sewing-cards PDF behavior.
+2. Keep one app codebase, with runtime-specific platform services behind an adapter boundary.
+3. Establish a repeatable path to Tauri mobile without reworking core app modules.
+
+### Work Breakdown Structure
+
+#### Phase 0: Tauri Shell Bootstrap (2-3 days)
+
+Scope:
+1. Initialize Tauri v2 project scaffolding in the repo.
+2. Configure dev/build commands for desktop targets.
+3. Configure Tauri capabilities/allowlist for dialogs, filesystem, and asset access.
+
+Repo touchpoints:
+1. `package.json` (scripts for tauri dev/build)
+2. New Tauri config and Rust shell files under a dedicated app shell folder
+3. Build docs in `README.md`
+
+Acceptance criteria:
+1. Desktop app launches and loads `stitchlab.html` content through Tauri.
+2. `npm` script(s) exist for local Tauri run and build.
+3. Existing web flow remains runnable via HTTP server.
+
+#### Phase 1: Platform Services Adapter (3-5 days)
+
+Scope:
+1. Introduce `platformServices` as the only API surface for native-sensitive operations.
+2. Implement runtime detection (`web` vs `tauri-desktop` vs `tauri-mobile` placeholder).
+3. Implement web fallback and Tauri-backed implementations.
+
+Proposed adapter contract:
+1. `saveFile({ name, mimeType, data })`
+2. `openFile({ mimeTypes })`
+3. `exportAndShare({ name, mimeType, data })`
+4. `isNativeShell()`
+5. `getRuntimeInfo()`
+
+Repo touchpoints:
+1. New module: `js/app/platform-services.js` (or equivalent)
+2. `stitchlab.html` script loading order update
+3. `README.md` ownership table update
+
+Acceptance criteria:
+1. No direct native-shell checks scattered through feature modules.
+2. Adapter returns consistent, typed result shapes for success/error/cancel.
+3. Browser fallback behavior still works without Tauri runtime.
+
+#### Phase 2: Export and Pattern Library Refactor (3-5 days)
+
+Scope:
+1. Route all file-save flows through `platformServices`.
+2. Route all file-open/import flows through `platformServices`.
+3. Keep ZIP/SVG/PNG generation logic in existing domain modules; only move I/O boundaries.
+
+Repo touchpoints:
+1. `js/app/export.js`
+2. `js/app/pattern-library.js`
+3. `stitchlab.html` (if file input fallback behavior changes)
+
+Implementation notes:
+1. Replace `URL.createObjectURL` + anchor click assumptions as primary path.
+2. Preserve browser download/file-input fallback for web runtime only.
+3. Keep modal and UX flows unchanged where possible.
+
+Acceptance criteria:
+1. Export of SVG/PNG/ZIP succeeds in Tauri through native file dialogs.
+2. Pattern library export/import succeeds in Tauri through native file dialogs.
+3. Existing Playwright web regressions for export/library still pass.
+
+#### Phase 3: PDF Runtime Reliability in Tauri (3-6 days)
+
+Scope:
+1. Add runtime-aware PDF.js worker/document path resolver.
+2. Expand existing debug instrumentation into actionable runtime diagnostics.
+3. Add fallback path policy for worker/document load failures.
+
+Repo touchpoints:
+1. `js/app/sewing-cards.js`
+2. `js/vendor/pdfjs/*` handling assumptions
+3. Optional diagnostics helper module
+
+Implementation notes:
+1. Keep existing debug event model and extend with first-render timing + source path metadata.
+2. Validate both first open and repeated open/close navigation cycles.
+3. Define fallback behavior before mobile phase (for example, alternate path retry then user-visible failure state).
+
+Acceptance criteria:
+1. PDF worker loads reliably in desktop Tauri build.
+2. Page navigation works without render lockups across repeated modal opens.
+3. Diagnostics clearly identify worker-load, document-load, and render failures.
+
+#### Phase 4: Lifecycle and State Semantics for Native Host (2-4 days)
+
+Scope:
+1. Review startup and URL-state assumptions under native host lifecycle.
+2. Distinguish launch behavior from browser-like reload assumptions.
+3. Implement NYI splash policy support with native-friendly semantics.
+
+Repo touchpoints:
+1. `js/app/ui-wiring.js`
+2. `js/app/state-url-persistence.js`
+3. `js/app/experience-runtime.js` (if lifecycle hooks are centralized there)
+
+Implementation notes:
+1. Keep URL-state serialization as internal state mechanism, but do not depend on browser navigation UX in packaged app.
+2. Add startup policy keys and last-pattern loading hooks directly, since compatibility migration is not a blocker.
+
+Acceptance criteria:
+1. Launch and relaunch behavior is deterministic in Tauri desktop.
+2. Splash policy (`always`/`disabled`) works as specified.
+3. "Load last pattern" can restore a valid last state reference.
+
+#### Phase 5: Storage and Error Telemetry Hardening (2-4 days)
+
+Scope:
+1. Keep IndexedDB/localStorage unless runtime testing proves instability.
+2. Add simple packaged-runtime error logging hooks (especially for export and PDF paths).
+3. Define migration/versioning only for new runtime contracts introduced during this work.
+
+Repo touchpoints:
+1. `js/app/pattern-library.js`
+2. `js/app/state-url-persistence.js`
+3. `js/app/experience-runtime.js`
+
+Acceptance criteria:
+1. Pattern library records persist across app restarts in Tauri desktop.
+2. No data corruption from save/load/import/export loop tests.
+3. Packaged-runtime errors are capturable with enough context to reproduce.
+
+#### Phase 6: Release Pipeline and Distribution Prep (3-6 days)
+
+Scope:
+1. Add desktop build/signing/notarization checklist per OS.
+2. Add CI smoke for Tauri desktop build artifacts.
+3. Add target-specific release docs.
+
+Repo touchpoints:
+1. `README.md`
+2. CI workflow files
+3. Tauri config/release metadata
+
+Acceptance criteria:
+1. Build artifacts generated for at least one desktop target in CI.
+2. Manual install/run instructions are documented and tested.
+3. Packaging does not include Playwright/test artifact folders.
+
+### Cross-Phase Validation Matrix (Tauri Track)
+
+Run these at the end of each phase where applicable:
+1. Export correctness: SVG/PNG/ZIP output and destination UX.
+2. Pattern library parity: save/load/import/export behavior.
+3. Sewing cards PDF reliability: load, navigate, reopen stability.
+4. Audio continuity: playback and interruption behavior.
+5. Startup and restore: splash policy, last-pattern load, URL-state restore.
+6. Persistence durability: data survives restart and upgrade build.
+
+### Suggested Sprint Sequence
+
+1. Sprint 1:
+- Phase 0 + Phase 1
+- Begin Phase 2
+2. Sprint 2:
+- Complete Phase 2
+- Complete Phase 3
+3. Sprint 3:
+- Phase 4 + Phase 5
+- Begin Phase 6
+4. Sprint 4:
+- Complete Phase 6
+- Desktop hardening pass and mobile planning checkpoint
+
+### Out-of-Scope for Desktop MVP
+
+1. Full Tauri mobile packaging and store submission.
+2. Comprehensive telemetry platform integration.
+3. Extensive legacy migration paths for old storage keys.
+
+### Mobile Follow-On (After Desktop MVP)
+
+1. Add Tauri mobile shell and permissions.
+2. Implement mobile-specific file/share behavior in `platformServices`.
+3. Re-run PDF and lifecycle validation with mobile webview constraints.
+4. Validate foreground/background interruption handling for narration/audio.
